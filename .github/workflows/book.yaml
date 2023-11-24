@@ -14,11 +14,14 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-      - name: Setup mdBook
+      - name: Setup mdbook
         uses: peaceiris/actions-mdbook@v1
         with:
-          mdbook-version: '0.4.10'
-          # mdbook-version: 'latest'
+          mdbook-version: 'latest'
+      - name: Setup mdbook-mermaid
+        uses: magicgh/mdbook-mermaid-action@v1
+        with:
+          version: 'latest'
       - name: Build book
         working-directory: ./book
         run: mdbook build
