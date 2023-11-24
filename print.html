@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">2.</strong> Glossary</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -172,7 +172,59 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+                        <h1 id="kona-book"><a class="header" href="#kona-book">Kona Book</a></h1>
+<p><em>Documentation for the Kona project.</em></p>
+<p><a href="https://github.com/kona-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a>
+<a href="https://t.me/+2yfSX0YikWMxNTRh"><img src="https://img.shields.io/badge/Telegram-x?logo=telegram&label=anton-rs%20contributors"></a></p>
+<blockquote>
+<p>📖 <code>kona</code> is in active development, and is not yet ready for use in production. During development, this book will evolve quickly and may contain inaccuracies.</p>
+<p>Please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> if you find any errors or have any suggestions for improvements, and also feel free to <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">contribute</a> to the project!</p>
+</blockquote>
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>Kona is a suite of libraries and build pipelines for developing verifiable Rust programs targeting
+<a href="./glossary.html#fault-proof-vm">Fault Proof VMs</a>
+.</p>
+<p>It is built and maintained by members of <a href="https://github.com/ethereum-optimism">OP Labs</a> as well as open source contributors, and is licensed under the MIT License. </p>
+<p>Kona provides tooling and abstractions around low-level syscalls, memory management, and other common structures that authors of verifiable programs
+will need to interact with. It also provides build pipelines for compiling <code>no_std</code> Rust programs to a format that can be executed by supported
+Fault Proof VM targets.</p>
+<h2 id="goals-of-kona"><a class="header" href="#goals-of-kona">Goals of Kona</a></h2>
+<p><strong>1. Composability</strong></p>
+<p>Kona provides a common set of tools and abstractions for developing verifiable Rust programs on top of several supported Fault Proof VM targets. This is done
+to ensure that programs written for one supported FPVM can be easily ported to another supported FPVM, and that the ecosystem of programs built on top of these targets
+can be easily shared and reused.</p>
+<p><strong>2. Safety</strong></p>
+<p>Through standardization of these low-level system interfaces and build pipelines, Kona seeks to increase coverage over the low-level operations that are
+required to build on top of a FPVM.</p>
+<p><strong>3. Developer Experience</strong></p>
+<p>Building on top of custom Rust targets can be difficult, especially when the target is nascent and tooling is not yet mature. Kona seeks to improve this
+experience by standardizing and streamlining the process of developing and compiling verifiable Rust programs, targeted at supported FPVMs.</p>
+<p><strong>4. Performance</strong></p>
+<p>Kona is opinionated in that it favors <code>no_std</code> Rust programs for embedded FPVM development, for both performance and portability. In contrast with alternative approaches, such
+as the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> using the Golang <code>MIPS32</code> target, <code>no_std</code> Rust programs produce much smaller binaries, resulting in fewer instructions
+that need to be executed on the FPVM. In addition, this offers developers more low-level control over interactions with the FPVM kernel, which can be useful
+for optimizing performance-critical code.</p>
+<h2 id="development-status"><a class="header" href="#development-status">Development Status</a></h2>
+<p><strong>Kona is currently in active development, and is not yet ready for use in production.</strong></p>
+<h2 id="contributing"><a class="header" href="#contributing">Contributing</a></h2>
+<p>Contributors are welcome! Please see the <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">contributing guide</a> for more information.</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
+<p><em>This document contains definitions for terms used throughout the Kona book.</em></p>
+<h4 id="fault-proof-vm"><a class="header" href="#fault-proof-vm">Fault Proof VM</a></h4>
+<p>A <code>Fault Proof VM</code> is a virtual machine, commonly supporting a modified subset of an existing reduced instruction set architecture,
+that is designed to execute verifiable programs.</p>
+<p>Full specification for the <code>cannon</code> &amp; <code>cannon-rs</code> FPVMs, as an example, is available in the <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/cannon-fault-proof-vm.md">Optimism Monorepo</a>.</p>
+<h4 id="fault-proof-program"><a class="header" href="#fault-proof-program">Fault Proof Program</a></h4>
+<p>A <code>Fault Proof Program</code> is a program, commonly written in a general purpose language such as Golang, C, or Rust, that may be compiled down
+to a compatible <code>Fault Proof VM</code> target and provably executed on that target VM.</p>
+<p>Examples of <code>Fault Proof Programs</code> include the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program">OP Program</a>, which runs on top of <a href="https://github.com/ethereum-optimism/optimism/tree/develop/cannon"><code>cannon</code></a>, <a href="https://github.com/anton-rs/cannon-rs"><code>cannon-rs</code></a>, and
+<a href="https://github.com/protolambda/asterisc"><code>asterisc</code></a> to verify a claim about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 
                     </main>
 
