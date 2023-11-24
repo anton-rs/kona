@@ -1,0 +1,23 @@
+[workspace]
+members = ["bin/*", "crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+authors = ["clabby"]
+repository = "https://github.com/clabby/example"
+homepage = "https://github.com/clabby/example"
+exclude = ["**/target", "benches/", "tests"]
+
+[workspace.dependencies]
+anyhow = "1.0.75"
+tracing = "0.1.40"
+
+[profile.dev]
+opt-level = 1
+overflow-checks = false
+
+[profile.bench]
+debug = true

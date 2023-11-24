@@ -1,0 +1,18 @@
+[package]
+name = "kona"
+description = "kona example cli binary"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+
+[dependencies]
+# workspace
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# external
+tracing-subscriber = "0.3.18"
+clap = { version = "4.4.8", features = ["derive"] }

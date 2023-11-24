@@ -1,0 +1,11 @@
+[package]
+name = "common"
+description = "common crate"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+
+[dependencies]
