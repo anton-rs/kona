@@ -7,8 +7,8 @@ version = "0.0.1"
 edition = "2021"
 license = "MIT"
 authors = ["clabby"]
-repository = "https://github.com/clabby/example"
-homepage = "https://github.com/clabby/example"
+repository = "https://github.com/anton-rs/kona"
+homepage = "https://github.com/anton-rs/kona"
 exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
