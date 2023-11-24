@@ -8,5 +8,7 @@ title = "The Kona Book"
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
 
+[preprocessor.template]
+
 [output.html]
 additional-js = ["mermaid.min.js", "mermaid-init.js"]

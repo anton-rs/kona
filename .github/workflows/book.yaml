@@ -22,6 +22,11 @@ jobs:
         uses: magicgh/mdbook-mermaid-action@v1
         with:
           version: 'latest'
+      - name: Install mdbook-template
+        run: |
+          mkdir mdbook-template
+          curl -sSL https://github.com/sgoudham/mdbook-template/releases/latest/download/mdbook-template-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook-template
+          echo `pwd`/mdbook-template >> $GITHUB_PATH
       - name: Build book
         working-directory: ./book
         run: mdbook build
