@@ -53,4 +53,4 @@ for optimizing performance-critical code.
 
 Contributors are welcome! Please see the [contributing guide][contributing] for more information.
 
-{{#include ./static/links.md}}
+{{#include ./links.md}}

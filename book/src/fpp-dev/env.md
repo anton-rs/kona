@@ -38,7 +38,7 @@ sequenceDiagram
 Below, we have a full architecture diagram of the [`op-program`][op-program] (source: [fault proof specs][fp-specs]), the reference implementation for the OP Stack's Fault Proof Program,
 which has the objective of verifying claims about the state of an [OP Stack][op-stack] layer two.
 
-<img src="../../../static/op-program-fpp.svg">
+![op-program-architecture](../assets/op-program-fpp.svg)
 
 In this program, execution and derivation of the L2 chain is performed within it, and ultimately the claimed state of the L2 chain is verified in the [prologue](../prologue.md) stage.
 
@@ -54,4 +54,4 @@ Other programs (`clients`) may have different requirements for communication wit
 1. The `client` program is a state machine that is responsible for bootstrapping itself from the inputs, executing the progam logic, and verifying the outcome.
 1. The `host` is responsible for providing the `client` with data it wasn't bootstrapped with, and for executing the program itself.
 
-{{#include ../static/links.md}}
+{{#include ../links.md}}
