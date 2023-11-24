@@ -17,4 +17,4 @@ Fault Proof Programs are structured with 3 stages:
 The following sections will provide a more in-depth overview of each of these stages, as well as the tools and abstractions provided by Kona for
 developing your own Fault Proof Programs.
 
-{{#include ../static/links.md}}
+{{#include ../links.md}}

@@ -19,4 +19,4 @@ Examples of `Fault Proof Programs` include the [OP Program][op-program], which r
 The `Preimage ABI` is a specification for a synchronous communication protocol between a `client` and a `host` that is used to request and read data from the `host`'s
 datastore. Full specifications for the `Preimage ABI` are available in the [Optimism Monorepo][preimage-specs].
 
-{{#include ./static/links.md}}
+{{#include ./links.md}}
