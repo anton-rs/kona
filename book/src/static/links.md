@@ -4,10 +4,13 @@
 [cannon]: https://github.com/ethereum-optimism/optimism/tree/develop/cannon
 [cannon-rs]: https://github.com/anton-rs/cannon-rs
 [asterisc]: https://github.com/protolambda/asterisc
+[fp-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md
 [fpp-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-program
+[preimage-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle
 [cannon-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/cannon-fault-proof-vm.md
 
 <!-- Kona links -->
+[kona]: https://github.com/anton-rs/kona
 [book]: https://anton-rs.github.io/kona/
 [issues]: https://github.com/anton-rs/kona/issues
 [new-issue]: https://github.com/anton-rs/kona/issues/new
