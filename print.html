@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -278,6 +278,18 @@ which has the objective of verifying claims about the state of an <a href="https
 <li>The <code>client</code> program is a state machine that is responsible for bootstrapping itself from the inputs, executing the progam logic, and verifying the outcome.</li>
 <li>The <code>host</code> is responsible for providing the <code>client</code> with data it wasn't bootstrapped with, and for executing the program itself.</li>
 </ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="supported-targets"><a class="header" href="#supported-targets">Supported Targets</a></h1>
+<p>Kona seeks to support all FPVM targets that LLVM and <code>rustc</code> can offer introductory support for. Below is a matrix of features that Kona offers
+for each FPVM target:</p>
+<div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th><th>Program Stages</th></tr></thead><tbody>
+<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+<tr><td><code>asterisc</code></td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+</tbody></table>
+</div>
+<p>If there is a feature that you would like to see supported, please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->

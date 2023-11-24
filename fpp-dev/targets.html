@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Execution - The Kona Book</title>
+        <title>Supported Targets - The Kona Book</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html" class="active"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html" class="active"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -171,17 +171,28 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="execution"><a class="header" href="#execution">Execution</a></h1>
+                        <h1 id="supported-targets"><a class="header" href="#supported-targets">Supported Targets</a></h1>
+<p>Kona seeks to support all FPVM targets that LLVM and <code>rustc</code> can offer introductory support for. Below is a matrix of features that Kona offers
+for each FPVM target:</p>
+<div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th><th>Program Stages</th></tr></thead><tbody>
+<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+<tr><td><code>asterisc</code></td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+</tbody></table>
+</div>
+<p>If there is a feature that you would like to see supported, please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../fpp-dev/prologue.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../fpp-dev/env.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../fpp-dev/epilogue.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../fpp-dev/prologue.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -191,11 +202,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../fpp-dev/prologue.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../fpp-dev/env.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../fpp-dev/epilogue.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../fpp-dev/prologue.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
