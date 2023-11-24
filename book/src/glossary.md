@@ -15,4 +15,8 @@ to a compatible `Fault Proof VM` target and provably executed on that target VM.
 Examples of `Fault Proof Programs` include the [OP Program][op-program], which runs on top of [`cannon`][cannon], [`cannon-rs`][cannon-rs], and
 [`asterisc`][asterisc] to verify a claim about the state of an [OP Stack][op-stack] layer two.
 
-{{#include ../static/links.md}}
+#### Preimage ABI
+The `Preimage ABI` is a specification for a synchronous communication protocol between a `client` and a `host` that is used to request and read data from the `host`'s
+datastore. Full specifications for the `Preimage ABI` are available in the [Optimism Monorepo][preimage-specs].
+
+{{#include ./static/links.md}}
