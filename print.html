@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">2.</strong> Glossary</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -211,6 +211,79 @@ for optimizing performance-critical code.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="fault-proof-program-development"><a class="header" href="#fault-proof-program-development">Fault Proof Program Development</a></h1>
+<p>This chapter provides an overview of <a href="fpp-dev/../glossary.html#fault-proof-program">Fault Proof Program</a>
+development
+on top of the custom FPVM targets supported by <a href="https://github.com/anton-rs/kona">Kona</a>.</p>
+<p>At a high level, a Fault Proof Program is not much different from a regular <code>no_std</code> Rust program. A custom entrypoint is provided, and the program
+is compiled down to a custom target, which is then executed on the FPVM.</p>
+<p>Fault Proof Programs are structured with 3 stages:</p>
+<ol>
+<li><strong>Prologue</strong>: The bootstrapping stage, where the program is loaded into memory and the initial state is set up. During this phase, the program's initial
+state is written to the FPVM's memory, and the program's entrypoint is set.</li>
+<li><strong>Execution</strong>: The main execution stage, where the program is executed on the FPVM. During this phase, the program's entrypoint is called, and the
+program is executed until it exits.</li>
+<li><strong>Epilogue</strong>: The finalization stage, where the program's final state is read from the FPVM's memory. During this phase, the program's final state is
+inspected and properties of the state transition are verified.</li>
+</ol>
+<p>The following sections will provide a more in-depth overview of each of these stages, as well as the tools and abstractions provided by Kona for
+developing your own Fault Proof Programs.</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="environment"><a class="header" href="#environment">Environment</a></h1>
+<p>Before kicking off the development of your own <a href="fpp-dev/../glossary.html#fault-proof-program">Fault Proof Program</a>
+,
+it's important to understand the environment that your program will be running in.</p>
+<p>The FPP runs on top of a custom FPVM target, which is typically a VM with a modified subset of an existing reduced instruction set architecture. The FPVM is designed to
+execute verifiable programs, and commonly modifies the instruction set it is derived from as well as the internal representation of memory to support verifiable memory access, <code>client</code> (program)
+communication with the <code>host</code> (the FPVM), and other implementation-specific features.</p>
+<h2 id="host---client-communication"><a class="header" href="#host---client-communication">Host &lt;-&gt; Client Communication</a></h2>
+<p>While the program is running on top of the FPVM, it is considered to be in the <code>client</code> role, while the VM is in the <code>host</code> role. The only way for the <code>client</code> and <code>host</code>
+to communicate with one another is synchronously through the <a href="fpp-dev/../glossary.html#preimage-abi">Preimage ABI</a>
+(<a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle">specification</a>).</p>
+<p>In order for the <code>client</code> to read from the <code>host</code>, special syscalls are modified within the FPVM to allow the <code>client</code> to request preparation of and read foreign data.</p>
+<h3 id="reading"><a class="header" href="#reading">Reading</a></h3>
+<p>When the <code>client</code> wants to read data from the <code>host</code>, it must first send a &quot;hint&quot; to the <code>host</code> through the hint file descriptor, which is a request for the <code>host</code> to prepare the data for reading. The <code>host</code> will then
+prepare the data, and send a hint acknowledgement back to the <code>client</code>. The <code>client</code> can then read the data from the host through the designated file descriptor.</p>
+<p>The preparation step (&quot;hinting&quot;) is an optimization that allows the <code>host</code> to know ahead of time the intents of the <code>client</code> and the data it requires for execution. This can allow
+for lazy loading of data, and also prevent the need for unnecessary allocations within the <code>host</code>'s memory. This step is a no-op on-chain, and is only ran locally
+when the <code>host</code> is the native implementation of the FPVM.</p>
+<center>
+<pre class="mermaid">sequenceDiagram
+    Client-&gt;&gt;+Host: Hint preimage (no-op on-chain / read-only mode)
+    Host--&gt;&gt;Host: Prepare Preimage
+    Host--&gt;&gt;-Client: Hint acknowledgement
+    Client--&gt;&gt;+Host: Preimage Read
+    Host--&gt;&gt;-Client: Preimage Data
+</pre>
+</center>
+<h2 id="full-example"><a class="header" href="#full-example">Full Example</a></h2>
+<p>Below, we have a full architecture diagram of the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> (source: <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md">fault proof specs</a>), the reference implementation for the OP Stack's Fault Proof Program,
+which has the objective of verifying claims about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
+<img src="fpp-dev/../../../static/op-program-fpp.svg">
+<p>In this program, execution and derivation of the L2 chain is performed within it, and ultimately the claimed state of the L2 chain is verified in the <a href="fpp-dev/../prologue.html">prologue</a> stage.</p>
+<p>It communicates with the <code>host</code> for two reasons:</p>
+<ol>
+<li>To request preparation of L1 and L2 state data preimages.</li>
+<li>To read the L1 and L2 state data preimages that were prepared after the above requests.</li>
+</ol>
+<p>The <code>host</code> is responsible for:</p>
+<ol>
+<li>Preparing and maintaining a store of the L1 and L2 state data preimages, as well as localized bootstrap k/v pairs.</li>
+<li>Providing the L1 and L2 state data preimages to the <code>client</code> for reading.</li>
+</ol>
+<p>Other programs (<code>clients</code>) may have different requirements for communication with the <code>host</code>, but the above is a common pattern for programs built on top of a FPVMs. In general:</p>
+<ol>
+<li>The <code>client</code> program is a state machine that is responsible for bootstrapping itself from the inputs, executing the progam logic, and verifying the outcome.</li>
+<li>The <code>host</code> is responsible for providing the <code>client</code> with data it wasn't bootstrapped with, and for executing the program itself.</li>
+</ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="prologue"><a class="header" href="#prologue">Prologue</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="execution"><a class="header" href="#execution">Execution</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="epilogue"><a class="header" href="#epilogue">Epilogue</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <p><em>This document contains definitions for terms used throughout the Kona book.</em></p>
 <h4 id="fault-proof-vm"><a class="header" href="#fault-proof-vm">Fault Proof VM</a></h4>
@@ -222,6 +295,9 @@ that is designed to execute verifiable programs.</p>
 to a compatible <code>Fault Proof VM</code> target and provably executed on that target VM.</p>
 <p>Examples of <code>Fault Proof Programs</code> include the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program">OP Program</a>, which runs on top of <a href="https://github.com/ethereum-optimism/optimism/tree/develop/cannon"><code>cannon</code></a>, <a href="https://github.com/anton-rs/cannon-rs"><code>cannon-rs</code></a>, and
 <a href="https://github.com/protolambda/asterisc"><code>asterisc</code></a> to verify a claim about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
+<h4 id="preimage-abi"><a class="header" href="#preimage-abi">Preimage ABI</a></h4>
+<p>The <code>Preimage ABI</code> is a specification for a synchronous communication protocol between a <code>client</code> and a <code>host</code> that is used to request and read data from the <code>host</code>'s
+datastore. Full specifications for the <code>Preimage ABI</code> are available in the <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle">Optimism Monorepo</a>.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
