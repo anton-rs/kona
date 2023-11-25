@@ -1,6 +1,6 @@
 [package]
-name = "common"
-description = "common crate"
+name = "kona-common"
+description = "Common traits and utilities for Kona"
 version = { workspace = true }
 edition = { workspace = true }
 authors = { workspace = true }
@@ -9,3 +9,9 @@ repository = { workspace = true }
 homepage = { workspace = true }
 
 [dependencies]
+# workspace
+anyhow.workspace = true
+
+# external
+num = { version = "0.4.1", default-features = false }
+good_memory_allocator = "0.1.7"
