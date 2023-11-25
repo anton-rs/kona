@@ -12,7 +12,7 @@ homepage = "https://github.com/anton-rs/kona"
 exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
-anyhow = "1.0.75"
+anyhow = { version = "1.0.75", default-features = false }
 tracing = "0.1.40"
 
 [profile.dev]

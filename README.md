@@ -33,7 +33,13 @@ This repository also contains an implementation of the [`op-program` specificati
 
 ## Overview
 
-*TODO*
+*todo*
+
+```
+crates
+├── `common-client`: A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
+└── `common-host`: A suite of utilities for developing `host` programs.
+```
 
 ## Credits
 
