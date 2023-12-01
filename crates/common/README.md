@@ -1,5 +1,5 @@
-# `kona-common`
+# `kona-client`
 
-A suite of utilities for developing `host` programs and verifiable `client` executables.
+A suite of utilities for developing verifiable `client` executables that may run on top of FPVM targets.
 
 *TODO*

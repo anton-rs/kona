@@ -7,7 +7,17 @@
 )]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-#![cfg_attr(not(test), no_std)]
+#![no_std]
 
-pub mod malloc;
+pub mod io;
 pub mod traits;
+pub mod types;
+
+#[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
+pub mod malloc;
+
+#[cfg(target_arch = "mips")]
+pub(crate) mod cannon;
+
+#[cfg(target_arch = "riscv64")]
+pub(crate) mod asterisc;

@@ -10,6 +10,8 @@ To build the images, run `make` in the root of this directory.
 
 ### Compiling Programs
 
+**cannon**
+
 ```
 docker run \
     --rm \
@@ -17,6 +19,12 @@ docker run \
     -v `pwd`/:/workdir \
     -w="/workdir" \
     cannon-pipeline:latest cargo build --release -Zbuild-std
+```
+
+**asterisc**
+```
+RUSTFLAGS="-Clink-arg=-e_start -C target-feature=-c" \
+    cargo build --target riscv64gc-unknown-none-elf --release
 ```
 
 [cross]: https://github.com/cross-rs/cross
