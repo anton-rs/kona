@@ -91,7 +91,9 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -285,11 +287,40 @@ which has the objective of verifying claims about the state of an <a href="https
 <p>Kona seeks to support all FPVM targets that LLVM and <code>rustc</code> can offer introductory support for. Below is a matrix of features that Kona offers
 for each FPVM target:</p>
 <div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th><th>Program Stages</th></tr></thead><tbody>
-<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
-<tr><td><code>asterisc</code></td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<tr><td><code>asterisc</code></td><td>❌</td><td>✅</td><td>✅</td><td>❌</td></tr>
 </tbody></table>
 </div>
 <p>If there is a feature that you would like to see supported, please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
+<h2 id="asterisc-risc-v"><a class="header" href="#asterisc-risc-v">Asterisc (RISC-V)</a></h2>
+<p>Asterisc is based off of the <code>rv64gc</code> target architecture, which defines the following extensions:</p>
+<ul>
+<li><code>RV32I</code> support - 32 bit base instruction set
+<ul>
+<li><code>FENCE</code>, <code>ECALL</code>, <code>EBREAK</code> are hardwired to implement a minimal subset of systemcalls of the linux kernel
+<ul>
+<li>Work in progress. All syscalls used by the Golang <code>risc64</code> runtime. </li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>RV64I</code> support</li>
+<li><code>RV64C</code>: Compressed instructions</li>
+<li><code>RV32M</code>+<code>RV64M</code>: Multiplication support</li>
+<li><code>RV32A</code>+<code>RV64A</code>: Atomics support</li>
+<li><code>RV{32,64}{D,F,Q}</code>: no-op: No floating points support (since no IEEE754 determinism with rounding modes etc., nor worth the complexity)</li>
+<li><code>Zifencei</code>: <code>FENCE.I</code> no-op: No need for <code>FENCE.I</code></li>
+<li><code>Zicsr</code>: no-op: some support for Control-and-status registers may come later though.</li>
+<li><code>Ztso</code>: no-op: no need for Total Store Ordering</li>
+<li>other: revert with error code on unrecognized instructions</li>
+</ul>
+<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/protolambda/asterisc">in the repository</a>. <code>kona</code> offers an interface for
+programs to directly invoke several syscalls:</p>
+<ol>
+<li><code>EXIT</code> - Terminate the process with the provided exit code.</li>
+<li><code>WRITE</code> - Write the passed buffer to the passed file descriptor.</li>
+<li><code>READ</code> - Read the specified number of bytes from the passed file descriptor.</li>
+</ol>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
@@ -299,7 +330,7 @@ for each FPVM target:</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <p><em>This document contains definitions for terms used throughout the Kona book.</em></p>
 <h4 id="fault-proof-vm"><a class="header" href="#fault-proof-vm">Fault Proof VM</a></h4>
-<p>A <code>Fault Proof VM</code> is a virtual machine, commonly supporting a modified subset of an existing reduced instruction set architecture,
+<p>A <code>Fault Proof VM</code> is a virtual machine, commonly supporting a subset of the Linux kernel's syscalls and a modified subset of an existing reduced instruction set architecture,
 that is designed to execute verifiable programs.</p>
 <p>Full specification for the <code>cannon</code> &amp; <code>cannon-rs</code> FPVMs, as an example, is available in the <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/cannon-fault-proof-vm.md">Optimism Monorepo</a>.</p>
 <h4 id="fault-proof-program"><a class="header" href="#fault-proof-program">Fault Proof Program</a></h4>
