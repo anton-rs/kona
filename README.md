@@ -3,7 +3,7 @@
 </h1>
 
 <h4 align="center">
-    A verifiable implementation of the [Optimism][op-stack] rollup state transition.
+    A verifiable implementation of the <a href="https://github.com/ethereum-optimism/optimism">Optimism</a> rollup state transition.
 </h4>
 
 <p align="center">
@@ -19,35 +19,32 @@
 </p>
 
 <p align="center">
-  <a href="#whats-a-cannon">What's Kona?</a> •
+  <a href="#whats-kona">What's Kona?</a> •
   <a href="#overview">Overview</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#book">Book</a> •
-  <a href="#contributing">Contributing</a>
+  <a href="#book">Contributing</a> •
+  <a href="#credits">Credits</a>
 </p>
 
 ## What's Kona?
 
-Kona is a [fault proof program] designed to execute a rollup state transition and ultimately verify an [L2 output root][g-output-root] from
-L1 inputs, derived through the rollup's [derivation pipeline][g-derivation-pipeline].
+Kona is a [fault proof program][fpp-specs] designed to deterministically execute a rollup state transition in order to
+verify an [L2 output root][g-output-root] from the L1 inputs it was [derived from][g-derivation-pipeline].
 
 ## Overview
 
-*TODO - overview after mockup*
+**`kona`**
+* [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
+* [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
-```
-crates
-├── `common`: A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
-└── `placeholder`: Placeholder
-```
+**Build Pipelines**
+*todo*
+
+**`client` / `host` SDK**
+* [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
 
 ## Book
 
-The [book][book] contains a more in-depth overview of the project, tutorials for getting started with building your own programs, and a reference for the libraries and tools provided by Kona.
-
-## Contributing
-
-*TODO - write `CONTRIBUTING.md`*
+The [book][book] contains a more in-depth overview of the project, contributor guidelines, tutorials for getting started with building your own programs, and a reference for the libraries and tools provided by Kona.
 
 ## Credits
 
@@ -69,3 +66,4 @@ The [book][book] contains a more in-depth overview of the project, tutorials for
 [g-output-root]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/glossary.md#l2-output-root
 [g-derivation-pipeline]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/derivation.md#l2-chain-derivation-pipeline
 [g-fault-proof-vm]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-vm
+[g-preimage-oracle]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle
