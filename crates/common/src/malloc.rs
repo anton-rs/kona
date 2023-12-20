@@ -3,16 +3,9 @@
 //! `dlmalloc` algorithm, which is a well-known and widely used allocator software such
 //! as OS Kernels.
 
-#[cfg(not(test))]
 use good_memory_allocator::SpinLockedAllocator;
 
-/// The global allocator for the program in the `test` profile uses the standard allocator.
-#[cfg(test)]
-#[global_allocator]
-static ALLOCATOR: std::alloc::System = std::alloc::System;
-
 /// The global allocator for the program in other profiles uses the [SpinLockedAllocator].
-#[cfg(not(test))]
 #[global_allocator]
 static ALLOCATOR: SpinLockedAllocator = SpinLockedAllocator::empty();
 
@@ -26,15 +19,16 @@ static ALLOCATOR: SpinLockedAllocator = SpinLockedAllocator::empty();
 /// * The provided memory region must be valid, non-null, and not used by anything else.
 /// * After aligning the start and end addresses, the size of the heap must be > 0, or the function
 ///   will panic.
-#[cfg_attr(test, allow(unused_variables))]
 pub unsafe fn init_allocator(heap_start_addr: usize, heap_size: usize) {
-    #[cfg(not(test))]
     ALLOCATOR.init(heap_start_addr, heap_size)
 }
 
-/// Initialize heap memory for the `client` program with
+/// Initialize heap memory for the `client` program with the given size.
+///
+/// # Safety
+/// See [init_allocator] safety comment.
 #[macro_export]
-macro_rules! init_heap {
+macro_rules! alloc_heap {
     ($size:expr) => {{
         use kona_common::malloc::init_allocator;
 

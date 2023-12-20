@@ -3,7 +3,7 @@
 *This document contains definitions for terms used throughout the Kona book.*
 
 #### Fault Proof VM
-A `Fault Proof VM` is a virtual machine, commonly supporting a modified subset of an existing reduced instruction set architecture,
+A `Fault Proof VM` is a virtual machine, commonly supporting a subset of the Linux kernel's syscalls and a modified subset of an existing reduced instruction set architecture,
 that is designed to execute verifiable programs.
 
 Full specification for the `cannon` & `cannon-rs` FPVMs, as an example, is available in the [Optimism Monorepo][cannon-specs].

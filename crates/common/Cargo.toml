@@ -1,6 +1,6 @@
 [package]
 name = "kona-common"
-description = "Common traits and utilities for Kona"
+description = "Common traits and system interfaces for developing client programs on top of Fault Proof VMs."
 version = { workspace = true }
 edition = { workspace = true }
 authors = { workspace = true }
@@ -13,5 +13,5 @@ homepage = { workspace = true }
 anyhow.workspace = true
 
 # external
-num = { version = "0.4.1", default-features = false }
 good_memory_allocator = "0.1.7"
+cfg-if = "1.0.0"

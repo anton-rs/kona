@@ -1,5 +1,3 @@
-all: cannon
-
-.PHONY: cannon
+# Build the `cannon` program builder image
 cannon:
 	docker build -t cannon-pipeline:latest -f cannon/cannon.dockerfile ./cannon

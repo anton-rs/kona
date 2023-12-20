@@ -6,5 +6,5 @@
 //! without needing to know the underlying implementation, which allows the same `client`
 //! program to be compiled and ran on different target FPVM architectures.
 
-mod syscall;
-pub use syscall::KernelIO;
+mod basic;
+pub use basic::BasicKernelInterface;
