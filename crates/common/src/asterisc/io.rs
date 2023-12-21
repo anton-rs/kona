@@ -32,7 +32,7 @@ impl BasicKernelInterface for AsteriscIO {
                 SyscallNumber::Write as usize,
                 fd as usize,
                 buf.as_ptr() as usize,
-                buf.len() as usize,
+                buf.len(),
             ) as RegisterSize)
         }
     }
@@ -43,7 +43,7 @@ impl BasicKernelInterface for AsteriscIO {
                 SyscallNumber::Read as usize,
                 fd as usize,
                 buf.as_ptr() as usize,
-                buf.len() as usize,
+                buf.len(),
             ) as RegisterSize)
         }
     }
