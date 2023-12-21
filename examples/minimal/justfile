@@ -1,3 +1,5 @@
+set positional-arguments
+
 # Build for the `cannon` target
 build-cannon *args='':
   docker run \
