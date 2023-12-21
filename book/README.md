@@ -1,6 +1,6 @@
 # `kona-book`
 
-This repository contains the source code for the Kona book, which is available at [anton-rs.github.io/kona](https://anton-rs.github.io/kona/).
+This repository contains the source code for the Kona book, which is available at [ethereum-optimism.github.io/kona](https://ethereum-optimism.github.io/kona/).
 
 ## Contributing
 

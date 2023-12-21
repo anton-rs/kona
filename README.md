@@ -7,11 +7,11 @@
 </h4>
 
 <p align="center">
-  <a href="https://github.com/anton-rs/kona/actions/workflows/ci.yaml">
-    <img src="https://github.com/anton-rs/kona/actions/workflows/ci.yaml/badge.svg?label=ci" alt="CI">
+  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/ci.yaml">
+    <img src="https://github.com/ethereum-optimism/kona/actions/workflows/ci.yaml/badge.svg?label=ci" alt="CI">
   </a>
   <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license" alt="License">
-  <a href="https://anton-rs.github.io/kona">
+  <a href="https://ethereum-optimism.github.io/kona">
     <img src="https://img.shields.io/badge/Contributor%20Book-grey?logo=mdBook" alt="Book">
   </a>
   <a href="https://github.com/ethereum-optimism/monorepo"><img src="https://img.shields.io/badge/OP%20Stack-monorepo-red" alt="OP Stack"></a>
@@ -59,7 +59,7 @@ The [book][book] contains a more in-depth overview of the project, contributor g
 [asterisc]: https://github.com/protolambda/asterisc
 [fpp-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-program
 
-[book]: https://anton-rs.github.io/kona/
+[book]: https://ethereum-optimism.github.io/kona/
 
 [op-labs]: https://github.com/ethereum-optimism
 [bad-boi-labs]: https://github.com/BadBoiLabs
