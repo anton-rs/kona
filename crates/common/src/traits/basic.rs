@@ -8,10 +8,6 @@ use anyhow::Result;
 /// the FPVM kernel. Commonly, FPVMs delegate IO operations to custom file descriptors in the `client` program. It is
 /// a safe wrapper around the raw system calls available to the `client` program.
 ///
-///
-/// The `RS` type parameter is the size of the registers in the VM. On MIPS32 for example, this would be 32, and on
-/// RISC-V/64 this would be 64.
-///
 /// In cases where the set of system calls defined in this trait need to be extended, an additional trait should be
 /// created that extends this trait.
 pub trait BasicKernelInterface {

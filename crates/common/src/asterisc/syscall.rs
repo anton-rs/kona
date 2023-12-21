@@ -1,6 +1,6 @@
 //! Unsafe system call interface for the `riscv64` target architecture.
 //!
-//! List of RISC-V system calls: https://jborza.com/post/2021-05-11-riscv-linux-syscalls/
+//! List of RISC-V system calls: <https://jborza.com/post/2021-05-11-riscv-linux-syscalls/>
 //!
 //! **Registers used for system calls**
 //! | Register Number |    Description     |

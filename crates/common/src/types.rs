@@ -1,4 +1,4 @@
-//! Constants
+//! This module contains the local types for the `kona-common` crate.
 
 use cfg_if::cfg_if;
 

@@ -1,17 +1,19 @@
 //! This module contains the [ClientIO] struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
+use crate::{traits::BasicKernelInterface, types::RegisterSize};
+use anyhow::Result;
 use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(target_arch = "mips")] {
-        #[doc = "Concrete implementation of the [`BasicKernelInterface`] trait for the `MIPS32rel1` target architecture."]
+        #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture."]
         pub type ClientIO = crate::cannon::io::CannonIO;
     } else if #[cfg(target_arch = "riscv64")] {
-        #[doc = "Concrete implementation of the [`BasicKernelInterface`] trait for the `riscv64` target architecture."]
+        #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
         pub type ClientIO = crate::asterisc::io::AsteriscIO;
     } else {
-        #[doc = "Concrete implementation of the [`BasicKernelInterface`] trait for the `native` target architecture."]
+        #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `native` target architecture."]
         pub type ClientIO = native_io::NativeIO;
     }
 }
@@ -34,6 +36,30 @@ pub enum FileDescriptor {
     PreimageRead = 5,
     /// Write-only. Used to request pre-images.
     PreimageWrite = 6,
+}
+
+/// Print the passed string to the standard output [FileDescriptor].
+#[inline]
+pub fn print(s: &str) {
+    ClientIO::write(FileDescriptor::StdOut, s.as_bytes()).expect("Error writing to stdout.");
+}
+
+/// Write the passed buffer to the given [FileDescriptor].
+#[inline]
+pub fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
+    ClientIO::write(fd, buf)
+}
+
+/// Write the passed buffer to the given [FileDescriptor].
+#[inline]
+pub fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
+    ClientIO::read(fd, buf)
+}
+
+/// Exit the process with the given exit code.
+#[inline]
+pub fn exit(code: RegisterSize) -> ! {
+    ClientIO::exit(code)
 }
 
 #[cfg(not(any(target_arch = "mips", target_arch = "riscv64")))]

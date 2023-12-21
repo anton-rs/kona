@@ -6,9 +6,13 @@ for each FPVM target:
 |         Target         | Build Pipeline | IO | malloc | Program Stages |
 |------------------------|----------------|----|--------|----------------|
 | `cannon` & `cannon-rs` | ✅             | ✅ | ✅     | ❌             |
-| `asterisc`             | ❌             | ✅ | ✅     | ❌             |
+| `asterisc`             | ✅             | ✅ | ✅     | ❌             |
 
 If there is a feature that you would like to see supported, please [open an issue][new-issue] or [consider contributing][contributing]!
+
+## Cannon (MIPS32rel1)
+
+*TODO*
 
 ## Asterisc (RISC-V)
 
@@ -27,7 +31,7 @@ Asterisc is based off of the `rv64gc` target architecture, which defines the fol
 - other: revert with error code on unrecognized instructions
 
 `asterisc` supports a plethora of syscalls, documented [in the repository][asterisc-syscalls]. `kona` offers an interface for
-programs to directly invoke several syscalls:
+programs to directly invoke a select few syscalls:
 1. `EXIT` - Terminate the process with the provided exit code.
 1. `WRITE` - Write the passed buffer to the passed file descriptor.
 1. `READ` - Read the specified number of bytes from the passed file descriptor.
