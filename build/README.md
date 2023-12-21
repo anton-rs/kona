@@ -1,12 +1,12 @@
 # `kona-build`
 
-This directory contains the [`cross`][cross] docker images and custom `rustc` targets used to build verifiable programs targeting various FPVMs.
+This directory contains the cross compilation docker images and custom `rustc` targets used to build verifiable programs targeting various FPVMs.
 
 ## Usage
 
 ### Building Images
 
-To build the images, run `make` in the root of this directory.
+To build the images, run `just` in the root of this directory.
 
 ### Compiling Programs
 
@@ -23,8 +23,10 @@ docker run \
 
 **asterisc**
 ```
-RUSTFLAGS="-Clink-arg=-e_start -C target-feature=-c" \
-    cargo build --target riscv64gc-unknown-none-elf --release
+docker run \
+    --rm \
+    --platform linux/amd64 \
+    -v `pwd`/:/workdir \
+    -w="/workdir" \
+    asterisc-pipeline:latest cargo build --release -Zbuild-std
 ```
-
-[cross]: https://github.com/cross-rs/cross

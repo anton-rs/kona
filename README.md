@@ -37,7 +37,8 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 * [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
 **Build Pipelines**
-*todo*
+* [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips-unknown-none` target.
+* [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64gc-unknown-none-elf` target.
 
 **`client` / `host` SDK**
 * [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.

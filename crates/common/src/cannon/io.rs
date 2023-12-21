@@ -1,8 +1,11 @@
-use crate::{cannon::syscall, traits::BasicKernelInterface, types::RegisterSize};
+use crate::{
+    cannon::syscall, io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize,
+};
 use anyhow::{anyhow, Result};
 
 /// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture. Exposes a safe
 /// interface for performing IO operations within the FPVM kernel.
+#[derive(Debug)]
 pub struct CannonIO;
 
 /// Relevant system call numbers for the `MIPS32rel1` target architecture.
@@ -14,7 +17,7 @@ pub struct CannonIO;
 /// the [BasicKernelInterface] trait is created for the `Cannon` kernel, this list should be extended
 /// accordingly.
 #[repr(u32)]
-pub enum SyscallNumber {
+pub(crate) enum SyscallNumber {
     /// Sets the Exited and ExitCode states to true and $a0 respectively.
     Exit = 4246,
     /// Similar behavior as Linux/MIPS with support for unaligned reads.
@@ -24,9 +27,7 @@ pub enum SyscallNumber {
 }
 
 impl BasicKernelInterface for CannonIO {
-    type FileDescriptor = crate::io::FileDescriptor;
-
-    fn write(fd: Self::FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
+    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
         unsafe {
             syscall::syscall3(
                 SyscallNumber::Write as u32,
@@ -38,7 +39,7 @@ impl BasicKernelInterface for CannonIO {
         }
     }
 
-    fn read(fd: Self::FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
+    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
         unsafe {
             syscall::syscall3(
                 SyscallNumber::Read as u32,

@@ -1,7 +1,10 @@
-use crate::{asterisc::syscall, traits::BasicKernelInterface, types::RegisterSize};
+use crate::{
+    asterisc::syscall, io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize,
+};
 use anyhow::Result;
 
 /// Concrete implementation of the [`KernelIO`] trait for the `riscv64` target architecture.
+#[derive(Debug)]
 pub struct AsteriscIO;
 
 /// Relevant system call numbers for the `riscv64` target architecture.
@@ -13,7 +16,7 @@ pub struct AsteriscIO;
 /// the [BasicKernelInterface] trait is created for the `asterisc` kernel, this list should be extended
 /// accordingly.
 #[repr(u32)]
-pub enum SyscallNumber {
+pub(crate) enum SyscallNumber {
     /// Sets the Exited and ExitCode states to true and $a0 respectively.
     Exit = 93,
     /// Similar behavior as Linux with support for unaligned reads.
@@ -23,7 +26,7 @@ pub enum SyscallNumber {
 }
 
 impl BasicKernelInterface for AsteriscIO {
-    fn write(fd: Self::FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
+    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
         unsafe {
             Ok(syscall::syscall3(
                 SyscallNumber::Write as usize,
@@ -34,7 +37,7 @@ impl BasicKernelInterface for AsteriscIO {
         }
     }
 
-    fn read(fd: Self::FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
+    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
         unsafe {
             Ok(syscall::syscall3(
                 SyscallNumber::Read as usize,

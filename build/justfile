@@ -1,3 +1,9 @@
+all: cannon asterisc
+
 # Build the `cannon` program builder image
 cannon:
 	docker build -t cannon-pipeline:latest -f cannon/cannon.dockerfile ./cannon
+
+# Build the `asterisc` program builder image
+asterisc:
+	docker build -t asterisc-pipeline:latest -f asterisc/asterisc.dockerfile ./asterisc

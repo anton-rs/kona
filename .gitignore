@@ -1,2 +1,5 @@
 # Rust target
 target
+
+# Example targets
+examples/**/target

@@ -1,8 +1,6 @@
 //! This module contains the [ClientIO] struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
-use crate::{traits::BasicKernelInterface, types::RegisterSize};
-use anyhow::Result;
 use cfg_if::cfg_if;
 
 cfg_if! {
@@ -42,8 +40,8 @@ pub enum FileDescriptor {
 mod native_io {
     extern crate std;
 
-    use super::{BasicKernelInterface, FileDescriptor, RegisterSize, Result};
-    use anyhow::anyhow;
+    use crate::{io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize};
+    use anyhow::{anyhow, Result};
     use std::{
         fs::File,
         io::{Read, Write},

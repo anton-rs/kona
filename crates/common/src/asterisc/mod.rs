@@ -1,4 +1,4 @@
 //! TODO
 
-pub mod io;
+pub(crate) mod io;
 mod syscall;

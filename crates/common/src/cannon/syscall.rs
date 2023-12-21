@@ -38,7 +38,7 @@ use core::arch::asm;
 
 /// Issues a raw system call with 1 argument. (e.g. exit)
 #[inline]
-pub unsafe fn syscall1(n: u32, arg1: u32) -> u32 {
+pub(crate) unsafe fn syscall1(n: u32, arg1: u32) -> u32 {
     let mut err: u32;
     let mut ret: u32;
     asm!(
@@ -67,7 +67,7 @@ pub unsafe fn syscall1(n: u32, arg1: u32) -> u32 {
 
 /// Issues a raw system call with 3 arguments. (e.g. read, write)
 #[inline]
-pub unsafe fn syscall3(n: u32, arg1: u32, arg2: u32, arg3: u32) -> Result<u32, i32> {
+pub(crate) unsafe fn syscall3(n: u32, arg1: u32, arg2: u32, arg3: u32) -> Result<u32, i32> {
     let mut err: u32;
     let mut ret: u32;
     asm!(
