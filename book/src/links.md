@@ -10,11 +10,11 @@
 [cannon-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/cannon-fault-proof-vm.md
 
 <!-- Kona links -->
-[kona]: https://github.com/anton-rs/kona
-[book]: https://anton-rs.github.io/kona/
-[issues]: https://github.com/anton-rs/kona/issues
-[new-issue]: https://github.com/anton-rs/kona/issues/new
-[contributing]: https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md
+[kona]: https://github.com/ethereum-optimism/kona
+[book]: https://ethereum-optimism.github.io/kona/
+[issues]: https://github.com/ethereum-optimism/kona/issues
+[new-issue]: https://github.com/ethereum-optimism/kona/issues/new
+[contributing]: https://github.com/ethereum-optimism/kona/tree/main/CONTRIBUTING.md
 
 <!-- People -->
 [op-labs]: https://github.com/ethereum-optimism

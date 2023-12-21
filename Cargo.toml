@@ -8,8 +8,8 @@ version = "0.0.1"
 edition = "2021"
 license = "MIT"
 authors = ["clabby"]
-repository = "https://github.com/anton-rs/kona"
-homepage = "https://github.com/anton-rs/kona"
+repository = "https://github.com/ethereum-optimism/kona"
+homepage = "https://github.com/ethereum-optimism/kona"
 exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
