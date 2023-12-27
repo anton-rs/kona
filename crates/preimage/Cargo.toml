@@ -1,0 +1,17 @@
+[package]
+name = "kona-preimage"
+description = "Bindings and types for interacting with the PreimageOracle ABI"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+
+[dependencies]
+# workspace
+anyhow.workspace = true
+
+# external
+cfg-if = "1.0.0"
+

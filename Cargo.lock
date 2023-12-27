@@ -46,6 +46,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-preimage"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "cfg-if",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
