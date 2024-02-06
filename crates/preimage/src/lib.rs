@@ -9,7 +9,13 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![no_std]
 
+extern crate alloc;
+
 mod key;
 pub use key::{PreimageKey, PreimageKeyType};
 
 mod oracle_reader;
+pub use oracle_reader::{oracle_reader, OracleReader};
+
+mod pipe;
+pub use pipe::{create_bidirectional_pipe, PipeHandle};

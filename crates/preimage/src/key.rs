@@ -11,6 +11,14 @@ pub enum PreimageKeyType {
     /// the preimage's `keccak256` digest to the preimage itself.
     #[default]
     Keccak256 = 2,
+    /// GlobalGeneric key types are reserved for future use.
+    GlobalGeneric = 3,
+    /// Sha256 key types are global and context independent. Preimages are mapped from the low-order 31 bytes of
+    /// the preimage's `sha256` digest to the preimage itself.
+    Sha256 = 4,
+    /// Blob key types are global and context independent. Blob keys are constructed as `keccak256(commitment ++ z)`,
+    /// and then the high-order byte of the digest is set to the type byte.
+    Blob = 5,
 }
 
 /// A preimage key is a 32-byte value that identifies a preimage that may be fetched from the oracle.

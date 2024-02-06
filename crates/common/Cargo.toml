@@ -1,17 +1,17 @@
 [package]
 name = "kona-common"
 description = "Common traits and system interfaces for developing client programs on top of Fault Proof VMs."
-version = { workspace = true }
-edition = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 # workspace
 anyhow.workspace = true
+cfg-if.workspace = true
 
 # external
 good_memory_allocator = "0.1.7"
-cfg-if = "1.0.0"

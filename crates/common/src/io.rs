@@ -83,15 +83,21 @@ mod native_io {
             let mut file = unsafe { File::from_raw_fd(fd as i32) };
             file.write_all(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
-            std::mem::forget(file); // forget the file descriptor so that the `Drop` impl doesn't close it.
+
+            // forget the file descriptor so that the `Drop` impl doesn't close it.
+            std::mem::forget(file);
+
             Ok(0)
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
             let mut file = unsafe { File::from_raw_fd(fd as i32) };
-            file.read(buf)
+            file.read_exact(buf)
                 .map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
-            std::mem::forget(file); // forget the file descriptor so that the `Drop` impl doesn't close it.
+
+            // forget the file descriptor so that the `Drop` impl doesn't close it.
+            std::mem::forget(file);
+
             Ok(0)
         }
 

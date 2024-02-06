@@ -11,6 +11,6 @@ cfg_if! {
         pub type RegisterSize = u64;
     } else {
         /// The size of the native target architecture's registers.
-        pub type RegisterSize = usize;
+        pub type RegisterSize = u64;
     }
 }
