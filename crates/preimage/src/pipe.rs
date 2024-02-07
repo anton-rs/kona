@@ -34,14 +34,9 @@ impl PipeHandle {
 }
 
 /// Creates a bidirectional pipe with four file descriptors.
-pub fn create_bidirectional_pipe(
-    a_read: FileDescriptor,
-    a_write: FileDescriptor,
-    b_read: FileDescriptor,
-    b_write: FileDescriptor,
-) -> Result<(PipeHandle, PipeHandle)> {
+pub fn create_bidirectional_pipe() -> Result<(PipeHandle, PipeHandle)> {
     Ok((
-        PipeHandle::new(a_read, a_write),
-        PipeHandle::new(b_read, b_write),
+        PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
+        PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite),
     ))
 }

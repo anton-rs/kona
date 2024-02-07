@@ -8,19 +8,36 @@ use spin::RwLock;
 #[derive(Debug)]
 pub struct OracleReader {
     key: Option<PreimageKey>,
-    pipe_handle: PipeHandle,
     length: usize,
     cursor: usize,
 }
 
-/// The only way to access an oracle reader is through this singleton. This is to ensure there cannot be more than one
+/// The preimage pipe is a bidirectional pipe that is used to communicate preimage requests and responses between the
+/// host and the client.
+static PREIMAGE_PIPE: RwLock<PipeHandle> = RwLock::new(PipeHandle::new(
+    FileDescriptor::PreimageRead,
+    FileDescriptor::PreimageWrite,
+));
+
+/// The only way to access an [OracleReader] is through this singleton. This is to ensure there cannot be more than one
 /// at a time, which would have undefined behavior.
-pub static ORACLE_READER: RwLock<OracleReader> = RwLock::new(OracleReader {
+static mut ORACLE_READER: Option<OracleReader> = Some(OracleReader {
     key: None,
-    pipe_handle: PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
     length: 0,
     cursor: 0,
 });
+
+/// Fetch the global [OracleReader]. 
+///
+/// # Panics
+/// Panics if ownership over the global [OracleReader] has already been taken.
+pub fn oracle_reader() -> OracleReader {
+    unsafe {
+        #[allow(static_mut_ref)]
+        let reader = core::mem::replace(&mut ORACLE_READER, None);
+        reader.expect("Oracle reader already in use")
+    }
+}
 
 impl OracleReader {
     /// Return the current key stored in the global oracle reader
@@ -54,7 +71,11 @@ impl OracleReader {
     pub fn get(&mut self, key: PreimageKey) -> Result<Vec<u8>> {
         self.set_key(key)?;
         let mut data_buffer = alloc::vec![0; self.length];
-        self.cursor += self.pipe_handle.read(&mut data_buffer)? as usize;
+
+        // Grab a read lock on the preimage pipe to read the data.
+        let lock = PREIMAGE_PIPE.read();
+        self.cursor += lock.read(&mut data_buffer)? as usize;
+
         Ok(data_buffer)
     }
 
@@ -74,8 +95,11 @@ impl OracleReader {
     /// ```
     pub fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
         self.set_key(key)?;
-        assert!(self.length == buf.len(), "Buffer not correct size for preimage data. Preimage size: {} bytes, buffer size: {} bytes", self.length, buf.len());
-        self.cursor += self.pipe_handle.read(buf)? as usize;
+
+        // Grab a read lock on the preimage pipe to read the data.
+        let lock = PREIMAGE_PIPE.read();
+        self.cursor += lock.read(buf)? as usize;
+
         Ok(())
     }
 
@@ -90,13 +114,17 @@ impl OracleReader {
         // Set the active key.
         self.key = Some(key);
 
-        // Write the key to the host so that it can prepare the preimage.
+        // Write the key to the host so that it can prepare the preimage. The lock is dropped after the write so that 
+        // the host can prepare the preimage for us to read.
         let key_bytes: [u8; 32] = key.into();
-        self.pipe_handle.write(&key_bytes)?;
+        let lock = PREIMAGE_PIPE.write();
+        lock.write(&key_bytes)?;
+        drop(lock);
 
         // Read the length prefix and reset the cursor.
         let mut length_buffer = [0u8; 8];
-        self.pipe_handle.read(&mut length_buffer)?;
+        let lock = PREIMAGE_PIPE.read();
+        lock.read(&mut length_buffer)?;
         self.length = u64::from_be_bytes(length_buffer) as usize;
         self.cursor = 0;
         Ok(())
@@ -164,9 +192,9 @@ mod test {
         let mut data = [0u8; 40];
         data[7] = 0x20;
         read.write_all(data.as_ref()).unwrap();
+        std::mem::forget(read);
 
-        ORACLE_READER
-            .write()
+        oracle_reader()
             .get(PreimageKey::new([0u8; 32], PreimageKeyType::Local))
             .unwrap();
     }

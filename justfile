@@ -1,5 +1,13 @@
 set positional-arguments
 
+# default recipe to display help information
+default:
+  @just --list
+
+# Test for the native target
+test *args='':
+  cargo nextest run --workspace --all $@
+
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc
 
