@@ -2,6 +2,7 @@ use crate::{PipeHandle, PreimageKey};
 use alloc::vec::Vec;
 use anyhow::Result;
 use kona_common::io::FileDescriptor;
+use spin::RwLock;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
 #[derive(Debug)]
@@ -12,28 +13,14 @@ pub struct OracleReader {
     cursor: usize,
 }
 
-// the only way to access an oracle reader is through this singleton.
-// This is to ensure there cannot be more than one at a time which would have
-// unpredictable results
-static mut ORACLE_READER: Option<OracleReader> = Some(OracleReader {
+/// The only way to access an oracle reader is through this singleton. This is to ensure there cannot be more than one
+/// at a time, which would have undefined behavior.
+pub static ORACLE_READER: RwLock<OracleReader> = RwLock::new(OracleReader {
     key: None,
     pipe_handle: PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
     length: 0,
     cursor: 0,
 });
-
-/// Get the global oracle reader
-///
-/// # Panics
-/// This will panic if called more than once. This is to ensure there is only one oracle reader at once as it
-/// encapsulates host global state.
-pub fn oracle_reader() -> OracleReader {
-    unsafe {
-        #[allow(static_mut_ref)]
-        let reader = core::ptr::replace(&mut ORACLE_READER, None);
-        reader.expect("oracle_reader` has already been called. Can only call once per program")
-    }
-}
 
 impl OracleReader {
     /// Return the current key stored in the global oracle reader
@@ -178,16 +165,8 @@ mod test {
         data[7] = 0x20;
         read.write_all(data.as_ref()).unwrap();
 
-        let mut reader = OracleReader {
-            key: None,
-            pipe_handle: PipeHandle::new(
-                FileDescriptor::PreimageRead,
-                FileDescriptor::PreimageWrite,
-            ),
-            length: 0,
-            cursor: 0,
-        };
-        reader
+        ORACLE_READER
+            .write()
             .get(PreimageKey::new([0u8; 32], PreimageKeyType::Local))
             .unwrap();
     }

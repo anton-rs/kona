@@ -11,11 +11,9 @@
 #![no_std]
 
 pub mod io;
+pub mod malloc;
 pub mod traits;
 pub mod types;
-
-#[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
-pub mod malloc;
 
 #[cfg(target_arch = "mips")]
 pub(crate) mod cannon;

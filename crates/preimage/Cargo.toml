@@ -16,5 +16,8 @@ cfg-if.workspace = true
 # local
 kona-common = { path = "../common" }
 
+# remote
+spin = "0.9.8"
+
 [dev-dependencies]
 libc = "0.2.153"

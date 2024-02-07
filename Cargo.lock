@@ -53,6 +53,7 @@ dependencies = [
  "cfg-if",
  "kona-common",
  "libc",
+ "spin",
 ]
 
 [[package]]
