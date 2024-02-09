@@ -2,6 +2,7 @@ package cannon_test
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"debug/elf"
 	"fmt"
 	"io"
@@ -9,8 +10,6 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/cannon/mipsevm"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 
 	preimage "github.com/ethereum-optimism/optimism/op-preimage"
@@ -38,14 +37,16 @@ var _ PreimageOracle = (*testOracle)(nil)
 
 func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr string) {
 	images := make(map[[32]byte][]byte)
-	images[preimage.LocalIndexKey(0).PreimageKey()] = crypto.Keccak256([]byte("started!"))
+	input := []byte("facade facade facade")
+	shaHash := sha256.Sum256(input)
+	images[preimage.LocalIndexKey(0).PreimageKey()] = input
+	images[preimage.LocalIndexKey(1).PreimageKey()] = shaHash[:]
 
 	oracle := &testOracle{
 		hint: func(v []byte) {
 			// no-op
 		},
 		getPreimage: func(k [32]byte) []byte {
-			fmt.Println("getPreimage", common.Bytes2Hex(k[:]))
 			p, ok := images[k]
 			if !ok {
 				t.Fatalf("missing pre-image %s", k)
@@ -57,16 +58,12 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 	return oracle, "", ""
 }
 
-func TestRust(t *testing.T) {
+func TestSimpleRevm(t *testing.T) {
 	elfProgram, err := elf.Open("../target/mips-unknown-none/release/simple-revm")
 	require.NoError(t, err, "open ELF file")
 
 	state, err := mipsevm.LoadELF(elfProgram)
 	require.NoError(t, err, "load ELF into state")
-
-	// err = PatchGo(elfProgram, state)
-	// require.NoError(t, err, "apply Go runtime patches")
-	// require.NoError(t, PatchStack(state), "add initial stack")
 
 	oracle, _, _ := rustTestOracle(t)
 
@@ -84,7 +81,4 @@ func TestRust(t *testing.T) {
 
 	require.True(t, state.Exited, "must complete program")
 	require.Equal(t, uint8(0), state.ExitCode, "exit with 0")
-
-	// require.Equal(t, "hello world!\n", stdOutBuf.String(), "stdout says hello")
-	// require.Equal(t, "", stdErrBuf.String(), "stderr silent")
 }

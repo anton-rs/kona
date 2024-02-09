@@ -19,5 +19,5 @@ build-asterisc *args='':
     asterisc-pipeline:latest cargo build -Zbuild-std $@
 
 # Test the program on `cannon`
-test-cannon *args='--release': build-cannon
-  cd cannon-test && go test -v ./...
+test-cannon:
+  cd cannon-test && go test -count=1 -v ./...

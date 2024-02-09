@@ -82,7 +82,7 @@ impl OracleReader {
         let mut data_buffer = alloc::vec![0; self.length];
 
         // Grab a read lock on the preimage pipe to read the data.
-        self.cursor += CLIENT_PREIMAGE_PIPE_HANDLE.read(&mut data_buffer)? as usize;
+        self.read_exact(&mut data_buffer)?;
 
         Ok(data_buffer)
     }
@@ -105,7 +105,7 @@ impl OracleReader {
         self.set_key(key)?;
 
         // Grab a read lock on the preimage pipe to read the data.
-        self.cursor += CLIENT_PREIMAGE_PIPE_HANDLE.read(buf)? as usize;
+        self.read_exact(buf)?;
 
         Ok(())
     }
@@ -121,16 +121,57 @@ impl OracleReader {
         // Set the active key.
         self.key = Some(key);
 
-        // Write the key to the host so that it can prepare the preimage. The lock is dropped after the write so that
-        // the host can prepare the preimage for us to read.
+        // Write the key to the host so that it can prepare the preimage.
         let key_bytes: [u8; 32] = key.into();
-        CLIENT_PREIMAGE_PIPE_HANDLE.write(&key_bytes)?;
+        let mut written = 0;
+        loop {
+            match CLIENT_PREIMAGE_PIPE_HANDLE.write(&key_bytes[written..]) {
+                Ok(0) => break,
+                Ok(n) => {
+                    written += n as usize;
+                    continue;
+                }
+                Err(e) => anyhow::bail!("Failed to write preimage key: {}", e),
+            }
+        }
 
         // Read the length prefix and reset the cursor.
         let mut length_buffer = [0u8; 8];
-        CLIENT_PREIMAGE_PIPE_HANDLE.read(&mut length_buffer)?;
+        self.read_exact(&mut length_buffer)?;
         self.length = u64::from_be_bytes(length_buffer) as usize;
         self.cursor = 0;
+        Ok(())
+    }
+
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let read = CLIENT_PREIMAGE_PIPE_HANDLE.read(buf)?;
+        self.cursor += read as usize;
+        Ok(read as usize)
+    }
+
+     fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<usize> {
+        let mut chunk = [0; 32];
+        loop {
+            let read = self.read(&mut chunk)?;
+            if read == 0 {
+                break;
+            }
+            buf.extend_from_slice(&chunk[..read]);
+        }
+        Ok(buf.len())
+    }
+
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
+        let mut chunk = [0u8; 32];
+        let mut read = 0;
+        while read < buf.len() {
+            let chunk_read = self.read(&mut chunk)?;
+            if chunk_read == 0 {
+                anyhow::bail!("Failed to read preimage");
+            }
+            buf[read..(read + chunk_read)].copy_from_slice(&chunk[..chunk_read]);
+            read += chunk_read;
+        }
         Ok(())
     }
 }

@@ -28,24 +28,18 @@ pub extern "C" fn _start() {
 /// Boot the program and load bootstrap information.
 fn boot() -> Result<(Vec<u8>, [u8; 32])> {
     let mut oracle = oracle_reader();
-    let input = oracle.get(PreimageKey::new([1u8; 32], PreimageKeyType::Local))?;
-    // let mut digest_key = [0u8; 32];
-    // digest_key[31] = 1;
-    // let digest = oracle
-    //     .get(PreimageKey::new(digest_key, PreimageKeyType::Local))
-    //     .unwrap()
-    //     .try_into()
-    //     .unwrap();
-    io::write(
-        FileDescriptor::StdOut,
-        alloc::format!("Input (len = {}): {:x?}", input.len(), input).as_bytes(),
-    )?;
+    let input = oracle.get(PreimageKey::new([0u8; 32], PreimageKeyType::Local))?;
+    let mut digest_key = [0u8; 32];
+    digest_key[31] = 1;
+    let digest = oracle
+        .get(PreimageKey::new(digest_key, PreimageKeyType::Local))?
+        .try_into().map_err(|_| anyhow::anyhow!("Failed to convert digest"))?;
 
-    Ok((input, [0u8; 32]))
+    Ok((input, digest))
 }
 
 /// Call the SHA-256 precompile and assert that the input and output match the expected values
-fn run_evm(input: alloc::vec::Vec<u8>, digest: [u8; 32]) -> Result<()> {
+fn run_evm(input: Vec<u8>, digest: [u8; 32]) -> Result<()> {
     let cache_db = CacheDB::new(EmptyDB::default());
     let mut evm = Evm::builder()
         .with_db(cache_db)
