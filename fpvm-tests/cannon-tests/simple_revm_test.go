@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/cannon/mipsevm"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
 	preimage "github.com/ethereum-optimism/optimism/op-preimage"
@@ -39,8 +40,17 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 	images := make(map[[32]byte][]byte)
 	input := []byte("facade facade facade")
 	shaHash := sha256.Sum256(input)
+	// shaHash[0] = 0x01
 	images[preimage.LocalIndexKey(0).PreimageKey()] = input
 	images[preimage.LocalIndexKey(1).PreimageKey()] = shaHash[:]
+	// CALLDATASIZE
+	// PUSH0
+	// PUSH0
+	// CALLDATACOPY
+	// CALLDATASIZE
+	// PUSH0
+	// RETURN
+	images[preimage.LocalIndexKey(2).PreimageKey()] = common.Hex2Bytes("365f5f37365ff3")
 
 	oracle := &testOracle{
 		hint: func(v []byte) {
@@ -59,7 +69,7 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 }
 
 func TestSimpleRevm(t *testing.T) {
-	elfProgram, err := elf.Open("../target/mips-unknown-none/release/simple-revm")
+	elfProgram, err := elf.Open("../../examples/simple-revm/target/mips-unknown-none/release/simple-revm")
 	require.NoError(t, err, "open ELF file")
 
 	state, err := mipsevm.LoadELF(elfProgram)
@@ -70,11 +80,13 @@ func TestSimpleRevm(t *testing.T) {
 	var stdOutBuf, stdErrBuf bytes.Buffer
 	us := mipsevm.NewInstrumentedState(state, oracle, io.MultiWriter(&stdOutBuf, os.Stdout), io.MultiWriter(&stdErrBuf, os.Stderr))
 
-	for i := 0; i < 400_000; i++ {
-		wit, err := us.Step(false)
+	for i := 0; i < 200_000; i++ {
+		wit, err := us.Step(true)
 		require.NoError(t, err)
-		if wit != nil && wit.State[90] == 1 {
-			fmt.Printf("exited @ %d\n", 0)
+		// hack: state isn't exposed in `InstrumentedState`, so we generate the
+		// state witness each step and check for the exit condition
+		if wit != nil && wit.State[89] == 1 {
+			fmt.Printf("exited @ step #%d\n", i)
 			break
 		}
 	}

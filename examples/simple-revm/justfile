@@ -17,7 +17,3 @@ build-asterisc *args='':
     -v `pwd`/../../:/workdir \
     -w="/workdir/examples/simple-revm" \
     asterisc-pipeline:latest cargo build -Zbuild-std $@
-
-# Test the program on `cannon`
-test-cannon:
-  cd cannon-test && go test -count=1 -v ./...

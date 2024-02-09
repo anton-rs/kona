@@ -13,17 +13,17 @@ pub struct OracleReader {
 
 /// The hint pipe is a bidirectional pipe that is used to communicate preimage hints and acknowledgements between the
 /// host and the client.
-static HINT_PIPE: BidirectionalPipe =
-    BidirectionalPipe::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
-static CLIENT_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
-static HOST_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
+// static HINT_PIPE: BidirectionalPipe =
+//     BidirectionalPipe::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
+// static CLIENT_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
+// static HOST_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
 
 /// The preimage pipe is a bidirectional pipe that is used to communicate preimage requests and responses between the
 /// host and the client.
 static PREIMAGE_PIPE: BidirectionalPipe =
     BidirectionalPipe::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
 static CLIENT_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
-static HOST_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
+// static HOST_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
 
 /// The only way to access an [OracleReader] is through this singleton. This is to ensure there cannot be more than one
 /// at a time, which would have undefined behavior.

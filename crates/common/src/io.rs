@@ -44,6 +44,12 @@ pub fn print(s: &str) {
     ClientIO::write(FileDescriptor::StdOut, s.as_bytes()).expect("Error writing to stdout.");
 }
 
+/// Print the passed string to the standard error [FileDescriptor].
+#[inline]
+pub fn print_err(s: &str) {
+    ClientIO::write(FileDescriptor::StdErr, s.as_bytes()).expect("Error writing to stderr.");
+}
+
 /// Write the passed buffer to the given [FileDescriptor].
 #[inline]
 pub fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
