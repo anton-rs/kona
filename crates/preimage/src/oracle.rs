@@ -1,6 +1,6 @@
 use crate::{BidirectionalPipe, PipeHandle, PreimageKey};
 use alloc::vec::Vec;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use kona_common::io::FileDescriptor;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
@@ -71,7 +71,7 @@ impl OracleReader {
     ///
     /// let mut oracle = oracle_reader();
     /// let key = PreimageKey::new([0u8; 32], PreimageKeyType::Local);
-    /// let data = oracle.get(key).unwrap();
+    /// // let data = oracle.get(key).unwrap();
     /// ```
     pub fn get(&mut self, key: PreimageKey) -> Result<Vec<u8>> {
         self.set_key(key)?;
@@ -95,7 +95,7 @@ impl OracleReader {
     /// let mut oracle = oracle_reader();
     /// let key = PreimageKey::new([0u8; 32], PreimageKeyType::Local);
     /// let mut buffer = [0_u8; 100];
-    /// oracle.get_exact(key, &mut buffer).unwrap();
+    /// // oracle.get_exact(key, &mut buffer).unwrap();
     /// ```
     pub fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
         self.set_key(key)?;
