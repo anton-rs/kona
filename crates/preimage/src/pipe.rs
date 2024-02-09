@@ -9,7 +9,7 @@ use kona_common::{
 use spin::RwLock;
 
 /// [BidirectionalPipe] is a spin-locked bidirectional pipe between two file descriptors. It may be shared between
-/// multiple threads 
+/// multiple threads
 #[derive(Debug)]
 pub struct BidirectionalPipe {
     a: RwLock<FileDescriptor>,
@@ -25,16 +25,22 @@ impl BidirectionalPipe {
         }
     }
 
-    /// Get the first handle for the pipe. This handle can be used to read from file descriptor `a` and write to file 
+    /// Get the first handle for the pipe. This handle can be used to read from file descriptor `a` and write to file
     /// descriptor `b`.
     pub const fn handle_a(&self) -> PipeHandle<'_> {
-        PipeHandle::new(ReadHandle { read_fd: &self.a }, WriteHandle { write_fd: &self.b })
+        PipeHandle::new(
+            ReadHandle { read_fd: &self.a },
+            WriteHandle { write_fd: &self.b },
+        )
     }
 
-    /// Get the second handle for the pipe. This handle can be used to read from file descriptor `b` and write to file 
+    /// Get the second handle for the pipe. This handle can be used to read from file descriptor `b` and write to file
     /// descriptor `a`.
     pub const fn handle_b(&self) -> PipeHandle<'_> {
-        PipeHandle::new(ReadHandle { read_fd: &self.b }, WriteHandle { write_fd: &self.a })
+        PipeHandle::new(
+            ReadHandle { read_fd: &self.b },
+            WriteHandle { write_fd: &self.a },
+        )
     }
 }
 
@@ -76,7 +82,10 @@ pub struct PipeHandle<'a> {
 impl<'a> PipeHandle<'a> {
     /// Create a new [PipeHandle] from two file descriptors.
     pub const fn new(read_handle: ReadHandle<'a>, write_handle: WriteHandle<'a>) -> Self {
-        Self { read_handle, write_handle }
+        Self {
+            read_handle,
+            write_handle,
+        }
     }
 
     /// Read from the pipe into the given buffer.

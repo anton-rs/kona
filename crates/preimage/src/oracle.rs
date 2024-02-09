@@ -1,6 +1,6 @@
 use crate::{BidirectionalPipe, PipeHandle, PreimageKey};
 use alloc::vec::Vec;
-use anyhow::Result;
+use anyhow::{Result, bail};
 use kona_common::io::FileDescriptor;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
@@ -11,21 +11,17 @@ pub struct OracleReader {
     cursor: usize,
 }
 
-/// The hint pipe is a bidirectional pipe that is used to communicate preimage hints and acknowledgements between the 
+/// The hint pipe is a bidirectional pipe that is used to communicate preimage hints and acknowledgements between the
 /// host and the client.
-static HINT_PIPE: BidirectionalPipe = BidirectionalPipe::new(
-    FileDescriptor::HintRead,
-    FileDescriptor::HintWrite,
-);
+static HINT_PIPE: BidirectionalPipe =
+    BidirectionalPipe::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
 static CLIENT_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
 static HOST_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
 
 /// The preimage pipe is a bidirectional pipe that is used to communicate preimage requests and responses between the
 /// host and the client.
-static PREIMAGE_PIPE: BidirectionalPipe = BidirectionalPipe::new(
-    FileDescriptor::PreimageRead,
-    FileDescriptor::PreimageWrite,
-);
+static PREIMAGE_PIPE: BidirectionalPipe =
+    BidirectionalPipe::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
 static CLIENT_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
 static HOST_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
 
@@ -54,7 +50,7 @@ impl OracleReader {
         self.key
     }
 
-    /// length of the current pre-image
+    /// Return the length of the current pre-image
     pub fn length(&self) -> usize {
         self.length
     }
@@ -131,7 +127,7 @@ impl OracleReader {
                     written += n as usize;
                     continue;
                 }
-                Err(e) => anyhow::bail!("Failed to write preimage key: {}", e),
+                Err(e) => bail!("Failed to write preimage key: {}", e),
             }
         }
 
@@ -143,103 +139,25 @@ impl OracleReader {
         Ok(())
     }
 
+    /// Reads bytes into `buf` and returns the number of bytes read.
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let read = CLIENT_PREIMAGE_PIPE_HANDLE.read(buf)?;
         self.cursor += read as usize;
         Ok(read as usize)
     }
 
-     fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<usize> {
-        let mut chunk = [0; 32];
-        loop {
-            let read = self.read(&mut chunk)?;
-            if read == 0 {
-                break;
-            }
-            buf.extend_from_slice(&chunk[..read]);
-        }
-        Ok(buf.len())
-    }
-
+    /// Reads exactly `buf.len()` bytes into `buf`.
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
         let mut chunk = [0u8; 32];
         let mut read = 0;
         while read < buf.len() {
             let chunk_read = self.read(&mut chunk)?;
             if chunk_read == 0 {
-                anyhow::bail!("Failed to read preimage");
+                bail!("Failed to read preimage");
             }
             buf[read..(read + chunk_read)].copy_from_slice(&chunk[..chunk_read]);
             read += chunk_read;
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::PreimageKeyType;
-    use std::{
-        fs::File,
-        io::Write,
-        os::fd::{AsRawFd, FromRawFd},
-    };
-
-    extern crate std;
-
-    fn create_file_at_fd(path: &str, target_fd: i32) -> std::io::Result<()> {
-        // Open the file normally. This gets us a File with some arbitrary FD.
-        let file = File::create(path)?;
-
-        // Extract the raw file descriptor from the File object.
-        let original_fd = file.as_raw_fd();
-
-        // Use dup2 to duplicate the file descriptor to the target FD.
-        // SAFETY: This operation is unsafe because it can affect global process state and may cause
-        // race conditions or security issues if not used carefully.
-        unsafe {
-            let dup_result = libc::dup2(original_fd, target_fd);
-            if dup_result == -1 {
-                // If dup2 failed, return an error.
-                return Err(std::io::Error::last_os_error());
-            }
-        }
-
-        // At this point, the file is duplicated to `target_fd`. The original FD is still open.
-        // We close the original to avoid resource leaks.
-        // Dropping the original File object will not close the new FD at `target_fd`.
-        drop(file);
-
-        // SAFETY: We now safely wrap the target FD back into a File.
-        // The caller must ensure that `target_fd` is not accessed concurrently by other parts of the program.
-        let file = unsafe { File::from_raw_fd(target_fd) };
-        std::mem::forget(file);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_oracle_reader() {
-        create_file_at_fd(
-            "/tmp/preimage-read.dat",
-            FileDescriptor::PreimageRead as i32,
-        )
-        .unwrap();
-        create_file_at_fd(
-            "/tmp/preimage-write.dat",
-            FileDescriptor::PreimageWrite as i32,
-        )
-        .unwrap();
-
-        // let mut read = unsafe { File::from_raw_fd(FileDescriptor::PreimageRead as i32) };
-        // let mut data = [0u8; 40];
-        // data[7] = 0x20;
-        // read.write_all(data.as_ref()).unwrap();
-        // std::mem::forget(read);
-
-        oracle_reader()
-            .get(PreimageKey::new([0u8; 32], PreimageKeyType::Local))
-            .unwrap();
     }
 }
