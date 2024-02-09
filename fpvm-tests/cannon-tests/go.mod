@@ -1,4 +1,4 @@
-module cannon_test
+module cannon_tests
 
 go 1.21.6
 

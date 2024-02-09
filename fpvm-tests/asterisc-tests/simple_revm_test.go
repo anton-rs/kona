@@ -1,0 +1,62 @@
+package asterisc_test
+
+import (
+	"crypto/sha256"
+	"debug/elf"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/asterisc/rvgo/fast"
+	preimage "github.com/ethereum-optimism/optimism/op-preimage"
+)
+
+func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr string) {
+	images := make(map[[32]byte][]byte)
+	input := []byte("facade facade facade")
+	shaHash := sha256.Sum256(input)
+	// shaHash[0] = 0x01
+	images[preimage.LocalIndexKey(0).PreimageKey()] = input
+	images[preimage.LocalIndexKey(1).PreimageKey()] = shaHash[:]
+	// CALLDATASIZE
+	// PUSH0
+	// PUSH0
+	// CALLDATACOPY
+	// CALLDATASIZE
+	// PUSH0
+	// RETURN
+	images[preimage.LocalIndexKey(2).PreimageKey()] = common.Hex2Bytes("365f5f37365ff3")
+
+	oracle := &testOracle{
+		hint: func(v []byte) {
+			// no-op
+		},
+		getPreimage: func(k [32]byte) []byte {
+			p, ok := images[k]
+			if !ok {
+				t.Fatalf("missing pre-image %s", k)
+			}
+			return p
+		},
+	}
+
+	return oracle, "", ""
+}
+
+func TestSimpleRevm(t *testing.T) {
+	t.Skip("Skipping simple revm test, wip")
+	programELF, err := elf.Open("../../examples/simple-revm/target/riscv64gc-unknown-none-elf/release/simple-revm")
+	require.NoError(t, err)
+	defer programELF.Close()
+
+	po, _, _ := rustTestOracle(t)
+
+	symbols, err := fast.Symbols(programELF)
+	require.NoError(t, err)
+
+	vmState, err := fast.LoadELF(programELF)
+	require.NoError(t, err, "must load test suite ELF binary")
+
+	fullTest(t, vmState, po, symbols)
+}

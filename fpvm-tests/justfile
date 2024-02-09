@@ -1,9 +1,18 @@
 # Test all FPVM targets
-test: test-cannon
+test: test-cannon test-asterisc
 
-# Test the program on `cannon`
+# Test programs on `cannon`
 test-cannon:
   # Build the programs
+  @cd ../examples/minimal && just build-cannon --release
   @cd ../examples/simple-revm && just build-cannon --release
   # Run Cannon tests
   @cd cannon-tests && go test -count=1 -v ./...
+
+# Test programs on `asterisc`
+test-asterisc:
+  # Build the programs
+  @cd ../examples/minimal && just build-asterisc --release
+  @cd ../examples/simple-revm && just build-asterisc --release
+  # Run Asterisc tests
+  @cd asterisc-tests && go test -count=1 -v ./...

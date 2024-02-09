@@ -15,3 +15,9 @@ just test
 ```sh
 just test-cannon
 ```
+
+**Asterisc**
+
+```sh
+just test-asterisc
+```
