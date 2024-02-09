@@ -36,7 +36,7 @@ macro_rules! alloc_heap {
     ($size:expr) => {{
         #[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
         {
-            use kona_common::malloc::inner::init_allocator;
+            use kona_common::malloc::global_allocator::init_allocator;
 
             static mut HEAP: [u8; $size] = [0u8; $size];
             unsafe { init_allocator(HEAP.as_ptr() as usize, $size) }

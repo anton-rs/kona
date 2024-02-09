@@ -1,8 +1,7 @@
-use crate::{PipeHandle, PreimageKey};
+use crate::{BidirectionalPipe, PipeHandle, PreimageKey};
 use alloc::vec::Vec;
 use anyhow::Result;
 use kona_common::io::FileDescriptor;
-use spin::RwLock;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
 #[derive(Debug)]
@@ -12,12 +11,23 @@ pub struct OracleReader {
     cursor: usize,
 }
 
+/// The hint pipe is a bidirectional pipe that is used to communicate preimage hints and acknowledgements between the 
+/// host and the client.
+static HINT_PIPE: BidirectionalPipe = BidirectionalPipe::new(
+    FileDescriptor::HintRead,
+    FileDescriptor::HintWrite,
+);
+static CLIENT_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
+static HOST_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
+
 /// The preimage pipe is a bidirectional pipe that is used to communicate preimage requests and responses between the
 /// host and the client.
-static PREIMAGE_PIPE: RwLock<PipeHandle> = RwLock::new(PipeHandle::new(
+static PREIMAGE_PIPE: BidirectionalPipe = BidirectionalPipe::new(
     FileDescriptor::PreimageRead,
     FileDescriptor::PreimageWrite,
-));
+);
+static CLIENT_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
+static HOST_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
 
 /// The only way to access an [OracleReader] is through this singleton. This is to ensure there cannot be more than one
 /// at a time, which would have undefined behavior.
@@ -27,14 +37,13 @@ static mut ORACLE_READER: Option<OracleReader> = Some(OracleReader {
     cursor: 0,
 });
 
-/// Fetch the global [OracleReader]. 
+/// Fetch the global [OracleReader].
 ///
 /// # Panics
 /// Panics if ownership over the global [OracleReader] has already been taken.
 pub fn oracle_reader() -> OracleReader {
     unsafe {
-        #[allow(static_mut_ref)]
-        let reader = core::mem::replace(&mut ORACLE_READER, None);
+        let reader = ORACLE_READER.take();
         reader.expect("Oracle reader already in use")
     }
 }
@@ -73,8 +82,7 @@ impl OracleReader {
         let mut data_buffer = alloc::vec![0; self.length];
 
         // Grab a read lock on the preimage pipe to read the data.
-        let lock = PREIMAGE_PIPE.read();
-        self.cursor += lock.read(&mut data_buffer)? as usize;
+        self.cursor += CLIENT_PREIMAGE_PIPE_HANDLE.read(&mut data_buffer)? as usize;
 
         Ok(data_buffer)
     }
@@ -97,8 +105,7 @@ impl OracleReader {
         self.set_key(key)?;
 
         // Grab a read lock on the preimage pipe to read the data.
-        let lock = PREIMAGE_PIPE.read();
-        self.cursor += lock.read(buf)? as usize;
+        self.cursor += CLIENT_PREIMAGE_PIPE_HANDLE.read(buf)? as usize;
 
         Ok(())
     }
@@ -114,17 +121,14 @@ impl OracleReader {
         // Set the active key.
         self.key = Some(key);
 
-        // Write the key to the host so that it can prepare the preimage. The lock is dropped after the write so that 
+        // Write the key to the host so that it can prepare the preimage. The lock is dropped after the write so that
         // the host can prepare the preimage for us to read.
         let key_bytes: [u8; 32] = key.into();
-        let lock = PREIMAGE_PIPE.write();
-        lock.write(&key_bytes)?;
-        drop(lock);
+        CLIENT_PREIMAGE_PIPE_HANDLE.write(&key_bytes)?;
 
         // Read the length prefix and reset the cursor.
         let mut length_buffer = [0u8; 8];
-        let lock = PREIMAGE_PIPE.read();
-        lock.read(&mut length_buffer)?;
+        CLIENT_PREIMAGE_PIPE_HANDLE.read(&mut length_buffer)?;
         self.length = u64::from_be_bytes(length_buffer) as usize;
         self.cursor = 0;
         Ok(())
@@ -175,7 +179,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_oracle_reader() {
         create_file_at_fd(
             "/tmp/preimage-read.dat",
@@ -188,11 +191,11 @@ mod test {
         )
         .unwrap();
 
-        let mut read = unsafe { File::from_raw_fd(FileDescriptor::PreimageRead as i32) };
-        let mut data = [0u8; 40];
-        data[7] = 0x20;
-        read.write_all(data.as_ref()).unwrap();
-        std::mem::forget(read);
+        // let mut read = unsafe { File::from_raw_fd(FileDescriptor::PreimageRead as i32) };
+        // let mut data = [0u8; 40];
+        // data[7] = 0x20;
+        // read.write_all(data.as_ref()).unwrap();
+        // std::mem::forget(read);
 
         oracle_reader()
             .get(PreimageKey::new([0u8; 32], PreimageKeyType::Local))

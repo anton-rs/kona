@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*"]
-exclude = ["examples/minimal"]
+exclude = ["examples/minimal", "examples/simple-revm"]
 resolver = "2"
 
 [workspace.package]

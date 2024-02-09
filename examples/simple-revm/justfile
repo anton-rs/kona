@@ -1,0 +1,23 @@
+set positional-arguments
+
+# Build for the `cannon` target
+build-cannon *args='':
+  docker run \
+    --rm \
+    --platform linux/amd64 \
+    -v `pwd`/../../:/workdir \
+    -w="/workdir/examples/simple-revm" \
+    cannon-pipeline:latest cargo build -Zbuild-std $@
+
+# Build for the `asterisc` target
+build-asterisc *args='':
+  docker run \
+    --rm \
+    --platform linux/amd64 \
+    -v `pwd`/../../:/workdir \
+    -w="/workdir/examples/simple-revm" \
+    asterisc-pipeline:latest cargo build -Zbuild-std $@
+
+# Test the program on `cannon`
+test-cannon *args='--release': build-cannon
+  cd cannon-test && go test -v ./...
