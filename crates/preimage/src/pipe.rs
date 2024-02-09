@@ -8,8 +8,7 @@ use kona_common::{
 };
 use spin::RwLock;
 
-/// [BidirectionalPipe] is a spin-locked bidirectional pipe between two file descriptors. It may be shared between
-/// multiple threads
+/// [BidirectionalPipe] is a spin-locked bidirectional pipe between two file descriptors.
 #[derive(Debug)]
 pub struct BidirectionalPipe {
     a: RwLock<FileDescriptor>,
@@ -18,25 +17,25 @@ pub struct BidirectionalPipe {
 
 impl BidirectionalPipe {
     /// Create a new [BidirectionalPipe] from two file descriptors.
-    pub const fn new(a: FileDescriptor, b: FileDescriptor) -> Self {
+    pub const fn new(client_read: FileDescriptor, server_read: FileDescriptor) -> Self {
         Self {
-            a: RwLock::new(a),
-            b: RwLock::new(b),
+            a: RwLock::new(client_read),
+            b: RwLock::new(server_read),
         }
     }
 
-    /// Get the first handle for the pipe. This handle can be used to read from file descriptor `a` and write to file
-    /// descriptor `b`.
-    pub const fn handle_a(&self) -> PipeHandle<'_> {
+    /// Get the first handle for the pipe. This handle can be used to read from file descriptor `client_read` and write
+    /// to file descriptor `server_read`.
+    pub const fn client_handle(&self) -> PipeHandle<'_> {
         PipeHandle::new(
             ReadHandle { read_fd: &self.a },
             WriteHandle { write_fd: &self.b },
         )
     }
 
-    /// Get the second handle for the pipe. This handle can be used to read from file descriptor `b` and write to file
-    /// descriptor `a`.
-    pub const fn handle_b(&self) -> PipeHandle<'_> {
+    /// Get the second handle for the pipe. This handle can be used to read from file descriptor `server_read` and write
+    /// to file descriptor `client_read`.
+    pub const fn server_handle(&self) -> PipeHandle<'_> {
         PipeHandle::new(
             ReadHandle { read_fd: &self.b },
             WriteHandle { write_fd: &self.a },
@@ -47,10 +46,15 @@ impl BidirectionalPipe {
 /// A [ReadHandle] is a handle to read from one end of a [BidirectionalPipe].
 #[derive(Debug)]
 pub struct ReadHandle<'a> {
-    read_fd: &'a RwLock<FileDescriptor>,
+    pub(crate) read_fd: &'a RwLock<FileDescriptor>,
 }
 
 impl<'a> ReadHandle<'a> {
+    /// Create a new [ReadHandle] from a file descriptor.
+    pub const fn new(read_fd: &'a RwLock<FileDescriptor>) -> Self {
+        Self { read_fd }
+    }
+
     /// Read from the pipe into the given buffer.
     pub fn read(&self, buf: &mut [u8]) -> Result<RegisterSize> {
         io::read(*self.read_fd.read(), buf)
@@ -64,6 +68,11 @@ pub struct WriteHandle<'a> {
 }
 
 impl<'a> WriteHandle<'a> {
+    /// Create a new [WriteHandle] from a file descriptor.
+    pub const fn new(write_fd: &'a RwLock<FileDescriptor>) -> Self {
+        Self { write_fd }
+    }
+
     /// Write the given buffer to the pipe.
     pub fn write(&self, buf: &[u8]) -> Result<RegisterSize> {
         io::write(*self.write_fd.write(), buf)

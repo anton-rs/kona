@@ -1,50 +1,53 @@
-use crate::{BidirectionalPipe, PipeHandle, PreimageKey};
+use crate::{
+    pipe::{ReadHandle, WriteHandle},
+    PipeHandle, PreimageKey,
+};
 use alloc::vec::Vec;
 use anyhow::{bail, Result};
 use kona_common::io::FileDescriptor;
+use spin::RwLock;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
 #[derive(Debug)]
-pub struct OracleReader {
+pub struct OracleReader<'pipe> {
+    pipe_handle: PipeHandle<'pipe>,
     key: Option<PreimageKey>,
     length: usize,
     cursor: usize,
 }
 
-/// The hint pipe is a bidirectional pipe that is used to communicate preimage hints and acknowledgements between the
-/// host and the client.
-// static HINT_PIPE: BidirectionalPipe =
-//     BidirectionalPipe::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
-// static CLIENT_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
-// static HOST_HINT_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
+static PREIMAGE_READ_LOCK: RwLock<FileDescriptor> = RwLock::new(FileDescriptor::PreimageRead);
+static PREIMAGE_WRITE_LOCK: RwLock<FileDescriptor> = RwLock::new(FileDescriptor::PreimageWrite);
 
 /// The preimage pipe is a bidirectional pipe that is used to communicate preimage requests and responses between the
-/// host and the client.
-static PREIMAGE_PIPE: BidirectionalPipe =
-    BidirectionalPipe::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
-static CLIENT_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_a();
-// static HOST_PREIMAGE_PIPE_HANDLE: PipeHandle<'static> = PREIMAGE_PIPE.handle_b();
+/// host and the client. There can only be one client preimage pipe handle at a time, so it is a static singleton.
+static mut CLIENT_PREIMAGE_PIPE_HANDLE: Option<PipeHandle<'static>> = Some(PipeHandle::new(
+    ReadHandle::new(&PREIMAGE_READ_LOCK),
+    WriteHandle::new(&PREIMAGE_WRITE_LOCK),
+));
 
-/// The only way to access an [OracleReader] is through this singleton. This is to ensure there cannot be more than one
-/// at a time, which would have undefined behavior.
-static mut ORACLE_READER: Option<OracleReader> = Some(OracleReader {
-    key: None,
-    length: 0,
-    cursor: 0,
-});
-
-/// Fetch the global [OracleReader].
+/// Fetch the global [PipeHandle] for the client preimage channel.
 ///
 /// # Panics
-/// Panics if ownership over the global [OracleReader] has already been taken.
-pub fn oracle_reader() -> OracleReader {
+/// Panics if ownership over the global [PipeHandle] has already been taken.
+pub fn client_preimage_pipe_handle() -> PipeHandle<'static> {
     unsafe {
-        let reader = ORACLE_READER.take();
-        reader.expect("Oracle reader already in use")
+        let reader = CLIENT_PREIMAGE_PIPE_HANDLE.take();
+        reader.expect("Client preimage pipe handle already in use")
     }
 }
 
-impl OracleReader {
+impl<'pipe> OracleReader<'pipe> {
+    /// Create a new [OracleReader] from a [PipeHandle].
+    pub fn new(pipe_handle: PipeHandle<'pipe>) -> Self {
+        Self {
+            pipe_handle,
+            key: None,
+            length: 0,
+            cursor: 0,
+        }
+    }
+
     /// Return the current key stored in the global oracle reader
     pub fn key(&self) -> Option<PreimageKey> {
         self.key
@@ -100,6 +103,15 @@ impl OracleReader {
     pub fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
         self.set_key(key)?;
 
+        // Ensure the buffer is the correct size.
+        if buf.len() != self.length {
+            bail!(
+                "Buffer size {} does not match preimage size {}",
+                buf.len(),
+                self.length
+            );
+        }
+
         // Grab a read lock on the preimage pipe to read the data.
         self.read_exact(buf)?;
 
@@ -121,7 +133,7 @@ impl OracleReader {
         let key_bytes: [u8; 32] = key.into();
         let mut written = 0;
         loop {
-            match CLIENT_PREIMAGE_PIPE_HANDLE.write(&key_bytes[written..]) {
+            match self.pipe_handle.write(&key_bytes[written..]) {
                 Ok(0) => break,
                 Ok(n) => {
                     written += n as usize;
@@ -141,7 +153,7 @@ impl OracleReader {
 
     /// Reads bytes into `buf` and returns the number of bytes read.
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let read = CLIENT_PREIMAGE_PIPE_HANDLE.read(buf)?;
+        let read = self.pipe_handle.read(buf)?;
         self.cursor += read as usize;
         Ok(read as usize)
     }

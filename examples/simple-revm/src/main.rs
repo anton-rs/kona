@@ -4,7 +4,7 @@
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
 use kona_common::io;
-use kona_preimage::{oracle_reader, PreimageKey, PreimageKeyType};
+use kona_preimage::{client_preimage_pipe_handle, PreimageKey, PreimageKeyType, OracleReader};
 use revm::{
     db::{CacheDB, EmptyDB},
     primitives::{address, b256, hex, keccak256, AccountInfo, Address, Bytecode, ExecutionResult, Output, TransactTo, B256},
@@ -42,7 +42,7 @@ pub extern "C" fn _start() {
 
 /// Boot the program and load bootstrap information.
 fn boot() -> Result<(Vec<u8>, [u8; 32], Vec<u8>)> {
-    let mut oracle = oracle_reader();
+    let mut oracle = OracleReader::new(client_preimage_pipe_handle());
     let input = oracle.get(PreimageKey::new(*INPUT_KEY, PreimageKeyType::Local))?;
     let digest = oracle
         .get(PreimageKey::new(*DIGEST_KEY, PreimageKeyType::Local))?
@@ -75,13 +75,13 @@ fn run_evm(input: Vec<u8>, digest: [u8; 32], code: Vec<u8>) -> Result<()> {
         .build();
 
     // Call EVM identity contract.
-    let ref_tx = evm.transact().map_err(|_| anyhow!("Failed state transition"))?;
+    let ref_tx = evm.transact().map_err(|e| anyhow!("Failed state transition: {}", e))?;
     let value = match ref_tx.result {
         ExecutionResult::Success {
             output: Output::Call(value),
             ..
         } => value,
-        _ => bail!("EVM Execution failed"),
+        e => bail!("EVM Execution failed: {:?}", e),
     };
     if value.as_ref() != evm.context.evm.env.tx.data.as_ref() {
         bail!(alloc::format!(
@@ -97,13 +97,13 @@ fn run_evm(input: Vec<u8>, digest: [u8; 32], code: Vec<u8>) -> Result<()> {
     // Call SHA2 precompile.
     let ref_tx = evm
         .transact()
-        .map_err(|_| anyhow!("Failed state transition"))?;
+        .map_err(|e| anyhow!("Failed state transition: {}", e))?;
     let value = match ref_tx.result {
         ExecutionResult::Success {
             output: Output::Call(value),
             ..
         } => value,
-        _ => bail!("EVM Execution failed"),
+        e => bail!("EVM Execution failed: {:?}", e),
     };
     if value.as_ref() != digest.as_ref() {
         bail!(alloc::format!(

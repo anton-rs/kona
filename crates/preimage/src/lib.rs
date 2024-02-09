@@ -15,7 +15,7 @@ mod key;
 pub use key::{PreimageKey, PreimageKeyType};
 
 mod oracle;
-pub use oracle::{oracle_reader, OracleReader};
+pub use oracle::{client_preimage_pipe_handle, OracleReader};
 
 mod pipe;
 pub use pipe::{BidirectionalPipe, PipeHandle};
