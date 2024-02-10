@@ -103,7 +103,7 @@ mod native_io {
         fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
             let raw_fd: RegisterSize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
-            file.write_all(buf)
+            file.write(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
 
             // forget the file descriptor so that the `Drop` impl doesn't close it.

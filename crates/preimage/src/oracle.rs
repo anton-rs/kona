@@ -2,44 +2,22 @@ use crate::{
     pipe::{ReadHandle, WriteHandle},
     PipeHandle, PreimageKey,
 };
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
 use anyhow::{bail, Result};
 use kona_common::io::FileDescriptor;
-use spin::RwLock;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
 #[derive(Debug)]
-pub struct OracleReader<'pipe> {
-    pipe_handle: PipeHandle<'pipe>,
+pub struct OracleReader {
+    pipe_handle: PipeHandle,
     key: Option<PreimageKey>,
     length: usize,
     cursor: usize,
 }
 
-static PREIMAGE_READ_LOCK: RwLock<FileDescriptor> = RwLock::new(FileDescriptor::PreimageRead);
-static PREIMAGE_WRITE_LOCK: RwLock<FileDescriptor> = RwLock::new(FileDescriptor::PreimageWrite);
-
-/// The preimage pipe is a bidirectional pipe that is used to communicate preimage requests and responses between the
-/// host and the client. There can only be one client preimage pipe handle at a time, so it is a static singleton.
-static mut CLIENT_PREIMAGE_PIPE_HANDLE: Option<PipeHandle<'static>> = Some(PipeHandle::new(
-    ReadHandle::new(&PREIMAGE_READ_LOCK),
-    WriteHandle::new(&PREIMAGE_WRITE_LOCK),
-));
-
-/// Fetch the global [PipeHandle] for the client preimage channel.
-///
-/// # Panics
-/// Panics if ownership over the global [PipeHandle] has already been taken.
-pub fn client_preimage_pipe_handle() -> PipeHandle<'static> {
-    unsafe {
-        let reader = CLIENT_PREIMAGE_PIPE_HANDLE.take();
-        reader.expect("Client preimage pipe handle already in use")
-    }
-}
-
-impl<'pipe> OracleReader<'pipe> {
+impl OracleReader {
     /// Create a new [OracleReader] from a [PipeHandle].
-    pub fn new(pipe_handle: PipeHandle<'pipe>) -> Self {
+    pub fn new(pipe_handle: PipeHandle) -> Self {
         Self {
             pipe_handle,
             key: None,
@@ -178,12 +156,13 @@ impl<'pipe> OracleReader<'pipe> {
 mod test {
     extern crate std;
 
+    use alloc::sync::Arc;
     use super::*;
     use std::{
         borrow::ToOwned,
         fs::{File, OpenOptions},
         io::{Read, Write},
-        os::fd::AsRawFd,
+        os::fd::AsRawFd, dbg,
     };
 
     /// Helper for opening a file with the correct options.
@@ -196,9 +175,8 @@ mod test {
             .to_owned()
     }
 
-    #[test]
-    #[ignore]
-    fn test_oracle_reader() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_oracle_reader() {
         const MOCK_DATA: &[u8] = b"1234567890";
 
         let (mut read, mut write) = (
@@ -206,27 +184,26 @@ mod test {
             open_options().open("/tmp/write.hex").unwrap(),
         );
         let (rwlock_a, rwlock_b) = (
-            RwLock::new(FileDescriptor::Wildcard(
+            FileDescriptor::Wildcard(
                 read.as_raw_fd().try_into().unwrap(),
-            )),
-            RwLock::new(FileDescriptor::Wildcard(
+            ),
+            FileDescriptor::Wildcard(
                 write.as_raw_fd().try_into().unwrap(),
-            )),
+            ),
         );
-        let pipe_handle = PipeHandle::new(ReadHandle::new(&rwlock_a), WriteHandle::new(&rwlock_b));
+        let client_handle = PipeHandle::new(ReadHandle::new(rwlock_a), WriteHandle::new(rwlock_b));
+        let host_handle = PipeHandle::new(ReadHandle::new(rwlock_b), WriteHandle::new(rwlock_a));
 
-        let mut buf = [0u8; 10];
+        let a = tokio::task::spawn(async move {
+            let mut buf = [0u8; 10];
+            client_handle.read(buf.as_mut()).unwrap();
+            dbg!(buf);
+        });
+        let b = tokio::task::spawn(async move {
+            host_handle.write(MOCK_DATA).unwrap();
+        });
 
-        // Ensure writing to the pipe works.
-        pipe_handle.write(MOCK_DATA).unwrap();
-        let _ = write.read(&mut buf).unwrap();
-        assert_eq!(buf, MOCK_DATA);
-
-        // Write mock data to the read end of the pipe; There's no host to respond.
-        read.write_all(MOCK_DATA).unwrap();
-        // Ensure reading from the pipe works.
-        pipe_handle.read(&mut buf).unwrap();
-        assert_eq!(buf, MOCK_DATA);
+        let (_, _) = tokio::join!(a, b);
 
         drop(read);
         drop(write);

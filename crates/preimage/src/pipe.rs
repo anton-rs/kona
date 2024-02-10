@@ -6,91 +6,55 @@ use kona_common::{
     io::{self, FileDescriptor},
     types::RegisterSize,
 };
-use spin::RwLock;
-
-/// [BidirectionalPipe] is a spin-locked bidirectional pipe between two file descriptors.
-#[derive(Debug)]
-pub struct BidirectionalPipe {
-    a: RwLock<FileDescriptor>,
-    b: RwLock<FileDescriptor>,
-}
-
-impl BidirectionalPipe {
-    /// Create a new [BidirectionalPipe] from two file descriptors.
-    pub const fn new(client_read: FileDescriptor, server_read: FileDescriptor) -> Self {
-        Self {
-            a: RwLock::new(client_read),
-            b: RwLock::new(server_read),
-        }
-    }
-
-    /// Get the first handle for the pipe. This handle can be used to read from file descriptor `client_read` and write
-    /// to file descriptor `server_read`.
-    pub const fn client_handle(&self) -> PipeHandle<'_> {
-        PipeHandle::new(
-            ReadHandle { read_fd: &self.a },
-            WriteHandle { write_fd: &self.b },
-        )
-    }
-
-    /// Get the second handle for the pipe. This handle can be used to read from file descriptor `server_read` and write
-    /// to file descriptor `client_read`.
-    pub const fn server_handle(&self) -> PipeHandle<'_> {
-        PipeHandle::new(
-            ReadHandle { read_fd: &self.b },
-            WriteHandle { write_fd: &self.a },
-        )
-    }
-}
 
 /// A [ReadHandle] is a handle to read from one end of a [BidirectionalPipe].
-#[derive(Debug)]
-pub struct ReadHandle<'a> {
-    pub(crate) read_fd: &'a RwLock<FileDescriptor>,
+#[derive(Debug, Clone, Copy)]
+pub struct ReadHandle {
+    pub(crate) read_fd: FileDescriptor,
 }
 
-impl<'a> ReadHandle<'a> {
+impl ReadHandle {
     /// Create a new [ReadHandle] from a file descriptor.
-    pub const fn new(read_fd: &'a RwLock<FileDescriptor>) -> Self {
+    pub const fn new(read_fd: FileDescriptor) -> Self {
         Self { read_fd }
     }
 
     /// Read from the pipe into the given buffer.
     pub fn read(&self, buf: &mut [u8]) -> Result<RegisterSize> {
-        io::read(*self.read_fd.read(), buf)
+        io::read(self.read_fd, buf)
     }
 }
 
 /// A [WriteHandle] is a handle to write to one end of a [BidirectionalPipe].
-#[derive(Debug)]
-pub struct WriteHandle<'a> {
-    write_fd: &'a RwLock<FileDescriptor>,
+#[derive(Debug, Clone, Copy)]
+pub struct WriteHandle {
+    write_fd: FileDescriptor,
 }
 
-impl<'a> WriteHandle<'a> {
+impl WriteHandle {
     /// Create a new [WriteHandle] from a file descriptor.
-    pub const fn new(write_fd: &'a RwLock<FileDescriptor>) -> Self {
+    pub const fn new(write_fd: FileDescriptor) -> Self {
         Self { write_fd }
     }
 
     /// Write the given buffer to the pipe.
     pub fn write(&self, buf: &[u8]) -> Result<RegisterSize> {
-        io::write(*self.write_fd.write(), buf)
+        io::write(self.write_fd, buf)
     }
 }
 
 /// [PipeHandle] is a handle for one end of a bidirectional pipe.
-#[derive(Debug)]
-pub struct PipeHandle<'a> {
+#[derive(Debug, Clone, Copy)]
+pub struct PipeHandle {
     /// File descriptor to read from
-    read_handle: ReadHandle<'a>,
+    read_handle: ReadHandle,
     /// File descriptor to write to
-    write_handle: WriteHandle<'a>,
+    write_handle: WriteHandle,
 }
 
-impl<'a> PipeHandle<'a> {
+impl PipeHandle {
     /// Create a new [PipeHandle] from two file descriptors.
-    pub const fn new(read_handle: ReadHandle<'a>, write_handle: WriteHandle<'a>) -> Self {
+    pub const fn new(read_handle: ReadHandle, write_handle: WriteHandle) -> Self {
         Self {
             read_handle,
             write_handle,

@@ -388,7 +388,6 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "kona-common",
- "spin 0.9.8",
 ]
 
 [[package]]

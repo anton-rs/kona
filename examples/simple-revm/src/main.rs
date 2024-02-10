@@ -3,8 +3,8 @@
 
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
-use kona_common::io;
-use kona_preimage::{client_preimage_pipe_handle, PreimageKey, PreimageKeyType, OracleReader};
+use kona_common::io::{self, FileDescriptor};
+use kona_preimage::{PipeHandle, ReadHandle, WriteHandle, PreimageKey, PreimageKeyType, OracleReader};
 use revm::{
     db::{CacheDB, EmptyDB},
     primitives::{address, b256, hex, keccak256, AccountInfo, Address, Bytecode, ExecutionResult, Output, TransactTo, B256},
@@ -21,6 +21,8 @@ const SHA2_PRECOMPILE: Address = address!("0000000000000000000000000000000000000
 const INPUT_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000000");
 const DIGEST_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000001");
 const CODE_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+
+static CLIENT_PREIMAGE_PIPE: PipeHandle = PipeHandle::new(ReadHandle::new(FileDescriptor::PreimageRead), WriteHandle::new(FileDescriptor::PreimageWrite));
 
 #[no_mangle]
 pub extern "C" fn _start() {
@@ -42,7 +44,7 @@ pub extern "C" fn _start() {
 
 /// Boot the program and load bootstrap information.
 fn boot() -> Result<(Vec<u8>, [u8; 32], Vec<u8>)> {
-    let mut oracle = OracleReader::new(client_preimage_pipe_handle());
+    let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
     let input = oracle.get(PreimageKey::new(*INPUT_KEY, PreimageKeyType::Local))?;
     let digest = oracle
         .get(PreimageKey::new(*DIGEST_KEY, PreimageKeyType::Local))?
