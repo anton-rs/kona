@@ -29,10 +29,10 @@ impl BasicKernelInterface for AsteriscIO {
     fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
         unsafe {
             Ok(syscall::syscall3(
-                SyscallNumber::Write as usize,
+                SyscallNumber::Write as u64,
                 fd.into(),
-                buf.as_ptr() as usize,
-                buf.len(),
+                buf.as_ptr() as u64,
+                buf.len() as u64,
             ) as RegisterSize)
         }
     }
@@ -40,17 +40,17 @@ impl BasicKernelInterface for AsteriscIO {
     fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
         unsafe {
             Ok(syscall::syscall3(
-                SyscallNumber::Read as usize,
+                SyscallNumber::Read as u64,
                 fd.into(),
-                buf.as_ptr() as usize,
-                buf.len(),
+                buf.as_ptr() as u64,
+                buf.len() as u64,
             ) as RegisterSize)
         }
     }
 
     fn exit(code: RegisterSize) -> ! {
         unsafe {
-            syscall::syscall1(SyscallNumber::Exit as usize, code as usize);
+            syscall::syscall1(SyscallNumber::Exit as u64, code);
             panic!()
         }
     }

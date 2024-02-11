@@ -219,7 +219,7 @@ mod test {
 
         // Ensure writing to the pipe works.
         pipe_handle.write(MOCK_DATA).unwrap();
-        write.read(&mut buf).unwrap();
+        let _ = write.read(&mut buf).unwrap();
         assert_eq!(buf, MOCK_DATA);
 
         // Write mock data to the read end of the pipe; There's no host to respond.
