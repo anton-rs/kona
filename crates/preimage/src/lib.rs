@@ -18,4 +18,4 @@ mod oracle;
 pub use oracle::OracleReader;
 
 mod pipe;
-pub use pipe::PipeHandle;
+pub use pipe::{PipeHandle, ReadHandle, WriteHandle};

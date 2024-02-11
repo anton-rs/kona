@@ -45,7 +45,6 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 }
 
 func TestSimpleRevm(t *testing.T) {
-	t.Skip("Skipping simple revm test, wip")
 	programELF, err := elf.Open("../../examples/simple-revm/target/riscv64gc-unknown-none-elf/release/simple-revm")
 	require.NoError(t, err)
 	defer programELF.Close()

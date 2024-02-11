@@ -91,7 +91,7 @@ mod native_io {
     use anyhow::{anyhow, Result};
     use std::{
         fs::File,
-        io::{Read, Write},
+        io::{Read, Seek, SeekFrom, Write},
         os::fd::FromRawFd,
     };
 
@@ -103,25 +103,33 @@ mod native_io {
         fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
             let raw_fd: RegisterSize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
-            file.write(buf)
+            let n = file
+                .write(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
+
+            // Reset the cursor back to 0 for the reader.
+            file.seek(SeekFrom::Start(0))
+                .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
 
             // forget the file descriptor so that the `Drop` impl doesn't close it.
             std::mem::forget(file);
 
-            Ok(0)
+            n.try_into()
+                .map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
             let raw_fd: RegisterSize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
-            file.read(buf)
+            let n = file
+                .read(buf)
                 .map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
 
             // forget the file descriptor so that the `Drop` impl doesn't close it.
             std::mem::forget(file);
 
-            Ok(0)
+            n.try_into()
+                .map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
         }
 
         fn exit(code: RegisterSize) -> ! {

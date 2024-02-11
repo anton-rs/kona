@@ -1,13 +1,9 @@
-use crate::{
-    pipe::{ReadHandle, WriteHandle},
-    PipeHandle, PreimageKey,
-};
-use alloc::{sync::Arc, vec::Vec};
+use crate::{PipeHandle, PreimageKey};
+use alloc::vec::Vec;
 use anyhow::{bail, Result};
-use kona_common::io::FileDescriptor;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct OracleReader {
     pipe_handle: PipeHandle,
     key: Option<PreimageKey>,
@@ -96,7 +92,8 @@ impl OracleReader {
         Ok(())
     }
 
-    /// Set the preimage key for the global oracle reader. This will overwrite any existing key
+    /// Set the preimage key for the global oracle reader. This will overwrite any existing key, and block until all
+    /// data has been read from the host.
     ///
     /// Internally this sends the 32 bytes of the key to the host by writing into the WritePreimage file descriptor.
     /// This may require several writes as the host may only accept a few bytes at a time. Once 32 bytes have been written
@@ -136,18 +133,14 @@ impl OracleReader {
         Ok(read as usize)
     }
 
-    /// Reads exactly `buf.len()` bytes into `buf`.
+    /// Reads exactly `buf.len()` bytes into `buf`, blocking until all bytes are read.
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
-        let mut chunk = [0u8; 32];
         let mut read = 0;
         while read < buf.len() {
-            let chunk_read = self.read(&mut chunk)?;
-            if chunk_read == 0 {
-                bail!("Failed to read preimage");
-            }
-            buf[read..(read + chunk_read)].copy_from_slice(&chunk[..chunk_read]);
+            let chunk_read = self.read(&mut buf[read..])?;
             read += chunk_read;
         }
+
         Ok(())
     }
 }
@@ -156,56 +149,94 @@ impl OracleReader {
 mod test {
     extern crate std;
 
-    use alloc::sync::Arc;
     use super::*;
+    use crate::{PreimageKeyType, ReadHandle, WriteHandle};
+    use kona_common::io::FileDescriptor;
     use std::{
         borrow::ToOwned,
         fs::{File, OpenOptions},
-        io::{Read, Write},
-        os::fd::AsRawFd, dbg,
+        os::fd::AsRawFd,
     };
+
+    /// Test struct containing the [OracleReader] and a [PipeHandle] for the host, plus the open [File]s. The [File]s
+    /// are stored in this struct so that they are not dropped until the end of the test.
+    ///
+    /// TODO: Swap host pipe handle to oracle writer once it exists.
+    #[derive(Debug)]
+    struct ClientAndHost {
+        oracle_reader: OracleReader,
+        host_handle: PipeHandle,
+        _read_file: File,
+        _write_file: File,
+    }
+
+    impl Drop for ClientAndHost {
+        fn drop(&mut self) {
+            std::fs::remove_file("/tmp/read.hex").unwrap();
+            std::fs::remove_file("/tmp/write.hex").unwrap();
+        }
+    }
 
     /// Helper for opening a file with the correct options.
     fn open_options() -> OpenOptions {
         File::options()
             .create(true)
-            .truncate(true)
-            .write(true)
             .read(true)
+            .write(true)
+            .truncate(true)
             .to_owned()
+    }
+
+    /// Helper for creating a new [OracleReader] and [PipeHandle] for testing. The file channel is over two temporary
+    /// files.
+    ///
+    /// TODO: Swap host pipe handle to oracle writer once it exists.
+    fn client_and_host() -> ClientAndHost {
+        let (read_file, write_file) = (
+            open_options().open("/tmp/read.hex").unwrap(),
+            open_options().open("/tmp/write.hex").unwrap(),
+        );
+        let (read_fd, write_fd) = (
+            FileDescriptor::Wildcard(read_file.as_raw_fd().try_into().unwrap()),
+            FileDescriptor::Wildcard(write_file.as_raw_fd().try_into().unwrap()),
+        );
+        let client_handle = PipeHandle::new(ReadHandle::new(read_fd), WriteHandle::new(write_fd));
+        let host_handle = PipeHandle::new(ReadHandle::new(write_fd), WriteHandle::new(read_fd));
+
+        let oracle_reader = OracleReader::new(client_handle);
+
+        ClientAndHost {
+            oracle_reader,
+            host_handle,
+            _read_file: read_file,
+            _write_file: write_file,
+        }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_oracle_reader() {
         const MOCK_DATA: &[u8] = b"1234567890";
+        let sys = client_and_host();
+        let (mut oracle_reader, host_handle) = (sys.oracle_reader, sys.host_handle);
 
-        let (mut read, mut write) = (
-            open_options().open("/tmp/read.hex").unwrap(),
-            open_options().open("/tmp/write.hex").unwrap(),
-        );
-        let (rwlock_a, rwlock_b) = (
-            FileDescriptor::Wildcard(
-                read.as_raw_fd().try_into().unwrap(),
-            ),
-            FileDescriptor::Wildcard(
-                write.as_raw_fd().try_into().unwrap(),
-            ),
-        );
-        let client_handle = PipeHandle::new(ReadHandle::new(rwlock_a), WriteHandle::new(rwlock_b));
-        let host_handle = PipeHandle::new(ReadHandle::new(rwlock_b), WriteHandle::new(rwlock_a));
-
-        let a = tokio::task::spawn(async move {
+        let client = tokio::task::spawn(async move {
             let mut buf = [0u8; 10];
-            client_handle.read(buf.as_mut()).unwrap();
-            dbg!(buf);
+            oracle_reader
+                .get_exact(
+                    PreimageKey::new([0u8; 32], PreimageKeyType::Keccak256),
+                    &mut buf,
+                )
+                .unwrap();
+            buf
         });
-        let b = tokio::task::spawn(async move {
-            host_handle.write(MOCK_DATA).unwrap();
+        let host = tokio::task::spawn(async move {
+            let mut length_and_data: [u8; 8 + 10] = [0u8; 8 + 10];
+            length_and_data[0..8].copy_from_slice(&u64::to_be_bytes(MOCK_DATA.len() as u64));
+            length_and_data[8..18].copy_from_slice(MOCK_DATA);
+            host_handle.write(&length_and_data).unwrap();
         });
 
-        let (_, _) = tokio::join!(a, b);
-
-        drop(read);
-        drop(write);
+        let (r, _) = tokio::join!(client, host);
+        assert_eq!(r.unwrap(), MOCK_DATA);
     }
 }
