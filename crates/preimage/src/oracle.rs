@@ -173,3 +173,62 @@ impl<'pipe> OracleReader<'pipe> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    extern crate std;
+
+    use super::*;
+    use std::{
+        borrow::ToOwned,
+        fs::{File, OpenOptions},
+        io::{Read, Write},
+        os::fd::AsRawFd,
+    };
+
+    /// Helper for opening a file with the correct options.
+    fn open_options() -> OpenOptions {
+        File::options()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .read(true)
+            .to_owned()
+    }
+
+    #[test]
+    #[ignore]
+    fn test_oracle_reader() {
+        const MOCK_DATA: &[u8] = b"1234567890";
+
+        let (mut read, mut write) = (
+            open_options().open("/tmp/read.hex").unwrap(),
+            open_options().open("/tmp/write.hex").unwrap(),
+        );
+        let (rwlock_a, rwlock_b) = (
+            RwLock::new(FileDescriptor::Wildcard(
+                read.as_raw_fd().try_into().unwrap(),
+            )),
+            RwLock::new(FileDescriptor::Wildcard(
+                write.as_raw_fd().try_into().unwrap(),
+            )),
+        );
+        let pipe_handle = PipeHandle::new(ReadHandle::new(&rwlock_a), WriteHandle::new(&rwlock_b));
+
+        let mut buf = [0u8; 10];
+
+        // Ensure writing to the pipe works.
+        pipe_handle.write(MOCK_DATA).unwrap();
+        write.read(&mut buf).unwrap();
+        assert_eq!(buf, MOCK_DATA);
+
+        // Write mock data to the read end of the pipe; There's no host to respond.
+        read.write_all(MOCK_DATA).unwrap();
+        // Ensure reading from the pipe works.
+        pipe_handle.read(&mut buf).unwrap();
+        assert_eq!(buf, MOCK_DATA);
+
+        drop(read);
+        drop(write);
+    }
+}

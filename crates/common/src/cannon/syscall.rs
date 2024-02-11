@@ -34,13 +34,14 @@
 //!
 //! All temporary registers are clobbered (8-15, 24-25).
 
+use crate::types::RegisterSize;
 use core::arch::asm;
 
 /// Issues a raw system call with 1 argument. (e.g. exit)
 #[inline]
-pub(crate) unsafe fn syscall1(n: u32, arg1: u32) -> u32 {
-    let mut err: u32;
-    let mut ret: u32;
+pub(crate) unsafe fn syscall1(n: RegisterSize, arg1: RegisterSize) -> RegisterSize {
+    let mut err: RegisterSize;
+    let mut ret: RegisterSize;
     asm!(
         "syscall",
         inlateout("$2") n => ret,
@@ -67,9 +68,14 @@ pub(crate) unsafe fn syscall1(n: u32, arg1: u32) -> u32 {
 
 /// Issues a raw system call with 3 arguments. (e.g. read, write)
 #[inline]
-pub(crate) unsafe fn syscall3(n: u32, arg1: u32, arg2: u32, arg3: u32) -> Result<u32, i32> {
-    let mut err: u32;
-    let mut ret: u32;
+pub(crate) unsafe fn syscall3(
+    n: RegisterSize,
+    arg1: RegisterSize,
+    arg2: RegisterSize,
+    arg3: RegisterSize,
+) -> Result<RegisterSize, i32> {
+    let mut err: RegisterSize;
+    let mut ret: RegisterSize;
     asm!(
         "syscall",
         inlateout("$2") n => ret,
@@ -95,7 +101,7 @@ pub(crate) unsafe fn syscall3(n: u32, arg1: u32, arg2: u32, arg3: u32) -> Result
         .then_some(ret)
         .unwrap_or_else(|| ret.wrapping_neg());
 
-    (value <= -4096isize as u32)
+    (value <= -4096isize as RegisterSize)
         .then_some(value)
         .ok_or_else(|| {
             // Truncation of the error value is guaranteed to never occur due to

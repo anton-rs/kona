@@ -19,25 +19,40 @@ cfg_if! {
 }
 
 /// File descriptors available to the `client` within the FPVM kernel.
-#[repr(u8)]
 #[derive(Debug, Clone, Copy)]
 pub enum FileDescriptor {
     /// Read-only standard input stream.
-    StdIn = 0,
+    StdIn,
     /// Write-only standaard output stream.
-    StdOut = 1,
+    StdOut,
     /// Write-only standard error stream.
-    StdErr = 2,
+    StdErr,
     /// Read-only. Used to read the status of pre-image hinting.
-    HintRead = 3,
+    HintRead,
     /// Write-only. Used to provide pre-image hints
-    HintWrite = 4,
+    HintWrite,
     /// Read-only. Used to read pre-images.
-    PreimageRead = 5,
+    PreimageRead,
     /// Write-only. Used to request pre-images.
-    PreimageWrite = 6,
+    PreimageWrite,
+    /// Other file descriptor, usually used for testing purposes.
+    Wildcard(RegisterSize),
 }
 
+impl From<FileDescriptor> for RegisterSize {
+    fn from(fd: FileDescriptor) -> Self {
+        match fd {
+            FileDescriptor::StdIn => 0,
+            FileDescriptor::StdOut => 1,
+            FileDescriptor::StdErr => 2,
+            FileDescriptor::HintRead => 3,
+            FileDescriptor::HintWrite => 4,
+            FileDescriptor::PreimageRead => 5,
+            FileDescriptor::PreimageWrite => 6,
+            FileDescriptor::Wildcard(value) => value,
+        }
+    }
+}
 /// Print the passed string to the standard output [FileDescriptor].
 #[inline]
 pub fn print(s: &str) {
@@ -86,7 +101,8 @@ mod native_io {
 
     impl BasicKernelInterface for NativeIO {
         fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
-            let mut file = unsafe { File::from_raw_fd(fd as i32) };
+            let raw_fd: RegisterSize = fd.into();
+            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
             file.write_all(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
 
@@ -97,8 +113,9 @@ mod native_io {
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
-            let mut file = unsafe { File::from_raw_fd(fd as i32) };
-            file.read_exact(buf)
+            let raw_fd: RegisterSize = fd.into();
+            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+            file.read(buf)
                 .map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
 
             // forget the file descriptor so that the `Drop` impl doesn't close it.

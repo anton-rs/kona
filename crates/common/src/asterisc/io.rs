@@ -30,7 +30,7 @@ impl BasicKernelInterface for AsteriscIO {
         unsafe {
             Ok(syscall::syscall3(
                 SyscallNumber::Write as usize,
-                fd as usize,
+                fd.into(),
                 buf.as_ptr() as usize,
                 buf.len(),
             ) as RegisterSize)
@@ -41,7 +41,7 @@ impl BasicKernelInterface for AsteriscIO {
         unsafe {
             Ok(syscall::syscall3(
                 SyscallNumber::Read as usize,
-                fd as usize,
+                fd.into(),
                 buf.as_ptr() as usize,
                 buf.len(),
             ) as RegisterSize)
