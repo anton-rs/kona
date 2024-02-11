@@ -14,4 +14,4 @@ anyhow.workspace = true
 cfg-if.workspace = true
 
 # external
-good_memory_allocator = "0.1.7"
+linked_list_allocator = "0.10.5"

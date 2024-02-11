@@ -6,11 +6,11 @@
 /// The global allocator for the program in FPVM environments.
 #[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
 pub mod global_allocator {
-    use good_memory_allocator::SpinLockedAllocator;
+    use linked_list_allocator::LockedHeap;
 
     /// The global allocator for the program in other profiles uses the [SpinLockedAllocator].
     #[global_allocator]
-    static ALLOCATOR: SpinLockedAllocator = SpinLockedAllocator::empty();
+    static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
     /// Initialize the [SpinLockedAllocator] with the following parameters:
     /// * `heap_start_addr` is the starting address of the heap memory region,
@@ -22,8 +22,8 @@ pub mod global_allocator {
     /// * The provided memory region must be valid, non-null, and not used by anything else.
     /// * After aligning the start and end addresses, the size of the heap must be > 0, or the function
     ///   will panic.
-    pub unsafe fn init_allocator(heap_start_addr: usize, heap_size: usize) {
-        ALLOCATOR.init(heap_start_addr, heap_size)
+    pub unsafe fn init_allocator(heap_start_addr: *mut u8, heap_size: usize) {
+        ALLOCATOR.lock().init(heap_start_addr, heap_size)
     }
 }
 
@@ -39,7 +39,7 @@ macro_rules! alloc_heap {
             use kona_common::malloc::global_allocator::init_allocator;
 
             static mut HEAP: [u8; $size] = [0u8; $size];
-            unsafe { init_allocator(HEAP.as_ptr() as usize, $size) }
+            unsafe { init_allocator(HEAP.as_mut_ptr(), $size) }
         }
     }};
 }

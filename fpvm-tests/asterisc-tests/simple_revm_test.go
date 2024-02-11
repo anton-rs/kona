@@ -57,5 +57,7 @@ func TestSimpleRevm(t *testing.T) {
 	vmState, err := fast.LoadELF(programELF)
 	require.NoError(t, err, "must load test suite ELF binary")
 
-	fullTest(t, vmState, po, symbols)
+	stdOut, stdErr := fullTest(t, vmState, po, symbols)
+	require.Equal(t, stdOut.String(), "Booting EVM and checking hash...\nSuccess, hashes matched!\n")
+	require.Equal(t, stdErr.String(), "")
 }

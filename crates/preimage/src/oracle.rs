@@ -41,15 +41,6 @@ impl OracleReader {
     ///
     /// Internally this reads self.length bytes from the ReadPreimage file descriptor into a new heap allocated `Vec<u8>` and returns it.
     /// This is a high level way to interact with the preimage oracle but may not be the best way if heap allocations are not desirable.
-    ///
-    /// # Examples
-    /// ```
-    /// use kona_preimage::{oracle_reader, PreimageKey, PreimageKeyType};
-    ///
-    /// let mut oracle = oracle_reader();
-    /// let key = PreimageKey::new([0u8; 32], PreimageKeyType::Local);
-    /// // let data = oracle.get(key).unwrap();
-    /// ```
     pub fn get(&mut self, key: PreimageKey) -> Result<Vec<u8>> {
         self.set_key(key)?;
         let mut data_buffer = alloc::vec![0; self.length];
@@ -64,16 +55,6 @@ impl OracleReader {
     ///
     /// # Panics
     /// This will panic if the size of the buffer is not equal to the size of the preimage as reported by the host
-    ///
-    /// # Examples
-    /// ```
-    /// use kona_preimage::{oracle_reader, PreimageKey, PreimageKeyType};
-    ///
-    /// let mut oracle = oracle_reader();
-    /// let key = PreimageKey::new([0u8; 32], PreimageKeyType::Local);
-    /// let mut buffer = [0_u8; 100];
-    /// // oracle.get_exact(key, &mut buffer).unwrap();
-    /// ```
     pub fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
         self.set_key(key)?;
 
