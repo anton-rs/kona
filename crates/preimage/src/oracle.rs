@@ -131,7 +131,7 @@ mod test {
     extern crate std;
 
     use super::*;
-    use crate::{PreimageKeyType, ReadHandle, WriteHandle};
+    use crate::PreimageKeyType;
     use kona_common::FileDescriptor;
     use std::{
         borrow::ToOwned,
@@ -181,8 +181,8 @@ mod test {
             FileDescriptor::Wildcard(read_file.as_raw_fd().try_into().unwrap()),
             FileDescriptor::Wildcard(write_file.as_raw_fd().try_into().unwrap()),
         );
-        let client_handle = PipeHandle::new(ReadHandle::new(read_fd), WriteHandle::new(write_fd));
-        let host_handle = PipeHandle::new(ReadHandle::new(write_fd), WriteHandle::new(read_fd));
+        let client_handle = PipeHandle::new(read_fd, write_fd);
+        let host_handle = PipeHandle::new(write_fd, read_fd);
 
         let oracle_reader = OracleReader::new(client_handle);
 
