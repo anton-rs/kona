@@ -1,6 +1,6 @@
 # `fpvm-tests`
 
-This directory contains tests for Rust programs running on top of various FPVMs.
+This directory contains tests for Rust programs running on top of supported Fault Proof Virtual Machines.
 
 ## Usage
 
