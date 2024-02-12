@@ -17,6 +17,6 @@ pub extern "C" fn _start() {
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     let msg = alloc::format!("Panic: {}", info);
-    let _ = io::print_err(&msg);
+    let _ = io::print_err(msg.as_ref());
     io::exit(2)
 }

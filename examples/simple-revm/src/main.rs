@@ -4,10 +4,13 @@
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
 use kona_common::{io, FileDescriptor};
-use kona_preimage::{PipeHandle, ReadHandle, WriteHandle, PreimageKey, PreimageKeyType, OracleReader};
+use kona_preimage::{OracleReader, PipeHandle, PreimageKey, PreimageKeyType};
 use revm::{
     db::{CacheDB, EmptyDB},
-    primitives::{address, b256, hex, keccak256, AccountInfo, Address, Bytecode, ExecutionResult, Output, TransactTo, B256},
+    primitives::{
+        address, b256, hex, keccak256, AccountInfo, Address, Bytecode, ExecutionResult, Output,
+        TransactTo, B256,
+    },
     Evm,
 };
 
@@ -22,7 +25,8 @@ const INPUT_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000
 const DIGEST_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000001");
 const CODE_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000002");
 
-static CLIENT_PREIMAGE_PIPE: PipeHandle = PipeHandle::new(ReadHandle::new(FileDescriptor::PreimageRead), WriteHandle::new(FileDescriptor::PreimageWrite));
+static CLIENT_PREIMAGE_PIPE: PipeHandle =
+    PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
 
 #[no_mangle]
 pub extern "C" fn _start() {
@@ -77,7 +81,9 @@ fn run_evm(input: Vec<u8>, digest: [u8; 32], code: Vec<u8>) -> Result<()> {
         .build();
 
     // Call EVM identity contract.
-    let ref_tx = evm.transact().map_err(|e| anyhow!("Failed state transition: {}", e))?;
+    let ref_tx = evm
+        .transact()
+        .map_err(|e| anyhow!("Failed state transition: {}", e))?;
     let value = match ref_tx.result {
         ExecutionResult::Success {
             output: Output::Call(value),

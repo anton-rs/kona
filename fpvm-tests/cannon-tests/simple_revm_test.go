@@ -93,4 +93,7 @@ func TestSimpleRevm(t *testing.T) {
 
 	require.True(t, state.Exited, "must complete program")
 	require.Equal(t, uint8(0), state.ExitCode, "exit with 0")
+
+	require.Equal(t, stdOutBuf.String(), "Booting EVM and checking hash...\nSuccess, hashes matched!\n")
+	require.Equal(t, stdErrBuf.String(), "")
 }

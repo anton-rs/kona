@@ -29,8 +29,4 @@ Before working with this repository locally, you'll need to install several depe
 1. Once you have sign-off from a maintainer, you may merge your pull request yourself if you have permissions to do so.
    If not, the maintainer who approves your pull request will add it to the merge queue.
 
-## Code of Conduct
-
-Write [Idiomatic Rust](https://github.com/mre/idiomatic-rust)
-
 [book]: https://static.optimism.io/kona
