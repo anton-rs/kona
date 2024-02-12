@@ -1,6 +1,6 @@
 [package]
-name = "kona-common"
-description = "Common traits and system interfaces for developing client programs on top of Fault Proof VMs."
+name = "kona-preimage"
+description = "Bindings and types for interacting with the PreimageOracle ABI"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -13,5 +13,8 @@ homepage.workspace = true
 anyhow.workspace = true
 cfg-if.workspace = true
 
-# external
-linked_list_allocator = "0.10.5"
+# local
+kona-common = { path = "../common" }
+
+[dev-dependencies]
+tokio = { version = "1.36.0", features = ["full"] }

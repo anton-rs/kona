@@ -1,3 +1,5 @@
+set fallback := true
+
 all: cannon asterisc
 
 # Build the `cannon` program builder image

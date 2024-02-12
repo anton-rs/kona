@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use kona_common::io::{self, FileDescriptor};
+use kona_common::io;
 
 extern crate alloc;
 
@@ -17,6 +17,6 @@ pub extern "C" fn _start() {
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     let msg = alloc::format!("Panic: {}", info);
-    let _ = io::write(FileDescriptor::StdErr, msg.as_bytes());
+    let _ = io::print_err(msg.as_ref());
     io::exit(2)
 }

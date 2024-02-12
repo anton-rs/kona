@@ -11,11 +11,14 @@
 #![no_std]
 
 pub mod io;
-pub mod traits;
-pub mod types;
 
-#[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
 pub mod malloc;
+
+mod traits;
+pub use traits::BasicKernelInterface;
+
+mod types;
+pub use types::{FileDescriptor, RegisterSize};
 
 #[cfg(target_arch = "mips")]
 pub(crate) mod cannon;

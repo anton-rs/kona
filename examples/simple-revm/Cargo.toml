@@ -1,0 +1,16 @@
+[package]
+name = "simple-revm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { version = "1.0.79", default-features = false }
+kona-common = { path = "../../crates/common" }
+kona-preimage = { path = "../../crates/preimage" }
+revm = { version = "4.0.0", default-features = false }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

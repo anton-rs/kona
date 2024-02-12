@@ -1,6 +1,4 @@
-use crate::{
-    cannon::syscall, io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize,
-};
+use crate::{cannon::syscall, BasicKernelInterface, FileDescriptor, RegisterSize};
 use anyhow::{anyhow, Result};
 
 /// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture. Exposes a safe
@@ -31,7 +29,7 @@ impl BasicKernelInterface for CannonIO {
         unsafe {
             syscall::syscall3(
                 SyscallNumber::Write as u32,
-                fd as u32,
+                fd.into(),
                 buf.as_ptr() as u32,
                 buf.len() as u32,
             )
@@ -43,7 +41,7 @@ impl BasicKernelInterface for CannonIO {
         unsafe {
             syscall::syscall3(
                 SyscallNumber::Read as u32,
-                fd as u32,
+                fd.into(),
                 buf.as_ptr() as u32,
                 buf.len() as u32,
             )

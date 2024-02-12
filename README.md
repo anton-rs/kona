@@ -21,7 +21,8 @@
 <p align="center">
   <a href="#whats-kona">What's Kona?</a> •
   <a href="#overview">Overview</a> •
-  <a href="#book">Contributing</a> •
+  <a href="CONTRIBUTING.md">Contributing</a> •
+  <a href="#book">Book</a> •
   <a href="#credits">Credits</a>
 </p>
 
@@ -33,15 +34,18 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 ## Overview
 
 **`kona`**
-* [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
-* [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
+
+- [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
+- [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
 **Build Pipelines**
-* [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips-unknown-none` target.
-* [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64gc-unknown-none-elf` target.
+
+- [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips-unknown-none` target.
+- [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64gc-unknown-none-elf` target.
 
 **`client` / `host` SDK**
-* [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
+
+- [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
 
 ## Book
 
@@ -58,12 +62,9 @@ The [book][book] contains a more in-depth overview of the project, contributor g
 [badboi-cannon-rs]: https://github.com/BadBoiLabs/cannon-rs
 [asterisc]: https://github.com/protolambda/asterisc
 [fpp-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-program
-
 [book]: https://ethereum-optimism.github.io/kona/
-
 [op-labs]: https://github.com/ethereum-optimism
 [bad-boi-labs]: https://github.com/BadBoiLabs
-
 [g-output-root]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/glossary.md#l2-output-root
 [g-derivation-pipeline]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/derivation.md#l2-chain-derivation-pipeline
 [g-fault-proof-vm]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-vm

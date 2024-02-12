@@ -1,7 +1,7 @@
 //! This module contains the [ClientIO] struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
-use crate::{traits::BasicKernelInterface, types::RegisterSize};
+use crate::{BasicKernelInterface, FileDescriptor, RegisterSize};
 use anyhow::Result;
 use cfg_if::cfg_if;
 
@@ -18,30 +18,16 @@ cfg_if! {
     }
 }
 
-/// File descriptors available to the `client` within the FPVM kernel.
-#[repr(u8)]
-#[derive(Debug, Clone, Copy)]
-pub enum FileDescriptor {
-    /// Read-only standard input stream.
-    StdIn = 0,
-    /// Write-only standaard output stream.
-    StdOut = 1,
-    /// Write-only standard error stream.
-    StdErr = 2,
-    /// Read-only. Used to read the status of pre-image hinting.
-    HintRead = 3,
-    /// Write-only. Used to provide pre-image hints
-    HintWrite = 4,
-    /// Read-only. Used to read pre-images.
-    PreimageRead = 5,
-    /// Write-only. Used to request pre-images.
-    PreimageWrite = 6,
-}
-
 /// Print the passed string to the standard output [FileDescriptor].
 #[inline]
 pub fn print(s: &str) {
     ClientIO::write(FileDescriptor::StdOut, s.as_bytes()).expect("Error writing to stdout.");
+}
+
+/// Print the passed string to the standard error [FileDescriptor].
+#[inline]
+pub fn print_err(s: &str) {
+    ClientIO::write(FileDescriptor::StdErr, s.as_bytes()).expect("Error writing to stderr.");
 }
 
 /// Write the passed buffer to the given [FileDescriptor].
@@ -70,7 +56,7 @@ mod native_io {
     use anyhow::{anyhow, Result};
     use std::{
         fs::File,
-        io::{Read, Write},
+        io::{Read, Seek, SeekFrom, Write},
         os::fd::FromRawFd,
     };
 
@@ -80,19 +66,35 @@ mod native_io {
 
     impl BasicKernelInterface for NativeIO {
         fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
-            let mut file = unsafe { File::from_raw_fd(fd as i32) };
-            file.write_all(buf)
+            let raw_fd: RegisterSize = fd.into();
+            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+            let n = file
+                .write(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
-            std::mem::forget(file); // forget the file descriptor so that the `Drop` impl doesn't close it.
-            Ok(0)
+
+            // Reset the cursor back to 0 for the reader.
+            file.seek(SeekFrom::Start(0))
+                .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
+
+            // forget the file descriptor so that the `Drop` impl doesn't close it.
+            std::mem::forget(file);
+
+            n.try_into()
+                .map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
-            let mut file = unsafe { File::from_raw_fd(fd as i32) };
-            file.read(buf)
+            let raw_fd: RegisterSize = fd.into();
+            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+            let n = file
+                .read(buf)
                 .map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
-            std::mem::forget(file); // forget the file descriptor so that the `Drop` impl doesn't close it.
-            Ok(0)
+
+            // forget the file descriptor so that the `Drop` impl doesn't close it.
+            std::mem::forget(file);
+
+            n.try_into()
+                .map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
         }
 
         fn exit(code: RegisterSize) -> ! {
