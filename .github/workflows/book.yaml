@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -14,19 +13,14 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Setup mdbook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: 'latest'
-      - name: Setup mdbook-mermaid
-        uses: magicgh/mdbook-mermaid-action@v1
-        with:
-          version: 'latest'
-      - name: Install mdbook-template
         run: |
-          mkdir mdbook-template
-          curl -sSL https://github.com/sgoudham/mdbook-template/releases/latest/download/mdbook-template-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook-template
-          echo `pwd`/mdbook-template >> $GITHUB_PATH
+          cargo install mdbook mdbook-mermaid mdbook-template
       - name: Build book
         working-directory: ./book
         run: mdbook build
