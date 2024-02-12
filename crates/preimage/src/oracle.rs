@@ -132,7 +132,7 @@ mod test {
 
     use super::*;
     use crate::{PreimageKeyType, ReadHandle, WriteHandle};
-    use kona_common::io::FileDescriptor;
+    use kona_common::FileDescriptor;
     use std::{
         borrow::ToOwned,
         fs::{File, OpenOptions},

@@ -1,7 +1,7 @@
 //! This module contains the [ClientIO] struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
-use crate::{traits::BasicKernelInterface, types::RegisterSize};
+use crate::{BasicKernelInterface, FileDescriptor, RegisterSize};
 use anyhow::Result;
 use cfg_if::cfg_if;
 
@@ -18,41 +18,6 @@ cfg_if! {
     }
 }
 
-/// File descriptors available to the `client` within the FPVM kernel.
-#[derive(Debug, Clone, Copy)]
-pub enum FileDescriptor {
-    /// Read-only standard input stream.
-    StdIn,
-    /// Write-only standaard output stream.
-    StdOut,
-    /// Write-only standard error stream.
-    StdErr,
-    /// Read-only. Used to read the status of pre-image hinting.
-    HintRead,
-    /// Write-only. Used to provide pre-image hints
-    HintWrite,
-    /// Read-only. Used to read pre-images.
-    PreimageRead,
-    /// Write-only. Used to request pre-images.
-    PreimageWrite,
-    /// Other file descriptor, usually used for testing purposes.
-    Wildcard(RegisterSize),
-}
-
-impl From<FileDescriptor> for RegisterSize {
-    fn from(fd: FileDescriptor) -> Self {
-        match fd {
-            FileDescriptor::StdIn => 0,
-            FileDescriptor::StdOut => 1,
-            FileDescriptor::StdErr => 2,
-            FileDescriptor::HintRead => 3,
-            FileDescriptor::HintWrite => 4,
-            FileDescriptor::PreimageRead => 5,
-            FileDescriptor::PreimageWrite => 6,
-            FileDescriptor::Wildcard(value) => value,
-        }
-    }
-}
 /// Print the passed string to the standard output [FileDescriptor].
 #[inline]
 pub fn print(s: &str) {

@@ -1,7 +1,7 @@
 //! Defines the [BasicKernelInterface] trait, which describes the functionality of several system calls inside of
 //! the FPVM kernel.
 
-use crate::{io::FileDescriptor, types::RegisterSize};
+use crate::{FileDescriptor, RegisterSize};
 use anyhow::Result;
 
 /// The [BasicKernelInterface] trait describes the functionality of several core system calls inside of

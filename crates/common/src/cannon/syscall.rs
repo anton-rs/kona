@@ -34,7 +34,7 @@
 //!
 //! All temporary registers are clobbered (8-15, 24-25).
 
-use crate::types::RegisterSize;
+use crate::RegisterSize;
 use core::arch::asm;
 
 /// Issues a raw system call with 1 argument. (e.g. exit)

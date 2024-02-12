@@ -2,10 +2,7 @@
 //! reading and writing from the file descriptors.
 
 use anyhow::Result;
-use kona_common::{
-    io::{self, FileDescriptor},
-    types::RegisterSize,
-};
+use kona_common::{io, FileDescriptor, RegisterSize};
 
 /// A [ReadHandle] is a handle to read from one end of a [BidirectionalPipe].
 #[derive(Debug, Clone, Copy)]

@@ -1,5 +1,5 @@
 use crate::{
-    cannon::syscall, io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize,
+    cannon::syscall, FileDescriptor, BasicKernelInterface, RegisterSize,
 };
 use anyhow::{anyhow, Result};
 

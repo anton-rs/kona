@@ -13,7 +13,7 @@
 //! | %a5             | arg6               |
 //! | %a7             | syscall number     |
 
-use crate::types::RegisterSize;
+use crate::RegisterSize;
 use core::arch::asm;
 
 /// Issues a raw system call with 1 argument. (e.g. exit)

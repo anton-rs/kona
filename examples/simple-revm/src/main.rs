@@ -3,7 +3,7 @@
 
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
-use kona_common::io::{self, FileDescriptor};
+use kona_common::{io, FileDescriptor};
 use kona_preimage::{PipeHandle, ReadHandle, WriteHandle, PreimageKey, PreimageKeyType, OracleReader};
 use revm::{
     db::{CacheDB, EmptyDB},

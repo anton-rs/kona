@@ -1,5 +1,5 @@
 use crate::{
-    asterisc::syscall, io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize,
+    asterisc::syscall, FileDescriptor, BasicKernelInterface, RegisterSize,
 };
 use anyhow::Result;
 
