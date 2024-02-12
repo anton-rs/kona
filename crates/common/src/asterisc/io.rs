@@ -1,6 +1,4 @@
-use crate::{
-    asterisc::syscall, FileDescriptor, BasicKernelInterface, RegisterSize,
-};
+use crate::{asterisc::syscall, BasicKernelInterface, FileDescriptor, RegisterSize};
 use anyhow::Result;
 
 /// Concrete implementation of the [`KernelIO`] trait for the `riscv64` target architecture.

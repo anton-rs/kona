@@ -1,6 +1,4 @@
-use crate::{
-    cannon::syscall, FileDescriptor, BasicKernelInterface, RegisterSize,
-};
+use crate::{cannon::syscall, BasicKernelInterface, FileDescriptor, RegisterSize};
 use anyhow::{anyhow, Result};
 
 /// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture. Exposes a safe

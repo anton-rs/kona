@@ -17,5 +17,4 @@ cfg-if.workspace = true
 kona-common = { path = "../common" }
 
 [dev-dependencies]
-libc = "0.2.153"
 tokio = { version = "1.36.0", features = ["full"] }

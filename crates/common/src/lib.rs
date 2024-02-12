@@ -18,7 +18,7 @@ mod traits;
 pub use traits::BasicKernelInterface;
 
 mod types;
-pub use types::{RegisterSize, FileDescriptor};
+pub use types::{FileDescriptor, RegisterSize};
 
 #[cfg(target_arch = "mips")]
 pub(crate) mod cannon;

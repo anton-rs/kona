@@ -99,7 +99,6 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "kona-common",
- "libc",
  "tokio",
 ]
 
