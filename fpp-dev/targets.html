@@ -182,8 +182,66 @@ for each FPVM target:</p>
 </tbody></table>
 </div>
 <p>If there is a feature that you would like to see supported, please <a href="https://github.com/ethereum-optimism/kona/issues/new">open an issue</a> or <a href="https://github.com/ethereum-optimism/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
-<h2 id="cannon-mips32rel1"><a class="header" href="#cannon-mips32rel1">Cannon (MIPS32rel1)</a></h2>
-<p><em>TODO</em></p>
+<h2 id="cannon-mips32r2"><a class="header" href="#cannon-mips32r2">Cannon (MIPS32r2)</a></h2>
+<p>Cannon is based off of the <code>mips32r2</code> target architecture, supporting 55 instructions:</p>
+<div class="table-wrapper"><table><thead><tr><th>Category</th><th>Instruction</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>Arithmetic</code></td><td><code>addi</code></td><td>Add immediate (with sign-extension).</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>addiu</code></td><td>Add immediate unsigned (no overflow).</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>addu</code></td><td>Add unsigned (no overflow).</td></tr>
+<tr><td><code>Logical</code></td><td><code>and</code></td><td>Bitwise AND.</td></tr>
+<tr><td><code>Logical</code></td><td><code>andi</code></td><td>Bitwise AND immediate.</td></tr>
+<tr><td><code>Branch</code></td><td><code>b</code></td><td>Unconditional branch.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>beq</code></td><td>Branch on equal.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>beqz</code></td><td>Branch if equal to zero.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>bgez</code></td><td>Branch on greater than or equal to zero.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>bgtz</code></td><td>Branch on greater than zero.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>blez</code></td><td>Branch on less than or equal to zero.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>bltz</code></td><td>Branch on less than zero.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>bne</code></td><td>Branch on not equal.</td></tr>
+<tr><td><code>Conditional Branch</code></td><td><code>bnez</code></td><td>Branch if not equal to zero.</td></tr>
+<tr><td><code>Logical</code></td><td><code>clz</code></td><td>Count leading zeros.</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>divu</code></td><td>Divide unsigned.</td></tr>
+<tr><td><code>Unconditional Jump</code></td><td><code>j</code></td><td>Jump.</td></tr>
+<tr><td><code>Unconditional Jump</code></td><td><code>jal</code></td><td>Jump and link.</td></tr>
+<tr><td><code>Unconditional Jump</code></td><td><code>jalr</code></td><td>Jump and link register.</td></tr>
+<tr><td><code>Unconditional Jump</code></td><td><code>jr</code></td><td>Jump register.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>lb</code></td><td>Load byte.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>lbu</code></td><td>Load byte unsigned.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>lui</code></td><td>Load upper immediate.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>lw</code></td><td>Load word.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>lwr</code></td><td>Load word right.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>mfhi</code></td><td>Move from HI register.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>mflo</code></td><td>Move from LO register.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>move</code></td><td>Move between registers.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>movn</code></td><td>Move conditional on not zero.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>movz</code></td><td>Move conditional on zero.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>mtlo</code></td><td>Move to LO register.</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>mul</code></td><td>Multiply (to produce a word result).</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>multu</code></td><td>Multiply unsigned.</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>negu</code></td><td>Negate unsigned.</td></tr>
+<tr><td><code>No Op</code></td><td><code>nop</code></td><td>No operation.</td></tr>
+<tr><td><code>Logical</code></td><td><code>not</code></td><td>Bitwise NOT (pseudo-instruction in MIPS).</td></tr>
+<tr><td><code>Logical</code></td><td><code>or</code></td><td>Bitwise OR.</td></tr>
+<tr><td><code>Logical</code></td><td><code>ori</code></td><td>Bitwise OR immediate.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>sb</code></td><td>Store byte.</td></tr>
+<tr><td><code>Logical</code></td><td><code>sll</code></td><td>Shift left logical.</td></tr>
+<tr><td><code>Logical</code></td><td><code>sllv</code></td><td>Shift left logical variable.</td></tr>
+<tr><td><code>Comparison</code></td><td><code>slt</code></td><td>Set on less than (signed).</td></tr>
+<tr><td><code>Comparison</code></td><td><code>slti</code></td><td>Set on less than immediate.</td></tr>
+<tr><td><code>Comparison</code></td><td><code>sltiu</code></td><td>Set on less than immediate unsigned.</td></tr>
+<tr><td><code>Comparison</code></td><td><code>sltu</code></td><td>Set on less than unsigned.</td></tr>
+<tr><td><code>Logical</code></td><td><code>sra</code></td><td>Shift right arithmetic.</td></tr>
+<tr><td><code>Logical</code></td><td><code>srl</code></td><td>Shift right logical.</td></tr>
+<tr><td><code>Logical</code></td><td><code>srlv</code></td><td>Shift right logical variable.</td></tr>
+<tr><td><code>Arithmetic</code></td><td><code>subu</code></td><td>Subtract unsigned.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>sw</code></td><td>Store word.</td></tr>
+<tr><td><code>Data Transfer</code></td><td><code>swr</code></td><td>Store word right.</td></tr>
+<tr><td><code>Serialization</code></td><td><code>sync</code></td><td>Synchronize shared memory.</td></tr>
+<tr><td><code>System Calls</code></td><td><code>syscall</code></td><td>System call.</td></tr>
+<tr><td><code>Logical</code></td><td><code>xor</code></td><td>Bitwise XOR.</td></tr>
+<tr><td><code>Logical</code></td><td><code>xori</code></td><td>Bitwise XOR immediate.</td></tr>
+</tbody></table>
+</div>
 <h2 id="asterisc-risc-v"><a class="header" href="#asterisc-risc-v">Asterisc (RISC-V)</a></h2>
 <p>Asterisc is based off of the <code>rv64gc</code> target architecture, which defines the following extensions:</p>
 <ul>
@@ -191,7 +249,7 @@ for each FPVM target:</p>
 <ul>
 <li><code>FENCE</code>, <code>ECALL</code>, <code>EBREAK</code> are hardwired to implement a minimal subset of systemcalls of the linux kernel
 <ul>
-<li>Work in progress. All syscalls used by the Golang <code>risc64</code> runtime. </li>
+<li>Work in progress. All syscalls used by the Golang <code>risc64</code> runtime.</li>
 </ul>
 </li>
 </ul>
