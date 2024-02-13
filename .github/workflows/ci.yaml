@@ -44,6 +44,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: fmt + lint
         run: just lint-${{ matrix.target }}
+      - name: chown target
+        run: |
+          sudo chown -R $(id -u):$(id -g) ./target
   cargo-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -70,6 +73,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: build
         run: just build-${{ matrix.target }}
+      - name: chown target
+        run: |
+          sudo chown -R $(id -u):$(id -g) ./target
   cargo-doc:
     runs-on: ubuntu-latest
     timeout-minutes: 20
