@@ -1,6 +1,6 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from the preimage oracle.
 
-/// https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-key-types
+/// <https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum PreimageKeyType {

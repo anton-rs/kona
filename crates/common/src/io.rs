@@ -19,12 +19,18 @@ cfg_if! {
 }
 
 /// Print the passed string to the standard output [FileDescriptor].
+///
+/// # Panics
+/// Panics if the write operation fails.
 #[inline]
 pub fn print(s: &str) {
     ClientIO::write(FileDescriptor::StdOut, s.as_bytes()).expect("Error writing to stdout.");
 }
 
 /// Print the passed string to the standard error [FileDescriptor].
+///
+/// # Panics
+/// Panics if the write operation fails.
 #[inline]
 pub fn print_err(s: &str) {
     ClientIO::write(FileDescriptor::StdErr, s.as_bytes()).expect("Error writing to stderr.");
