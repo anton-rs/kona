@@ -8,6 +8,7 @@ test-cannon:
   @cd ../examples/simple-revm && just build-cannon --release
   # Run Cannon tests
   @cd cannon-tests && go test -count=1 -v ./...
+  @cd cannon-rs-tests && cargo +nightly test --release
 
 # Test programs on `asterisc`
 test-asterisc:
