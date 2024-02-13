@@ -9,7 +9,7 @@ test *args='':
   cargo nextest run --workspace --all $@
 
 # Lint the workspace for all available targets
-lint: lint-native lint-cannon lint-asterisc
+lint: lint-native lint-cannon lint-asterisc lint-docs
 
 # Fixes the formatting of the workspace
 fmt-native-fix:
@@ -40,6 +40,14 @@ lint-asterisc:
     -v `pwd`/:/workdir \
     -w="/workdir" \
     ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy --workspace --all --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings 
+
+# Lint the Rust documentation
+lint-docs:
+  RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items 
+
+# Test the Rust documentation
+test-docs:
+  cargo test --doc --all --locked
 
 # Build the workspace for all available targets
 build: build-native build-cannon build-asterisc

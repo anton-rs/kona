@@ -83,14 +83,14 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
       - name: Install Rust stable toolchain
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
       - name: doclint
-        id: build
         continue-on-error: true
-        run: RUSTDOCFLAGS="-D warnings" cargo doc --all --no-deps --document-private-items
+        run: just lint-docs
       - name: doctest
-        run: cargo test --doc --all --locked
+        run: just test-docs

@@ -30,7 +30,14 @@ pub mod global_allocator {
 /// Initialize heap memory for the `client` program with the given size.
 ///
 /// # Safety
-/// See [init_allocator] safety comment.
+#[cfg_attr(
+    any(target_arch = "mips", target_arch = "riscv64"),
+    doc = "See [global_allocator::init_allocator] safety comment."
+)]
+#[cfg_attr(
+    not(any(target_arch = "mips", target_arch = "riscv64")),
+    doc = "This macro is entirely safe to invoke in non-MIPS and non-RISC-V64 profiles, and functions as a no-op."
+)]
 #[macro_export]
 macro_rules! alloc_heap {
     ($size:expr) => {{
