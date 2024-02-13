@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*"]
-exclude = ["examples/minimal", "examples/simple-revm"]
+exclude = ["examples/minimal", "examples/simple-revm", "fpvm-tests/cannon-rs-tests"]
 resolver = "2"
 
 [workspace.package]
@@ -13,7 +13,7 @@ homepage = "https://github.com/ethereum-optimism/kona"
 exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
-anyhow = { version = "1.0.75", default-features = false }
+anyhow = { version = "1.0.79", default-features = false }
 tracing = "0.1.40"
 cfg-if = "1.0.0"
 
