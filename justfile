@@ -11,9 +11,16 @@ test *args='':
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc
 
-# Lint the workspace
-lint-native:
+# Fixes the formatting of the workspace
+fmt-native-fix:
   cargo +nightly fmt --all
+
+# Check the formatting of the workspace
+fmt-native-check:
+  cargo +nightly fmt --all -- --check
+
+# Lint the workspace
+lint-native: fmt-native-check
   cargo +nightly clippy --workspace --all --all-features --all-targets -- -D warnings
 
 # Lint the workspace (mips arch)
@@ -23,7 +30,7 @@ lint-cannon:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    cannon-pipeline:latest cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std -- -D warnings 
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std -- -D warnings 
 
 # Lint the workspace (risc-v arch)
 lint-asterisc:
@@ -32,7 +39,7 @@ lint-asterisc:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    asterisc-pipeline:latest cargo +nightly clippy --workspace --all --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings 
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy --workspace --all --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings 
 
 # Build the workspace for all available targets
 build: build-native build-cannon build-asterisc
@@ -48,7 +55,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    cannon-pipeline:latest cargo build --workspace --all -Zbuild-std $@
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@
 
 # Build for the `asterisc` target
 build-asterisc *args='':
@@ -57,4 +64,4 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    asterisc-pipeline:latest cargo build --workspace --all -Zbuild-std $@
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@
