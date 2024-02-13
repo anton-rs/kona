@@ -20,9 +20,14 @@ jobs:
   cargo-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      matrix:
+        target: ["native", "cannon", "asterisc"]
+    name: lint-${{ matrix.target }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
       - name: Install Rust nightly toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -30,25 +35,41 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - name: cargo fmt
-        run: cargo fmt --all -- --check
-      - name: cargo clippy
-        run: cargo clippy --workspace --all --locked -- -D warnings
+          prefix-key: ${{ matrix.target }}
+      - name: Log into ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: fmt + lint
+        run: just lint-${{ matrix.target }}
   cargo-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      matrix:
+        target: ["native", "cannon", "asterisc"]
+    name: build-${{ matrix.target }}
     continue-on-error: true
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
       - name: Install Rust stable toolchain
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+          prefix-key: ${{ matrix.target }}
+      - name: Log into ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: build
-        id: build
-        run: cargo build --workspace --all --locked
+        run: just build-${{ matrix.target }}
   cargo-doc:
     runs-on: ubuntu-latest
     timeout-minutes: 20

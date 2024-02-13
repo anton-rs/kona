@@ -7,7 +7,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/../../:/workdir \
     -w="/workdir/examples/minimal" \
-    cannon-pipeline:latest cargo build -Zbuild-std $@
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build -Zbuild-std $@
 
 # Build for the `asterisc` target
 build-asterisc *args='':
@@ -16,4 +16,4 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/../../:/workdir \
     -w="/workdir/examples/minimal" \
-    asterisc-pipeline:latest cargo build -Zbuild-std $@
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build -Zbuild-std $@

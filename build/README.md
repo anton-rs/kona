@@ -18,15 +18,16 @@ docker run \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    cannon-pipeline:latest cargo build --release -Zbuild-std
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --release -Zbuild-std
 ```
 
 **asterisc**
+
 ```
 docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    asterisc-pipeline:latest cargo build --release -Zbuild-std
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --release -Zbuild-std
 ```
