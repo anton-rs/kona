@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="CONTRIBUTING.html"><strong aria-hidden="true">4.</strong> Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -404,6 +404,37 @@ datastore. Full specifications for the <code>Preimage ABI</code> are available i
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributing-1"><a class="header" href="#contributing-1">Contributing</a></h1>
+<p>Thank you for wanting to contribute! Before contributing to this repository, please read through this document and
+discuss the change you wish to make via issue or in the development telegram.</p>
+<h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
+<p>Before working with this repository locally, you'll need to install several dependencies:</p>
+<ul>
+<li><a href="https://www.docker.com/">Docker</a> for cross-compilation.</li>
+<li><a href="https://github.com/casey/just">just</a> for our command-runner scripts.</li>
+<li>The <a href="https://rustup.rs/">Rust toolchain</a></li>
+<li>The <a href="https://go.dev/dl/">Golang toolchain</a></li>
+</ul>
+<p><strong>Optional</strong></p>
+<ul>
+<li><a href="https://github.com/rust-lang/mdBook">mdbook</a> to contribute to the <a href="/">book</a>
+<ul>
+<li><a href="https://github.com/sgoudham/mdbook-template">mdbook-template</a></li>
+<li><a href="https://github.com/badboy/mdbook-mermaid">mdbook-mermaid</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="pull-request-process"><a class="header" href="#pull-request-process">Pull Request Process</a></h2>
+<ol>
+<li>Before anything, <a href="https://github.com/ethereum-optimism/kona/issues/new">create an issue</a> to discuss the change you're
+wanting to make, if it is significant or changes functionality. Feel free to skip this step for trivial changes.</li>
+<li>Once your change is implemented, ensure that all checks are passing before creating a PR. The full CI pipeline can
+be ran locally via the <code>justfile</code>s in the repository.</li>
+<li>Make sure to update any documentation that has gone stale as a result of the change, in the <code>README</code> files, the [book][book],
+and in rustdoc comments.</li>
+<li>Once you have sign-off from a maintainer, you may merge your pull request yourself if you have permissions to do so.
+If not, the maintainer who approves your pull request will add it to the merge queue.</li>
+</ol>
 
                     </main>
 
