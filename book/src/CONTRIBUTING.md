@@ -1,7 +1,7 @@
 # Contributing
 
-Thank you for wanting to contribute! Before contributing to this repository, please read through this document, the
-[book][book], and discuss the change you wish to make via issue or in the development telegram.
+Thank you for wanting to contribute! Before contributing to this repository, please read through this document and
+discuss the change you wish to make via issue or in the development telegram.
 
 ## Dependencies
 
@@ -14,7 +14,7 @@ Before working with this repository locally, you'll need to install several depe
 
 **Optional**
 
-- [mdbook](https://github.com/rust-lang/mdBook) to contribute to the [book][book]
+- [mdbook](https://github.com/rust-lang/mdBook) to contribute to the [book](/)
   - [mdbook-template](https://github.com/sgoudham/mdbook-template)
   - [mdbook-mermaid](https://github.com/badboy/mdbook-mermaid)
 
@@ -28,5 +28,3 @@ Before working with this repository locally, you'll need to install several depe
    and in rustdoc comments.
 1. Once you have sign-off from a maintainer, you may merge your pull request yourself if you have permissions to do so.
    If not, the maintainer who approves your pull request will add it to the merge queue.
-
-[book]: https://static.optimism.io/kona
