@@ -2,9 +2,7 @@
 
 use alloy_primitives::hex;
 use anyhow::Result;
-use cannon_mipsevm::{
-    load_elf, patch_stack, InstrumentedState, PreimageOracle,
-};
+use cannon_mipsevm::{load_elf, patch_stack, InstrumentedState, PreimageOracle};
 use preimage_oracle::{Hint, Key, LocalIndexKey};
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, io::BufWriter};
@@ -40,6 +38,7 @@ fn test_simple_revm() {
 
 pub struct RevmTestOracle {
     images: HashMap<[u8; 32], Vec<u8>>,
+    sha2_preimages: HashMap<[u8; 32], Vec<u8>>,
 }
 
 impl RevmTestOracle {
@@ -50,25 +49,46 @@ impl RevmTestOracle {
         let input_hash = hasher.finalize();
 
         let mut images = HashMap::new();
-        images.insert((0 as LocalIndexKey).preimage_key(), INPUT.to_vec());
         images.insert((1 as LocalIndexKey).preimage_key(), input_hash.to_vec());
         images.insert(
             (2 as LocalIndexKey).preimage_key(),
             hex!("365f5f37365ff3").to_vec(),
         );
 
-        Self { images }
+        let mut sha2_preimages = HashMap::new();
+        sha2_preimages.insert(input_hash.try_into().unwrap(), INPUT.to_vec());
+
+        Self {
+            images,
+            sha2_preimages,
+        }
     }
 }
 
 impl PreimageOracle for RevmTestOracle {
-    fn hint(&mut self, _: impl Hint) -> Result<()> {
-        // no-op
-        Ok(())
+    fn hint(&mut self, hint: impl Hint) -> Result<()> {
+        let hint_str = std::str::from_utf8(hint.hint())?;
+        let hint_parts = hint_str.split_whitespace().collect::<Vec<_>>();
+
+        match hint_parts[0] {
+            "sha2-preimage" => {
+                let hash: [u8; 32] = hex::decode(hint_parts[1])?
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Failed to parse hash"))?;
+                self.images.insert(
+                    (0 as LocalIndexKey).preimage_key(),
+                    self.sha2_preimages
+                        .get(&hash)
+                        .ok_or(anyhow::anyhow!("No preimage for hash"))?
+                        .to_vec(),
+                );
+                Ok(())
+            }
+            _ => anyhow::bail!("Unknown hint: {}", hint_str),
+        }
     }
 
     fn get(&mut self, key: [u8; 32]) -> Result<Vec<u8>> {
-        dbg!(&key);
         Ok(self
             .images
             .get(&key)

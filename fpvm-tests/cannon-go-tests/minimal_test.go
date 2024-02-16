@@ -25,12 +25,10 @@ func TestMinimal(t *testing.T) {
 	us := mipsevm.NewInstrumentedState(state, oracle, io.MultiWriter(&stdOutBuf, os.Stdout), io.MultiWriter(&stdErrBuf, os.Stderr))
 
 	for i := 0; i < 200_000; i++ {
-		wit, err := us.Step(true)
+		_, err := us.Step(true)
 		require.NoError(t, err)
-		// hack: state isn't exposed in `InstrumentedState`, so we generate the
-		// state witness each step and check for the exit condition
-		if wit != nil && wit.State[89] == 1 {
-			fmt.Printf("exited @ step #%d\n", i)
+		if state.Exited {
+			fmt.Printf("exited @ step #%d\n", state.Step)
 			break
 		}
 	}

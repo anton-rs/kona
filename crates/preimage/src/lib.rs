@@ -17,5 +17,8 @@ pub use key::{PreimageKey, PreimageKeyType};
 mod oracle;
 pub use oracle::OracleReader;
 
+mod hint;
+pub use hint::HintWriter;
+
 mod pipe;
 pub use pipe::PipeHandle;

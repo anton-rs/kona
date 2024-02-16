@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/cannon/mipsevm"
@@ -38,11 +39,13 @@ var _ PreimageOracle = (*testOracle)(nil)
 
 func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr string) {
 	images := make(map[[32]byte][]byte)
+	sha2Preimages := make(map[[32]byte][]byte)
+
 	input := []byte("facade facade facade")
 	shaHash := sha256.Sum256(input)
-	// shaHash[0] = 0x01
-	images[preimage.LocalIndexKey(0).PreimageKey()] = input
 	images[preimage.LocalIndexKey(1).PreimageKey()] = shaHash[:]
+	sha2Preimages[shaHash] = input
+
 	// CALLDATASIZE
 	// PUSH0
 	// PUSH0
@@ -54,7 +57,16 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 
 	oracle := &testOracle{
 		hint: func(v []byte) {
-			// no-op
+			hintStr := string(v)
+			hintParts := strings.Split(hintStr, " ")
+
+			switch hintParts[0] {
+			case "sha2-preimage":
+				hash := common.HexToHash(hintParts[1])
+				images[preimage.LocalIndexKey(0).PreimageKey()] = sha2Preimages[hash]
+			default:
+				t.Fatalf("unknown hint: %s", hintStr)
+			}
 		},
 		getPreimage: func(k [32]byte) []byte {
 			p, ok := images[k]
@@ -81,12 +93,10 @@ func TestSimpleRevm(t *testing.T) {
 	us := mipsevm.NewInstrumentedState(state, oracle, io.MultiWriter(&stdOutBuf, os.Stdout), io.MultiWriter(&stdErrBuf, os.Stderr))
 
 	for i := 0; i < 200_000; i++ {
-		wit, err := us.Step(true)
+		_, err := us.Step(false)
 		require.NoError(t, err)
-		// hack: state isn't exposed in `InstrumentedState`, so we generate the
-		// state witness each step and check for the exit condition
-		if wit != nil && wit.State[89] == 1 {
-			fmt.Printf("exited @ step #%d\n", i)
+		if state.Exited {
+			fmt.Printf("exited @ step #%d\n", state.Step)
 			break
 		}
 	}

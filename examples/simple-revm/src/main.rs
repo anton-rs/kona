@@ -4,7 +4,7 @@
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
 use kona_common::{io, FileDescriptor};
-use kona_preimage::{OracleReader, PipeHandle, PreimageKey, PreimageKeyType};
+use kona_preimage::{HintWriter, OracleReader, PipeHandle, PreimageKey, PreimageKeyType};
 use revm::{
     db::{CacheDB, EmptyDB},
     primitives::{
@@ -27,15 +27,20 @@ const CODE_KEY: B256 = b256!("00000000000000000000000000000000000000000000000000
 
 static CLIENT_PREIMAGE_PIPE: PipeHandle =
     PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
+static CLIENT_HINT_PIPE: PipeHandle =
+    PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
 
 #[no_mangle]
 pub extern "C" fn _start() {
     kona_common::alloc_heap!(HEAP_SIZE);
 
-    io::print("Booting EVM and checking hash...\n");
-    let (input, digest, code) = boot().expect("Failed to boot");
+    let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
+    let hint_writer = HintWriter::new(CLIENT_HINT_PIPE);
 
-    match run_evm(input, digest, code) {
+    io::print("Booting EVM and checking hash...\n");
+    let (digest, code) = boot(&mut oracle).expect("Failed to boot");
+
+    match run_evm(&mut oracle, &hint_writer, digest, code) {
         Ok(_) => io::print("Success, hashes matched!\n"),
         Err(e) => {
             let _ = io::print_err(alloc::format!("Error: {}\n", e).as_ref());
@@ -47,20 +52,28 @@ pub extern "C" fn _start() {
 }
 
 /// Boot the program and load bootstrap information.
-fn boot() -> Result<(Vec<u8>, [u8; 32], Vec<u8>)> {
-    let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
-    let input = oracle.get(PreimageKey::new(*INPUT_KEY, PreimageKeyType::Local))?;
+fn boot(oracle: &mut OracleReader) -> Result<([u8; 32], Vec<u8>)> {
     let digest = oracle
         .get(PreimageKey::new(*DIGEST_KEY, PreimageKeyType::Local))?
         .try_into()
         .map_err(|_| anyhow!("Failed to convert digest to [u8; 32]"))?;
     let code = oracle.get(PreimageKey::new(*CODE_KEY, PreimageKeyType::Local))?;
 
-    Ok((input, digest, code))
+    Ok((digest, code))
 }
 
 /// Call the SHA-256 precompile and assert that the input and output match the expected values
-fn run_evm(input: Vec<u8>, digest: [u8; 32], code: Vec<u8>) -> Result<()> {
+fn run_evm(
+    oracle: &mut OracleReader,
+    hint_writer: &HintWriter,
+    digest: [u8; 32],
+    code: Vec<u8>,
+) -> Result<()> {
+    // Send a hint for the preimage of the digest to the host so that it can prepare the preimage.
+    hint_writer.write(&alloc::format!("sha2-preimage {}", hex::encode(digest)))?;
+    // Get the preimage of `digest` from the host.
+    let input = oracle.get(PreimageKey::new(*INPUT_KEY, PreimageKeyType::Local))?;
+
     let mut cache_db = CacheDB::new(EmptyDB::default());
 
     // Insert EVM identity contract into database.

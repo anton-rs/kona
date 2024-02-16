@@ -3,6 +3,7 @@ package asterisc_test
 import (
 	"crypto/sha256"
 	"debug/elf"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,11 +15,13 @@ import (
 
 func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr string) {
 	images := make(map[[32]byte][]byte)
+	sha2Preimages := make(map[[32]byte][]byte)
+
 	input := []byte("facade facade facade")
 	shaHash := sha256.Sum256(input)
-	// shaHash[0] = 0x01
-	images[preimage.LocalIndexKey(0).PreimageKey()] = input
 	images[preimage.LocalIndexKey(1).PreimageKey()] = shaHash[:]
+	sha2Preimages[shaHash] = input
+
 	// CALLDATASIZE
 	// PUSH0
 	// PUSH0
@@ -30,7 +33,16 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 
 	oracle := &testOracle{
 		hint: func(v []byte) {
-			// no-op
+			hintStr := string(v)
+			hintParts := strings.Split(hintStr, " ")
+
+			switch hintParts[0] {
+			case "sha2-preimage":
+				hash := common.HexToHash(hintParts[1])
+				images[preimage.LocalIndexKey(0).PreimageKey()] = sha2Preimages[hash]
+			default:
+				t.Fatalf("unknown hint: %s", hintStr)
+			}
 		},
 		getPreimage: func(k [32]byte) []byte {
 			p, ok := images[k]
