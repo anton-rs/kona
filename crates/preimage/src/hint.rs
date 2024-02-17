@@ -1,6 +1,6 @@
 use crate::PipeHandle;
 use alloc::vec;
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 /// A [HintWriter] is a high-level interface to the hint pipe. It provides a way to write hints to the host.
 #[derive(Debug, Clone, Copy)]
@@ -24,38 +24,11 @@ impl HintWriter {
         hint_bytes[4..].copy_from_slice(hint.as_bytes());
 
         // Write the hint to the host.
-        let mut written = 0;
-        loop {
-            match self.pipe_handle.write(&hint_bytes[written..]) {
-                Ok(0) => break,
-                Ok(n) => {
-                    written += n as usize;
-                    continue;
-                }
-                Err(e) => bail!("Failed to write preimage key: {}", e),
-            }
-        }
+        self.pipe_handle.write(&hint_bytes)?;
 
         // Read the hint acknowledgement from the host.
         let mut hint_ack = [0u8; 1];
-        self.read_exact(&mut hint_ack)?;
-
-        Ok(())
-    }
-
-    /// Reads bytes into `buf` and returns the number of bytes read.
-    fn read(&self, buf: &mut [u8]) -> Result<usize> {
-        let read = self.pipe_handle.read(buf)?;
-        Ok(read as usize)
-    }
-
-    /// Reads exactly `buf.len()` bytes into `buf`, blocking until all bytes are read.
-    fn read_exact(&self, buf: &mut [u8]) -> Result<()> {
-        let mut read = 0;
-        while read < buf.len() {
-            let chunk_read = self.read(&mut buf[read..])?;
-            read += chunk_read;
-        }
+        self.pipe_handle.read_exact(&mut hint_ack)?;
 
         Ok(())
     }
