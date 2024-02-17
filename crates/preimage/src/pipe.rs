@@ -1,7 +1,7 @@
 //! This module contains a rudamentary pipe between two file descriptors, using [kona_common::io] for
 //! reading and writing from the file descriptors.
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use kona_common::{io, FileDescriptor, RegisterSize};
 
 /// [PipeHandle] is a handle for one end of a bidirectional pipe.
@@ -27,8 +27,29 @@ impl PipeHandle {
         io::read(self.read_handle, buf)
     }
 
+    /// Reads exactly `buf.len()` bytes into `buf`, blocking until all bytes are read.
+    pub fn read_exact(&self, buf: &mut [u8]) -> Result<RegisterSize> {
+        let mut read = 0;
+        while read < buf.len() {
+            let chunk_read = self.read(&mut buf[read..])?;
+            read += chunk_read as usize;
+        }
+        Ok(read as RegisterSize)
+    }
+
     /// Write the given buffer to the pipe.
     pub fn write(&self, buf: &[u8]) -> Result<RegisterSize> {
-        io::write(self.write_handle, buf)
+        let mut written = 0;
+        loop {
+            match io::write(self.write_handle, &buf[written..]) {
+                Ok(0) => break,
+                Ok(n) => {
+                    written += n as usize;
+                    continue;
+                }
+                Err(e) => bail!("Failed to write preimage key: {}", e),
+            }
+        }
+        Ok(written as RegisterSize)
     }
 }
