@@ -63,7 +63,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_local_key() {
+    fn test_preimage_keys() {
         let types = [PreimageKeyType::Local, PreimageKeyType::Keccak256];
 
         for key_type in types {
