@@ -1,6 +1,6 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from the preimage oracle.
 
-/// <https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-key-types>
+/// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum PreimageKeyType {
@@ -41,6 +41,17 @@ impl PreimageKey {
         let mut data = [0u8; 31];
         data.copy_from_slice(&key[1..]);
         Self { data, key_type }
+    }
+
+    /// Creates a new local [PreimageKey] from a 64-bit local identifier. The local identifier will be written into the
+    /// low-order 8 bytes of the big-endian 31-byte data field.
+    pub fn new_local(local_ident: u64) -> Self {
+        let mut data = [0u8; 31];
+        data[23..].copy_from_slice(&local_ident.to_be_bytes());
+        Self {
+            data,
+            key_type: PreimageKeyType::Local,
+        }
     }
 
     /// Returns the [PreimageKeyType] for the [PreimageKey].

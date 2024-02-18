@@ -3,10 +3,6 @@
 This library offers utilities for developing verifiable `client` executables that may run on top of Fault Proof Virtual
 Machine targets.
 
-## Usage
-
-The primary offerings of this crate are the `io` module and the global allocator wrapper.
-
 - The `alloc_heap` macro allows for statically allocating a heap of a certain size, and all `client` programs will need
   to run it if they require heap allocation. The `alloc` crate can be used for programs targeting any FPVM, but is
   optional.

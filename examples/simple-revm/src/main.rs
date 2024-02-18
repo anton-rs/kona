@@ -4,14 +4,16 @@
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
 use kona_common::{io, FileDescriptor};
-use kona_preimage::{HintWriter, OracleReader, PipeHandle, PreimageKey, PreimageKeyType};
+use kona_preimage::{
+    HintWriter, HintWriterClient, OracleReader, PipeHandle, PreimageKey, PreimageOracleClient,
+};
 use revm::{
     db::{CacheDB, EmptyDB},
     primitives::{
-        address, b256, hex, keccak256, AccountInfo, Address, Bytecode, ExecutionResult, Output,
-        TransactTo, B256,
+        address, hex, keccak256, AccountInfo, Address, Bytecode, Bytes, ExecutionResult, Output,
+        TransactTo,
     },
-    Evm,
+    Database, Evm,
 };
 
 extern crate alloc;
@@ -21,9 +23,9 @@ const HEAP_SIZE: usize = 0xFFFFFFF;
 const EVM_ID_ADDRESS: Address = address!("dead00000000000000000000000000000000beef");
 const SHA2_PRECOMPILE: Address = address!("0000000000000000000000000000000000000002");
 
-const INPUT_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000000");
-const DIGEST_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000001");
-const CODE_KEY: B256 = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+const INPUT_IDENT: u64 = 0;
+const DIGEST_IDENT: u64 = 1;
+const CODE_IDENT: u64 = 2;
 
 static CLIENT_PREIMAGE_PIPE: PipeHandle =
     PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
@@ -52,17 +54,19 @@ pub extern "C" fn _start() {
 }
 
 /// Boot the program and load bootstrap information.
+#[inline]
 fn boot(oracle: &mut OracleReader) -> Result<([u8; 32], Vec<u8>)> {
     let digest = oracle
-        .get(PreimageKey::new(*DIGEST_KEY, PreimageKeyType::Local))?
+        .get(PreimageKey::new_local(DIGEST_IDENT))?
         .try_into()
         .map_err(|_| anyhow!("Failed to convert digest to [u8; 32]"))?;
-    let code = oracle.get(PreimageKey::new(*CODE_KEY, PreimageKeyType::Local))?;
+    let code = oracle.get(PreimageKey::new_local(CODE_IDENT))?;
 
     Ok((digest, code))
 }
 
 /// Call the SHA-256 precompile and assert that the input and output match the expected values
+#[inline]
 fn run_evm(
     oracle: &mut OracleReader,
     hint_writer: &HintWriter,
@@ -72,7 +76,7 @@ fn run_evm(
     // Send a hint for the preimage of the digest to the host so that it can prepare the preimage.
     hint_writer.write(&alloc::format!("sha2-preimage {}", hex::encode(digest)))?;
     // Get the preimage of `digest` from the host.
-    let input = oracle.get(PreimageKey::new(*INPUT_KEY, PreimageKeyType::Local))?;
+    let input = oracle.get(PreimageKey::new_local(INPUT_IDENT))?;
 
     let mut cache_db = CacheDB::new(EmptyDB::default());
 
@@ -94,16 +98,7 @@ fn run_evm(
         .build();
 
     // Call EVM identity contract.
-    let ref_tx = evm
-        .transact()
-        .map_err(|e| anyhow!("Failed state transition: {}", e))?;
-    let value = match ref_tx.result {
-        ExecutionResult::Success {
-            output: Output::Call(value),
-            ..
-        } => value,
-        e => bail!("EVM Execution failed: {:?}", e),
-    };
+    let value = call_evm(&mut evm)?;
     if value.as_ref() != evm.context.evm.env.tx.data.as_ref() {
         bail!(alloc::format!(
             "Expected: {} | Got: {}\n",
@@ -113,9 +108,31 @@ fn run_evm(
     }
 
     // Set up SHA2 precompile call
-    evm.context.evm.env.tx.transact_to = TransactTo::Call(SHA2_PRECOMPILE);
-
+    let mut evm = evm
+        .modify()
+        .modify_tx_env(|tx_env| tx_env.transact_to = TransactTo::Call(SHA2_PRECOMPILE))
+        .build();
     // Call SHA2 precompile.
+    let value = call_evm(&mut evm)?;
+    if value.as_ref() != digest.as_ref() {
+        bail!(alloc::format!(
+            "Expected: {} | Got: {}\n",
+            hex::encode(digest),
+            hex::encode(value)
+        ));
+    }
+
+    Ok(())
+}
+
+/// Performs a read-only call with the current transction environment and returns the output,
+/// or an error if the transaction failed.
+#[inline]
+fn call_evm<DB>(evm: &mut Evm<'_, (), DB>) -> Result<Bytes>
+where
+    DB: Database,
+    <DB as revm::Database>::Error: core::fmt::Display,
+{
     let ref_tx = evm
         .transact()
         .map_err(|e| anyhow!("Failed state transition: {}", e))?;
@@ -126,15 +143,7 @@ fn run_evm(
         } => value,
         e => bail!("EVM Execution failed: {:?}", e),
     };
-    if value.as_ref() != digest.as_ref() {
-        bail!(alloc::format!(
-            "Expected: {} | Got: {}\n",
-            hex::encode(digest),
-            hex::encode(value)
-        ));
-    }
-
-    Ok(())
+    Ok(value)
 }
 
 #[panic_handler]

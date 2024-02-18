@@ -12,11 +12,11 @@ communication with the `host` (the FPVM), and other implementation-specific feat
 While the program is running on top of the FPVM, it is considered to be in the `client` role, while the VM is in the `host` role. The only way for the `client` and `host`
 to communicate with one another is synchronously through the {{#template ../../templates/glossary-link.md root=../ text=Preimage ABI ref=preimage-abi}} ([specification][preimage-specs]).
 
-In order for the `client` to read from the `host`, special syscalls are modified within the FPVM to allow the `client` to request preparation of and read foreign data.
+In order for the `client` to read from the `host`, the `read` and `write` syscalls are modified within the FPVM to allow the `client` to request preparation of and read foreign data.
 
 ### Reading
 
-When the `client` wants to read data from the `host`, it must first send a "hint" to the `host` through the hint file descriptor, which is a request for the `host` to prepare the data for reading. The `host` will then
+When the `client` wants to read data from the `host`, it must first send a "hint" to the `host` through the hint file descriptor, which signals a request for the `host` to prepare the data for reading. The `host` will then
 prepare the data, and send a hint acknowledgement back to the `client`. The `client` can then read the data from the host through the designated file descriptor.
 
 The preparation step ("hinting") is an optimization that allows the `host` to know ahead of time the intents of the `client` and the data it requires for execution. This can allow
