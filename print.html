@@ -243,10 +243,10 @@ communication with the <code>host</code> (the FPVM), and other implementation-sp
 <h2 id="host---client-communication"><a class="header" href="#host---client-communication">Host &lt;-&gt; Client Communication</a></h2>
 <p>While the program is running on top of the FPVM, it is considered to be in the <code>client</code> role, while the VM is in the <code>host</code> role. The only way for the <code>client</code> and <code>host</code>
 to communicate with one another is synchronously through the <a href="fpp-dev/../glossary.html#preimage-abi">Preimage ABI</a>
-(<a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle">specification</a>).</p>
-<p>In order for the <code>client</code> to read from the <code>host</code>, special syscalls are modified within the FPVM to allow the <code>client</code> to request preparation of and read foreign data.</p>
+(<a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">specification</a>).</p>
+<p>In order for the <code>client</code> to read from the <code>host</code>, the <code>read</code> and <code>write</code> syscalls are modified within the FPVM to allow the <code>client</code> to request preparation of and read foreign data.</p>
 <h3 id="reading"><a class="header" href="#reading">Reading</a></h3>
-<p>When the <code>client</code> wants to read data from the <code>host</code>, it must first send a "hint" to the <code>host</code> through the hint file descriptor, which is a request for the <code>host</code> to prepare the data for reading. The <code>host</code> will then
+<p>When the <code>client</code> wants to read data from the <code>host</code>, it must first send a "hint" to the <code>host</code> through the hint file descriptor, which signals a request for the <code>host</code> to prepare the data for reading. The <code>host</code> will then
 prepare the data, and send a hint acknowledgement back to the <code>client</code>. The <code>client</code> can then read the data from the host through the designated file descriptor.</p>
 <p>The preparation step ("hinting") is an optimization that allows the <code>host</code> to know ahead of time the intents of the <code>client</code> and the data it requires for execution. This can allow
 for lazy loading of data, and also prevent the need for unnecessary allocations within the <code>host</code>'s memory. This step is a no-op on-chain, and is only ran locally
@@ -261,7 +261,7 @@ when the <code>host</code> is the native implementation of the FPVM.</p>
 </pre>
 </center>
 <h2 id="full-example"><a class="header" href="#full-example">Full Example</a></h2>
-<p>Below, we have a full architecture diagram of the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> (source: <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md">fault proof specs</a>), the reference implementation for the OP Stack's Fault Proof Program,
+<p>Below, we have a full architecture diagram of the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> (source: <a href="https://specs.optimism.io/experimental/fault-proof/index.html">fault proof specs</a>), the reference implementation for the OP Stack's Fault Proof Program,
 which has the objective of verifying claims about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
 <p><img src="fpp-dev/../assets/op-program-fpp.svg" alt="op-program-architecture" /></p>
 <p>In this program, execution and derivation of the L2 chain is performed within it, and ultimately the claimed state of the L2 chain is verified in the <a href="fpp-dev/../prologue.html">prologue</a> stage.</p>
@@ -352,6 +352,23 @@ for each FPVM target:</p>
 <tr><td><code>Logical</code></td><td><code>xori</code></td><td>Bitwise XOR immediate.</td></tr>
 </tbody></table>
 </div>
+<h3 id="syscalls"><a class="header" href="#syscalls">Syscalls</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>$v0</th><th>system call</th><th>$a0</th><th>$a1</th><th>$a2</th><th>Effect</th></tr></thead><tbody>
+<tr><td>4090</td><td>mmap</td><td>uint32 addr</td><td>uint32 len</td><td>🚫</td><td>Allocates a page from the heap. See <a href="fpp-dev/targets.html#heap">heap</a> for details.</td></tr>
+<tr><td>4045</td><td>brk</td><td>🚫</td><td>🚫</td><td>🚫</td><td>Returns a fixed address for the program break at <code>0x40000000</code></td></tr>
+<tr><td>4120</td><td>clone</td><td>🚫</td><td>🚫</td><td>🚫</td><td>Returns 1</td></tr>
+<tr><td>4246</td><td>exit_group</td><td>uint8 exit_code</td><td>🚫</td><td>🚫</td><td>Sets the Exited and ExitCode states to <code>true</code> and <code>$a0</code> respectively.</td></tr>
+<tr><td>4003</td><td>read</td><td>uint32 fd</td><td>char *buf</td><td>uint32 count</td><td>Similar behavior as Linux/MIPS with support for unaligned reads. See <a href="fpp-dev/targets.html#io">I/O</a> for more details.</td></tr>
+<tr><td>4004</td><td>write</td><td>uint32 fd</td><td>char *buf</td><td>uint32 count</td><td>Similar behavior as Linux/MIPS with support for unaligned writes. See <a href="fpp-dev/targets.html#io">I/O</a> for more details.</td></tr>
+<tr><td>4055</td><td>fcntl</td><td>uint32 fd</td><td>int32 cmd</td><td>🚫</td><td>Similar behavior as Linux/MIPS. Only the <code>F_GETFL</code> (3) cmd is supported. Sets errno to <code>0x16</code> for all other commands</td></tr>
+</tbody></table>
+</div>
+<p>For all of the above syscalls, an error is indicated by setting the return
+register (<code>$v0</code>) to <code>0xFFFFFFFF</code> (-1) and <code>errno</code> (<code>$a3</code>) is set accordingly.
+The VM must not modify any register other than <code>$v0</code> and <code>$a3</code> during syscall handling.
+For unsupported syscalls, the VM must do nothing except to zero out the syscall return (<code>$v0</code>)
+and errno (<code>$a3</code>) registers.</p>
+<p>Note that the above syscalls have identical syscall numbers and ABIs as Linux/MIPS.</p>
 <h2 id="asterisc-risc-v"><a class="header" href="#asterisc-risc-v">Asterisc (RISC-V)</a></h2>
 <p>Asterisc is based off of the <code>rv64gc</code> target architecture, which defines the following extensions:</p>
 <ul>
@@ -374,7 +391,7 @@ for each FPVM target:</p>
 <li><code>Ztso</code>: no-op: no need for Total Store Ordering</li>
 <li>other: revert with error code on unrecognized instructions</li>
 </ul>
-<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/protolambda/asterisc">in the repository</a>. <code>kona</code> offers an interface for
+<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/ethereum-optimism/asterisc">in the repository</a>. <code>kona</code> offers an interface for
 programs to directly invoke a select few syscalls:</p>
 <ol>
 <li><code>EXIT</code> - Terminate the process with the provided exit code.</li>
@@ -385,22 +402,25 @@ programs to directly invoke a select few syscalls:</p>
 <!-- Kona links -->
 <!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="prologue"><a class="header" href="#prologue">Prologue</a></h1>
+<p><em>TODO</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="execution"><a class="header" href="#execution">Execution</a></h1>
+<p><em>TODO</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="epilogue"><a class="header" href="#epilogue">Epilogue</a></h1>
+<p><em>TODO</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <p><em>This document contains definitions for terms used throughout the Kona book.</em></p>
 <h4 id="fault-proof-vm"><a class="header" href="#fault-proof-vm">Fault Proof VM</a></h4>
 <p>A <code>Fault Proof VM</code> is a virtual machine, commonly supporting a subset of the Linux kernel's syscalls and a modified subset of an existing reduced instruction set architecture,
 that is designed to execute verifiable programs.</p>
-<p>Full specification for the <code>cannon</code> &amp; <code>cannon-rs</code> FPVMs, as an example, is available in the <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/cannon-fault-proof-vm.md">Optimism Monorepo</a>.</p>
+<p>Full specification for the <code>cannon</code> &amp; <code>cannon-rs</code> FPVMs, as an example, is available in the <a href="https://specs.optimism.io/experimental/fault-proof/cannon-fault-proof-vm.html#cannon-fault-proof-virtual-machine">Optimism Monorepo</a>.</p>
 <h4 id="fault-proof-program"><a class="header" href="#fault-proof-program">Fault Proof Program</a></h4>
 <p>A <code>Fault Proof Program</code> is a program, commonly written in a general purpose language such as Golang, C, or Rust, that may be compiled down
 to a compatible <code>Fault Proof VM</code> target and provably executed on that target VM.</p>
 <p>Examples of <code>Fault Proof Programs</code> include the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program">OP Program</a>, which runs on top of <a href="https://github.com/ethereum-optimism/optimism/tree/develop/cannon"><code>cannon</code></a>, <a href="https://github.com/anton-rs/cannon-rs"><code>cannon-rs</code></a>, and
-<a href="https://github.com/protolambda/asterisc"><code>asterisc</code></a> to verify a claim about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
+<a href="https://github.com/ethereum-optimism/asterisc"><code>asterisc</code></a> to verify a claim about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
 <h4 id="preimage-abi"><a class="header" href="#preimage-abi">Preimage ABI</a></h4>
 <p>The <code>Preimage ABI</code> is a specification for a synchronous communication protocol between a <code>client</code> and a <code>host</code> that is used to request and read data from the <code>host</code>'s
-datastore. Full specifications for the <code>Preimage ABI</code> are available in the <a href="https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle">Optimism Monorepo</a>.</p>
+datastore. Full specifications for the <code>Preimage ABI</code> are available in the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">Optimism Monorepo</a>.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
