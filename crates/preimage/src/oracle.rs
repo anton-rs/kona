@@ -1,4 +1,4 @@
-use crate::{PipeHandle, PreimageKey};
+use crate::{traits::PreimageOracleClient, PipeHandle, PreimageKey};
 use alloc::vec::Vec;
 use anyhow::{bail, Result};
 
@@ -6,85 +6,17 @@ use anyhow::{bail, Result};
 #[derive(Debug, Clone, Copy)]
 pub struct OracleReader {
     pipe_handle: PipeHandle,
-    key: Option<PreimageKey>,
-    length: usize,
-    cursor: usize,
 }
 
 impl OracleReader {
     /// Create a new [OracleReader] from a [PipeHandle].
     pub fn new(pipe_handle: PipeHandle) -> Self {
-        Self {
-            pipe_handle,
-            key: None,
-            length: 0,
-            cursor: 0,
-        }
+        Self { pipe_handle }
     }
 
-    /// Return the current key stored in the global oracle reader
-    pub fn key(&self) -> Option<PreimageKey> {
-        self.key
-    }
-
-    /// Return the length of the current pre-image
-    pub fn length(&self) -> usize {
-        self.length
-    }
-
-    /// Current position of the read cursor within the current pre-image
-    pub fn cursor(&self) -> usize {
-        self.cursor
-    }
-
-    /// Get the data corresponding to the currently set key from the host. Return the data in a new heap allocated `Vec<u8>`
-    ///
-    /// Internally this reads self.length bytes from the ReadPreimage file descriptor into a new heap allocated `Vec<u8>` and returns it.
-    /// This is a high level way to interact with the preimage oracle but may not be the best way if heap allocations are not desirable.
-    pub fn get(&mut self, key: PreimageKey) -> Result<Vec<u8>> {
-        self.set_key(key)?;
-        let mut data_buffer = alloc::vec![0; self.length];
-
-        // Grab a read lock on the preimage pipe to read the data.
-        self.cursor += self.pipe_handle.read_exact(&mut data_buffer)? as usize;
-
-        Ok(data_buffer)
-    }
-
-    /// Get the data corresponding to the currently set key from the host. Write the data into the provided buffer
-    ///
-    /// # Panics
-    /// This will panic if the size of the buffer is not equal to the size of the preimage as reported by the host
-    pub fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
-        self.set_key(key)?;
-
-        // Ensure the buffer is the correct size.
-        if buf.len() != self.length {
-            bail!(
-                "Buffer size {} does not match preimage size {}",
-                buf.len(),
-                self.length
-            );
-        }
-
-        // Grab a read lock on the preimage pipe to read the data.
-        self.cursor += self.pipe_handle.read_exact(buf)? as usize;
-
-        Ok(())
-    }
-
-    /// Set the preimage key for the global oracle reader. This will overwrite any existing key, and block until all
-    /// data has been read from the host.
-    ///
-    /// Internally this sends the 32 bytes of the key to the host by writing into the WritePreimage file descriptor.
-    /// This may require several writes as the host may only accept a few bytes at a time. Once 32 bytes have been written
-    /// successfully the key is considered set. If it fails to write 32 bytes it will return an error.
-    /// Once it has written the key it will read the first 8 bytes of the ReadPreimage file descriptor which is the length
-    /// encoded as a big endian u64. This is stored in the oracle reader along with the read cursor position.
-    fn set_key(&mut self, key: PreimageKey) -> Result<()> {
-        // Set the active key.
-        self.key = Some(key);
-
+    /// Set the preimage key for the global oracle reader. This will overwrite any existing key, and block until the
+    /// host has prepared the preimage and responded with the length of the preimage.
+    fn write_key(&mut self, key: PreimageKey) -> Result<usize> {
         // Write the key to the host so that it can prepare the preimage.
         let key_bytes: [u8; 32] = key.into();
         self.pipe_handle.write(&key_bytes)?;
@@ -92,8 +24,39 @@ impl OracleReader {
         // Read the length prefix and reset the cursor.
         let mut length_buffer = [0u8; 8];
         self.pipe_handle.read_exact(&mut length_buffer)?;
-        self.length = u64::from_be_bytes(length_buffer) as usize;
-        self.cursor = 0;
+        Ok(u64::from_be_bytes(length_buffer) as usize)
+    }
+}
+
+impl PreimageOracleClient for OracleReader {
+    /// Get the data corresponding to the currently set key from the host. Return the data in a new heap allocated
+    /// `Vec<u8>`
+    fn get(&mut self, key: PreimageKey) -> Result<Vec<u8>> {
+        let length = self.write_key(key)?;
+        let mut data_buffer = alloc::vec![0; length];
+
+        // Grab a read lock on the preimage pipe to read the data.
+        self.pipe_handle.read_exact(&mut data_buffer)?;
+
+        Ok(data_buffer)
+    }
+
+    /// Get the data corresponding to the currently set key from the host. Write the data into the provided buffer
+    fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
+        // Write the key to the host and read the length of the preimage.
+        let length = self.write_key(key)?;
+
+        // Ensure the buffer is the correct size.
+        if buf.len() != length {
+            bail!(
+                "Buffer size {} does not match preimage size {}",
+                buf.len(),
+                length
+            );
+        }
+
+        self.pipe_handle.read_exact(buf)?;
+
         Ok(())
     }
 }
@@ -105,11 +68,8 @@ mod test {
     use super::*;
     use crate::PreimageKeyType;
     use kona_common::FileDescriptor;
-    use std::{
-        borrow::ToOwned,
-        fs::{File, OpenOptions},
-        os::fd::AsRawFd,
-    };
+    use std::{fs::File, os::fd::AsRawFd};
+    use tempfile::tempfile;
 
     /// Test struct containing the [OracleReader] and a [PipeHandle] for the host, plus the open [File]s. The [File]s
     /// are stored in this struct so that they are not dropped until the end of the test.
@@ -123,32 +83,12 @@ mod test {
         _write_file: File,
     }
 
-    impl Drop for ClientAndHost {
-        fn drop(&mut self) {
-            std::fs::remove_file("/tmp/read.hex").unwrap();
-            std::fs::remove_file("/tmp/write.hex").unwrap();
-        }
-    }
-
-    /// Helper for opening a file with the correct options.
-    fn open_options() -> OpenOptions {
-        File::options()
-            .create(true)
-            .read(true)
-            .write(true)
-            .truncate(true)
-            .to_owned()
-    }
-
     /// Helper for creating a new [OracleReader] and [PipeHandle] for testing. The file channel is over two temporary
     /// files.
     ///
     /// TODO: Swap host pipe handle to oracle writer once it exists.
     fn client_and_host() -> ClientAndHost {
-        let (read_file, write_file) = (
-            open_options().open("/tmp/read.hex").unwrap(),
-            open_options().open("/tmp/write.hex").unwrap(),
-        );
+        let (read_file, write_file) = (tempfile().unwrap(), tempfile().unwrap());
         let (read_fd, write_fd) = (
             FileDescriptor::Wildcard(read_file.as_raw_fd().try_into().unwrap()),
             FileDescriptor::Wildcard(write_file.as_raw_fd().try_into().unwrap()),
@@ -173,14 +113,9 @@ mod test {
         let (mut oracle_reader, host_handle) = (sys.oracle_reader, sys.host_handle);
 
         let client = tokio::task::spawn(async move {
-            let mut buf = [0u8; 10];
             oracle_reader
-                .get_exact(
-                    PreimageKey::new([0u8; 32], PreimageKeyType::Keccak256),
-                    &mut buf,
-                )
-                .unwrap();
-            buf
+                .get(PreimageKey::new([0u8; 32], PreimageKeyType::Keccak256))
+                .unwrap()
         });
         let host = tokio::task::spawn(async move {
             let mut length_and_data: [u8; 8 + 10] = [0u8; 8 + 10];

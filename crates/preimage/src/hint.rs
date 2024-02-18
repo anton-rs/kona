@@ -1,4 +1,4 @@
-use crate::PipeHandle;
+use crate::{traits::HintWriterClient, PipeHandle};
 use alloc::vec;
 use anyhow::Result;
 
@@ -13,10 +13,12 @@ impl HintWriter {
     pub fn new(pipe_handle: PipeHandle) -> Self {
         Self { pipe_handle }
     }
+}
 
+impl HintWriterClient for HintWriter {
     /// Write a hint to the host. This will overwrite any existing hint in the pipe, and block until all data has been
     /// written.
-    pub fn write(&self, hint: &str) -> Result<()> {
+    fn write(&self, hint: &str) -> Result<()> {
         // Form the hint into a byte buffer. The format is a 4-byte big-endian length prefix followed by the hint
         // string.
         let mut hint_bytes = vec![0u8; hint.len() + 4];

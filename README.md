@@ -22,7 +22,6 @@
   <a href="#whats-kona">What's Kona?</a> •
   <a href="#overview">Overview</a> •
   <a href="https://static.optimism.io/kona/CONTRIBUTING.html">Contributing</a> •
-  <a href="#book">Book</a> •
   <a href="#credits">Credits</a>
 </p>
 
@@ -46,10 +45,15 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 **`client` / `host` SDK**
 
 - [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
+- [`preimage`](./crates/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
 
 ## Book
 
 The [book][book] contains a more in-depth overview of the project, contributor guidelines, tutorials for getting started with building your own programs, and a reference for the libraries and tools provided by Kona.
+
+## Development Status
+
+`kona` is currently in active development, and is not yet ready for use in production.
 
 ## Credits
 
@@ -60,12 +64,12 @@ The [book][book] contains a more in-depth overview of the project, contributor g
 [cannon]: https://github.com/ethereum-optimism/optimism/tree/develop/cannon
 [cannon-rs]: https://github.com/anton-rs/cannon-rs
 [badboi-cannon-rs]: https://github.com/BadBoiLabs/cannon-rs
-[asterisc]: https://github.com/protolambda/asterisc
-[fpp-specs]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-program
+[asterisc]: https://github.com/etheruem-optimism/asterisc
+[fpp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html
 [book]: https://ethereum-optimism.github.io/kona/
 [op-labs]: https://github.com/ethereum-optimism
 [bad-boi-labs]: https://github.com/BadBoiLabs
-[g-output-root]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/glossary.md#l2-output-root
-[g-derivation-pipeline]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/derivation.md#l2-chain-derivation-pipeline
-[g-fault-proof-vm]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#fault-proof-vm
-[g-preimage-oracle]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/fault-proof.md#pre-image-oracle
+[g-output-root]: https://specs.optimism.io/glossary.html#l2-output-root
+[g-derivation-pipeline]: https://specs.optimism.io/protocol/derivation.html#l2-chain-derivation-pipeline
+[g-fault-proof-vm]: https://specs.optimism.io/experimental/fault-proof/index.html#fault-proof-vm
+[g-preimage-oracle]: https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle

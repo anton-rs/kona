@@ -18,3 +18,4 @@ kona-common = { path = "../common" }
 
 [dev-dependencies]
 tokio = { version = "1.36.0", features = ["full"] }
+tempfile = "3.10.0"

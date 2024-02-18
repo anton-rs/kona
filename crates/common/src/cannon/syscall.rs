@@ -1,4 +1,4 @@
-//! Taken from the syscalls crate <https://github.com/jasonwhite/syscalls>
+//! Derived from the syscalls crate <https://github.com/jasonwhite/syscalls>
 //!
 //! MIPS has the following registers:
 //!

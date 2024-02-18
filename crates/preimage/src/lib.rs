@@ -22,3 +22,6 @@ pub use hint::HintWriter;
 
 mod pipe;
 pub use pipe::PipeHandle;
+
+mod traits;
+pub use traits::{HintWriterClient, PreimageOracleClient};

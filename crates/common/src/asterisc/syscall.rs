@@ -1,3 +1,5 @@
+//! Derived from the syscalls crate <https://github.com/jasonwhite/syscalls>
+//!
 //! Unsafe system call interface for the `riscv64` target architecture.
 //!
 //! List of RISC-V system calls: <https://jborza.com/post/2021-05-11-riscv-linux-syscalls/>
