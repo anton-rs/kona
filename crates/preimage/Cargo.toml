@@ -14,7 +14,7 @@ anyhow.workspace = true
 cfg-if.workspace = true
 
 # local
-kona-common = { path = "../common" }
+kona-common = { path = "../common", version = "0.0.1" }
 
 [dev-dependencies]
 tokio = { version = "1.36.0", features = ["full"] }
