@@ -112,6 +112,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-derive"
+version = "0.0.1"
+
+[[package]]
 name = "kona-preimage"
 version = "0.0.1"
 dependencies = [
