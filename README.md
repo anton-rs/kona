@@ -10,6 +10,9 @@
   <a href="https://github.com/ethereum-optimism/kona/actions/workflows/ci.yaml">
     <img src="https://github.com/ethereum-optimism/kona/actions/workflows/ci.yaml/badge.svg?label=ci" alt="CI">
   </a>
+  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm-tests.yaml">
+    <img src="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm-tests.yaml/badge.svg?label=FPVM Tests" alt="FPVM Tests">
+  </a>
   <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license" alt="License">
   <a href="https://ethereum-optimism.github.io/kona">
     <img src="https://img.shields.io/badge/Contributor%20Book-grey?logo=mdBook" alt="Book">
@@ -28,6 +31,10 @@
 
 Kona is a [fault proof program][fpp-specs] designed to deterministically execute a rollup state transition in order to
 verify an [L2 output root][g-output-root] from the L1 inputs it was [derived from][g-derivation-pipeline].
+
+### Development Status
+
+`kona` is currently in active development, and is not yet ready for use in production.
 
 ## Overview
 
@@ -49,10 +56,6 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 ## Book
 
 The [book][book] contains a more in-depth overview of the project, contributor guidelines, tutorials for getting started with building your own programs, and a reference for the libraries and tools provided by Kona.
-
-## Development Status
-
-`kona` is currently in active development, and is not yet ready for use in production.
 
 ## Credits
 
