@@ -1,5 +1,8 @@
 use crate::types::{
-    eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718},
+    eips::{
+        deposit::TxDeposit,
+        eip2718::{Decodable2718, Eip2718Error, Encodable2718},
+    },
     network::Signed,
     transaction::{TxEip1559, TxEip2930, TxEip4844, TxLegacy},
 };
@@ -23,6 +26,8 @@ pub enum TxType {
     Eip1559 = 2,
     /// EIP-4844 transaction type.
     Eip4844 = 3,
+    /// Optimism Deposit transaction type.
+    Deposit = 126,
 }
 
 impl TryFrom<u8> for TxType {
@@ -31,7 +36,7 @@ impl TryFrom<u8> for TxType {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             // SAFETY: repr(u8) with explicit discriminant
-            ..=3 => Ok(unsafe { core::mem::transmute(value) }),
+            ..=3 | 126 => Ok(unsafe { core::mem::transmute(value) }),
             _ => Err(Eip2718Error::UnexpectedType(value)),
         }
     }
@@ -60,6 +65,8 @@ pub enum TxEnvelope {
     Eip1559(Signed<TxEip1559>),
     /// A [`TxEip4844`].
     Eip4844(Signed<TxEip4844>),
+    /// A [`TxDeposit`].
+    Deposit(Signed<TxDeposit>),
 }
 
 impl From<Signed<TxEip2930>> for TxEnvelope {
@@ -82,6 +89,7 @@ impl TxEnvelope {
             Self::Eip2930(_) => TxType::Eip2930,
             Self::Eip1559(_) => TxType::Eip1559,
             Self::Eip4844(_) => TxType::Eip4844,
+            Self::Deposit(_) => TxType::Deposit,
         }
     }
 
@@ -92,6 +100,7 @@ impl TxEnvelope {
             Self::Eip2930(t) => t.length(),
             Self::Eip1559(t) => t.length(),
             Self::Eip4844(t) => t.length(),
+            Self::Deposit(t) => t.length(),
         }
     }
 
@@ -146,6 +155,9 @@ impl Decodable2718 for TxEnvelope {
             TxType::Eip4844 => Ok(Self::Eip4844(
                 Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
             )),
+            TxType::Deposit => Ok(Self::Deposit(
+                Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
+            )),
         }
     }
 
@@ -164,6 +176,7 @@ impl Encodable2718 for TxEnvelope {
             Self::Eip2930(_) => Some(TxType::Eip2930 as u8),
             Self::Eip1559(_) => Some(TxType::Eip1559 as u8),
             Self::Eip4844(_) => Some(TxType::Eip4844 as u8),
+            Self::Deposit(_) => Some(TxType::Deposit as u8),
         }
     }
 
@@ -188,6 +201,10 @@ impl Encodable2718 for TxEnvelope {
             }
             TxEnvelope::Eip4844(tx) => {
                 out.put_u8(TxType::Eip4844 as u8);
+                tx.encode(out);
+            }
+            TxEnvelope::Deposit(tx) => {
+                out.put_u8(TxType::Deposit as u8);
                 tx.encode(out);
             }
         }
