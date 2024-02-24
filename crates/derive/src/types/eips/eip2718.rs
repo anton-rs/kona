@@ -12,6 +12,7 @@ const TX_TYPE_BYTE_MAX: u8 = 0x7f;
 /// [EIP-2718] decoding errors.
 ///
 /// [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
+#[derive(Debug)]
 pub enum Eip2718Error {
     /// Rlp error from [`alloy_rlp`].
     RlpError(alloy_rlp::Error),

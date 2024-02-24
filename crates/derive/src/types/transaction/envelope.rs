@@ -16,9 +16,10 @@ use alloy_rlp::{length_of_length, Decodable, Encodable};
 /// [2930]: https://eips.ethereum.org/EIPS/eip-2930
 /// [4844]: https://eips.ethereum.org/EIPS/eip-4844
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Default)]
 pub enum TxType {
     /// Wrapped legacy transaction type.
+    #[default]
     Legacy = 0,
     /// EIP-2930 transaction type.
     Eip2930 = 1,
