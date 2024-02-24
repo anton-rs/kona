@@ -1,3 +1,7 @@
 //! This module contains all of the traits describing functionality of portions of the derivation pipeline.
 
-pub mod data_sources;
+mod data_sources;
+pub use data_sources::ChainProvider;
+
+mod stages;
+pub use stages::ResettableStage;

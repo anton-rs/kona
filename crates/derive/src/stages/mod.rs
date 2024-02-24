@@ -12,11 +12,13 @@
 //! 7. Payload Attributes Derivation
 //! 8. Engine Queue
 
-pub(crate) mod batch_queue;
-pub(crate) mod channel_bank;
-pub(crate) mod channel_reader;
-pub(crate) mod engine_queue;
-pub(crate) mod frame_queue;
-pub(crate) mod l1_retrieval;
-pub(crate) mod l1_traversal;
-pub(crate) mod payload_derivation;
+mod l1_traversal;
+pub use l1_traversal::L1Traversal;
+
+mod batch_queue;
+mod channel_bank;
+mod channel_reader;
+mod engine_queue;
+mod frame_queue;
+mod l1_retrieval;
+mod payload_derivation;
