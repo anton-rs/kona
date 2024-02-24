@@ -12,6 +12,7 @@
 #![allow(dead_code, unused, unreachable_pub)]
 
 extern crate alloc;
+extern crate std;
 
 pub mod stages;
 pub mod traits;
