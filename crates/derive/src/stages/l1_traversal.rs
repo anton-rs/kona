@@ -4,15 +4,15 @@
 
 use crate::{
     traits::{BlockByNumberProvider, ResettableStage},
-    types::SystemConfig,
+    types::{BlockInfo, RollupConfig, SystemConfig},
 };
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 
 /// The L1 traversal stage of the derivation pipeline.
 #[derive(Debug, Clone, Copy)]
 pub struct L1Traversal<F: BlockByNumberProvider> {
     /// The current block in the traversal stage.
-    block: (),
+    block: Option<BlockInfo>,
     /// The data source for the traversal stage.
     data_source: F,
     /// Signals whether or not the traversal stage has been completed.
@@ -20,27 +20,27 @@ pub struct L1Traversal<F: BlockByNumberProvider> {
     /// The system config
     system_config: SystemConfig,
     /// The rollup config
-    rollup_config: (),
+    rollup_config: RollupConfig,
 }
 
 impl<F: BlockByNumberProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
-    pub fn new(data_source: F) -> Self {
+    pub fn new(data_source: F, cfg: RollupConfig) -> Self {
         Self {
-            block: (),
+            block: None,
             data_source,
             done: false,
             system_config: SystemConfig::default(),
-            rollup_config: (),
+            rollup_config: cfg,
         }
     }
 
     /// Returns the next L1 block in the traversal stage, if the stage has not been completed. This function can only
     /// be called once, and will return `None` on subsequent calls unless the stage is reset.
-    pub fn next_l1_block(&mut self) -> Option<()> {
+    pub fn next_l1_block(&mut self) -> Option<BlockInfo> {
         if !self.done {
             self.done = true;
-            todo!("Return block once we have a `Block` type");
+            self.block
         } else {
             None
         }
@@ -48,7 +48,20 @@ impl<F: BlockByNumberProvider> L1Traversal<F> {
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
     pub async fn advance_l1_block(&mut self) -> Result<()> {
-        todo!("Once we have a `Block` type and a `RollupConfig` type");
+        let block = self.block.ok_or(anyhow!("No block to advance from"))?;
+        let next_l1_origin = self.data_source.block_by_number(block.number + 1).await?;
+
+        // Check for reorgs
+        if block.hash != next_l1_origin.parent_hash {
+            bail!(
+                "Detected L1 reorg from {} to {} with conflicting parent",
+                block.hash,
+                next_l1_origin.hash
+            );
+        }
+
+        // Fetch receipts.
+        todo!("Once we have a `Receipt` type");
     }
 }
 
