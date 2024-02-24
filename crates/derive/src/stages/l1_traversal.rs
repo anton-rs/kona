@@ -8,11 +8,11 @@ use anyhow::{anyhow, bail, Result};
 
 /// The L1 traversal stage of the derivation pipeline.
 #[derive(Debug, Clone, Copy)]
-pub struct L1Traversal<F: ChainProvider> {
+pub struct L1Traversal<Provider: ChainProvider> {
     /// The current block in the traversal stage.
     block: Option<BlockInfo>,
     /// The data source for the traversal stage.
-    data_source: F,
+    data_source: Provider,
     /// Signals whether or not the traversal stage has been completed.
     done: bool,
     /// The system config

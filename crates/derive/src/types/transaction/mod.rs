@@ -10,5 +10,8 @@ pub use legacy::TxLegacy;
 mod eip4844;
 pub use eip4844::TxEip4844;
 
+mod deposit;
+pub use deposit::TxDeposit;
+
 mod envelope;
 pub use envelope::{TxEnvelope, TxType};

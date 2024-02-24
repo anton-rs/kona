@@ -12,6 +12,4 @@ pub mod eip4788;
 pub mod eip4844;
 pub use eip4844::{calc_blob_gasprice, calc_excess_blob_gas};
 
-pub mod deposit;
-
 pub mod merge;

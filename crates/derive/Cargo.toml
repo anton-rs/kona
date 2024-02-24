@@ -15,6 +15,7 @@ anyhow.workspace = true
 # External
 alloy-primitives = { version = "0.6.3", default-features = false, features = ["rlp"] }
 alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
+alloy-sol-types = { version = "0.6.3", default-features = false }
 async-trait = "0.1.77"
 
 # Optional
