@@ -10,6 +10,8 @@
 #![cfg_attr(target_arch = "mips", feature(asm_experimental_arch))]
 #![no_std]
 
+extern crate alloc;
+
 pub mod io;
 
 pub mod malloc;
@@ -19,6 +21,9 @@ pub use traits::BasicKernelInterface;
 
 mod types;
 pub use types::{FileDescriptor, RegisterSize};
+
+mod executor;
+pub use executor::block_on;
 
 #[cfg(target_arch = "mips")]
 pub(crate) mod cannon;
