@@ -9,3 +9,15 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+# Workspace
+anyhow.workspace = true
+
+# External
+alloy-primitives = { version = "0.6.3", default-features = false }
+async-trait = "0.1.77"
+
+# Optional
+serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
+
+[features]
+serde = ["dep:serde", "alloy-primitives/serde"]
