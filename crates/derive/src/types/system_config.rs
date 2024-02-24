@@ -28,6 +28,30 @@ pub struct SystemConfig {
     pub unsafe_block_signer: Address,
 }
 
+/// Represents type of update to the system config.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u64)]
+pub enum SystemConfigUpdateType {
+    Batcher = 0,
+    GasConfig = 1,
+    GasLimit = 2,
+    UnsafeBlockSigner = 3,
+}
+
+impl TryFrom<u64> for SystemConfigUpdateType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u64) -> core::prelude::v1::Result<Self, Self::Error> {
+        match value {
+            0 => Ok(SystemConfigUpdateType::Batcher),
+            1 => Ok(SystemConfigUpdateType::GasConfig),
+            2 => Ok(SystemConfigUpdateType::GasLimit),
+            3 => Ok(SystemConfigUpdateType::UnsafeBlockSigner),
+            _ => bail!("Invalid SystemConfigUpdateType value: {}", value),
+        }
+    }
+}
+
 impl SystemConfig {
     /// Filters all L1 receipts to find config updates and applies the config updates.
     pub fn update_with_receipts(
@@ -90,8 +114,8 @@ impl SystemConfig {
         );
         let log_data = log.data.data.as_ref();
 
-        match update_type {
-            0 => {
+        match update_type.try_into()? {
+            SystemConfigUpdateType::Batcher => {
                 if log_data.len() != 96 {
                     bail!("Invalid config update log: invalid data length");
                 }
@@ -112,7 +136,7 @@ impl SystemConfig {
                         .map_err(|e| anyhow!("Failed to decode batcher update log"))?;
                 self.batch_sender = batcher_address;
             }
-            1 => {
+            SystemConfigUpdateType::GasConfig => {
                 if log_data.len() != 128 {
                     bail!("Invalid config update log: invalid data length");
                 }
@@ -150,7 +174,7 @@ impl SystemConfig {
                     self.l1_fee_overhead = overhead;
                 }
             }
-            2 => {
+            SystemConfigUpdateType::GasLimit => {
                 if log_data.len() != 96 {
                     bail!("Invalid config update log: invalid data length");
                 }
@@ -170,10 +194,9 @@ impl SystemConfig {
                     .map_err(|e| anyhow!("Invalid config update log: invalid gas limit"))?;
                 self.gas_limit = gas_limit;
             }
-            3 => {
+            SystemConfigUpdateType::UnsafeBlockSigner => {
                 // Ignored in derivation
             }
-            _ => bail!("Unsupported config update type: {}", update_type),
         }
 
         Ok(())
