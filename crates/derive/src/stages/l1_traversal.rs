@@ -1,7 +1,5 @@
 //! Contains the L1 traversal stage of the derivation pipeline.
 
-#![allow(dead_code, unused)]
-
 use crate::{
     traits::{ChainProvider, ResettableStage},
     types::{BlockInfo, RollupConfig, SystemConfig},
