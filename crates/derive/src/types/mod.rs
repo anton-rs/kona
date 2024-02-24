@@ -11,3 +11,6 @@ pub use transactions::{RawTransaction, Transaction};
 
 mod block;
 pub use block::{BlockId, BlockInfo, BlockKind, BlockWithTransactions};
+
+mod receipt;
+pub use receipt::{Receipt, ReceiptWithBloom};
