@@ -63,7 +63,7 @@ impl Channel {
                 self.id
             );
         }
-        if !self.inputs.contains_key(&frame.number) {
+        if self.inputs.contains_key(&frame.number) {
             bail!(
                 "Frame number already exists in channel. Channel ID: {:?}",
                 self.id
@@ -136,5 +136,182 @@ impl Channel {
         }
 
         true
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Channel;
+    use crate::{
+        params::ChannelID,
+        types::{BlockInfo, Frame},
+    };
+    use alloc::{
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+
+    extern crate std;
+
+    struct FrameValidityTestCase {
+        name: String,
+        frames: Vec<Frame>,
+        should_error: Vec<bool>,
+        sizes: Vec<u64>,
+    }
+
+    fn run_frame_validity_test(test_case: FrameValidityTestCase) {
+        let id = [0xFF; 16];
+        let block = BlockInfo::default();
+        let mut channel = Channel::new(id, block);
+
+        if test_case.frames.len() != test_case.should_error.len()
+            || test_case.frames.len() != test_case.sizes.len()
+        {
+            panic!("Test case length mismatch");
+        }
+
+        for (i, frame) in test_case.frames.iter().enumerate() {
+            let result = channel.add_frame(frame.clone(), block);
+            if test_case.should_error[i] {
+                assert!(result.is_err());
+            } else {
+                assert!(result.is_ok());
+            }
+            assert_eq!(channel.size(), test_case.sizes[i] as usize);
+        }
+    }
+
+    #[test]
+    fn test_frame_validity() {
+        let id = [0xFF; 16];
+        let test_cases = [
+            FrameValidityTestCase {
+                name: "wrong channel".to_string(),
+                frames: vec![Frame {
+                    id: [0xEE; 16],
+                    ..Default::default()
+                }],
+                should_error: vec![true],
+                sizes: vec![0],
+            },
+            FrameValidityTestCase {
+                name: "double close".to_string(),
+                frames: vec![
+                    Frame {
+                        id,
+                        is_last: true,
+                        number: 2,
+                        data: b"four".to_vec(),
+                    },
+                    Frame {
+                        id,
+                        is_last: true,
+                        number: 1,
+                        ..Default::default()
+                    },
+                ],
+                should_error: vec![false, true],
+                sizes: vec![204, 204],
+            },
+            FrameValidityTestCase {
+                name: "duplicate frame".to_string(),
+                frames: vec![
+                    Frame {
+                        id,
+                        number: 2,
+                        data: b"four".to_vec(),
+                        ..Default::default()
+                    },
+                    Frame {
+                        id,
+                        number: 2,
+                        data: b"seven".to_vec(),
+                        ..Default::default()
+                    },
+                ],
+                should_error: vec![false, true],
+                sizes: vec![204, 204],
+            },
+            FrameValidityTestCase {
+                name: "duplicate closing frames".to_string(),
+                frames: vec![
+                    Frame {
+                        id,
+                        number: 2,
+                        is_last: true,
+                        data: b"four".to_vec(),
+                    },
+                    Frame {
+                        id,
+                        number: 2,
+                        is_last: true,
+                        data: b"seven".to_vec(),
+                    },
+                ],
+                should_error: vec![false, true],
+                sizes: vec![204, 204],
+            },
+            FrameValidityTestCase {
+                name: "frame past closing".to_string(),
+                frames: vec![
+                    Frame {
+                        id,
+                        number: 2,
+                        is_last: true,
+                        data: b"four".to_vec(),
+                    },
+                    Frame {
+                        id,
+                        number: 10,
+                        data: b"seven".to_vec(),
+                        ..Default::default()
+                    },
+                ],
+                should_error: vec![false, true],
+                sizes: vec![204, 204],
+            },
+            FrameValidityTestCase {
+                name: "prune after close frame".to_string(),
+                frames: vec![
+                    Frame {
+                        id,
+                        number: 10,
+                        is_last: false,
+                        data: b"seven".to_vec(),
+                    },
+                    Frame {
+                        id,
+                        number: 2,
+                        is_last: true,
+                        data: b"four".to_vec(),
+                    },
+                ],
+                should_error: vec![false, false],
+                sizes: vec![205, 204],
+            },
+            FrameValidityTestCase {
+                name: "multiple valid frames".to_string(),
+                frames: vec![
+                    Frame {
+                        id,
+                        number: 10,
+                        data: b"seven__".to_vec(),
+                        ..Default::default()
+                    },
+                    Frame {
+                        id,
+                        number: 2,
+                        data: b"four".to_vec(),
+                        ..Default::default()
+                    },
+                ],
+                should_error: vec![false, false],
+                sizes: vec![207, 411],
+            },
+        ];
+
+        test_cases.into_iter().for_each(run_frame_validity_test);
     }
 }

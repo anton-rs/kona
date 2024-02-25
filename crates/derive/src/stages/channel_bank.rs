@@ -2,12 +2,13 @@
 
 use alloc::collections::VecDeque;
 use alloy_primitives::Bytes;
+use anyhow::{anyhow, Result};
 use hashbrown::HashMap;
 
 use crate::{
-    params::ChannelID,
+    params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     traits::{ChainProvider, DataAvailabilityProvider},
-    types::{Channel, RollupConfig},
+    types::{BlockInfo, Channel, RollupConfig},
 };
 
 use super::l1_retrieval::L1Retrieval;
@@ -45,5 +46,39 @@ where
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
 {
-    // TODO
+    /// Create a new [ChannelBank] stage.
+    pub fn new(cfg: RollupConfig, prev: L1Retrieval<DAP, CP>, chain_provider: CP) -> Self {
+        Self {
+            cfg,
+            channels: HashMap::new(),
+            channel_queue: VecDeque::new(),
+            prev,
+            chain_provider,
+        }
+    }
+
+    /// Returns the L1 origin [BlockInfo].
+    pub fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
+    }
+
+    /// Prunes the Channel bank, until it is below [MAX_CHANNEL_BANK_SIZE].
+    pub fn prune(&mut self) -> Result<()> {
+        // Check total size
+        let mut total_size = self.channels.iter().fold(0, |acc, (_, c)| acc + c.size());
+        // Prune until it is reasonable again. The high-priority channel failed to be read,
+        // so we prune from there.
+        while total_size > MAX_CHANNEL_BANK_SIZE {
+            let id = self
+                .channel_queue
+                .pop_front()
+                .ok_or(anyhow!("No channel to prune"))?;
+            let channel = self
+                .channels
+                .remove(&id)
+                .ok_or(anyhow!("Could not find channel"))?;
+            total_size -= channel.size();
+        }
+        Ok(())
+    }
 }

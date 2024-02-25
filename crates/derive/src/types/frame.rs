@@ -18,7 +18,7 @@ const MAX_FRAME_LEN: usize = 1000;
 /// * frame_data_length = uint32
 /// * frame_data        = bytes
 /// * is_last           = bool
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Frame {
     /// The unique idetifier for the frame.
     pub id: ChannelID,

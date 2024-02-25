@@ -15,6 +15,9 @@ pub const MAX_SPAN_BATCH_BYTES: u64 = MAX_RLP_BYTES_PER_CHANNEL;
 /// a channel. This limit is set when decoding the RLP.
 pub const MAX_RLP_BYTES_PER_CHANNEL: u64 = 10_000_000;
 
+/// The maximum size of a channel bank.
+pub const MAX_CHANNEL_BANK_SIZE: usize = 100_000_000;
+
 /// [CHANNEL_ID_LENGTH] is the length of the channel ID.
 pub const CHANNEL_ID_LENGTH: usize = 16;
 
