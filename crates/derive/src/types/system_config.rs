@@ -15,14 +15,17 @@ const CONFIG_UPDATE_EVENT_VERSION_0: B256 = B256::ZERO;
 /// Optimism system config contract values
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct SystemConfig {
     /// Batch sender address
-    pub batch_sender: Address,
+    pub batcher_addr: Address,
     /// L2 gas limit
     pub gas_limit: U256,
     /// Fee overhead
+    #[cfg_attr(feature = "serde", serde(rename = "overhead"))]
     pub l1_fee_overhead: U256,
     /// Fee scalar
+    #[cfg_attr(feature = "serde", serde(rename = "scalar"))]
     pub l1_fee_scalar: U256,
     /// Sequencer's signer for unsafe blocks
     pub unsafe_block_signer: Address,
@@ -134,7 +137,7 @@ impl SystemConfig {
                 let batcher_address =
                     <sol!(address)>::abi_decode(&log.data.data.as_ref()[64..], true)
                         .map_err(|e| anyhow!("Failed to decode batcher update log"))?;
-                self.batch_sender = batcher_address;
+                self.batcher_addr = batcher_address;
             }
             SystemConfigUpdateType::GasConfig => {
                 if log_data.len() != 128 {
@@ -290,7 +293,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            system_config.batch_sender,
+            system_config.batcher_addr,
             address!("000000000000000000000000000000000000bEEF")
         );
     }

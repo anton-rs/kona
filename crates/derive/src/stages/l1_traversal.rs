@@ -4,7 +4,9 @@ use crate::{
     traits::{ChainProvider, ResettableStage},
     types::{BlockInfo, RollupConfig, SystemConfig},
 };
+use alloc::boxed::Box;
 use anyhow::{anyhow, bail, Result};
+use async_trait::async_trait;
 
 /// The L1 traversal stage of the derivation pipeline.
 #[derive(Debug, Clone, Copy)]
@@ -16,9 +18,9 @@ pub struct L1Traversal<Provider: ChainProvider> {
     /// Signals whether or not the traversal stage has been completed.
     done: bool,
     /// The system config
-    system_config: SystemConfig,
+    pub system_config: SystemConfig,
     /// The rollup config
-    rollup_config: RollupConfig,
+    pub rollup_config: RollupConfig,
 }
 
 impl<F: ChainProvider> L1Traversal<F> {
@@ -42,6 +44,11 @@ impl<F: ChainProvider> L1Traversal<F> {
         } else {
             None
         }
+    }
+
+    /// Returns the current L1 block in the traversal stage, if it exists.
+    pub fn origin(&self) -> Option<&BlockInfo> {
+        self.block.as_ref()
     }
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
@@ -78,8 +85,9 @@ impl<F: ChainProvider> L1Traversal<F> {
     }
 }
 
-impl<F: ChainProvider> ResettableStage for L1Traversal<F> {
-    fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
+#[async_trait]
+impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
+    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
         self.block = Some(base);
         self.done = false;
         self.system_config = cfg;
