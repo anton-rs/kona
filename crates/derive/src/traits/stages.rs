@@ -1,8 +1,7 @@
 //! This module contains common traits for stages within the derivation pipeline.
 
-use anyhow::Result;
-
 use crate::types::{BlockInfo, SystemConfig};
+use anyhow::Result;
 
 /// Describes the functionality fo a resettable stage within the derivation pipeline.
 pub trait ResettableStage {

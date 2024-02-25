@@ -16,9 +16,9 @@ pub struct L1Traversal<Provider: ChainProvider> {
     /// Signals whether or not the traversal stage has been completed.
     done: bool,
     /// The system config
-    system_config: SystemConfig,
+    pub system_config: SystemConfig,
     /// The rollup config
-    rollup_config: RollupConfig,
+    pub rollup_config: RollupConfig,
 }
 
 impl<F: ChainProvider> L1Traversal<F> {
@@ -42,6 +42,11 @@ impl<F: ChainProvider> L1Traversal<F> {
         } else {
             None
         }
+    }
+
+    /// Returns the current L1 block in the traversal stage, if it exists.
+    pub fn origin(&self) -> Option<&BlockInfo> {
+        self.block.as_ref()
     }
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
