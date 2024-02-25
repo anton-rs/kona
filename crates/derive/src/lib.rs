@@ -13,6 +13,11 @@
 
 extern crate alloc;
 
+pub mod params;
 pub mod stages;
 pub mod traits;
 pub mod types;
+
+/// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
+#[derive(Debug, Clone, Copy)]
+pub struct DerivationPipeline;

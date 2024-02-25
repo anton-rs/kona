@@ -29,3 +29,6 @@ pub use eips::{
 
 mod genesis;
 pub use genesis::Genesis;
+
+mod frame;
+pub use frame::Frame;

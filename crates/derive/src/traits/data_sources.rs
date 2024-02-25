@@ -36,5 +36,5 @@ pub trait DataAvailabilityProvider {
 /// Describes the behavior of a data iterator.
 pub trait DataIter<T> {
     /// Returns the next item in the iterator, or `None` if the iterator is exhausted.
-    fn next(&self) -> Option<T>;
+    fn next(&mut self) -> Option<T>;
 }
