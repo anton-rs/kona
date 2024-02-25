@@ -56,17 +56,29 @@ where
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
             self.data = Some(
                 self.provider
-                    .open_data(&next, self.prev.system_config.batch_sender)
+                    .open_data(&next, self.prev.system_config.batcher_addr)
                     .await?,
             );
         }
 
         // Fetch next data item from the iterator.
-        let data = self
-            .data
-            .as_mut()
-            .and_then(|d| d.next())
-            .ok_or_else(|| anyhow!("No more data to retrieve"))?;
+        let data = self.data.as_mut().and_then(|d| d.next()).ok_or_else(|| {
+            self.data = None;
+            anyhow!("No more data to retrieve")
+        })?;
         Ok(data.into())
+    }
+}
+
+#[async_trait]
+impl<T, DAP, CP> ResettableStage for L1Retrieval<T, DAP, CP>
+where
+    T: Into<Bytes>,
+    DAP: DataAvailabilityProvider + Send,
+    CP: ChainProvider + Send,
+{
+    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
+        self.data = Some(self.provider.open_data(&base, cfg.batcher_addr).await?);
+        Ok(())
     }
 }

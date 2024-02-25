@@ -4,7 +4,9 @@ use crate::{
     traits::{ChainProvider, ResettableStage},
     types::{BlockInfo, RollupConfig, SystemConfig},
 };
+use alloc::boxed::Box;
 use anyhow::{anyhow, bail, Result};
+use async_trait::async_trait;
 
 /// The L1 traversal stage of the derivation pipeline.
 #[derive(Debug, Clone, Copy)]
@@ -83,8 +85,9 @@ impl<F: ChainProvider> L1Traversal<F> {
     }
 }
 
-impl<F: ChainProvider> ResettableStage for L1Traversal<F> {
-    fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
+#[async_trait]
+impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
+    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
         self.block = Some(base);
         self.done = false;
         self.system_config = cfg;

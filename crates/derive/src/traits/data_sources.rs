@@ -22,7 +22,7 @@ pub trait ChainProvider {
 #[async_trait]
 pub trait DataAvailabilityProvider {
     /// A data iterator for the data source to return.
-    type DataIter<T>: DataIter<T>;
+    type DataIter<T>: DataIter<T> + Send;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.
