@@ -83,7 +83,7 @@ impl Frame {
     /// Frames are stored in L1 transactions with the following format:
     /// * `data = DerivationVersion0 ++ Frame(s)`
     /// Where there is one or more frames concatenated together.
-    fn parse_frames(encoded: &[u8]) -> Result<Vec<Self>> {
+    pub fn parse_frames(encoded: &[u8]) -> Result<Vec<Self>> {
         if encoded.is_empty() {
             bail!("No frames to parse");
         }
@@ -120,9 +120,9 @@ mod test {
     #[test]
     fn test_encode_frame_roundtrip() {
         let frame = Frame {
-            id: [1; 16],
-            number: 0,
-            data: std::vec![],
+            id: [0xFF; 16],
+            number: 0xEE,
+            data: std::vec![0xDD; 50],
             is_last: true,
         };
 
@@ -133,9 +133,9 @@ mod test {
     #[test]
     fn test_decode_many() {
         let frame = Frame {
-            id: [1; 16],
-            number: 0,
-            data: std::vec![],
+            id: [0xFF; 16],
+            number: 0xEE,
+            data: std::vec![0xDD; 50],
             is_last: true,
         };
         let mut bytes = Vec::new();
