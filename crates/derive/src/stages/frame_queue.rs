@@ -10,26 +10,24 @@ use alloy_primitives::Bytes;
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 
-pub struct FrameQueue<T, DAP, CP>
+pub struct FrameQueue<DAP, CP>
 where
-    T: Into<Bytes>,
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
 {
     /// The previous stage in the pipeline.
-    pub prev: L1Retrieval<T, DAP, CP>,
+    pub prev: L1Retrieval<DAP, CP>,
     /// The current frame queue.
     queue: VecDeque<Frame>,
 }
 
-impl<T, DAP, CP> FrameQueue<T, DAP, CP>
+impl<DAP, CP> FrameQueue<DAP, CP>
 where
-    T: Into<Bytes>,
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
 {
     /// Create a new frame queue stage.
-    pub fn new(prev: L1Retrieval<T, DAP, CP>) -> Self {
+    pub fn new(prev: L1Retrieval<DAP, CP>) -> Self {
         Self {
             prev,
             queue: VecDeque::new(),
@@ -67,9 +65,8 @@ where
 }
 
 #[async_trait]
-impl<T, DAP, CP> ResettableStage for FrameQueue<T, DAP, CP>
+impl<DAP, CP> ResettableStage for FrameQueue<DAP, CP>
 where
-    T: Into<Bytes>,
     DAP: DataAvailabilityProvider + Send,
     CP: ChainProvider + Send,
 {

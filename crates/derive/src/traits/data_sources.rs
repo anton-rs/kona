@@ -3,7 +3,7 @@
 // use alloy_rpc_types::Block;
 use crate::types::{BlockInfo, Receipt};
 use alloc::{boxed::Box, vec::Vec};
-use alloy_primitives::{Address, B256};
+use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -22,11 +22,11 @@ pub trait ChainProvider {
 #[async_trait]
 pub trait DataAvailabilityProvider {
     /// A data iterator for the data source to return.
-    type DataIter<T>: DataIter<T> + Send;
+    type DataIter<T: Into<Bytes>>: DataIter<T> + Send;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.
-    async fn open_data<T>(
+    async fn open_data<T: Into<Bytes>>(
         &self,
         block_ref: &BlockInfo,
         batcher_address: Address,

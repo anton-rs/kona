@@ -5,14 +5,14 @@ use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, DataIter, ResettableStage},
     types::{BlockInfo, SystemConfig},
 };
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 
 /// The L1 retrieval stage of the derivation pipeline.
 #[derive(Debug)]
-pub struct L1Retrieval<T, DAP, CP>
+pub struct L1Retrieval<DAP, CP>
 where
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
@@ -22,12 +22,11 @@ where
     /// The data availability provider to use for the L1 retrieval stage.
     pub provider: DAP,
     /// The current data iterator.
-    data: Option<DAP::DataIter<T>>,
+    data: Option<DAP::DataIter<Bytes>>,
 }
 
-impl<T, DAP, CP> L1Retrieval<T, DAP, CP>
+impl<DAP, CP> L1Retrieval<DAP, CP>
 where
-    T: Into<Bytes>,
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
 {
@@ -66,14 +65,13 @@ where
             self.data = None;
             anyhow!("No more data to retrieve")
         })?;
-        Ok(data.into())
+        Ok(data)
     }
 }
 
 #[async_trait]
-impl<T, DAP, CP> ResettableStage for L1Retrieval<T, DAP, CP>
+impl<DAP, CP> ResettableStage for L1Retrieval<DAP, CP>
 where
-    T: Into<Bytes>,
     DAP: DataAvailabilityProvider + Send,
     CP: ChainProvider + Send,
 {

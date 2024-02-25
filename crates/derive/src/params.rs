@@ -1,7 +1,7 @@
 //! This module contains the parameters and identifying types for the derivation pipeline.
 
 /// Count the tagging info as 200 in terms of buffer size.
-pub const FRAME_OVERHEAD: u64 = 200;
+pub const FRAME_OVERHEAD: usize = 200;
 
 /// The version of the derivation pipeline.
 pub const DERIVATION_VERSION_0: u8 = 0;

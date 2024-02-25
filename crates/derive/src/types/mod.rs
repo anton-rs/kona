@@ -32,3 +32,6 @@ pub use genesis::Genesis;
 
 mod frame;
 pub use frame::Frame;
+
+mod channel;
+pub use channel::Channel;
