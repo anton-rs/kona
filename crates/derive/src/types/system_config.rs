@@ -68,7 +68,7 @@ impl SystemConfig {
                 continue;
             }
 
-            for log in receipt.logs.iter() {
+            receipt.logs.iter().try_for_each(|log| {
                 let topics = log.topics();
                 if log.address == rollup_config.l1_system_config_address
                     && !topics.is_empty()
@@ -76,7 +76,8 @@ impl SystemConfig {
                 {
                     self.process_config_update_log(log, rollup_config, l1_time)?;
                 }
-            }
+                Ok(())
+            })?;
         }
         Ok(())
     }
