@@ -101,6 +101,13 @@ impl RollupConfig {
         self.interop_time.map_or(false, |t| timestamp >= t)
     }
 
+    /// Returns true if a DA Challenge proxy Address is provided in the rollup config and the
+    /// address is not zero.
+    pub fn is_plasma_enabled(&self) -> bool {
+        self.da_challenge_address
+            .map_or(false, |addr| !addr.is_zero())
+    }
+
     /// Checks the scalar value in Ecotone.
     pub fn check_ecotone_l1_system_config_scalar(scalar: [u8; 32]) -> Result<(), &'static str> {
         let version_byte = scalar[0];

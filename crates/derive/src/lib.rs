@@ -17,6 +17,7 @@ pub use params::{
     MAX_RLP_BYTES_PER_CHANNEL, MAX_SPAN_BATCH_BYTES,
 };
 
+pub mod sources;
 pub mod stages;
 pub mod traits;
 pub mod types;

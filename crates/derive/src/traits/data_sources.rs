@@ -1,6 +1,6 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
-use crate::types::{BlockInfo, Receipt, StageResult};
+use crate::types::{BlockInfo, Receipt, StageResult, TxEnvelope};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
@@ -16,6 +16,12 @@ pub trait ChainProvider {
     /// Returns all receipts in the block with the given hash, or an error if the block does not exist in the data
     /// source.
     async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>>;
+
+    /// Returns the [BlockInfo] and list of [TxEnvelope]s from the given block hash.
+    async fn block_info_and_transactions_by_hash(
+        &self,
+        hash: B256,
+    ) -> Result<(BlockInfo, Vec<TxEnvelope>)>;
 }
 
 /// Describes the functionality of a data source that can provide data availability information.
