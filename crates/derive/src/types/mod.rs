@@ -1,7 +1,7 @@
 //! This module contains all of the types used within the derivation pipeline.
 
 use alloc::vec::Vec;
-use alloy_rlp::Decodable;
+use alloy_rlp::{Decodable, Encodable};
 
 mod system_config;
 pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
@@ -45,12 +45,15 @@ pub use errors::{StageError, StageResult};
 mod single_batch;
 pub use single_batch::SingleBatch;
 
-mod span_batch;
-pub use span_batch::SpanBatch;
-
 /// A raw transaction
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Vec<u8>);
+
+impl Encodable for RawTransaction {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        self.0.encode(out)
+    }
+}
 
 impl Decodable for RawTransaction {
     /// Decodes RLP encoded bytes into [RawTransaction] bytes
