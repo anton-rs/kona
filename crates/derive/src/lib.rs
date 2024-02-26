@@ -8,12 +8,15 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![no_std]
-// Temp
-#![allow(dead_code, unused, unreachable_pub)]
 
 extern crate alloc;
 
-pub mod params;
+mod params;
+pub use params::{
+    ChannelID, CHANNEL_ID_LENGTH, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_CHANNEL_BANK_SIZE,
+    MAX_RLP_BYTES_PER_CHANNEL, MAX_SPAN_BATCH_BYTES,
+};
+
 pub mod stages;
 pub mod traits;
 pub mod types;

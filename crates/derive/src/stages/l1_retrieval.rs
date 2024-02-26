@@ -5,7 +5,7 @@ use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, DataIter, ResettableStage},
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;

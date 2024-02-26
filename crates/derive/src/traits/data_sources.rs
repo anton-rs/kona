@@ -1,11 +1,11 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
-// use alloy_rpc_types::Block;
 use crate::types::{BlockInfo, Receipt, StageResult};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
+use core::fmt::Debug;
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
@@ -22,7 +22,7 @@ pub trait ChainProvider {
 #[async_trait]
 pub trait DataAvailabilityProvider {
     /// A data iterator for the data source to return.
-    type DataIter<T: Into<Bytes>>: DataIter<T> + Send;
+    type DataIter<T: Into<Bytes>>: DataIter<T> + Send + Debug;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.

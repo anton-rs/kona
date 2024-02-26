@@ -1,5 +1,7 @@
 //! `alloy-network` crate ported to `no_std`.
 
+#![allow(unused, unreachable_pub)]
+
 use crate::types::eips::eip2718::Eip2718Envelope;
 use alloc::vec::Vec;
 use alloy_primitives::B256;

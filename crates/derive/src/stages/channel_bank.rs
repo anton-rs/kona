@@ -1,6 +1,6 @@
 //! This module contains the `ChannelBank` struct.
 
-use super::{frame_queue::FrameQueue, l1_retrieval::L1Retrieval};
+use super::frame_queue::FrameQueue;
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
@@ -8,8 +8,9 @@ use crate::{
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use async_trait::async_trait;
+use core::fmt::Debug;
 use hashbrown::HashMap;
 
 /// [ChannelBank] is a stateful stage that does the following:
@@ -23,10 +24,11 @@ use hashbrown::HashMap;
 /// Specifically, the channel bank is not allowed to become too large between successive calls
 /// to `IngestData`. This means that we can do an ingest and then do a read while becoming too large.
 /// [ChannelBank] buffers channel frames, and emits full channel data
+#[derive(Debug)]
 pub struct ChannelBank<DAP, CP>
 where
-    DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
 {
     /// The rollup configuration.
     cfg: RollupConfig,
@@ -36,23 +38,20 @@ where
     channel_queue: VecDeque<ChannelID>,
     /// The previous stage of the derivation pipeline.
     prev: FrameQueue<DAP, CP>,
-    /// Chain provider.
-    chain_provider: CP,
 }
 
 impl<DAP, CP> ChannelBank<DAP, CP>
 where
-    DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP>, chain_provider: CP) -> Self {
+    pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP>) -> Self {
         Self {
             cfg,
             channels: HashMap::new(),
             channel_queue: VecDeque::new(),
             prev,
-            chain_provider,
         }
     }
 
@@ -162,7 +161,7 @@ where
 
         // Load the data into the channel bank
         let frame = self.prev.next_frame().await?;
-        self.ingest_frame(frame);
+        self.ingest_frame(frame)?;
         Err(StageError::NotEnoughData)
     }
 
@@ -193,10 +192,10 @@ where
 #[async_trait]
 impl<DAP, CP> ResettableStage for ChannelBank<DAP, CP>
 where
-    DAP: DataAvailabilityProvider + Send,
-    CP: ChainProvider + Send,
+    DAP: DataAvailabilityProvider + Send + Debug,
+    CP: ChainProvider + Send + Debug,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         Err(StageError::Eof)

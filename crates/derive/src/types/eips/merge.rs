@@ -1,5 +1,7 @@
 //! Constants related to the beacon chain consensus.
 
+#![allow(unreachable_pub, unused)]
+
 /// An EPOCH is a series of 32 slots.
 pub const EPOCH_SLOTS: u64 = 32;
 
