@@ -4,7 +4,7 @@ use alloy_primitives::BlockHash;
 use alloy_rlp::Decodable;
 
 /// Represents a single batch: a single encoded L2 block
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SingleBatch {
     /// Block hash of the previous L2 block
     pub parent_hash: BlockHash,

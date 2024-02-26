@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use alloy_primitives::{Address, Bytes, StorageKey, U256};
 use alloy_rlp::{BufMut, BytesMut, Decodable, Encodable};
 
-use super::{BlockInput, Config, RawTransaction};
+use super::{BlockInput, RawTransaction, RollupConfig};
 use anyhow::Result;
 
 #[derive(Debug, Clone)]
@@ -57,7 +57,7 @@ pub struct AccessListItem {
 }
 
 /// Represents a span batch: a range of encoded L2 blocks
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SpanBatch {
     /// Uvarint encoded relative timestamp since L2 genesis
     pub rel_timestamp: u64,
@@ -118,7 +118,7 @@ impl SpanBatch {
     }
 
     /// Returns a [BlockInput] vector for this batch. Contains all L2 block in the batch.
-    pub fn block_inputs(&self, config: &Config) -> Vec<BlockInput> {
+    pub fn block_inputs(&self, config: &RollupConfig) -> Vec<BlockInput> {
         let init_epoch_num = self.l1_origin_num
             - self
                 .origin_bits
@@ -138,9 +138,8 @@ impl SpanBatch {
             let transactions = self.transactions[tx_index..tx_index + tx_end].to_vec();
             tx_index += self.block_tx_counts[i] as usize;
 
-            let timestamp = self.rel_timestamp
-                + config.chain.l2_genesis.timestamp
-                + i as u64 * config.chain.blocktime;
+            let timestamp =
+                self.rel_timestamp + config.genesis.timestamp + i as u64 * config.block_time;
 
             let block_input = BlockInput {
                 timestamp,
