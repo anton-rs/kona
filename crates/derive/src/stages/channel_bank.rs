@@ -2,7 +2,7 @@
 
 use alloc::collections::VecDeque;
 use alloy_primitives::Bytes;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use hashbrown::HashMap;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     types::{BlockInfo, Channel, Frame, RollupConfig},
 };
 
-use super::l1_retrieval::L1Retrieval;
+use super::{frame_queue::FrameQueue, l1_retrieval::L1Retrieval};
 
 /// [ChannelBank] is a stateful stage that does the following:
 /// 1. Unmarshalls frames from L1 transaction data
@@ -36,9 +36,20 @@ where
     /// Channels in FIFO order.
     channel_queue: VecDeque<ChannelID>,
     /// The previous stage of the derivation pipeline.
-    prev: L1Retrieval<DAP, CP>,
+    prev: FrameQueue<DAP, CP>,
     /// Chain provider.
     chain_provider: CP,
+}
+
+#[derive(Debug)]
+pub enum ChannelBankError {
+    /// There is no data to read from the channel bank.
+    Eof,
+    /// There is not enough data progress, but if we wait, the stage will eventually return data
+    /// or produce an EOF error.
+    NotEnoughData,
+    /// Other wildcard error.
+    Custom(anyhow::Error),
 }
 
 impl<DAP, CP> ChannelBank<DAP, CP>
@@ -47,7 +58,7 @@ where
     CP: ChainProvider,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: RollupConfig, prev: L1Retrieval<DAP, CP>, chain_provider: CP) -> Self {
+    pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP>, chain_provider: CP) -> Self {
         Self {
             cfg,
             channels: HashMap::new(),
@@ -104,5 +115,101 @@ where
         }
 
         self.prune()
+    }
+
+    /// Read the raw data of the first channel, if it's timed-out or closed.
+    ///
+    /// Returns an error if there is nothing new to read.
+    pub fn read(&mut self) -> Result<Option<Bytes>, ChannelBankError> {
+        // Bail if there are no channels to read from.
+        if self.channel_queue.is_empty() {
+            return Err(ChannelBankError::Eof);
+        }
+
+        // Return an `Ok(None)` if the first channel is timed out. There may be more timed
+        // out channels at the head of the queue and we want to remove them all.
+        let first = self.channel_queue[0];
+        let channel = self
+            .channels
+            .get(&first)
+            .ok_or(ChannelBankError::Custom(anyhow!("Channel not found")))?;
+        let origin = self
+            .origin()
+            .ok_or(ChannelBankError::Custom(anyhow!("No origin present")))?;
+
+        if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
+            self.channels.remove(&first);
+            self.channel_queue.pop_front();
+            return Ok(None);
+        }
+
+        // At the point we have removed all timed out channels from the front of the `channel_queue`.
+        // Pre-Canyon we simply check the first index.
+        // Post-Canyon we read the entire channelQueue for the first ready channel. If no channel is
+        // available, we return `nil, io.EOF`.
+        // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2 timestamp.
+        if !self.cfg.is_canyon_active(origin.timestamp) {
+            return self.try_read_channel_at_index(0).map(Some);
+        }
+
+        let channel_data =
+            (0..self.channel_queue.len()).find_map(|i| self.try_read_channel_at_index(i).ok());
+        match channel_data {
+            Some(data) => Ok(Some(data)),
+            None => Err(ChannelBankError::Eof),
+        }
+    }
+
+    /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out of the channel bank prior to
+    /// loading data in (unlike most other stages). This is to ensure maintain consistency around channel bank pruning which depends upon the order
+    /// of operations.
+    pub async fn next_data(&mut self) -> Result<Option<Bytes>, ChannelBankError> {
+        match self.read() {
+            Err(ChannelBankError::Eof) => {
+                // continue - we will attempt to load data into the channel bank
+            }
+            Err(e) => {
+                return Err(ChannelBankError::Custom(anyhow!(
+                    "Error fetching next data from channel bank: {:?}",
+                    e
+                )))
+            }
+            data => return data,
+        };
+
+        // Load the data into the channel bank
+        // TODO: Consider EOF error.
+        let frame = self
+            .prev
+            .next_frame()
+            .await
+            .map_err(ChannelBankError::Custom)?;
+        self.ingest_frame(frame);
+        Err(ChannelBankError::NotEnoughData)
+    }
+
+    /// Attempts to read the channel at the specified index. If the channel is not ready or timed out,
+    /// it will return an error.
+    /// If the channel read was successful, it will remove the channel from the channel queue.
+    fn try_read_channel_at_index(&mut self, index: usize) -> Result<Bytes, ChannelBankError> {
+        let channel_id = self.channel_queue[index];
+        let channel = self
+            .channels
+            .get(&channel_id)
+            .ok_or(ChannelBankError::Custom(anyhow!("Channel not found")))?;
+        let origin = self
+            .origin()
+            .ok_or(ChannelBankError::Custom(anyhow!("No origin present")))?;
+
+        let timed_out = channel.open_block_number() + self.cfg.channel_timeout < origin.number;
+        if timed_out || !channel.is_ready() {
+            return Err(ChannelBankError::Eof);
+        }
+
+        let frame_data = channel.frame_data();
+        self.channels.remove(&channel_id);
+        self.channel_queue.remove(index);
+
+        frame_data.map_err(ChannelBankError::Custom)
     }
 }

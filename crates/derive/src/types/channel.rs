@@ -4,7 +4,9 @@ use crate::{
     params::ChannelID,
     types::{BlockInfo, Frame},
 };
-use anyhow::{bail, Result};
+use alloc::vec::Vec;
+use alloy_primitives::Bytes;
+use anyhow::{anyhow, bail, Result};
 use hashbrown::HashMap;
 
 /// A Channel is a set of batches that are split into at least one, but possibly multiple frames.
@@ -136,6 +138,20 @@ impl Channel {
         }
 
         true
+    }
+
+    /// Returns all of the channel's [Frame]s concatenated together.
+    pub fn frame_data(&self) -> Result<Bytes> {
+        let mut data = Vec::with_capacity(self.size());
+        (0..=self.last_frame_number).try_for_each(|i| {
+            let frame = self
+                .inputs
+                .get(&i)
+                .ok_or_else(|| anyhow!("Frame not found"))?;
+            data.extend_from_slice(&frame.data);
+            Ok(())
+        })?;
+        Ok(data.into())
     }
 }
 
