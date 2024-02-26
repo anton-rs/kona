@@ -15,10 +15,16 @@
 mod l1_traversal;
 pub use l1_traversal::L1Traversal;
 
-mod batch_queue;
+mod l1_retrieval;
+pub use l1_retrieval::L1Retrieval;
+
+mod frame_queue;
+pub use frame_queue::FrameQueue;
+
 mod channel_bank;
+pub use channel_bank::ChannelBank;
+
+mod batch_queue;
 mod channel_reader;
 mod engine_queue;
-mod frame_queue;
-mod l1_retrieval;
 mod payload_derivation;

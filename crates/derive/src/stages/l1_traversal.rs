@@ -5,7 +5,7 @@ use crate::{
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use async_trait::async_trait;
 
 /// The L1 traversal stage of the derivation pipeline.

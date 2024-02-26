@@ -63,6 +63,11 @@ impl Frame {
                 .try_into()
                 .map_err(|e| anyhow!("Error: {e}"))?,
         ) as usize;
+
+        if data_len > MAX_FRAME_LEN {
+            bail!("Frame data too large");
+        }
+
         let data = encoded[22..22 + data_len].to_vec();
         let is_last = encoded[22 + data_len] != 0;
         Ok((

@@ -157,11 +157,10 @@ impl Channel {
 
 #[cfg(test)]
 mod test {
+    use std::println;
+
     use super::Channel;
-    use crate::{
-        params::ChannelID,
-        types::{BlockInfo, Frame},
-    };
+    use crate::types::{BlockInfo, Frame};
     use alloc::{
         string::{String, ToString},
         vec,
@@ -178,6 +177,8 @@ mod test {
     }
 
     fn run_frame_validity_test(test_case: FrameValidityTestCase) {
+        println!("Running test: {}", test_case.name);
+
         let id = [0xFF; 16];
         let block = BlockInfo::default();
         let mut channel = Channel::new(id, block);
