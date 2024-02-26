@@ -52,6 +52,7 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 
 - [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
 - [`preimage`](./crates/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
+- [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
 
 ## Book
 

@@ -2,10 +2,10 @@
 
 use crate::{
     traits::{ChainProvider, ResettableStage},
-    types::{BlockInfo, RollupConfig, SystemConfig},
+    types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail};
 use async_trait::async_trait;
 
 /// The L1 traversal stage of the derivation pipeline.
@@ -37,12 +37,12 @@ impl<F: ChainProvider> L1Traversal<F> {
 
     /// Returns the next L1 block in the traversal stage, if the stage has not been completed. This function can only
     /// be called once, and will return `None` on subsequent calls unless the stage is reset.
-    pub fn next_l1_block(&mut self) -> Option<BlockInfo> {
+    pub fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
         if !self.done {
             self.done = true;
-            self.block
+            Ok(self.block)
         } else {
-            None
+            Err(StageError::Eof)
         }
     }
 
@@ -52,7 +52,8 @@ impl<F: ChainProvider> L1Traversal<F> {
     }
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
-    pub async fn advance_l1_block(&mut self) -> Result<()> {
+    pub async fn advance_l1_block(&mut self) -> StageResult<()> {
+        // TODO: Return EOF if the block wasn't found.
         let block = self.block.ok_or(anyhow!("No block to advance from"))?;
         let next_l1_origin = self
             .data_source
@@ -61,11 +62,12 @@ impl<F: ChainProvider> L1Traversal<F> {
 
         // Check for reorgs
         if block.hash != next_l1_origin.parent_hash {
-            bail!(
+            return Err(anyhow!(
                 "Detected L1 reorg from {} to {} with conflicting parent",
                 block.hash,
                 next_l1_origin.hash
-            );
+            )
+            .into());
         }
 
         // Fetch receipts.
@@ -87,12 +89,10 @@ impl<F: ChainProvider> L1Traversal<F> {
 
 #[async_trait]
 impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
+    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
         self.block = Some(base);
         self.done = false;
         self.system_config = cfg;
-
-        // TODO: Do we want to return an error here w/ EOF?
-        Ok(())
+        Err(StageError::Eof)
     }
 }

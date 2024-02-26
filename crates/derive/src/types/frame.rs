@@ -1,6 +1,6 @@
 //! This module contains the [Frame] type used within the derivation pipeline.
 
-use crate::params::{ChannelID, DERIVATION_VERSION_0};
+use crate::params::{ChannelID, DERIVATION_VERSION_0, FRAME_OVERHEAD};
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
 
@@ -18,7 +18,7 @@ const MAX_FRAME_LEN: usize = 1000;
 /// * frame_data_length = uint32
 /// * frame_data        = bytes
 /// * is_last           = bool
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Frame {
     /// The unique idetifier for the frame.
     pub id: ChannelID,
@@ -108,6 +108,13 @@ impl Frame {
         }
 
         Ok(frames)
+    }
+
+    /// Calculates the size of the frame + overhead for storing the frame. The sum of the frame size of each frame in
+    /// a channel determines the channel's size. The sum of the channel sizes is used for pruning & compared against
+    /// the max channel bank size.
+    pub fn size(&self) -> usize {
+        self.data.len() + FRAME_OVERHEAD
     }
 }
 
