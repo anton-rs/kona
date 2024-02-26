@@ -10,6 +10,8 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// No item returned from the previous stage iterator.
+    Empty,
     /// Other wildcard error.
     Custom(anyhow::Error),
 }
@@ -28,6 +30,7 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::Empty => write!(f, "Empty"),
             StageError::Custom(e) => write!(f, "Custom error: {}", e),
         }
     }

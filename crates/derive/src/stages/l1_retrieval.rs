@@ -2,7 +2,7 @@
 
 use super::L1Traversal;
 use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider, DataIter, ResettableStage},
+    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
@@ -60,7 +60,12 @@ where
             );
         }
 
-        let data = self.data.as_mut().expect("Cannot be None").next();
+        let data = self
+            .data
+            .as_mut()
+            .expect("Cannot be None")
+            .next()
+            .unwrap_or(Err(StageError::Empty));
         match data {
             Ok(data) => Ok(data),
             Err(StageError::Eof) => {

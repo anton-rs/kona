@@ -1,28 +1,27 @@
 //! CallData Source
 
-use crate::traits::{ChainProvider, DataIter};
+use crate::traits::ChainProvider;
 use crate::types::BlockInfo;
 use crate::types::StageResult;
 use alloy_primitives::{Address, Bytes};
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
-pub struct CalldataSource {
+pub struct CalldataSource<CP>
+where
+    CP: ChainProvider,
+{
     /// The chain provider to use for the calldata source.
-    chain_provider: ChainProvider,
+    chain_provider: CP,
     /// The address of the batcher contract.
     batcher_address: Address,
     /// Block Ref
     block_ref: BlockInfo,
 }
 
-impl CalldataSource {
+impl<CP: ChainProvider> CalldataSource<CP> {
     /// Creates a new calldata source.
-    pub fn new(
-        chain_provider: ChainProvider,
-        batcher_address: Address,
-        block_ref: BlockInfo,
-    ) -> Self {
+    pub fn new(chain_provider: CP, batcher_address: Address, block_ref: BlockInfo) -> Self {
         Self {
             chain_provider,
             batcher_address,
@@ -31,8 +30,10 @@ impl CalldataSource {
     }
 }
 
-impl<T: Into<Bytes>> DataIter<T> for CalldataSource {
-    fn next(&mut self) -> StageResult<T> {
+impl<CP: ChainProvider> Iterator for CalldataSource<CP> {
+    type Item = StageResult<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()
     }
 }

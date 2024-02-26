@@ -1,6 +1,5 @@
 //! Blob Data Source
 
-use crate::traits::DataIter;
 use crate::types::StageResult;
 use alloy_primitives::Bytes;
 
@@ -15,8 +14,10 @@ impl BlobSource {
     }
 }
 
-impl<T: Into<Bytes>> DataIter<T> for BlobSource {
-    fn next(&mut self) -> StageResult<T> {
+impl Iterator for BlobSource {
+    type Item = StageResult<Bytes>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()
     }
 }

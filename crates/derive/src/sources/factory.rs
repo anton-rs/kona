@@ -1,15 +1,16 @@
 //! Contains a Factory for creating a calldata and blob provider.
 
-use crate::sources::{BlobSource, CalldataSource, PlasmaSource};
+use crate::sources::{BlobSource, CalldataSource, DataSource, PlasmaSource};
 use crate::traits::{ChainProvider, DataAvailabilityProvider};
 use crate::types::{BlockInfo, RollupConfig};
 use alloy_primitives::{Address, Bytes};
 use anyhow::{anyhow, Result};
 
 /// A factory for creating a calldata and blob provider.
+#[derive(Debug, Clone, Copy)]
 pub struct DataSourceFactory<CP>
 where
-    CP: ChainProvider + Clone,
+    CP: ChainProvider,
 {
     /// The chain provider to use for the factory.
     pub chain_provider: CP,
@@ -19,19 +20,19 @@ where
     pub plasma_enabled: bool,
 }
 
-impl<F: ChainProvider + Clone> DataSourceFactory<F> {
+impl<F: ChainProvider> DataSourceFactory<F> {
     /// Creates a new factory.
     pub fn new(provider: F, cfg: RollupConfig) -> Self {
         Self {
-            chain_provider: Box::new(provider),
+            chain_provider: provider,
             ecotone_timestamp: cfg.ecotone_time,
             plasma_enabled: cfg.is_plasma_enabled(),
         }
     }
 }
 
-impl<F: ChainProvider + Clone> DataAvailabilityProvider for DataSourceFactory<F> {
-    type DataIter<T> = F::DataIter<T>;
+impl<F: ChainProvider> DataAvailabilityProvider for DataSourceFactory<F> {
+    type DataIter<T> = DataSource<F>;
 
     async fn open_data<T: Into<Bytes>>(
         &self,
@@ -40,16 +41,16 @@ impl<F: ChainProvider + Clone> DataAvailabilityProvider for DataSourceFactory<F>
     ) -> Result<Self::DataIter<T>> {
         if let Some(ecotone) = self.ecotone_timestamp {
             if block_ref.timestamp >= ecotone {
-                return Ok(BlobSource::new());
+                return Ok(DataSource::Blob(BlobSource::new()));
             }
-            return Ok(CalldataSource::new(
-                self.chain_provider.clone(),
+            return Ok(DataSource::Calldata(CalldataSource::new(
+                self.chain_provider,
                 batcher_address,
                 *block_ref,
-            ));
+            )));
         }
         if self.plasma_enabled {
-            return Ok(PlasmaSource::new());
+            return Ok(DataSource::Plasma(PlasmaSource::new()));
         }
         return Err(anyhow!("No data source available"));
     }

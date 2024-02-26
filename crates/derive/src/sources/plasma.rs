@@ -1,6 +1,5 @@
 //! Plasma Data Source
 
-use crate::traits::DataIter;
 use crate::types::StageResult;
 use alloy_primitives::Bytes;
 
@@ -15,8 +14,10 @@ impl PlasmaSource {
     }
 }
 
-impl<T: Into<Bytes>> DataIter<T> for PlasmaSource {
-    fn next(&mut self) -> StageResult<T> {
+impl Iterator for PlasmaSource {
+    type Item = StageResult<Bytes>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()
     }
 }

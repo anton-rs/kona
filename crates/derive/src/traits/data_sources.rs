@@ -28,7 +28,8 @@ pub trait ChainProvider {
 #[async_trait]
 pub trait DataAvailabilityProvider {
     /// A data iterator for the data source to return.
-    type DataIter<T: Into<Bytes>>: DataIter<T> + Send + Debug;
+    /// The iterator returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
+    type DataIter<T: Into<Bytes>>: Iterator<Item = StageResult<T>> + Send + Debug;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.
@@ -37,10 +38,4 @@ pub trait DataAvailabilityProvider {
         block_ref: &BlockInfo,
         batcher_address: Address,
     ) -> Result<Self::DataIter<T>>;
-}
-
-/// Describes the behavior of a data iterator.
-pub trait DataIter<T> {
-    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
-    fn next(&mut self) -> StageResult<T>;
 }
