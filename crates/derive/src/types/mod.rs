@@ -1,7 +1,10 @@
 //! This module contains all of the types used within the derivation pipeline.
 
+use alloc::vec::Vec;
+use alloy_rlp::Decodable;
+
 mod system_config;
-pub use system_config::{SystemAccounts, SystemConfig};
+pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
 
 mod rollup_config;
 pub use rollup_config::RollupConfig;
@@ -30,10 +33,14 @@ pub use eips::{
 mod genesis;
 pub use genesis::Genesis;
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use alloy_primitives::{hex, Address, BlockHash};
-use alloy_rlp::Decodable;
+mod frame;
+pub use frame::Frame;
+
+mod channel;
+pub use channel::Channel;
+
+mod errors;
+pub use errors::{StageError, StageResult};
 
 mod single_batch;
 pub use single_batch::SingleBatch;

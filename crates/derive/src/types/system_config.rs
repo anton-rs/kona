@@ -2,7 +2,7 @@
 
 use super::{Receipt, RollupConfig};
 use alloy_primitives::{address, b256, Address, Log, B256, U256};
-use alloy_sol_types::{sol, SolType, SolValue};
+use alloy_sol_types::{sol, SolType};
 use anyhow::{anyhow, bail, Result};
 
 /// `keccak256("ConfigUpdate(uint256,uint8,bytes)")`
@@ -15,14 +15,17 @@ const CONFIG_UPDATE_EVENT_VERSION_0: B256 = B256::ZERO;
 /// Optimism system config contract values
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct SystemConfig {
     /// Batch sender address
-    pub batch_sender: Address,
+    pub batcher_addr: Address,
     /// L2 gas limit
     pub gas_limit: U256,
     /// Fee overhead
+    #[cfg_attr(feature = "serde", serde(rename = "overhead"))]
     pub l1_fee_overhead: U256,
     /// Fee scalar
+    #[cfg_attr(feature = "serde", serde(rename = "scalar"))]
     pub l1_fee_scalar: U256,
     /// Sequencer's signer for unsafe blocks
     pub unsafe_block_signer: Address,
@@ -32,9 +35,13 @@ pub struct SystemConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u64)]
 pub enum SystemConfigUpdateType {
+    /// Batcher update type
     Batcher = 0,
+    /// Gas config update type
     GasConfig = 1,
+    /// Gas limit update type
     GasLimit = 2,
+    /// Unsafe block signer update type
     UnsafeBlockSigner = 3,
 }
 
@@ -65,7 +72,7 @@ impl SystemConfig {
                 continue;
             }
 
-            for log in receipt.logs.iter() {
+            receipt.logs.iter().try_for_each(|log| {
                 let topics = log.topics();
                 if log.address == rollup_config.l1_system_config_address
                     && !topics.is_empty()
@@ -73,7 +80,8 @@ impl SystemConfig {
                 {
                     self.process_config_update_log(log, rollup_config, l1_time)?;
                 }
-            }
+                Ok(())
+            })?;
         }
         Ok(())
     }
@@ -121,20 +129,20 @@ impl SystemConfig {
                 }
 
                 let pointer = <sol!(uint64)>::abi_decode(&log_data[0..32], true)
-                    .map_err(|e| anyhow!("Failed to decode batcher update log"))?;
+                    .map_err(|_| anyhow!("Failed to decode batcher update log"))?;
                 if pointer != 32 {
                     bail!("Invalid config update log: invalid data pointer");
                 }
                 let length = <sol!(uint64)>::abi_decode(&log_data[32..64], true)
-                    .map_err(|e| anyhow!("Failed to decode batcher update log"))?;
+                    .map_err(|_| anyhow!("Failed to decode batcher update log"))?;
                 if length != 32 {
                     bail!("Invalid config update log: invalid data length");
                 }
 
                 let batcher_address =
                     <sol!(address)>::abi_decode(&log.data.data.as_ref()[64..], true)
-                        .map_err(|e| anyhow!("Failed to decode batcher update log"))?;
-                self.batch_sender = batcher_address;
+                        .map_err(|_| anyhow!("Failed to decode batcher update log"))?;
+                self.batcher_addr = batcher_address;
             }
             SystemConfigUpdateType::GasConfig => {
                 if log_data.len() != 128 {
@@ -142,20 +150,20 @@ impl SystemConfig {
                 }
 
                 let pointer = <sol!(uint64)>::abi_decode(&log_data[0..32], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid data pointer"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid data pointer"))?;
                 if pointer != 32 {
                     bail!("Invalid config update log: invalid data pointer");
                 }
                 let length = <sol!(uint64)>::abi_decode(&log_data[32..64], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid data length"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid data length"))?;
                 if length != 64 {
                     bail!("Invalid config update log: invalid data length");
                 }
 
                 let overhead = <sol!(uint256)>::abi_decode(&log_data[64..96], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid overhead"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid overhead"))?;
                 let scalar = <sol!(uint256)>::abi_decode(&log_data[96..], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid scalar"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid scalar"))?;
 
                 if rollup_config.is_ecotone_active(l1_time) {
                     if RollupConfig::check_ecotone_l1_system_config_scalar(scalar.to_be_bytes())
@@ -180,18 +188,18 @@ impl SystemConfig {
                 }
 
                 let pointer = <sol!(uint64)>::abi_decode(&log_data[0..32], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid data pointer"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid data pointer"))?;
                 if pointer != 32 {
                     bail!("Invalid config update log: invalid data pointer");
                 }
                 let length = <sol!(uint64)>::abi_decode(&log_data[32..64], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid data length"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid data length"))?;
                 if length != 32 {
                     bail!("Invalid config update log: invalid data length");
                 }
 
                 let gas_limit = <sol!(uint256)>::abi_decode(&log_data[64..], true)
-                    .map_err(|e| anyhow!("Invalid config update log: invalid gas limit"))?;
+                    .map_err(|_| anyhow!("Invalid config update log: invalid gas limit"))?;
                 self.gas_limit = gas_limit;
             }
             SystemConfigUpdateType::UnsafeBlockSigner => {
@@ -231,7 +239,7 @@ mod test {
 
     use super::*;
     use alloc::vec;
-    use alloy_primitives::{hex, Bytes, LogData};
+    use alloy_primitives::{hex, LogData};
 
     extern crate std;
 
@@ -290,7 +298,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            system_config.batch_sender,
+            system_config.batcher_addr,
             address!("000000000000000000000000000000000000bEEF")
         );
     }

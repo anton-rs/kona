@@ -1,11 +1,11 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
-// use alloy_rpc_types::Block;
-use crate::types::{BlockInfo, Receipt};
+use crate::types::{BlockInfo, Receipt, StageResult};
 use alloc::{boxed::Box, vec::Vec};
-use alloy_primitives::B256;
+use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
+use core::fmt::Debug;
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
@@ -16,4 +16,25 @@ pub trait ChainProvider {
     /// Returns all receipts in the block with the given hash, or an error if the block does not exist in the data
     /// source.
     async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>>;
+}
+
+/// Describes the functionality of a data source that can provide data availability information.
+#[async_trait]
+pub trait DataAvailabilityProvider {
+    /// A data iterator for the data source to return.
+    type DataIter<T: Into<Bytes>>: DataIter<T> + Send + Debug;
+
+    /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
+    /// data source.
+    async fn open_data<T: Into<Bytes>>(
+        &self,
+        block_ref: &BlockInfo,
+        batcher_address: Address,
+    ) -> Result<Self::DataIter<T>>;
+}
+
+/// Describes the behavior of a data iterator.
+pub trait DataIter<T> {
+    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
+    fn next(&mut self) -> StageResult<T>;
 }

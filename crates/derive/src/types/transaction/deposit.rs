@@ -113,11 +113,7 @@ impl TxDeposit {
     ///
     /// NOTE: Deposit transactions are not signed, so this function does not encode a signature,
     /// just the header and transaction rlp.
-    pub(crate) fn encode_with_signature(
-        &self,
-        signature: &Signature,
-        out: &mut dyn alloy_rlp::BufMut,
-    ) {
+    pub(crate) fn encode_with_signature(&self, _: &Signature, out: &mut dyn alloy_rlp::BufMut) {
         let payload_length = self.fields_len();
         let header = Header {
             list: true,
@@ -128,6 +124,7 @@ impl TxDeposit {
     }
 
     /// Output the length of the RLP signed transaction encoding. This encodes with a RLP header.
+    #[allow(unused)]
     pub(crate) fn payload_len(&self) -> usize {
         let payload_length = self.fields_len();
         // 'tx type' + 'header length' + 'payload length'
@@ -135,6 +132,7 @@ impl TxDeposit {
         length_of_length(len) + len
     }
 
+    #[allow(unused)]
     pub(crate) fn payload_len_without_header(&self) -> usize {
         let payload_length = self.fields_len();
         // 'transaction type byte length' + 'header length' + 'payload length'
@@ -256,7 +254,7 @@ impl Transaction for TxDeposit {
         None
     }
 
-    fn set_chain_id(&mut self, chain_id: ChainId) {
+    fn set_chain_id(&mut self, _: ChainId) {
         unreachable!("Deposit transactions do not have a chain id");
     }
 
@@ -264,7 +262,7 @@ impl Transaction for TxDeposit {
         0
     }
 
-    fn set_nonce(&mut self, nonce: u64) {
+    fn set_nonce(&mut self, _: u64) {
         unreachable!("Deposit transactions do not have a nonce");
     }
 
