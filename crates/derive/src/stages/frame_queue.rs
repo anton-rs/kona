@@ -3,7 +3,7 @@
 use super::l1_retrieval::L1Retrieval;
 use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
-    types::{BlockInfo, Frame, SystemConfig},
+    types::{BlockInfo, Frame, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
@@ -40,7 +40,7 @@ where
     }
 
     /// Fetches the next frame from the frame queue.
-    pub async fn next_frame(&mut self) -> Result<Frame> {
+    pub async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
@@ -49,18 +49,18 @@ where
                     }
                 }
                 Err(e) => {
-                    bail!("Error fetching next data: {e}")
+                    return Err(anyhow!("Error fetching next data: {e}").into());
                 }
             }
         }
         // If we did not add more frames but still have more data, retry this function.
         if self.queue.is_empty() {
-            bail!("Not enough data");
+            return Err(anyhow!("Not enough data").into());
         }
 
         self.queue
             .pop_front()
-            .ok_or_else(|| anyhow!("Frame queue is impossibly empty."))
+            .ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
     }
 }
 
@@ -70,7 +70,7 @@ where
     DAP: DataAvailabilityProvider + Send,
     CP: ChainProvider + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> Result<()> {
+    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
         self.queue = VecDeque::default();
         Ok(())
     }

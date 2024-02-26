@@ -1,17 +1,15 @@
 //! This module contains the `ChannelBank` struct.
 
-use alloc::collections::VecDeque;
-use alloy_primitives::Bytes;
-use anyhow::{anyhow, bail, Result};
-use hashbrown::HashMap;
-
+use super::{frame_queue::FrameQueue, l1_retrieval::L1Retrieval};
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     traits::{ChainProvider, DataAvailabilityProvider},
-    types::{BlockInfo, Channel, Frame, RollupConfig},
+    types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult},
 };
-
-use super::{frame_queue::FrameQueue, l1_retrieval::L1Retrieval};
+use alloc::collections::VecDeque;
+use alloy_primitives::Bytes;
+use anyhow::{anyhow, bail};
+use hashbrown::HashMap;
 
 /// [ChannelBank] is a stateful stage that does the following:
 /// 1. Unmarshalls frames from L1 transaction data
@@ -41,17 +39,6 @@ where
     chain_provider: CP,
 }
 
-#[derive(Debug)]
-pub enum ChannelBankError {
-    /// There is no data to read from the channel bank.
-    Eof,
-    /// There is not enough data progress, but if we wait, the stage will eventually return data
-    /// or produce an EOF error.
-    NotEnoughData,
-    /// Other wildcard error.
-    Custom(anyhow::Error),
-}
-
 impl<DAP, CP> ChannelBank<DAP, CP>
 where
     DAP: DataAvailabilityProvider,
@@ -74,7 +61,7 @@ where
     }
 
     /// Prunes the Channel bank, until it is below [MAX_CHANNEL_BANK_SIZE].
-    pub fn prune(&mut self) -> Result<()> {
+    pub fn prune(&mut self) -> StageResult<()> {
         // Check total size
         let mut total_size = self.channels.iter().fold(0, |acc, (_, c)| acc + c.size());
         // Prune until it is reasonable again. The high-priority channel failed to be read,
@@ -94,7 +81,7 @@ where
     }
 
     /// Adds new L1 data to the channel bank. Should only be called after all data has been read.
-    pub fn ingest_frame(&mut self, frame: Frame) -> Result<()> {
+    pub fn ingest_frame(&mut self, frame: Frame) -> StageResult<()> {
         let origin = *self.origin().ok_or(anyhow!("No origin"))?;
 
         let current_channel = self.channels.entry(frame.id).or_insert_with(|| {
@@ -120,10 +107,10 @@ where
     /// Read the raw data of the first channel, if it's timed-out or closed.
     ///
     /// Returns an error if there is nothing new to read.
-    pub fn read(&mut self) -> Result<Option<Bytes>, ChannelBankError> {
+    pub fn read(&mut self) -> StageResult<Option<Bytes>> {
         // Bail if there are no channels to read from.
         if self.channel_queue.is_empty() {
-            return Err(ChannelBankError::Eof);
+            return Err(StageError::Eof);
         }
 
         // Return an `Ok(None)` if the first channel is timed out. There may be more timed
@@ -132,10 +119,8 @@ where
         let channel = self
             .channels
             .get(&first)
-            .ok_or(ChannelBankError::Custom(anyhow!("Channel not found")))?;
-        let origin = self
-            .origin()
-            .ok_or(ChannelBankError::Custom(anyhow!("No origin present")))?;
+            .ok_or(anyhow!("Channel not found"))?;
+        let origin = self.origin().ok_or(anyhow!("No origin present"))?;
 
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
             self.channels.remove(&first);
@@ -156,60 +141,51 @@ where
             (0..self.channel_queue.len()).find_map(|i| self.try_read_channel_at_index(i).ok());
         match channel_data {
             Some(data) => Ok(Some(data)),
-            None => Err(ChannelBankError::Eof),
+            None => Err(StageError::Eof),
         }
     }
 
     /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out of the channel bank prior to
     /// loading data in (unlike most other stages). This is to ensure maintain consistency around channel bank pruning which depends upon the order
     /// of operations.
-    pub async fn next_data(&mut self) -> Result<Option<Bytes>, ChannelBankError> {
+    pub async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         match self.read() {
-            Err(ChannelBankError::Eof) => {
+            Err(StageError::Eof) => {
                 // continue - we will attempt to load data into the channel bank
             }
             Err(e) => {
-                return Err(ChannelBankError::Custom(anyhow!(
-                    "Error fetching next data from channel bank: {:?}",
-                    e
-                )))
+                return Err(anyhow!("Error fetching next data from channel bank: {:?}", e).into());
             }
             data => return data,
         };
 
         // Load the data into the channel bank
         // TODO: Consider EOF error.
-        let frame = self
-            .prev
-            .next_frame()
-            .await
-            .map_err(ChannelBankError::Custom)?;
+        let frame = self.prev.next_frame().await?;
         self.ingest_frame(frame);
-        Err(ChannelBankError::NotEnoughData)
+        Err(StageError::NotEnoughData)
     }
 
     /// Attempts to read the channel at the specified index. If the channel is not ready or timed out,
     /// it will return an error.
     /// If the channel read was successful, it will remove the channel from the channel queue.
-    fn try_read_channel_at_index(&mut self, index: usize) -> Result<Bytes, ChannelBankError> {
+    fn try_read_channel_at_index(&mut self, index: usize) -> StageResult<Bytes> {
         let channel_id = self.channel_queue[index];
         let channel = self
             .channels
             .get(&channel_id)
-            .ok_or(ChannelBankError::Custom(anyhow!("Channel not found")))?;
-        let origin = self
-            .origin()
-            .ok_or(ChannelBankError::Custom(anyhow!("No origin present")))?;
+            .ok_or(anyhow!("Channel not found"))?;
+        let origin = self.origin().ok_or(anyhow!("No origin present"))?;
 
         let timed_out = channel.open_block_number() + self.cfg.channel_timeout < origin.number;
         if timed_out || !channel.is_ready() {
-            return Err(ChannelBankError::Eof);
+            return Err(StageError::Eof);
         }
 
         let frame_data = channel.frame_data();
         self.channels.remove(&channel_id);
         self.channel_queue.remove(index);
 
-        frame_data.map_err(ChannelBankError::Custom)
+        frame_data.map_err(StageError::Custom)
     }
 }

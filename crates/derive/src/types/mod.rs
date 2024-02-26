@@ -35,3 +35,6 @@ pub use frame::Frame;
 
 mod channel;
 pub use channel::Channel;
+
+mod errors;
+pub use errors::{StageError, StageResult};
