@@ -1,7 +1,7 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
 // use alloy_rpc_types::Block;
-use crate::types::{BlockInfo, Receipt};
+use crate::types::{BlockInfo, Receipt, StageResult};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
@@ -35,6 +35,6 @@ pub trait DataAvailabilityProvider {
 
 /// Describes the behavior of a data iterator.
 pub trait DataIter<T> {
-    /// Returns the next item in the iterator, or `None` if the iterator is exhausted.
-    fn next(&mut self) -> Option<T>;
+    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
+    fn next(&mut self) -> StageResult<T>;
 }

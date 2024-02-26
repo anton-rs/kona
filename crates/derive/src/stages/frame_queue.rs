@@ -3,7 +3,7 @@
 use super::l1_retrieval::L1Retrieval;
 use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
-    types::{BlockInfo, Frame, StageResult, SystemConfig},
+    types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
@@ -72,6 +72,6 @@ where
 {
     async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
         self.queue = VecDeque::default();
-        Ok(())
+        Err(StageError::Eof)
     }
 }

@@ -3,12 +3,13 @@
 use super::{frame_queue::FrameQueue, l1_retrieval::L1Retrieval};
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
-    traits::{ChainProvider, DataAvailabilityProvider},
-    types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult},
+    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
+    types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
-use alloc::collections::VecDeque;
+use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
 use anyhow::{anyhow, bail};
+use async_trait::async_trait;
 use hashbrown::HashMap;
 
 /// [ChannelBank] is a stateful stage that does the following:
@@ -160,7 +161,6 @@ where
         };
 
         // Load the data into the channel bank
-        // TODO: Consider EOF error.
         let frame = self.prev.next_frame().await?;
         self.ingest_frame(frame);
         Err(StageError::NotEnoughData)
@@ -187,5 +187,18 @@ where
         self.channel_queue.remove(index);
 
         frame_data.map_err(StageError::Custom)
+    }
+}
+
+#[async_trait]
+impl<DAP, CP> ResettableStage for ChannelBank<DAP, CP>
+where
+    DAP: DataAvailabilityProvider + Send,
+    CP: ChainProvider + Send,
+{
+    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
+        self.channels.clear();
+        self.channel_queue = VecDeque::with_capacity(10);
+        Err(StageError::Eof)
     }
 }

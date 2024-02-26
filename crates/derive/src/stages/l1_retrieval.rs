@@ -3,7 +3,7 @@
 use super::L1Traversal;
 use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, DataIter, ResettableStage},
-    types::{BlockInfo, StageResult, SystemConfig},
+    types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
@@ -51,7 +51,7 @@ where
         if self.data.is_none() {
             let next = self
                 .prev
-                .next_l1_block()
+                .next_l1_block()?
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
             self.data = Some(
                 self.provider
@@ -60,12 +60,15 @@ where
             );
         }
 
-        // Fetch next data item from the iterator.
-        let data = self.data.as_mut().and_then(|d| d.next()).ok_or_else(|| {
-            self.data = None;
-            anyhow!("No more data to retrieve")
-        })?;
-        Ok(data)
+        let data = self.data.as_mut().expect("Cannot be None").next();
+        match data {
+            Ok(data) => Ok(data),
+            Err(StageError::Eof) => {
+                self.data = None;
+                Err(StageError::Eof)
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
