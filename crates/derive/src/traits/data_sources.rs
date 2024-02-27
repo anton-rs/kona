@@ -1,11 +1,31 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
-use crate::types::{BlockInfo, Receipt, StageResult, TxEnvelope};
+use crate::types::{Blob, BlockInfo, IndexedBlobHash, Receipt, StageResult, TxEnvelope};
 use alloc::fmt::Debug;
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
+
+/// The BlobProvider trait specifies the functionality of a data source that can provide blobs.
+#[async_trait]
+pub trait BlobProvider {
+    /// Fetches blobs for a given block ref and the blob hashes.
+    async fn get_blobs(
+        &self,
+        block_ref: &BlockInfo,
+        blob_hashes: Vec<IndexedBlobHash>,
+    ) -> Result<Vec<Blob>>;
+}
+
+/// The PlasmaProvider trait specifies the functionality of a data source that can fetch plasma
+/// inputs.
+#[async_trait]
+#[allow(dead_code)]
+pub(crate) trait PlasmaProvider {
+    /// Fetches the plasma input for the given commitment at the given block number.
+    async fn get_input(&self, commitment: &[u8], block_number: u64) -> Result<Bytes>;
+}
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]

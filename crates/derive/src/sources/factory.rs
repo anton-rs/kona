@@ -1,7 +1,7 @@
 //! Contains a Factory for creating a calldata and blob provider.
 
 use crate::sources::{BlobSource, CalldataSource, DataSource, PlasmaSource};
-use crate::traits::{ChainProvider, DataAvailabilityProvider};
+use crate::traits::{BlobProvider, ChainProvider, DataAvailabilityProvider};
 use crate::types::{BlockInfo, RollupConfig};
 use alloc::boxed::Box;
 use alloc::fmt::Debug;
@@ -11,12 +11,15 @@ use async_trait::async_trait;
 
 /// A factory for creating a calldata and blob provider.
 #[derive(Debug, Clone, Copy)]
-pub struct DataSourceFactory<CP>
+pub struct DataSourceFactory<C, B>
 where
-    CP: ChainProvider + Clone,
+    C: ChainProvider + Clone,
+    B: BlobProvider + Clone,
 {
     /// The chain provider to use for the factory.
-    pub chain_provider: CP,
+    pub chain_provider: C,
+    /// The blob provider
+    pub blob_provider: B,
     /// The ecotone timestamp.
     pub ecotone_timestamp: Option<u64>,
     /// Whether or not plasma is enabled.
@@ -25,11 +28,16 @@ where
     pub signer: Address,
 }
 
-impl<F: ChainProvider + Clone> DataSourceFactory<F> {
+impl<C, B> DataSourceFactory<C, B>
+where
+    C: ChainProvider + Clone + Debug,
+    B: BlobProvider + Clone + Debug,
+{
     /// Creates a new factory.
-    pub fn new(provider: F, cfg: RollupConfig) -> Self {
+    pub fn new(provider: C, blobs: B, cfg: RollupConfig) -> Self {
         Self {
             chain_provider: provider,
+            blob_provider: blobs,
             ecotone_timestamp: cfg.ecotone_time,
             plasma_enabled: cfg.is_plasma_enabled(),
             signer: cfg.l1_signer_address(),
@@ -38,11 +46,12 @@ impl<F: ChainProvider + Clone> DataSourceFactory<F> {
 }
 
 #[async_trait]
-impl<F> DataAvailabilityProvider for DataSourceFactory<F>
+impl<C, B> DataAvailabilityProvider for DataSourceFactory<C, B>
 where
-    F: ChainProvider + Send + Sync + Clone + Debug,
+    C: ChainProvider + Send + Sync + Clone + Debug,
+    B: BlobProvider + Send + Sync + Clone + Debug,
 {
-    type DataIter = DataSource<F>;
+    type DataIter = DataSource<C, B>;
 
     async fn open_data(
         &self,
@@ -51,7 +60,13 @@ where
     ) -> Result<Self::DataIter> {
         if let Some(ecotone) = self.ecotone_timestamp {
             if block_ref.timestamp >= ecotone {
-                return Ok(DataSource::Blob(BlobSource::new()));
+                return Ok(DataSource::Blob(BlobSource::new(
+                    self.chain_provider.clone(),
+                    self.blob_provider.clone(),
+                    batcher_address,
+                    *block_ref,
+                    self.signer,
+                )));
             }
             return Ok(DataSource::Calldata(CalldataSource::new(
                 self.chain_provider.clone(),
@@ -61,7 +76,9 @@ where
             )));
         }
         if self.plasma_enabled {
-            return Ok(DataSource::Plasma(PlasmaSource::new()));
+            return Ok(DataSource::Plasma(PlasmaSource::new(
+                self.chain_provider.clone(),
+            )));
         }
         return Err(anyhow!("No data source available"));
     }

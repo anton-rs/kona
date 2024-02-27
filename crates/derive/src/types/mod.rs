@@ -30,6 +30,9 @@ pub use eips::{
     eip4788, eip4844,
 };
 
+mod blob;
+pub use blob::{Blob, BlobData, IndexedBlobHash};
+
 mod genesis;
 pub use genesis::Genesis;
 

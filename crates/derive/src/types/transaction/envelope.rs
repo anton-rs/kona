@@ -3,7 +3,8 @@ use crate::types::{
     network::Signed,
     transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxLegacy},
 };
-use alloy_primitives::{Address, Bytes};
+use alloc::vec::Vec;
+use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{length_of_length, Decodable, Encodable};
 
 /// Ethereum `TransactionType` flags as specified in EIPs [2718], [1559], and
@@ -89,6 +90,14 @@ impl TxEnvelope {
             Self::Eip1559(t) => t.to.to(),
             Self::Eip4844(t) => t.to.to(),
             Self::Deposit(t) => t.to.to(),
+        }
+    }
+
+    /// Get Blob Hash count
+    pub fn blob_hashes(&self) -> Option<Vec<B256>> {
+        match self {
+            Self::Eip4844(t) => Some(t.blob_versioned_hashes.clone()),
+            _ => None,
         }
     }
 
