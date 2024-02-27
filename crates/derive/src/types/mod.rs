@@ -9,6 +9,9 @@ pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
 mod rollup_config;
 pub use rollup_config::RollupConfig;
 
+pub mod spans;
+pub use spans::{SpanBatch, SpanBatchBuilder, SpanBatchElement, SPAN_BATCH_TYPE};
+
 mod transaction;
 pub use transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxLegacy, TxType};
 
