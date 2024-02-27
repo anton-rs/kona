@@ -1,8 +1,10 @@
 //! Plasma Data Source
 
+use crate::traits::AsyncIterator;
 use crate::types::StageResult;
+use alloc::boxed::Box;
 use alloy_primitives::Bytes;
-use async_iterator::Iterator;
+use async_trait::async_trait;
 
 /// A plasma data iterator.
 #[derive(Debug, Clone, Default)]
@@ -15,7 +17,8 @@ impl PlasmaSource {
     }
 }
 
-impl Iterator for PlasmaSource {
+#[async_trait]
+impl AsyncIterator for PlasmaSource {
     type Item = StageResult<Bytes>;
 
     async fn next(&mut self) -> Option<Self::Item> {

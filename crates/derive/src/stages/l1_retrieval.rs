@@ -2,13 +2,12 @@
 
 use super::L1Traversal;
 use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
+    traits::{AsyncIterator, ChainProvider, DataAvailabilityProvider, ResettableStage},
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use anyhow::anyhow;
-use async_iterator::Iterator;
 use async_trait::async_trait;
 
 /// The L1 retrieval stage of the derivation pipeline.

@@ -101,7 +101,7 @@ impl TxEnvelope {
             Self::Eip2930(t) => t.recover_signer().ok(),
             Self::Eip1559(t) => t.recover_signer().ok(),
             Self::Eip4844(t) => t.recover_signer().ok(),
-            Self::Deposit(t) => t.from,
+            Self::Deposit(t) => Some(t.from),
         }
         #[cfg(not(feature = "k256"))]
         return None;

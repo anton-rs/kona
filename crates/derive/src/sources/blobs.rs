@@ -1,8 +1,10 @@
 //! Blob Data Source
 
+use crate::traits::AsyncIterator;
 use crate::types::StageResult;
+use alloc::boxed::Box;
 use alloy_primitives::Bytes;
-use async_iterator::Iterator;
+use async_trait::async_trait;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone, Default)]
@@ -15,7 +17,8 @@ impl BlobSource {
     }
 }
 
-impl Iterator for BlobSource {
+#[async_trait]
+impl AsyncIterator for BlobSource {
     type Item = StageResult<Bytes>;
 
     async fn next(&mut self) -> Option<Self::Item> {

@@ -1,19 +1,20 @@
 //! CallData Source
 
-use crate::traits::ChainProvider;
+use crate::traits::{AsyncIterator, ChainProvider};
 use crate::types::BlockInfo;
 use crate::types::StageError;
 use crate::types::StageResult;
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bytes};
-use async_iterator::Iterator;
+use async_trait::async_trait;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct CalldataSource<CP>
 where
-    CP: ChainProvider,
+    CP: ChainProvider + Send,
 {
     /// The chain provider to use for the calldata source.
     chain_provider: CP,
@@ -29,7 +30,7 @@ where
     open: bool,
 }
 
-impl<CP: ChainProvider> CalldataSource<CP> {
+impl<CP: ChainProvider + Send> CalldataSource<CP> {
     /// Creates a new calldata source.
     pub fn new(
         chain_provider: CP,
@@ -78,7 +79,8 @@ impl<CP: ChainProvider> CalldataSource<CP> {
     }
 }
 
-impl<CP: ChainProvider> Iterator for CalldataSource<CP> {
+#[async_trait]
+impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
     type Item = StageResult<Bytes>;
 
     async fn next(&mut self) -> Option<Self::Item> {

@@ -5,7 +5,6 @@ use alloc::fmt::Debug;
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
-use async_iterator::Iterator;
 use async_trait::async_trait;
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
@@ -25,12 +24,23 @@ pub trait ChainProvider {
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)>;
 }
 
+/// A simple asynchronous iterator trait.
+/// This should be replaced with the `async-iterator` crate.
+#[async_trait]
+pub trait AsyncIterator {
+    /// The item type of the iterator.
+    type Item: Send + Sync + Debug;
+
+    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
+    async fn next(&mut self) -> Option<Self::Item>;
+}
+
 /// Describes the functionality of a data source that can provide data availability information.
 #[async_trait]
 pub trait DataAvailabilityProvider {
     /// A data iterator for the data source to return.
     /// The iterator returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
-    type DataIter: Iterator<Item = StageResult<Bytes>> + Send + Sync + Debug;
+    type DataIter: AsyncIterator<Item = StageResult<Bytes>> + Send + Sync + Debug;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.

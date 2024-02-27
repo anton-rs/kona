@@ -40,7 +40,7 @@ impl<F: ChainProvider + Clone> DataSourceFactory<F> {
 #[async_trait]
 impl<F> DataAvailabilityProvider for DataSourceFactory<F>
 where
-   F: ChainProvider + Send + Sync + Clone + Debug
+    F: ChainProvider + Send + Sync + Clone + Debug,
 {
     type DataIter = DataSource<F>;
 
