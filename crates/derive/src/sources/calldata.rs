@@ -7,6 +7,7 @@ use alloy_primitives::{Address, Bytes};
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CalldataSource<CP>
 where
     CP: ChainProvider,
@@ -31,7 +32,7 @@ impl<CP: ChainProvider> CalldataSource<CP> {
 }
 
 impl<CP: ChainProvider> Iterator for CalldataSource<CP> {
-    type Item = StageResult<T>;
+    type Item = StageResult<Bytes>;
 
     fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()

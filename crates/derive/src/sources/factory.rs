@@ -3,14 +3,17 @@
 use crate::sources::{BlobSource, CalldataSource, DataSource, PlasmaSource};
 use crate::traits::{ChainProvider, DataAvailabilityProvider};
 use crate::types::{BlockInfo, RollupConfig};
-use alloy_primitives::{Address, Bytes};
+use alloc::boxed::Box;
+use alloc::fmt::Debug;
+use alloy_primitives::Address;
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 
 /// A factory for creating a calldata and blob provider.
 #[derive(Debug, Clone, Copy)]
 pub struct DataSourceFactory<CP>
 where
-    CP: ChainProvider,
+    CP: ChainProvider + Clone,
 {
     /// The chain provider to use for the factory.
     pub chain_provider: CP,
@@ -20,7 +23,7 @@ where
     pub plasma_enabled: bool,
 }
 
-impl<F: ChainProvider> DataSourceFactory<F> {
+impl<F: ChainProvider + Clone> DataSourceFactory<F> {
     /// Creates a new factory.
     pub fn new(provider: F, cfg: RollupConfig) -> Self {
         Self {
@@ -31,20 +34,23 @@ impl<F: ChainProvider> DataSourceFactory<F> {
     }
 }
 
-impl<F: ChainProvider> DataAvailabilityProvider for DataSourceFactory<F> {
-    type DataIter<T> = DataSource<F>;
+#[async_trait]
+impl<F: ChainProvider + Send + Sync + Clone + Debug> DataAvailabilityProvider
+    for DataSourceFactory<F>
+{
+    type DataIter = DataSource<F>;
 
-    async fn open_data<T: Into<Bytes>>(
+    async fn open_data(
         &self,
         block_ref: &BlockInfo,
         batcher_address: Address,
-    ) -> Result<Self::DataIter<T>> {
+    ) -> Result<Self::DataIter> {
         if let Some(ecotone) = self.ecotone_timestamp {
             if block_ref.timestamp >= ecotone {
                 return Ok(DataSource::Blob(BlobSource::new()));
             }
             return Ok(DataSource::Calldata(CalldataSource::new(
-                self.chain_provider,
+                self.chain_provider.clone(),
                 batcher_address,
                 *block_ref,
             )));

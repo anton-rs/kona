@@ -1,11 +1,11 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
 use crate::types::{BlockInfo, Receipt, StageResult, TxEnvelope};
+use alloc::fmt::Debug;
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
-use core::fmt::Debug;
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
@@ -29,13 +29,13 @@ pub trait ChainProvider {
 pub trait DataAvailabilityProvider {
     /// A data iterator for the data source to return.
     /// The iterator returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
-    type DataIter<T: Into<Bytes>>: Iterator<Item = StageResult<T>> + Send + Debug;
+    type DataIter: Iterator<Item = StageResult<Bytes>> + Send + Sync + Debug;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.
-    async fn open_data<T: Into<Bytes>>(
+    async fn open_data(
         &self,
         block_ref: &BlockInfo,
         batcher_address: Address,
-    ) -> Result<Self::DataIter<T>>;
+    ) -> Result<Self::DataIter>;
 }

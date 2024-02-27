@@ -22,7 +22,7 @@ where
     /// The data availability provider to use for the L1 retrieval stage.
     pub provider: DAP,
     /// The current data iterator.
-    data: Option<DAP::DataIter<Bytes>>,
+    data: Option<DAP::DataIter>,
 }
 
 impl<DAP, CP> L1Retrieval<DAP, CP>

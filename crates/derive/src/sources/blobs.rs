@@ -4,13 +4,13 @@ use crate::types::StageResult;
 use alloy_primitives::Bytes;
 
 /// A data iterator that reads from a blob.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BlobSource {}
 
 impl BlobSource {
     /// Creates a new blob data source.
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
 }
 

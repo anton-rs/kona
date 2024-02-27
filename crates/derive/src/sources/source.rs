@@ -16,14 +16,14 @@ pub enum DataSource<CP: ChainProvider> {
     Plasma(PlasmaSource),
 }
 
-impl<CP: ChainProvider, T: Into<Bytes>> Iterator for DataSource<CP> {
-    type Item = StageResult<T>;
+impl<CP: ChainProvider> Iterator for DataSource<CP> {
+    type Item = StageResult<Bytes>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            DataSource::Calldata(c) => c.next().ok(),
-            DataSource::Blob(b) => b.next().ok(),
-            DataSource::Plasma(p) => p.next().ok(),
+            DataSource::Calldata(c) => c.next(),
+            DataSource::Blob(b) => b.next(),
+            DataSource::Plasma(p) => p.next(),
         }
     }
 }
