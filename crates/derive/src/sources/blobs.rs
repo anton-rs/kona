@@ -7,6 +7,7 @@ use crate::types::{
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bytes};
+use anyhow::Result;
 use async_trait::async_trait;
 
 /// A data iterator that reads from a blob.
@@ -98,7 +99,7 @@ where
     }
 
     /// Loads blob data into the source if it is not open.
-    async fn load_blobs(&mut self) -> anyhow::Result<()> {
+    async fn load_blobs(&mut self) -> Result<()> {
         if self.open {
             return Ok(());
         }
@@ -108,7 +109,7 @@ where
             .block_info_and_transactions_by_hash(self.block_ref.hash)
             .await?;
 
-        let (data, blob_hashes) = self.extract_blob_data(info.1);
+        let (mut data, blob_hashes) = self.extract_blob_data(info.1);
 
         // If there are no hashes, set the calldata and return.
         if blob_hashes.is_empty() {
@@ -117,12 +118,23 @@ where
             return Ok(());
         }
 
-        let _blobs = self
+        let blobs = self
             .blob_fetcher
             .get_blobs(&self.block_ref, blob_hashes)
             .await?;
 
-        // TODO(refcell): fill blob pointers
+        // Fill the blob pointers.
+        let mut blob_index = 0;
+        for blob in data.iter_mut() {
+            match blob.fill(&blobs, blob_index) {
+                Ok(_) => {
+                    blob_index += 1;
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
 
         self.open = true;
         self.data = data;

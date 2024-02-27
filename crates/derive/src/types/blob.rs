@@ -1,5 +1,7 @@
 //! EIP4844 Blob Type
 
+use anyhow::Result;
+
 use alloy_primitives::{Bytes, FixedBytes, B256};
 
 /// How many bytes are in a blob
@@ -24,6 +26,34 @@ pub struct BlobData {
     pub data: Option<Bytes>,
     /// The calldata
     pub calldata: Option<Bytes>,
+}
+
+impl BlobData {
+    /// Fills in the pointers to the fetched blob bodies.
+    /// There should be exactly one placeholder blobOrCalldata
+    /// element for each blob, otherwise an error is returned.
+    pub fn fill(&mut self, blobs: &[Blob], index: usize) -> Result<()> {
+        // Do not fill if there is no calldata to fill
+        if self.calldata.as_ref().map_or(false, |data| data.is_empty()) {
+            return Ok(());
+        }
+
+        if index >= blobs.len() {
+            return Err(anyhow::anyhow!("Insufficient blob count"));
+        }
+
+        if blobs[index].is_empty() {
+            return Err(anyhow::anyhow!("Empty blob"));
+        }
+
+        self.data = Some(Bytes::from(blobs[index]));
+        Ok(())
+    }
+
+    /// Returns if a blob is empty.
+    pub fn is_empty(&self) -> bool {
+        self.data.is_none() && self.calldata.is_none()
+    }
 }
 
 impl BlobData {
