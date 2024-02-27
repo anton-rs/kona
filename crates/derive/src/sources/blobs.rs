@@ -172,13 +172,14 @@ where
             return Some(Ok(next_data.calldata.unwrap()));
         }
 
-        if let Some(d) = next_data.data {
-            // if let Ok(b) = d.decode() {
-            // TODO(refcell): Decoding
-            // https://github.com/ethereum-optimism/optimism/blob/develop/op-service/eth/blob.go#L199
-            return Some(Ok(d));
-            // }
+        // Decode the blob data to raw bytes.
+        // Otherwise, ignore blob and recurse next.
+        match next_data.decode() {
+            Ok(d) => Some(Ok(d)),
+            Err(_) => {
+                // TODO(refcell): Add a warning log here if decoding fails
+                self.next().await
+            }
         }
-        self.next().await
     }
 }
