@@ -40,6 +40,6 @@ impl<CP: ChainProvider + Send> AsyncIterator for PlasmaSource<CP> {
     type Item = StageResult<Bytes>;
 
     async fn next(&mut self) -> Option<Self::Item> {
-        unimplemented!()
+        unimplemented!("Plasma will not be supported until further notice.");
     }
 }

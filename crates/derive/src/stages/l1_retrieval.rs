@@ -66,7 +66,7 @@ where
             .expect("Cannot be None")
             .next()
             .await
-            .unwrap_or(Err(StageError::Empty));
+            .unwrap_or(Err(StageError::Eof));
         match data {
             Ok(data) => Ok(data),
             Err(StageError::Eof) => {

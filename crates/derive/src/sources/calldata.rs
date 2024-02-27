@@ -53,14 +53,14 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
             return Ok(());
         }
 
-        let info = self
+        let (_, txs) = self
             .chain_provider
             .block_info_and_transactions_by_hash(self.block_ref.hash)
             .await?;
 
-        self.calldata = info
-            .1
+        self.calldata = txs
             .iter()
+            .rev()
             .filter_map(|tx| {
                 if tx.to() != Some(self.batcher_address) {
                     return None;

@@ -59,27 +59,31 @@ where
         batcher_address: Address,
     ) -> Result<Self::DataIter> {
         if let Some(ecotone) = self.ecotone_timestamp {
-            if block_ref.timestamp >= ecotone {
-                return Ok(DataSource::Blob(BlobSource::new(
-                    self.chain_provider.clone(),
-                    self.blob_provider.clone(),
-                    batcher_address,
-                    *block_ref,
-                    self.signer,
-                )));
-            }
-            return Ok(DataSource::Calldata(CalldataSource::new(
+            let source = (block_ref.timestamp >= ecotone)
+                .then(|| {
+                    DataSource::Blob(BlobSource::new(
+                        self.chain_provider.clone(),
+                        self.blob_provider.clone(),
+                        batcher_address,
+                        *block_ref,
+                        self.signer,
+                    ))
+                })
+                .unwrap_or_else(|| {
+                    DataSource::Calldata(CalldataSource::new(
+                        self.chain_provider.clone(),
+                        batcher_address,
+                        *block_ref,
+                        self.signer,
+                    ))
+                });
+            Ok(source)
+        } else if self.plasma_enabled {
+            Ok(DataSource::Plasma(PlasmaSource::new(
                 self.chain_provider.clone(),
-                batcher_address,
-                *block_ref,
-                self.signer,
-            )));
+            )))
+        } else {
+            Err(anyhow!("No data source available"))
         }
-        if self.plasma_enabled {
-            return Ok(DataSource::Plasma(PlasmaSource::new(
-                self.chain_provider.clone(),
-            )));
-        }
-        return Err(anyhow!("No data source available"));
     }
 }
