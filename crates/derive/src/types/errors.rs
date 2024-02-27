@@ -1,5 +1,6 @@
 //! This module contains derivation errors thrown within the pipeline.
 
+use alloy_primitives::B256;
 use core::fmt::Display;
 
 /// An error that is thrown within the stages of the derivation pipeline.
@@ -10,6 +11,8 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// Failed to fetch block info and transactions by hash.
+    BlockFetch(B256),
     /// No item returned from the previous stage iterator.
     Empty,
     /// Other wildcard error.
@@ -30,6 +33,11 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::BlockFetch(hash) => write!(
+                f,
+                "Failed to fetch block info and transactions by hash: {}",
+                hash
+            ),
             StageError::Empty => write!(f, "Empty"),
             StageError::Custom(e) => write!(f, "Custom error: {}", e),
         }

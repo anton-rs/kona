@@ -3,6 +3,7 @@ use crate::types::{
     network::Signed,
     transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxLegacy},
 };
+use alloy_primitives::{Address, Bytes};
 use alloy_rlp::{length_of_length, Decodable, Encodable};
 
 /// Ethereum `TransactionType` flags as specified in EIPs [2718], [1559], and
@@ -80,6 +81,43 @@ impl From<Signed<TxEip1559>> for TxEnvelope {
 }
 
 impl TxEnvelope {
+    /// Returns the inner transaction `to` field.
+    pub fn to(&self) -> Option<Address> {
+        match self {
+            Self::Legacy(t) | Self::TaggedLegacy(t) => t.to.to(),
+            Self::Eip2930(t) => t.to.to(),
+            Self::Eip1559(t) => t.to.to(),
+            Self::Eip4844(t) => t.to.to(),
+            Self::Deposit(t) => t.to.to(),
+        }
+    }
+
+    /// Returns the inner transaction `from` field.
+    pub fn from(&self) -> Option<Address> {
+        // TODO(refcell): fix this to work for non-k256
+        #[cfg(feature = "k256")]
+        match self {
+            Self::Legacy(t) | Self::TaggedLegacy(t) => t.recover_signer().ok(),
+            Self::Eip2930(t) => t.recover_signer().ok(),
+            Self::Eip1559(t) => t.recover_signer().ok(),
+            Self::Eip4844(t) => t.recover_signer().ok(),
+            Self::Deposit(t) => t.from,
+        }
+        #[cfg(not(feature = "k256"))]
+        return None;
+    }
+
+    /// Returns the inner transaction data.
+    pub fn data(&self) -> Bytes {
+        match self {
+            Self::Legacy(t) | Self::TaggedLegacy(t) => t.input.clone(),
+            Self::Eip2930(t) => t.input.clone(),
+            Self::Eip1559(t) => t.input.clone(),
+            Self::Eip4844(t) => t.input.clone(),
+            Self::Deposit(t) => t.input.clone(),
+        }
+    }
+
     /// Return the [`TxType`] of the inner txn.
     pub const fn tx_type(&self) -> TxType {
         match self {

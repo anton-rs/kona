@@ -76,6 +76,11 @@ impl RollupConfig {
         self.regolith_time.map_or(false, |t| timestamp >= t)
     }
 
+    /// Returns the L1 Signer Address.
+    pub fn l1_signer_address(&self) -> Address {
+        self.genesis.system_config.unsafe_block_signer
+    }
+
     /// Returns true if Canyon is active at the given timestamp.
     pub fn is_canyon_active(&self, timestamp: u64) -> bool {
         self.canyon_time.map_or(false, |t| timestamp >= t)

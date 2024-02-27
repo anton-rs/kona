@@ -8,6 +8,7 @@ use crate::{
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use anyhow::anyhow;
+use async_iterator::Iterator;
 use async_trait::async_trait;
 
 /// The L1 retrieval stage of the derivation pipeline.
@@ -65,6 +66,7 @@ where
             .as_mut()
             .expect("Cannot be None")
             .next()
+            .await
             .unwrap_or(Err(StageError::Empty));
         match data {
             Ok(data) => Ok(data),

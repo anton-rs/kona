@@ -21,6 +21,8 @@ where
     pub ecotone_timestamp: Option<u64>,
     /// Whether or not plasma is enabled.
     pub plasma_enabled: bool,
+    /// The L1 Signer.
+    pub signer: Address,
 }
 
 impl<F: ChainProvider + Clone> DataSourceFactory<F> {
@@ -30,6 +32,7 @@ impl<F: ChainProvider + Clone> DataSourceFactory<F> {
             chain_provider: provider,
             ecotone_timestamp: cfg.ecotone_time,
             plasma_enabled: cfg.is_plasma_enabled(),
+            signer: cfg.l1_signer_address(),
         }
     }
 }
@@ -53,6 +56,7 @@ impl<F: ChainProvider + Send + Sync + Clone + Debug> DataAvailabilityProvider
                 self.chain_provider.clone(),
                 batcher_address,
                 *block_ref,
+                self.signer,
             )));
         }
         if self.plasma_enabled {

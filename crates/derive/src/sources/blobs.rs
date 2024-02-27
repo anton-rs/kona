@@ -2,6 +2,7 @@
 
 use crate::types::StageResult;
 use alloy_primitives::Bytes;
+use async_iterator::Iterator;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone, Default)]
@@ -17,7 +18,7 @@ impl BlobSource {
 impl Iterator for BlobSource {
     type Item = StageResult<Bytes>;
 
-    fn next(&mut self) -> Option<Self::Item> {
+    async fn next(&mut self) -> Option<Self::Item> {
         unimplemented!()
     }
 }

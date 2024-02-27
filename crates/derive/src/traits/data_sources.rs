@@ -5,6 +5,7 @@ use alloc::fmt::Debug;
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
+use async_iterator::Iterator;
 use async_trait::async_trait;
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
