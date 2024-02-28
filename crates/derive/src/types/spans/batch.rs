@@ -1,6 +1,6 @@
 //! The Span Batch Type
 
-use crate::types::spans::{RawSpanBatch, SpanBatchPayload, SpanBatchPrefix};
+use crate::types::spans::{RawSpanBatch, SpanBatchBits, SpanBatchPayload, SpanBatchPrefix};
 use crate::types::SpanBatchElement;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -47,7 +47,7 @@ impl SpanBatch {
             },
             payload: SpanBatchPayload {
                 block_count: self.batches.len() as u64,
-                origin_bits: vec![origin_changed_bit; self.batches.len()],
+                origin_bits: SpanBatchBits(vec![origin_changed_bit; self.batches.len()]),
                 block_tx_counts,
                 txs,
             },
