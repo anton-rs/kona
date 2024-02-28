@@ -3,6 +3,7 @@
 use crate::types::spans::{RawSpanBatch, SpanBatch, SpanBatchElement};
 use crate::types::SingleBatch;
 use alloc::vec::Vec;
+use alloy_primitives::FixedBytes;
 
 /// The span batch builder builds a [SpanBatch] by adding
 /// [SpanBatchElement] iteratively. Provides a way to stack
@@ -26,8 +27,8 @@ impl SpanBatchBuilder {
             genesis_timestamp,
             chain_id,
             span_batch: SpanBatch {
-                parent_check: [0; 20],
-                l1_origin_check: [0; 20],
+                parent_check: FixedBytes::<20>::default(),
+                l1_origin_check: FixedBytes::<20>::default(),
                 batches: Vec::new(),
             },
             origin_changed_bit: 0,
@@ -42,8 +43,8 @@ impl SpanBatchBuilder {
     /// Resets the span batch builder.
     pub fn reset(&mut self) {
         self.span_batch = SpanBatch {
-            parent_check: [0; 20],
-            l1_origin_check: [0; 20],
+            parent_check: FixedBytes::<20>::default(),
+            l1_origin_check: FixedBytes::<20>::default(),
             batches: Vec::new(),
         };
         self.origin_changed_bit = 0;

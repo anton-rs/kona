@@ -1,6 +1,6 @@
 //! Span Batch Errors
 
-#![allow(dead_code)]
+use core::fmt::Display;
 
 /// Span Batch Errors
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,6 +17,21 @@ pub enum SpanBatchError {
     Decoding(SpanDecodingError),
 }
 
+impl Display for SpanBatchError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            SpanBatchError::TooBigSpanBatchSize => write!(f, "The span batch is too big"),
+            SpanBatchError::BitfieldTooLong => write!(f, "The bit field is too long"),
+            SpanBatchError::InvalidBitSlice => write!(
+                f,
+                "Failed to set [alloy_primitives::U256] from big-endian slice"
+            ),
+            SpanBatchError::Encoding(e) => write!(f, "Encoding error: {:?}", e),
+            SpanBatchError::Decoding(e) => write!(f, "Decoding error: {:?}", e),
+        }
+    }
+}
+
 /// Encoding Error
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EncodingError {
@@ -24,6 +39,15 @@ pub enum EncodingError {
     SpanBatch,
     /// Failed to encode span batch bits
     SpanBatchBits,
+}
+
+impl Display for EncodingError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            EncodingError::SpanBatch => write!(f, "Failed to encode span batch"),
+            EncodingError::SpanBatchBits => write!(f, "Failed to encode span batch bits"),
+        }
+    }
 }
 
 /// Decoding Error
@@ -37,4 +61,17 @@ pub enum SpanDecodingError {
     ParentCheck,
     /// Failed to decode L1 origin check
     L1OriginCheck,
+}
+
+impl Display for SpanDecodingError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            SpanDecodingError::RelativeTimestamp => {
+                write!(f, "Failed to decode relative timestamp")
+            }
+            SpanDecodingError::L1OriginNumber => write!(f, "Failed to decode L1 origin number"),
+            SpanDecodingError::ParentCheck => write!(f, "Failed to decode parent check"),
+            SpanDecodingError::L1OriginCheck => write!(f, "Failed to decode L1 origin check"),
+        }
+    }
 }
