@@ -18,11 +18,17 @@ pub use bits::SpanBatchBits;
 mod batch;
 pub use batch::SpanBatch;
 
+mod payload;
+pub use payload::SpanBatchPayload;
+
+mod prefix;
+pub use prefix::SpanBatchPrefix;
+
 mod errors;
-pub use errors::SpanBatchError;
+pub use errors::*; // Re-export all error types
 
 mod raw;
-pub use raw::{RawSpanBatch, SpanBatchPayload, SpanBatchPrefix};
+pub use raw::RawSpanBatch;
 
 mod element;
 pub use element::SpanBatchElement;
