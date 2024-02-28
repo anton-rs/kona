@@ -4,7 +4,7 @@ use crate::types::spans::{RawSpanBatch, SpanBatchBits, SpanBatchPayload, SpanBat
 use crate::types::SpanBatchElement;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloy_primitives::FixedBytes;
+use alloy_primitives::{FixedBytes, U64};
 
 /// The span batch contains the input to build a span of L2 blocks in derived form.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,13 +41,13 @@ impl SpanBatch {
 
         RawSpanBatch {
             prefix: SpanBatchPrefix {
-                rel_timestamp: self.get_timestamp() - genesis_timestamp,
-                l1_origin_num: chain_id,
+                rel_timestamp: U64::from(self.get_timestamp() - genesis_timestamp),
+                l1_origin_num: U64::from(chain_id),
                 parent_check: self.parent_check,
                 l1_origin_check: self.l1_origin_check,
             },
             payload: SpanBatchPayload {
-                block_count: self.batches.len() as u64,
+                block_count: U64::from(self.batches.len() as u64),
                 origin_bits: SpanBatchBits(vec![origin_changed_bit; self.batches.len()]),
                 block_tx_counts,
                 txs,
