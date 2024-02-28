@@ -4,14 +4,15 @@ use crate::types::spans::{RawSpanBatch, SpanBatchBits, SpanBatchPayload, SpanBat
 use crate::types::SpanBatchElement;
 use alloc::vec;
 use alloc::vec::Vec;
+use alloy_primitives::FixedBytes;
 
 /// The span batch contains the input to build a span of L2 blocks in derived form.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpanBatch {
     /// First 20 bytes of the first block's parent hash
-    pub parent_check: [u8; 20],
+    pub parent_check: FixedBytes<20>,
     /// First 20 bytes of the last block's L1 origin hash
-    pub l1_origin_check: [u8; 20],
+    pub l1_origin_check: FixedBytes<20>,
     /// List of block input in derived form
     pub batches: Vec<SpanBatchElement>,
 }
