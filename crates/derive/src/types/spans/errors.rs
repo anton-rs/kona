@@ -11,6 +11,8 @@ pub enum SpanBatchError {
     BitfieldTooLong,
     /// Failed to set [alloy_primitives::U256] from big-endian slice
     InvalidBitSlice,
+    /// Empty Block Count
+    EmptyBlockCount,
     /// Encoding errors
     Encoding(EncodingError),
     /// Decoding errors
@@ -26,6 +28,7 @@ impl Display for SpanBatchError {
                 f,
                 "Failed to set [alloy_primitives::U256] from big-endian slice"
             ),
+            SpanBatchError::EmptyBlockCount => write!(f, "Empty Block Count"),
             SpanBatchError::Encoding(e) => write!(f, "Encoding error: {:?}", e),
             SpanBatchError::Decoding(e) => write!(f, "Decoding error: {:?}", e),
         }
@@ -61,6 +64,8 @@ pub enum SpanDecodingError {
     ParentCheck,
     /// Failed to decode L1 origin check
     L1OriginCheck,
+    /// Failed to decode block count
+    BlockCount,
 }
 
 impl Display for SpanDecodingError {
@@ -72,6 +77,7 @@ impl Display for SpanDecodingError {
             SpanDecodingError::L1OriginNumber => write!(f, "Failed to decode L1 origin number"),
             SpanDecodingError::ParentCheck => write!(f, "Failed to decode parent check"),
             SpanDecodingError::L1OriginCheck => write!(f, "Failed to decode L1 origin check"),
+            SpanDecodingError::BlockCount => write!(f, "Failed to decode block count"),
         }
     }
 }

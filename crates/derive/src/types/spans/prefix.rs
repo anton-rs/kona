@@ -1,16 +1,17 @@
 //! Raw Span Batch Prefix
 
 use crate::types::spans::{SpanBatchError, SpanDecodingError};
-use alloy_primitives::FixedBytes;
+use alloc::vec::Vec;
+use alloy_primitives::{FixedBytes, U64};
 use alloy_rlp::{Decodable, Encodable};
 
 /// Span Batch Prefix
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SpanBatchPrefix {
     /// Relative timestamp of the first block
-    pub rel_timestamp: u64,
+    pub rel_timestamp: U64,
     /// L1 origin number
-    pub l1_origin_num: u64,
+    pub l1_origin_num: U64,
     /// First 20 bytes of the first block's parent hash
     pub parent_check: FixedBytes<20>,
     /// First 20 bytes of the last block's L1 origin hash
@@ -48,7 +49,7 @@ impl Encodable for SpanBatchPrefix {
 impl SpanBatchPrefix {
     /// Decodes the relative timestamp from a reader.
     pub fn decode_rel_timestamp(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
-        let (rel_timestamp, _) = unsigned_varint::decode::u64(r)
+        let rel_timestamp = U64::decode(r)
             .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::RelativeTimestamp))?;
         self.rel_timestamp = rel_timestamp;
         Ok(())
@@ -56,7 +57,7 @@ impl SpanBatchPrefix {
 
     /// Decodes the L1 origin number from a reader.
     pub fn decode_l1_origin_num(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
-        let (l1_origin_num, _) = unsigned_varint::decode::u64(r)
+        let l1_origin_num = U64::decode(r)
             .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::L1OriginNumber))?;
         self.l1_origin_num = l1_origin_num;
         Ok(())
@@ -64,52 +65,61 @@ impl SpanBatchPrefix {
 
     /// Decodes the parent check from a reader.
     pub fn decode_parent_check(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
-        if r.len() < 20 {
-            return Err(SpanBatchError::Decoding(SpanDecodingError::ParentCheck));
-        }
-        self.parent_check.copy_from_slice(&r[..20]);
-        *r = &r[20..];
+        let parent_check = FixedBytes::<20>::decode(r)
+            .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::ParentCheck))?;
+        self.parent_check = parent_check;
         Ok(())
     }
 
     /// Decodes the L1 origin check from a reader.
     pub fn decode_l1_origin_check(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
-        if r.len() < 20 {
-            return Err(SpanBatchError::Decoding(SpanDecodingError::L1OriginCheck));
-        }
-        self.l1_origin_check.copy_from_slice(&r[..20]);
-        *r = &r[20..];
+        let l1_origin_check = FixedBytes::decode(r)
+            .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::L1OriginCheck))?;
+        self.l1_origin_check = l1_origin_check;
         Ok(())
+    }
+
+    /// Returns the length of the RLP encoding of the prefix.
+    pub fn rlp_encoded_len(&self) -> usize {
+        self.rel_timestamp.length()
+            + self.l1_origin_num.length()
+            + self.parent_check.length()
+            + self.l1_origin_check.length()
+    }
+
+    /// Returns the rlp encoding of the prefix.
+    pub fn rlp_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new(); // with_capacity(self.rlp_encoded_len());
+        self.encode(&mut buf);
+        buf
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::{SpanBatchError, SpanBatchPrefix, SpanDecodingError};
-    use alloy_rlp::encode;
-    use alloy_rlp::Decodable;
+    use alloc::vec::Vec;
+    use alloy_primitives::{FixedBytes, U64};
+    use alloy_rlp::{Decodable, Encodable};
 
     #[test]
     fn test_span_batch_prefix_roundtrip_encoding() {
         let expected = SpanBatchPrefix {
-            rel_timestamp: 1337,
-            l1_origin_num: 42,
+            rel_timestamp: U64::from(1337),
+            l1_origin_num: U64::from(42),
             parent_check: [0x42; 20].into(),
             l1_origin_check: [0x42; 20].into(),
         };
-        let mut buf = [0u8; 100];
-        let w = &mut buf[..];
-        encode(w.to_vec());
-        let mut r = &buf[..];
-        let result = SpanBatchPrefix::decode(&mut r);
+        let encoded = expected.rlp_bytes();
+        let result = SpanBatchPrefix::decode(&mut &encoded[..]);
         assert_eq!(result, Ok(expected));
     }
 
     #[test]
     fn test_decode_rel_timestamp() {
-        let expected = 1337;
-        let mut buf = [0u8; 10];
-        let _byte_slice = unsigned_varint::encode::u64(expected, &mut buf);
+        let expected = U64::from(1337);
+        let mut buf = Vec::with_capacity(expected.length());
+        expected.encode(&mut buf);
         let mut r = &buf[..];
         let mut prefix = SpanBatchPrefix::default();
         prefix.decode_rel_timestamp(&mut r).unwrap();
@@ -118,9 +128,9 @@ mod test {
 
     #[test]
     fn test_decode_l1_origin_num() {
-        let expected = 1337;
-        let mut buf = [0u8; 10];
-        let _byte_slice = unsigned_varint::encode::u64(expected, &mut buf);
+        let expected = U64::from(1337);
+        let mut buf = Vec::with_capacity(expected.length());
+        expected.encode(&mut buf);
         let mut r = &buf[..];
         let mut prefix = SpanBatchPrefix::default();
         prefix.decode_l1_origin_num(&mut r).unwrap();
@@ -129,8 +139,10 @@ mod test {
 
     #[test]
     fn test_decode_parent_check() {
-        let expected = [0x42; 20];
-        let mut r = &expected[..];
+        let expected = FixedBytes::<20>::from([0x42; 20]);
+        let mut buf = Vec::with_capacity(expected.length());
+        expected.encode(&mut buf);
+        let mut r = &buf[..];
         let mut prefix = SpanBatchPrefix::default();
         prefix.decode_parent_check(&mut r).unwrap();
         assert_eq!(prefix.parent_check, expected);
@@ -150,8 +162,10 @@ mod test {
 
     #[test]
     fn test_decode_l1_origin_check() {
-        let expected = [0x42; 20];
-        let mut r = &expected[..];
+        let expected = FixedBytes::<20>::from([0x42; 20]);
+        let mut buf = Vec::with_capacity(expected.length());
+        expected.encode(&mut buf);
+        let mut r = &buf[..];
         let mut prefix = SpanBatchPrefix::default();
         prefix.decode_l1_origin_check(&mut r).unwrap();
         assert_eq!(prefix.l1_origin_check, expected);

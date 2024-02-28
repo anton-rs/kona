@@ -7,7 +7,7 @@ use alloy_primitives::U256;
 use anyhow::Result;
 
 /// Type for span batch bits.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SpanBatchBits(pub Vec<u8>);
 
 impl SpanBatchBits {
