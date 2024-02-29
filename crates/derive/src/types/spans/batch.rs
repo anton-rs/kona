@@ -55,3 +55,21 @@ impl SpanBatch {
         }
     }
 }
+
+#[cfg(test)]
+#[cfg(feature = "std")]
+mod tests {
+    use super::*;
+
+    fn setup_test() -> &[u8] {
+        std::include_bytes!("testdata/span_batch")
+    }
+
+    #[test]
+    fn test_span_batch() {
+        let data = setup_test();
+        let span_batch = SpanBatch::decode(&mut data.as_ref()).unwrap();
+        assert_eq!(span_batch.batches.len(), 1);
+        assert_eq!(span_batch.batches[0].transactions.len(), 1);
+    }
+}
