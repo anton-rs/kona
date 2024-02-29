@@ -1,7 +1,7 @@
 //! The Span Batch Type
 
 use crate::types::spans::{RawSpanBatch, SpanBatchBits, SpanBatchPayload, SpanBatchPrefix};
-use crate::types::SpanBatchElement;
+use crate::types::{SpanBatchElement, SPAN_BATCH_TYPE};
 use alloc::vec;
 use alloc::vec::Vec;
 use alloy_primitives::{FixedBytes, U64};
@@ -18,6 +18,11 @@ pub struct SpanBatch {
 }
 
 impl SpanBatch {
+    /// Returns the span batch type.
+    pub fn get_type() -> u8 {
+        SPAN_BATCH_TYPE
+    }
+
     /// Returns the timestamp for the first batch in the span.
     pub fn get_timestamp(&self) -> u64 {
         self.batches[0].timestamp
