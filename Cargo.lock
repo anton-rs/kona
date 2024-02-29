@@ -326,6 +326,7 @@ dependencies = [
  "alloy-sol-types",
  "anyhow",
  "async-trait",
+ "bytes",
  "hashbrown",
  "serde",
  "unsigned-varint",

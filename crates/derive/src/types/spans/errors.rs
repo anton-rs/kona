@@ -66,6 +66,8 @@ pub enum SpanDecodingError {
     L1OriginCheck,
     /// Failed to decode block count
     BlockCount,
+    /// Failed to decode span batch transactions
+    Transactions,
 }
 
 impl Display for SpanDecodingError {
@@ -78,6 +80,7 @@ impl Display for SpanDecodingError {
             SpanDecodingError::ParentCheck => write!(f, "Failed to decode parent check"),
             SpanDecodingError::L1OriginCheck => write!(f, "Failed to decode L1 origin check"),
             SpanDecodingError::BlockCount => write!(f, "Failed to decode block count"),
+            SpanDecodingError::Transactions => write!(f, "Failed to decode span batch transactions"),
         }
     }
 }
