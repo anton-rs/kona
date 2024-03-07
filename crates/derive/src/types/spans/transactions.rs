@@ -1,8 +1,9 @@
 //! Span Batch Transactions
 
 use crate::types::spans::{SpanBatchBits, SpanBatchSignature};
-use alloy_primitives::U64;
+use alloy_primitives::{Bytes, Address, U64};
 use alloy_rlp::Decodable;
+use alloc::vec::Vec;
 
 /// Transactions in a span batch
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -18,25 +19,23 @@ pub struct SpanBatchTransactions {
     /// The transaction signatures
     pub tx_sigs: Vec<SpanBatchSignature>,
 
+    /// Transaction nonces
+    pub tx_nonces: Vec<U64>,
+    /// Transaction gases
+    pub tx_gases: Vec<U64>,
+    /// Transaction to addresses
+    pub tx_tos: Vec<Address>,
+    /// Transaction data
+    pub tx_datas: Vec<Bytes>,
+    /// The protected bits
+    pub protected_bits: Bytes,
 
+    // Intermediate variables which can be recovered
 
-
-	// 8 fields
-	contractCreationBits *big.Int // standard span-batch bitlist
-	yParityBits          *big.Int // standard span-batch bitlist
-	txSigs               []spanBatchSignature
-	txNonces             []uint64
-	txGases              []uint64
-	txTos                []common.Address
-	txDatas              []hexutil.Bytes
-	protectedBits        *big.Int // standard span-batch bitlist
-
-	// intermediate variables which can be recovered
-	txTypes            []int
-	totalLegacyTxCount uint64
-
-    // TODO(refcell): Add in the rest of the fields
-    // https://github.com/ethereum-optimism/optimism/blob/develop/op-node/rollup/derive/span_batch_txs.go#L17
+    /// The transaction types
+    pub tx_types: Vec<i32>,
+    /// The total legacy transaction count
+    pub total_legacy_tx_count: U64,
 }
 
 impl Decodable for SpanBatchTransactions {
