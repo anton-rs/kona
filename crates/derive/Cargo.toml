@@ -25,3 +25,4 @@ serde = { version = "1.0.197", default-features = false, features = ["derive"], 
 
 [features]
 serde = ["dep:serde", "alloy-primitives/serde"]
+test-utils = []

@@ -53,8 +53,9 @@ impl<F: ChainProvider> L1Traversal<F> {
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
     pub async fn advance_l1_block(&mut self) -> StageResult<()> {
-        // TODO: Return EOF if the block wasn't found.
-        let block = self.block.ok_or(anyhow!("No block to advance from"))?;
+        // Pull the next block or return EOF which has special
+        // handling further up the pipeline.
+        let block = self.block.ok_or(StageError::Eof)?;
         let next_l1_origin = self
             .data_source
             .block_info_by_number(block.number + 1)
@@ -96,3 +97,26 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
         Err(StageError::Eof)
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::traits::test_utils::TestChainProvider;
+//
+//     async fn test_l1_traversal() {
+//         let mut provider = TestChainProvider::default();
+//         let block = BlockInfo {
+//             number: 0,
+//             hash: Default::default(),
+//             parent_hash: Default::default(),
+//             timestamp: 0,
+//         };
+//         provider.insert_block(0, block.clone());
+//         let mut traversal = L1Traversal::new(provider, RollupConfig::default());
+//         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(&block));
+//         assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
+//         assert_eq!(traversal.advance_l1_block().await.unwrap_err(), StageError::Eof);
+//         assert_eq!(traversal.advance_l1_block().await.unwrap_err(), StageError::Eof);
+//         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(&block));
+//     }
+// }
