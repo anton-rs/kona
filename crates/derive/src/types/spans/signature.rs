@@ -13,7 +13,7 @@ cfg_if! {
 }
 
 #[cfg(not(feature = "k256"))]
-use alloy_primitives::{U64, U256};
+use alloy_primitives::{U256, U64};
 
 /// Local Span Batch Signature
 #[cfg(not(feature = "k256"))]

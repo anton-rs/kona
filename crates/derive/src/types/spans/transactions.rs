@@ -1,9 +1,9 @@
 //! Span Batch Transactions
 
 use crate::types::spans::{SpanBatchBits, SpanBatchSignature};
-use alloy_primitives::{Bytes, Address, U64};
-use alloy_rlp::Decodable;
 use alloc::vec::Vec;
+use alloy_primitives::{Address, Bytes, U64};
+use alloy_rlp::Decodable;
 
 /// Transactions in a span batch
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -31,7 +31,6 @@ pub struct SpanBatchTransactions {
     pub protected_bits: Bytes,
 
     // Intermediate variables which can be recovered
-
     /// The transaction types
     pub tx_types: Vec<i32>,
     /// The total legacy transaction count
