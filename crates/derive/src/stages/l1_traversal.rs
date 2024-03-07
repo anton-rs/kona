@@ -98,25 +98,32 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::traits::test_utils::TestChainProvider;
-//
-//     async fn test_l1_traversal() {
-//         let mut provider = TestChainProvider::default();
-//         let block = BlockInfo {
-//             number: 0,
-//             hash: Default::default(),
-//             parent_hash: Default::default(),
-//             timestamp: 0,
-//         };
-//         provider.insert_block(0, block.clone());
-//         let mut traversal = L1Traversal::new(provider, RollupConfig::default());
-//         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(&block));
-//         assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
-//         assert_eq!(traversal.advance_l1_block().await.unwrap_err(), StageError::Eof);
-//         assert_eq!(traversal.advance_l1_block().await.unwrap_err(), StageError::Eof);
-//         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(&block));
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::traits::test_utils::TestChainProvider;
+
+    #[tokio::test]
+    async fn test_l1_traversal() {
+        let mut provider = TestChainProvider::default();
+        let block = BlockInfo {
+            number: 0,
+            hash: Default::default(),
+            parent_hash: Default::default(),
+            timestamp: 0,
+        };
+        provider.insert_block(0, block);
+        let mut traversal = L1Traversal::new(provider, RollupConfig::default());
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(block));
+        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        assert_eq!(
+            traversal.advance_l1_block().await.unwrap_err(),
+            StageError::Eof
+        );
+        assert_eq!(
+            traversal.advance_l1_block().await.unwrap_err(),
+            StageError::Eof
+        );
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(block));
+    }
+}

@@ -21,8 +21,9 @@ hashbrown = "0.14.3"
 unsigned-varint = "0.8.0"
 
 # Optional
+tokio = { version = "1", features = ["full"], optional = true }
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
 
 [features]
 serde = ["dep:serde", "alloy-primitives/serde"]
-test-utils = []
+test-utils = ["dep:tokio"]

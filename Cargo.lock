@@ -328,6 +328,7 @@ dependencies = [
  "async-trait",
  "hashbrown",
  "serde",
+ "tokio",
  "unsigned-varint",
 ]
 
