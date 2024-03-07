@@ -35,6 +35,9 @@ pub use payload::SpanBatchPayload;
 mod prefix;
 pub use prefix::SpanBatchPrefix;
 
+mod signature;
+pub use signature::SpanBatchSignature;
+
 mod errors;
 pub use errors::*; // Re-export all error types
 

@@ -11,6 +11,7 @@ homepage.workspace = true
 [dependencies]
 # Workspace
 anyhow.workspace = true
+cfg-if.workspace = true
 
 # External
 alloy-primitives = { version = "0.6.3", default-features = false, features = ["rlp"] }

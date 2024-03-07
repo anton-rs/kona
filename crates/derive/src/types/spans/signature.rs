@@ -4,32 +4,33 @@ use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(feature = "k256")] {
-        use alloy_primitives::Signature;
+        /// Span Batch Signature
+        pub type SpanBatchSignature = alloy_primitives::Signature;
     } else {
-        use crate::types::spans::SpanBatchSignature;
+        /// Span Batch Signature
+        pub type SpanBatchSignature = LocalSpanBatchSignature;
     }
 }
 
-/// Span Batch Signature
-///
-/// The signature of a span batch.
-/// If the `k256` feature is enabled, kona will use the [Signature] type from the
-/// `alloy_primitives` crate. Otherwise, we need to use our own type.
+#[cfg(not(feature = "k256"))]
+use alloy_primitives::{U64, U256};
+
+/// Local Span Batch Signature
 #[cfg(not(feature = "k256"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SpanBatchSignature {
+pub struct LocalSpanBatchSignature {
     /// The signature r value
-    pub r: [u8; 32],
+    pub r: U256,
     /// The signature s value
-    pub s: [u8; 32],
+    pub s: U256,
     /// The signature v value
-    pub v: u8,
+    pub v: U64,
 }
 
 #[cfg(not(feature = "k256"))]
-impl SpanBatchSignature {
+impl LocalSpanBatchSignature {
     /// Creates a new span batch signature.
-    pub fn new(r: [u8; 32], s: [u8; 32], v: u8) -> Self {
+    pub fn new(r: U256, s: U256, v: U64) -> Self {
         Self { r, s, v }
     }
 }
