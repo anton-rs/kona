@@ -1,4 +1,4 @@
-//! Contains the [L1Retrieval] stage of the derivation pipeline.]
+//! Contains the [L1Retrieval] stage of the derivation pipeline.
 
 use super::L1Traversal;
 use crate::{
