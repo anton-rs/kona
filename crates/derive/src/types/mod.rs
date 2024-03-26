@@ -3,6 +3,12 @@
 use alloc::vec::Vec;
 use alloy_rlp::{Decodable, Encodable};
 
+mod batch;
+pub use batch::Batch;
+
+mod batch_type;
+pub use batch_type::BatchType;
+
 mod system_config;
 pub use system_config::{
     SystemAccounts, SystemConfig, SystemConfigUpdateType, CONFIG_UPDATE_EVENT_VERSION_0,
