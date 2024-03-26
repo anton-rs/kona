@@ -34,7 +34,7 @@ impl Decodable for Batch {
                 // TODO: implement span batch decoding
                 unimplemented!()
             }
-        } 
+        }
     }
 }
 
@@ -52,5 +52,3 @@ impl Encodable for Batch {
         }
     }
 }
-
-
