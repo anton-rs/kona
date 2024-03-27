@@ -327,6 +327,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "hashbrown",
+ "miniz_oxide",
  "serde",
  "unsigned-varint",
 ]
