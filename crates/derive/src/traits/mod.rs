@@ -6,5 +6,5 @@ pub use data_sources::{ChainProvider, DataAvailabilityProvider, DataIter};
 mod stages;
 pub use stages::ResettableStage;
 
-#[cfg(any(test, feature = "test-utils"))]
+#[cfg(test)]
 pub mod test_utils;
