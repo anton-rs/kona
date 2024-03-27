@@ -27,7 +27,7 @@ impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
     pub fn new(data_source: F, cfg: RollupConfig) -> Self {
         Self {
-            block: None,
+            block: Some(BlockInfo::default()),
             data_source,
             done: false,
             system_config: SystemConfig::default(),
@@ -35,8 +35,14 @@ impl<F: ChainProvider> L1Traversal<F> {
         }
     }
 
-    /// Returns the next L1 block in the traversal stage, if the stage has not been completed. This function can only
-    /// be called once, and will return `None` on subsequent calls unless the stage is reset.
+    /// Retrieves a reference to the inner data source of the [L1Traversal] stage.
+    pub fn data_source(&self) -> &F {
+        &self.data_source
+    }
+
+    /// Returns the next L1 block in the traversal stage, if the stage has not been completed.
+    /// This function can only be called once, and will return `None` on subsequent calls
+    /// unless the stage is reset.
     pub fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
         if !self.done {
             self.done = true;
@@ -101,29 +107,87 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{Receipt, RollupConfig, CONFIG_UPDATE_TOPIC, CONFIG_UPDATE_EVENT_VERSION_0};
     use crate::traits::test_utils::TestChainProvider;
+    use alloc::vec;
+    use alloy_primitives::{Address, Log, Bytes, B256, LogData, hex, b256, address};
+
+    const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");
+
+    fn new_update_batcher_log() -> Log {
+        const UPDATE_TYPE: B256 =
+            b256!("0000000000000000000000000000000000000000000000000000000000000000");
+        Log {
+            address: L1_SYS_CONFIG_ADDR,
+            data: LogData::new_unchecked(
+                vec![
+                    CONFIG_UPDATE_TOPIC,
+                    CONFIG_UPDATE_EVENT_VERSION_0,
+                    UPDATE_TYPE,
+                ],
+                hex!("00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000beef").into()
+            )
+        }
+    }
+
+    fn new_test_traversal(blocks: bool, receipts: bool) -> L1Traversal<TestChainProvider> {
+        let mut provider = TestChainProvider::default();
+        let rollup_config = RollupConfig {
+            l1_system_config_address: L1_SYS_CONFIG_ADDR,
+            ..RollupConfig::default()
+        };
+        let block = BlockInfo::default();
+        if blocks {
+            provider.insert_block(0, block);
+            provider.insert_block(1, block);
+        }
+        if receipts {
+            let mut receipt = Receipt { success: true, ..Receipt::default() };
+            let bad = Log::new(Address::from([2; 20]), vec![CONFIG_UPDATE_TOPIC, B256::default()], Bytes::default()).unwrap();
+            receipt.logs = vec![new_update_batcher_log(), bad, new_update_batcher_log()];
+            let receipts = vec![receipt.clone(), Receipt::default(), receipt];
+            provider.insert_receipts(block.hash, receipts);
+        }
+        L1Traversal::new(provider, rollup_config)
+    }
 
     #[tokio::test]
     async fn test_l1_traversal() {
-        let mut provider = TestChainProvider::default();
-        let block = BlockInfo {
-            number: 0,
-            hash: Default::default(),
-            parent_hash: Default::default(),
-            timestamp: 0,
-        };
-        provider.insert_block(0, block);
-        let mut traversal = L1Traversal::new(provider, RollupConfig::default());
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(block));
+        let mut traversal = new_test_traversal(true, true);
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        assert_eq!(
+        assert!(traversal.advance_l1_block().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_l1_traversal_missing_receipts() {
+        let mut traversal = new_test_traversal(true, false);
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        matches!(
             traversal.advance_l1_block().await.unwrap_err(),
-            StageError::Eof
+            StageError::Custom(_)
         );
-        assert_eq!(
+    }
+
+    #[tokio::test]
+    async fn test_l1_traversal_missing_blocks() {
+        let mut traversal = new_test_traversal(false, false);
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        matches!(
             traversal.advance_l1_block().await.unwrap_err(),
-            StageError::Eof
+            StageError::Custom(_)
         );
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(block));
+    }
+
+    #[tokio::test]
+    async fn test_system_config_updated() {
+        let mut traversal = new_test_traversal(true, true);
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        assert!(traversal.advance_l1_block().await.is_ok());
+        let expected = address!("000000000000000000000000000000000000bEEF");
+        assert_eq!(traversal.system_config.batcher_addr, expected);
     }
 }

@@ -26,6 +26,22 @@ impl TestChainProvider {
     pub fn insert_receipts(&mut self, hash: B256, receipts: Vec<Receipt>) {
         self.receipts.push((hash, receipts));
     }
+
+    /// Clears blocks from the mock chain provider.
+    pub fn clear_blocks(&mut self) {
+        self.blocks.clear();
+    }
+
+    /// Clears receipts from the mock chain provider.
+    pub fn clear_receipts(&mut self) {
+        self.receipts.clear();
+    }
+
+    /// Clears all blocks and receipts from the mock chain provider.
+    pub fn clear(&mut self) {
+        self.clear_blocks();
+        self.clear_receipts();
+    }
 }
 
 #[async_trait]
