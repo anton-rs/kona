@@ -3,13 +3,13 @@
 use super::channel_bank::ChannelBank;
 use crate::{
     traits::{ChainProvider, DataAvailabilityProvider},
-    types::{BlockInfo, Batch, StageResult, StageError},
+    types::{Batch, BlockInfo, StageError, StageResult},
 };
-use anyhow::anyhow;
 use alloc::vec::Vec;
-use miniz_oxide::inflate::decompress_to_vec;
-use core::fmt::Debug;
 use alloy_rlp::Decodable;
+use anyhow::anyhow;
+use core::fmt::Debug;
+use miniz_oxide::inflate::decompress_to_vec;
 
 /// [ChannelReader] is a stateful stage that does the following:
 #[derive(Debug)]
@@ -43,7 +43,13 @@ where
             self.next_channel();
             return Err(e);
         }
-        match self.next_batch.as_mut().unwrap().next_batch().ok_or(anyhow!("no batch")) {
+        match self
+            .next_batch
+            .as_mut()
+            .unwrap()
+            .next_batch()
+            .ok_or(anyhow!("no batch"))
+        {
             Ok(batch) => Ok(batch),
             Err(e) => {
                 self.next_channel();
@@ -83,7 +89,6 @@ pub(crate) struct BatchReader {
     data: Option<Vec<u8>>,
     /// Decompressed data.
     decompressed: Vec<u8>,
-
 }
 
 impl BatchReader {
