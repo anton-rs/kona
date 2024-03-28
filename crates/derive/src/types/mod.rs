@@ -5,11 +5,8 @@ use alloy_rlp::{Decodable, Encodable};
 
 mod system_config;
 pub use system_config::{
-    SystemAccounts,
-    SystemConfig,
-    SystemConfigUpdateType,
+    SystemAccounts, SystemConfig, SystemConfigUpdateType, CONFIG_UPDATE_EVENT_VERSION_0,
     CONFIG_UPDATE_TOPIC,
-    CONFIG_UPDATE_EVENT_VERSION_0,
 };
 
 mod rollup_config;
