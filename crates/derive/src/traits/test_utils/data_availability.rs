@@ -1,49 +1,58 @@
+//! Test utilities for data availability.
 
+use crate::{
+    traits::{DataAvailabilityProvider, DataIter},
+    types::{BlockInfo, StageError, StageResult},
+};
+use alloc::{boxed::Box, vec, vec::Vec};
+use alloy_primitives::{Address, Bytes};
+use anyhow::Result;
+use async_trait::async_trait;
+use core::fmt::Debug;
 
-// A mock data iterator for testing.
-// #[derive(Debug, Clone, Default)]
-// pub struct TestDataIter<T: Into<Bytes>> {
-//     /// The data to iterate over.
-//     pub data: Vec<T>,
-// }
+/// Mock data iterator
+#[derive(Debug, Default, PartialEq)]
+pub struct TestIter {
+    /// Holds open data calls with args for assertions.
+    pub(crate) open_data_calls: Vec<(BlockInfo, Address)>,
+    /// A queue of results to return as the next iterated data.
+    pub(crate) results: Vec<StageResult<Bytes>>,
+}
 
-// impl<T: Into<Bytes>> DataIter<T> for TestDataIter<T> {
-//     fn next(&mut self) -> StageResult<T> {
-//         if let Some(data) = self.data.pop() {
-//             Ok(data)
-//         } else {
-//             Err(crate::types::StageError::Eof)
-//         }
-//     }
-// }
-//
-// /// A mock data availability provider for testing.
-// #[derive(Debug, Clone, Default)]
-// pub struct TestDataAvailabilityProvider<T: Into<Bytes>> {
-//     /// Maps block hashes to data iterators using a tuple list.
-//     pub data: Vec<(B256, TestDataIter<T>)>,
-// }
-//
-// impl<T: Into<Bytes>> TestDataAvailabilityProvider<T> {
-//     pub fn insert_data(&mut self, hash: B256, data: TestDataIter<T>) {
-//         self.data.push((hash, data));
-//     }
-// }
-//
-// #[async_trait]
-// impl<B: Into<Bytes>> DataAvailabilityProvider for TestDataAvailabilityProvider<B> {
-//     type DataIter<T> = TestDataIter<T>;
-//
-//     async fn open_data(
-//         &self,
-//         block_ref: &BlockInfo,
-//         _batcher_address: alloy_primitives::Address,
-//     ) -> Result<Self::DataIter<B>> {
-//         if let Some((_, data)) = self.data.iter().find(|(h, _)| *h == block_ref.hash) {
-//             let res = data.clone();
-//             Ok(res)
-//         } else {
-//             Err(anyhow::anyhow!("Data not found"))
-//         }
-//     }
-// }
+impl DataIter<Bytes> for TestIter {
+    fn next(&mut self) -> StageResult<Bytes> {
+        self.results.pop().unwrap_or_else(|| Err(StageError::Eof))
+    }
+}
+
+/// Mock data availability provider
+#[derive(Debug, Default)]
+pub struct TestDAP {
+    /// Specifies the stage results the test iter returns as data.
+    pub(crate) results: Vec<StageResult<Bytes>>,
+}
+
+#[async_trait]
+impl DataAvailabilityProvider for TestDAP {
+    type DataIter = TestIter;
+
+    async fn open_data(
+        &self,
+        block_ref: &BlockInfo,
+        batcher_address: Address,
+    ) -> Result<Self::DataIter> {
+        // Construct a new vec of results to return.
+        let results = self
+            .results
+            .iter()
+            .map(|i| match i {
+                Ok(r) => Ok(r.clone()),
+                Err(_) => Err(StageError::Eof),
+            })
+            .collect::<Vec<StageResult<Bytes>>>();
+        Ok(TestIter {
+            open_data_calls: vec![(*block_ref, batcher_address)],
+            results,
+        })
+    }
+}

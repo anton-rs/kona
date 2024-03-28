@@ -21,16 +21,16 @@ pub trait ChainProvider {
 /// Describes the functionality of a data source that can provide data availability information.
 #[async_trait]
 pub trait DataAvailabilityProvider {
-    /// A data iterator for the data source to return.
-    type DataIter<T: Into<Bytes>>: DataIter<T> + Send + Debug;
+    /// An iterator over returned bytes data.
+    type DataIter: DataIter<Bytes> + Send + Debug;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.
-    async fn open_data<T: Into<Bytes>>(
+    async fn open_data(
         &self,
         block_ref: &BlockInfo,
         batcher_address: Address,
-    ) -> Result<Self::DataIter<T>>;
+    ) -> Result<Self::DataIter>;
 }
 
 /// Describes the behavior of a data iterator.

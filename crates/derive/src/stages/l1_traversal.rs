@@ -105,7 +105,7 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::traits::test_utils::TestChainProvider;
     use crate::types::{Receipt, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
@@ -130,7 +130,10 @@ mod tests {
         }
     }
 
-    fn new_test_traversal(blocks: bool, receipts: bool) -> L1Traversal<TestChainProvider> {
+    pub(crate) fn new_test_traversal(
+        blocks: bool,
+        receipts: bool,
+    ) -> L1Traversal<TestChainProvider> {
         let mut provider = TestChainProvider::default();
         let rollup_config = RollupConfig {
             l1_system_config_address: L1_SYS_CONFIG_ADDR,
