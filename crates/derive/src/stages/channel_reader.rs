@@ -1,15 +1,14 @@
 //! This module contains the `ChannelReader` struct.
 
-use super::channel_bank::ChannelBank;
-use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider},
-    types::{Batch, BlockInfo, StageError, StageResult},
-};
 use alloc::vec::Vec;
 use alloy_rlp::Decodable;
 use anyhow::anyhow;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec;
+
+use crate::stages::channel_bank::ChannelBank;
+use crate::traits::{ChainProvider, DataAvailabilityProvider};
+use crate::types::{Batch, BlockInfo, StageError, StageResult};
 
 /// [ChannelReader] is a stateful stage that does the following:
 #[derive(Debug)]

@@ -31,6 +31,31 @@ impl BlockInfo {
     }
 }
 
+/// Block ID identifies a block by its hash and number
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct BlockID {
+    /// The block hash
+    pub hash: BlockHash,
+    /// The block number
+    pub number: BlockNumber,
+}
+
+/// An L2 Block Ref
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct L2BlockRef {
+    /// The l2 block info
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub info: BlockInfo,
+    /// The l1 origin of the l2 block
+    #[cfg_attr(feature = "serde", serde(rename = "l1origin"))]
+    pub l1_origin: BlockID,
+    /// The distance to the first block of the associated epoch
+    #[cfg_attr(feature = "serde", serde(rename = "sequenceNumber"))]
+    pub sequence_number: u64,
+}
+
 // impl TryFrom<BlockWithTransactions> for BlockInfo {
 //     type Error = anyhow::Error;
 //

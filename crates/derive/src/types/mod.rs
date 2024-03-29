@@ -4,10 +4,13 @@ use alloc::vec::Vec;
 use alloy_rlp::{Decodable, Encodable};
 
 mod batch;
-pub use batch::Batch;
+pub use batch::{Batch, BatchWithInclusionBlock, SpanBatch};
 
 mod batch_type;
 pub use batch_type::BatchType;
+
+mod batch_validity;
+pub use batch_validity::BatchValidity;
 
 mod system_config;
 pub use system_config::{
@@ -28,10 +31,13 @@ mod header;
 pub use header::{Header, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 
 mod block;
-pub use block::{BlockId, BlockInfo, BlockKind};
+pub use block::{BlockID, BlockId, BlockInfo, BlockKind, L2BlockRef};
 
 mod receipt;
 pub use receipt::{Receipt, ReceiptWithBloom};
+
+mod payload;
+pub use payload::{ExecutionPayload, ExecutionPayloadEnvelope};
 
 mod eips;
 pub use eips::{
