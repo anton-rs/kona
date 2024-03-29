@@ -104,16 +104,16 @@ impl TxEnvelope {
     /// Returns the inner transaction `from` field.
     pub fn from(&self) -> Option<Address> {
         // TODO(refcell): fix this to work for non-k256
-        #[cfg(feature = "k256")]
-        match self {
-            Self::Legacy(t) | Self::TaggedLegacy(t) => t.recover_signer().ok(),
-            Self::Eip2930(t) => t.recover_signer().ok(),
-            Self::Eip1559(t) => t.recover_signer().ok(),
-            Self::Eip4844(t) => t.recover_signer().ok(),
-            Self::Deposit(t) => Some(t.from),
-        }
-        #[cfg(not(feature = "k256"))]
-        return None;
+        // #[cfg(feature = "k256")]
+        // match self {
+        //     Self::Legacy(t) | Self::TaggedLegacy(t) => t.recover_signer().ok(),
+        //     Self::Eip2930(t) => t.recover_signer().ok(),
+        //     Self::Eip1559(t) => t.recover_signer().ok(),
+        //     Self::Eip4844(t) => t.recover_signer().ok(),
+        //     Self::Deposit(t) => Some(t.from),
+        // }
+        // #[cfg(not(feature = "k256"))]
+        None
     }
 
     /// Returns the inner transaction data.
