@@ -5,7 +5,7 @@ use crate::types::BlockInfo;
 use crate::types::StageError;
 use crate::types::StageResult;
 use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::collections::VecDeque;
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 
@@ -24,7 +24,7 @@ where
     /// The L1 Signer.
     signer: Address,
     /// Current calldata.
-    calldata: Vec<Bytes>,
+    calldata: VecDeque<Bytes>,
     /// Whether the calldata source is open.
     open: bool,
 }
@@ -42,7 +42,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
             batcher_address,
             block_ref,
             signer,
-            calldata: Vec::new(),
+            calldata: VecDeque::new(),
             open: false,
         }
     }
@@ -60,7 +60,6 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 
         self.calldata = txs
             .iter()
-            .rev()
             .filter_map(|tx| {
                 if tx.to() != Some(self.batcher_address) {
                     return None;
@@ -70,7 +69,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                 }
                 Some(tx.data())
             })
-            .collect::<Vec<_>>();
+            .collect::<VecDeque<_>>();
 
         self.open = true;
 
@@ -86,7 +85,6 @@ impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
         if self.load_calldata().await.is_err() {
             return Some(Err(StageError::BlockFetch(self.block_ref.hash)));
         }
-
-        Some(self.calldata.pop().ok_or(StageError::Eof))
+        Some(self.calldata.pop_front().ok_or(StageError::Eof))
     }
 }
