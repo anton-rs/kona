@@ -12,7 +12,7 @@ use async_trait::async_trait;
 #[derive(Debug, Clone, Copy)]
 pub struct L1Traversal<Provider: ChainProvider> {
     /// The current block in the traversal stage.
-    block: Option<BlockInfo>,
+    pub(crate) block: Option<BlockInfo>,
     /// The data source for the traversal stage.
     data_source: Provider,
     /// Signals whether or not the traversal stage has been completed.
