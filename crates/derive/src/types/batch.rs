@@ -33,13 +33,9 @@ impl BatchWithInclusionBlock {
         fetcher: &BF,
     ) -> BatchValidity {
         match &self.batch {
-            Batch::Single(single_batch) => single_batch.check_batch(
-                cfg,
-                l1_blocks,
-                l2_safe_head,
-                &self.inclusion_block,
-                fetcher,
-            ),
+            Batch::Single(single_batch) => {
+                single_batch.check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block)
+            }
             Batch::Span(span_batch) => {
                 span_batch.check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block, fetcher)
             }
@@ -66,7 +62,7 @@ impl SpanBatch {
         unimplemented!()
     }
 
-    /// Checks if the batch is valid.
+    /// Checks if the span batch is valid.
     pub fn check_batch<BF: SafeBlockFetcher>(
         &self,
         _cfg: &RollupConfig,

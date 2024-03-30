@@ -64,6 +64,18 @@ pub use single_batch::SingleBatch;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Vec<u8>);
 
+impl RawTransaction {
+    /// Returns if the transaction is empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Returns if the transaction is a deposit
+    pub fn is_deposit(&self) -> bool {
+        !self.0.is_empty() && self.0[0] == 0x7E
+    }
+}
+
 impl Encodable for RawTransaction {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         self.0.encode(out)
