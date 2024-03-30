@@ -4,7 +4,7 @@ use super::Genesis;
 use alloy_primitives::Address;
 
 /// The Rollup configuration.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RollupConfig {
     /// The genesis state of the rollup.

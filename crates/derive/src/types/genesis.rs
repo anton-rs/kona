@@ -3,7 +3,7 @@
 use super::{BlockId, SystemConfig};
 
 /// Represents the genesis state of the rollup.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Genesis {
     /// The L1 block that the rollup starts *after* (no derived transactions)

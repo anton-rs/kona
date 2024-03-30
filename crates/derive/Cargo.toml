@@ -23,5 +23,8 @@ unsigned-varint = "0.8.0"
 # Optional
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
 
+[dev-dependencies]
+tokio = { version = "1.36", features = ["full"] }
+
 [features]
 serde = ["dep:serde", "alloy-primitives/serde"]

@@ -60,12 +60,15 @@ where
         self.prev.origin()
     }
 
+    /// Returns the size of the channel bank by accumulating over all channels.
+    pub fn size(&self) -> usize {
+        self.channels.iter().fold(0, |acc, (_, c)| acc + c.size())
+    }
+
     /// Prunes the Channel bank, until it is below [MAX_CHANNEL_BANK_SIZE].
+    /// Prunes from the high-priority channel since it failed to be read.
     pub fn prune(&mut self) -> StageResult<()> {
-        // Check total size
-        let mut total_size = self.channels.iter().fold(0, |acc, (_, c)| acc + c.size());
-        // Prune until it is reasonable again. The high-priority channel failed to be read,
-        // so we prune from there.
+        let mut total_size = self.size();
         while total_size > MAX_CHANNEL_BANK_SIZE {
             let id = self
                 .channel_queue
@@ -122,16 +125,17 @@ where
             .ok_or(anyhow!("Channel not found"))?;
         let origin = self.origin().ok_or(anyhow!("No origin present"))?;
 
+        // Remove all timed out channels from the front of the `channel_queue`.
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
             self.channels.remove(&first);
             self.channel_queue.pop_front();
             return Ok(None);
         }
 
-        // At the point we have removed all timed out channels from the front of the `channel_queue`.
+        // At this point we have removed all timed out channels from the front of the `channel_queue`.
         // Pre-Canyon we simply check the first index.
-        // Post-Canyon we read the entire channelQueue for the first ready channel. If no channel is
-        // available, we return `nil, io.EOF`.
+        // Post-Canyon we read the entire channelQueue for the first ready channel.
+        // If no channel is available, we return StageError::Eof.
         // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2 timestamp.
         if !self.cfg.is_canyon_active(origin.timestamp) {
             return self.try_read_channel_at_index(0).map(Some);
@@ -199,5 +203,70 @@ where
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         Err(StageError::Eof)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stages::frame_queue::tests::new_test_frames;
+    use crate::stages::l1_retrieval::L1Retrieval;
+    use crate::stages::l1_traversal::tests::new_test_traversal;
+    use crate::traits::test_utils::TestDAP;
+    use alloc::vec;
+
+    #[test]
+    fn test_ingest_empty_origin() {
+        let mut traversal = new_test_traversal(false, false);
+        traversal.block = None;
+        let dap = TestDAP::default();
+        let retrieval = L1Retrieval::new(traversal, dap);
+        let frame_queue = FrameQueue::new(retrieval);
+        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let frame = Frame::default();
+        let err = channel_bank.ingest_frame(frame).unwrap_err();
+        assert_eq!(err, StageError::Custom(anyhow!("No origin")));
+    }
+
+    #[test]
+    fn test_ingest_and_prune_channel_bank() {
+        let traversal = new_test_traversal(true, true);
+        let results = vec![Ok(Bytes::from(vec![0x00]))];
+        let dap = TestDAP { results };
+        let retrieval = L1Retrieval::new(traversal, dap);
+        let frame_queue = FrameQueue::new(retrieval);
+        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let mut frames = new_test_frames(100000);
+        // Ingest frames until the channel bank is full and it stops increasing in size
+        let mut current_size = 0;
+        let next_frame = frames.pop().unwrap();
+        channel_bank.ingest_frame(next_frame).unwrap();
+        while channel_bank.size() > current_size {
+            current_size = channel_bank.size();
+            let next_frame = frames.pop().unwrap();
+            channel_bank.ingest_frame(next_frame).unwrap();
+            assert!(channel_bank.size() <= MAX_CHANNEL_BANK_SIZE);
+        }
+        // There should be a bunch of frames leftover
+        assert!(!frames.is_empty());
+        // If we ingest one more frame, the channel bank should prune
+        // and the size should be the same
+        let next_frame = frames.pop().unwrap();
+        channel_bank.ingest_frame(next_frame).unwrap();
+        assert_eq!(channel_bank.size(), current_size);
+    }
+
+    #[tokio::test]
+    async fn test_read_empty_channel_bank() {
+        let traversal = new_test_traversal(true, true);
+        let results = vec![Ok(Bytes::from(vec![0x00]))];
+        let dap = TestDAP { results };
+        let retrieval = L1Retrieval::new(traversal, dap);
+        let frame_queue = FrameQueue::new(retrieval);
+        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let err = channel_bank.read().unwrap_err();
+        assert_eq!(err, StageError::Eof);
+        let err = channel_bank.next_data().await.unwrap_err();
+        assert_eq!(err, StageError::Custom(anyhow!("Not Enough Data")));
     }
 }
