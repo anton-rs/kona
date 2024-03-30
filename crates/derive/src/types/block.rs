@@ -56,6 +56,12 @@ pub enum BlockId {
     Kind(BlockKind),
 }
 
+impl Default for BlockId {
+    fn default() -> Self {
+        BlockId::Kind(BlockKind::Latest)
+    }
+}
+
 /// The Block Kind
 ///
 /// The block kinds are:

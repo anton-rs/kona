@@ -19,6 +19,17 @@ pub enum StageError {
     Custom(anyhow::Error),
 }
 
+impl PartialEq<StageError> for StageError {
+    fn eq(&self, other: &StageError) -> bool {
+        matches!(
+            (self, other),
+            (StageError::Eof, StageError::Eof)
+                | (StageError::NotEnoughData, StageError::NotEnoughData)
+                | (StageError::Custom(_), StageError::Custom(_))
+        )
+    }
+}
+
 /// A result type for the derivation pipeline stages.
 pub type StageResult<T> = Result<T, StageError>;
 

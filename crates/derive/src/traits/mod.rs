@@ -5,3 +5,6 @@ pub use data_sources::{AsyncIterator, BlobProvider, ChainProvider, DataAvailabil
 
 mod stages;
 pub use stages::ResettableStage;
+
+#[cfg(test)]
+pub mod test_utils;
