@@ -68,12 +68,7 @@ where
     /// Prunes the Channel bank, until it is below [MAX_CHANNEL_BANK_SIZE].
     /// Prunes from the high-priority channel since it failed to be read.
     pub fn prune(&mut self) -> StageResult<()> {
-        // Check total size
-        let mut total_size = self.channels.iter().fold(0, |acc, (_, c)| acc + c.size());
-        // Prune until it is reasonable again. The high-priority channel failed to be read,
-        // so we prune from there.
-        // TODO: make max channel bank size configurable via config
-        // TODO: debug pruning until max channel bank size
+        let mut total_size = self.size();
         while total_size > MAX_CHANNEL_BANK_SIZE {
             let id = self
                 .channel_queue
