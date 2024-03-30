@@ -2,7 +2,7 @@
 
 use crate::stages::channel_reader::ChannelReader;
 use crate::traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher};
-use crate::types::{Batch, BatchWithInclusionBlock, SingleBatch};
+use crate::types::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch};
 use crate::types::{BlockInfo, L2BlockRef};
 use crate::types::{RollupConfig, SystemConfig};
 use crate::types::{StageError, StageResult};
@@ -207,9 +207,119 @@ where
         }
     }
 
-    /// Derives the next batch.
-    pub fn derive_next_batch(&self, _empty: bool, _parent: L2BlockRef) -> StageResult<Batch> {
-        unimplemented!()
+    /// Derives the next batch to apply on top of the current L2 safe head.
+    /// Follows the validity rules imposed on consecutive batches.
+    /// Based on currently available buffered batch and L1 origin information.
+    /// A [StageError::Eof] is returned if no batch can be derived yet.
+    pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockRef) -> StageResult<Batch> {
+        // Cannot derive a batch if no origin was prepared.
+        if self.l1_blocks.is_empty() {
+            return Err(StageError::Custom(anyhow!(
+                "failed to derive batch: no origin was prepared"
+            )));
+        }
+
+        // Get the epoch
+        let epoch = self.l1_blocks[0];
+        // TODO: log that the next batch is being derived.
+        // TODO: metrice the time it takes to derive the next batch.
+
+        // Note: epoch origin can now be one block ahead of the L2 Safe Head
+        // This is in the case where we auto generate all batches in an epoch & advance the epoch
+        // but don't advance the L2 Safe Head's epoch
+        if parent.l1_origin != epoch.id() && parent.l1_origin.number != epoch.number - 1 {
+            return Err(StageError::Custom(anyhow!(
+                "buffered L1 chain epoch {} in batch queue does not match safe head origin {}",
+                epoch,
+                parent.l1_origin
+            )));
+        }
+
+        // Find the first-seen batch that matches all validity conditions.
+        // We may not have sufficient information to proceed filtering, and then we stop.
+        // There may be none: in that case we force-create an empty batch
+        let mut next_batch = None;
+        let next_timestamp = parent.info.timestamp + self.cfg.block_time;
+
+        // Go over all batches, in order of inclusion, and find the first batch we can accept.
+        // Filter in-place by only remembering the batches that may be processed in the future, or any undecided ones.
+        let mut remaining = Vec::new();
+        for i in 0..self.batches.len() {
+            let batch = &self.batches[i];
+            let validity = batch.check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher);
+            match validity {
+                BatchValidity::Future => {
+                    remaining.push(batch.clone());
+                }
+                BatchValidity::Drop => {
+                    // TODO: Log the drop reason with WARN level.
+                    // batch.log_context(self.log).warn("Dropping batch", "parent", parent.id(), "parent_time", parent.info.time);
+                    continue;
+                }
+                BatchValidity::Accept => {
+                    next_batch = Some(batch.clone());
+                    // Don't keep the current batch in the remaining items since we are processing it now,
+                    // but retain every batch we didn't get to yet.
+                    remaining.extend_from_slice(&self.batches[i + 1..]);
+                    break;
+                }
+                BatchValidity::Undecided => {
+                    remaining.extend_from_slice(&self.batches[i..]);
+                    self.batches = remaining;
+                    return Err(StageError::Eof);
+                }
+            }
+        }
+        self.batches = remaining;
+
+        if let Some(nb) = next_batch {
+            // TODO: log that the next batch is found.
+            return Ok(nb.batch);
+        }
+
+        // If the current epoch is too old compared to the L1 block we are at,
+        // i.e. if the sequence window expired, we create empty batches for the current epoch
+        let expiry_epoch = epoch.number + self.cfg.seq_window_size;
+        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty)
+            || expiry_epoch < parent.l1_origin.number;
+        let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
+
+        // TODO: Log the empty batch generation.
+
+        // If the sequencer window did not expire,
+        // there is still room to receive batches for the current epoch.
+        // No need to force-create empty batch(es) towards the next epoch yet.
+        if !force_empty_batches {
+            return Err(StageError::Eof);
+        }
+
+        // The next L1 block is needed to proceed towards the next epoch.
+        if self.l1_blocks.len() < 2 {
+            return Err(StageError::Eof);
+        }
+
+        let next_epoch = self.l1_blocks[1];
+
+        // Fill with empty L2 blocks of the same epoch until we meet the time of the next L1 origin,
+        // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always generate a
+        // batch to ensure that we at least have one batch per epoch.
+        if next_timestamp < next_epoch.timestamp || first_of_epoch {
+            // TODO: log next batch generation.
+            return Ok(Batch::Single(SingleBatch {
+                parent_hash: parent.info.hash,
+                epoch_num: epoch.number,
+                epoch_hash: epoch.hash,
+                timestamp: next_timestamp,
+                transactions: Vec::new(),
+            }));
+        }
+
+        // At this point we have auto generated every batch for the current epoch
+        // that we can, so we can advance to the next epoch.
+        // TODO: log that the epoch is advanced.
+        // bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp, "next_epoch_time", nextEpoch.Time)
+        self.l1_blocks.remove(0);
+        Err(StageError::Eof)
     }
 
     /// Adds a batch to the queue.

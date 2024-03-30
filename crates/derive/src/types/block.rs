@@ -29,6 +29,24 @@ impl BlockInfo {
             timestamp,
         }
     }
+
+    /// Returns the block ID.
+    pub fn id(&self) -> BlockID {
+        BlockID {
+            hash: self.hash,
+            number: self.number,
+        }
+    }
+}
+
+impl core::fmt::Display for BlockInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "BlockInfo {{ hash: {}, number: {}, parent_hash: {}, timestamp: {} }}",
+            self.hash, self.number, self.parent_hash, self.timestamp
+        )
+    }
 }
 
 /// Block ID identifies a block by its hash and number
@@ -39,6 +57,12 @@ pub struct BlockID {
     pub hash: BlockHash,
     /// The block number
     pub number: BlockNumber,
+}
+
+impl core::fmt::Display for BlockID {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{{ hash: {}, number: {} }}", self.hash, self.number)
+    }
 }
 
 /// An L2 Block Ref

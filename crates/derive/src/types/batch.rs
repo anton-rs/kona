@@ -79,6 +79,12 @@ impl SpanBatch {
     }
 }
 
+impl From<BatchWithInclusionBlock> for Batch {
+    fn from(b: BatchWithInclusionBlock) -> Self {
+        b.batch
+    }
+}
+
 /// A Batch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Batch {
