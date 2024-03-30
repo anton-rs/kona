@@ -1,5 +1,8 @@
 //! This module contains the enumerable [Batch].
 
+use alloc::vec::Vec;
+use alloy_rlp::{Decodable, Encodable};
+
 use super::batch_type::BatchType;
 use super::batch_validity::BatchValidity;
 use super::block::BlockInfo;
@@ -7,8 +10,6 @@ use super::block::L2BlockRef;
 use super::rollup_config::RollupConfig;
 use super::single_batch::SingleBatch;
 use crate::traits::SafeBlockFetcher;
-
-use alloy_rlp::{Decodable, Encodable};
 
 /// A batch with its inclusion block.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +52,15 @@ impl BatchWithInclusionBlock {
 pub struct SpanBatch {}
 
 impl SpanBatch {
+    /// Derives [SingleBatch]s from the span batch.
+    pub fn get_singular_batches(
+        &self,
+        _l1_blocks: &[BlockInfo],
+        _parent: L2BlockRef,
+    ) -> Vec<SingleBatch> {
+        unimplemented!()
+    }
+
     /// Returns the timestamp for the span batch.
     pub fn timestamp(&self) -> u64 {
         unimplemented!()
