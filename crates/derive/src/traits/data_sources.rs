@@ -1,6 +1,6 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation pipeline's stages.
 
-use crate::types::{Blob, BlockInfo, IndexedBlobHash, Receipt, StageResult, TxEnvelope};
+use crate::types::{Blob, BlockInfo, Frame, IndexedBlobHash, Receipt, TxEnvelope};
 use alloc::fmt::Debug;
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
@@ -44,12 +44,18 @@ pub trait ChainProvider {
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)>;
 }
 
+/// Allows a type to be converted into a list of frames.
+pub trait IntoFrames {
+    /// Converts the type into a list of frames.
+    fn into_frames(self) -> Result<Vec<Frame>>;
+}
+
 /// A simple asynchronous iterator trait.
-/// This should be replaced with the `async-iterator` crate.
+/// This should be replaced with the `async-iterator` crate
 #[async_trait]
 pub trait AsyncIterator {
     /// The item type of the iterator.
-    type Item: Send + Sync + Debug;
+    type Item: Send + Sync + Debug + IntoFrames;
 
     /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
     async fn next(&mut self) -> Option<Self::Item>;
@@ -58,8 +64,10 @@ pub trait AsyncIterator {
 /// Describes the functionality of a data source that can provide data availability information.
 #[async_trait]
 pub trait DataAvailabilityProvider {
+    /// The item type of the data iterator.
+    type Item: Send + Sync + Debug + IntoFrames;
     /// An iterator over returned bytes data.
-    type DataIter: DataIter<Bytes> + Send + Debug;
+    type DataIter: AsyncIterator<Item = Self::Item> + Send + Debug;
 
     /// Returns the data availability for the block with the given hash, or an error if the block does not exist in the
     /// data source.
@@ -70,8 +78,9 @@ pub trait DataAvailabilityProvider {
     ) -> Result<Self::DataIter>;
 }
 
-/// Describes the behavior of a data iterator.
-pub trait DataIter<T> {
-    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
-    fn next(&mut self) -> StageResult<T>;
-}
+//
+// /// Describes the behavior of a data iterator.
+// pub trait DataIter<T> {
+//     /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is exhausted.
+//     fn next(&mut self) -> StageResult<T>;
+// }

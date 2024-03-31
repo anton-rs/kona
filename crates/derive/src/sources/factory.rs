@@ -2,7 +2,7 @@
 
 use crate::sources::{BlobSource, CalldataSource, DataSource, PlasmaSource};
 use crate::traits::{BlobProvider, ChainProvider, DataAvailabilityProvider};
-use crate::types::{BlockInfo, RollupConfig};
+use crate::types::{BlockInfo, RollupConfig, StageResult};
 use alloc::boxed::Box;
 use alloc::fmt::Debug;
 use alloy_primitives::Address;
@@ -51,6 +51,7 @@ where
     C: ChainProvider + Send + Sync + Clone + Debug,
     B: BlobProvider + Send + Sync + Clone + Debug,
 {
+    type Item = StageResult<alloy_primitives::Bytes>;
     type DataIter = DataSource<C, B>;
 
     async fn open_data(

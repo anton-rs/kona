@@ -1,7 +1,7 @@
 //! Test utilities for data availability.
 
 use crate::{
-    traits::{DataAvailabilityProvider, DataIter},
+    traits::{AsyncIterator, DataAvailabilityProvider},
     types::{BlockInfo, StageError, StageResult},
 };
 use alloc::{boxed::Box, vec, vec::Vec};
@@ -19,9 +19,12 @@ pub struct TestIter {
     pub(crate) results: Vec<StageResult<Bytes>>,
 }
 
-impl DataIter<Bytes> for TestIter {
-    fn next(&mut self) -> StageResult<Bytes> {
-        self.results.pop().unwrap_or_else(|| Err(StageError::Eof))
+#[async_trait]
+impl AsyncIterator for TestIter {
+    type Item = StageResult<Bytes>;
+
+    async fn next(&mut self) -> Option<Self::Item> {
+        Some(self.results.pop().unwrap_or_else(|| Err(StageError::Eof)))
     }
 }
 
@@ -34,6 +37,7 @@ pub struct TestDAP {
 
 #[async_trait]
 impl DataAvailabilityProvider for TestDAP {
+    type Item = StageResult<Bytes>;
     type DataIter = TestIter;
 
     async fn open_data(

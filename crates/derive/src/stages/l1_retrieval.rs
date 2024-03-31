@@ -6,7 +6,6 @@ use crate::{
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
-use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
@@ -47,7 +46,7 @@ where
     /// Retrieves the next data item from the L1 retrieval stage.
     /// If there is data, it pushes it into the next stage.
     /// If there is no data, it returns an error.
-    pub async fn next_data(&mut self) -> StageResult<Bytes> {
+    pub async fn next_data(&mut self) -> StageResult<DAP::Item> {
         if self.data.is_none() {
             let next = self
                 .prev
@@ -66,7 +65,7 @@ where
             .expect("Cannot be None")
             .next()
             .await
-            .unwrap_or(Err(StageError::Eof));
+            .ok_or(StageError::Eof);
         match data {
             Ok(data) => Ok(data),
             Err(StageError::Eof) => {
@@ -97,6 +96,7 @@ mod tests {
     use crate::traits::test_utils::{TestDAP, TestIter};
     use alloc::vec;
     use alloy_primitives::Address;
+    use alloy_primitives::Bytes;
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
@@ -114,7 +114,7 @@ mod tests {
         let dap = TestDAP { results };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         assert_eq!(retrieval.data, None);
-        let data = retrieval.next_data().await.unwrap();
+        let data = retrieval.next_data().await.unwrap().unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
         let retrieval_data = retrieval.data.as_ref().unwrap();
@@ -143,7 +143,7 @@ mod tests {
             provider: dap,
             data: Some(data),
         };
-        let data = retrieval.next_data().await.unwrap();
+        let data = retrieval.next_data().await.unwrap().unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
         let retrieval_data = retrieval.data.as_ref().unwrap();
