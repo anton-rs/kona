@@ -1,5 +1,7 @@
 //! Span Batch Builder
 
+#![allow(unused)]
+
 use crate::types::spans::{RawSpanBatch, SpanBatch, SpanBatchElement};
 use crate::types::SingleBatch;
 use alloc::vec::Vec;
@@ -52,26 +54,27 @@ impl SpanBatchBuilder {
 
     /// Returns the raw span batch ready for encoding.
     pub fn get_raw_span_batch(&self) -> RawSpanBatch {
-        self.span_batch.to_raw_span_batch(
-            self.origin_changed_bit,
-            self.genesis_timestamp,
-            self.chain_id,
-        )
+        // self.span_batch.to_raw_span_batch(
+        //     self.origin_changed_bit,
+        //     self.genesis_timestamp,
+        //     self.chain_id,
+        // )
+        unimplemented!()
     }
 
-    /// Append a singular batch to the span batch
-    /// and update the origin changed bit
-    pub fn append_singular_batch(&mut self, singular_batch: &SingleBatch, seq_num: u64) {
-        if self.get_block_count() == 0 {
-            self.origin_changed_bit = 0;
-            if seq_num == 0 {
-                self.origin_changed_bit = 1;
-            }
-        }
-        self.span_batch.batches.push(SpanBatchElement {
-            epoch_num: singular_batch.epoch_num,
-            timestamp: singular_batch.timestamp,
-            transactions: singular_batch.transactions.clone(),
-        });
+    /// Append a singular batch to the span batch and update the origin changed bit
+    pub fn append_singular_batch(&mut self, _singular_batch: &SingleBatch, _seq_num: u64) {
+        // if self.get_block_count() == 0 {
+        //     self.origin_changed_bit = 0;
+        //     if seq_num == 0 {
+        //         self.origin_changed_bit = 1;
+        //     }
+        // }
+        // self.span_batch.batches.push(SpanBatchElement {
+        //     epoch_num: singular_batch.epoch_num,
+        //     timestamp: singular_batch.timestamp,
+        //     transactions: singular_batch.transactions.clone(),
+        // });
+        unimplemented!()
     }
 }

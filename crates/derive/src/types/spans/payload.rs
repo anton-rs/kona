@@ -1,6 +1,8 @@
 //! Raw Span Batch Payload
 
-use crate::types::spans::{SpanBatchBits, SpanBatchError, SpanDecodingError, MAX_SPAN_BATCH_SIZE};
+use crate::types::spans::{
+    SpanBatchBits, SpanBatchError, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
+};
 use alloc::vec::Vec;
 
 /// Span Batch Payload
@@ -13,7 +15,7 @@ pub struct SpanBatchPayload {
     /// List of transaction counts for each L2 block
     pub block_tx_counts: Vec<u64>,
     /// Transactions encoded in SpanBatch specs
-    pub txs: Vec<u8>,
+    pub txs: SpanBatchTransactions,
 }
 
 impl SpanBatchPayload {
@@ -23,8 +25,16 @@ impl SpanBatchPayload {
         payload.decode_block_count(r)?;
         payload.decode_origin_bits(r)?;
         payload.decode_block_tx_counts(r)?;
-        // payload.decode_txs(r)?;
+        payload.decode_txs(r)?;
         Ok(payload)
+    }
+
+    /// Encodes a [SpanBatchPayload] into a writer.
+    pub fn encode_payload(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        self.encode_block_count(w);
+        self.encode_origin_bits(w)?;
+        self.encode_block_tx_counts(w);
+        self.encode_txs(w)
     }
 
     /// Decodes the origin bits from a reader.
@@ -71,7 +81,7 @@ impl SpanBatchPayload {
     }
 
     /// Decode transactions from a reader.
-    pub fn decode_txs(&mut self, _r: &mut &[u8]) -> Result<(), SpanBatchError> {
+    pub fn decode_txs(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
         if self.block_tx_counts.is_empty() {
             return Err(SpanBatchError::EmptySpanBatch);
         }
@@ -88,7 +98,39 @@ impl SpanBatchPayload {
         if total_block_tx_count as usize > MAX_SPAN_BATCH_SIZE {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
+        self.txs.total_block_tx_count = total_block_tx_count;
+        self.txs.decode(r)?;
+        Ok(())
+    }
 
-        todo!()
+    /// Encode the origin bits into a writer.
+    pub fn encode_origin_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        SpanBatchBits::encode(w, self.block_count as usize, self.origin_bits.as_ref())
+    }
+
+    /// Encode the block count into a writer.
+    pub fn encode_block_count(&self, w: &mut Vec<u8>) {
+        let mut u64_varint_buf = [0u8; 10];
+        w.extend_from_slice(unsigned_varint::encode::u64(
+            self.block_count,
+            &mut u64_varint_buf,
+        ));
+    }
+
+    /// Encode the block transaction counts into a writer.
+    pub fn encode_block_tx_counts(&self, w: &mut Vec<u8>) {
+        let mut u64_varint_buf = [0u8; 10];
+        for block_tx_count in &self.block_tx_counts {
+            u64_varint_buf.fill(0);
+            w.extend_from_slice(unsigned_varint::encode::u64(
+                *block_tx_count,
+                &mut u64_varint_buf,
+            ));
+        }
+    }
+
+    /// Encode the transactions into a writer.
+    pub fn encode_txs(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        self.txs.encode(w)
     }
 }

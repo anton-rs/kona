@@ -3,7 +3,7 @@
 use crate::types::spans::{SpanBatchError, MAX_SPAN_BATCH_SIZE};
 use alloc::vec;
 use alloc::vec::Vec;
-use alloy_primitives::U256;
+use alloy_rlp::Buf;
 use anyhow::Result;
 
 /// Type for span batch bits.
@@ -42,12 +42,14 @@ impl SpanBatchBits {
         let bits = if b.len() < buffer_len {
             let mut bits = vec![0; buffer_len];
             bits[..b.len()].copy_from_slice(b);
+            b.advance(b.len());
             bits
         } else {
-            b[..buffer_len].to_vec()
+            let v = b[..buffer_len].to_vec();
+            b.advance(buffer_len);
+            v
         };
-        let out = U256::try_from_be_slice(&bits).ok_or(SpanBatchError::InvalidBitSlice)?;
-        if out.bit_len() > bit_length {
+        if bits.iter().map(|n| n.count_ones()).sum::<u32>() as usize > bit_length {
             return Err(SpanBatchError::BitfieldTooLong);
         }
         Ok(SpanBatchBits(bits.to_vec()))

@@ -76,6 +76,8 @@ pub enum SpanDecodingError {
     InvalidTransactionType,
     /// Invalid transaction data
     InvalidTransactionData,
+    /// Invalid transaction signature
+    InvalidTransactionSignature,
 }
 
 impl Display for SpanDecodingError {
@@ -95,6 +97,9 @@ impl Display for SpanDecodingError {
             }
             SpanDecodingError::InvalidTransactionType => write!(f, "Invalid transaction type"),
             SpanDecodingError::InvalidTransactionData => write!(f, "Invalid transaction data"),
+            SpanDecodingError::InvalidTransactionSignature => {
+                write!(f, "Invalid transaction signature")
+            }
         }
     }
 }
