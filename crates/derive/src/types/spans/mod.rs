@@ -1,4 +1,12 @@
 //! Contains all Span Batch Logic
+//!
+//! Batch format
+//!
+//! [SPAN_BATCH_TYPE] = 1
+//! span_batch = [SPAN_BATCH_TYPE] ++ prefix ++ payload
+//! prefix = rel_timestamp ++ l1_origin_num ++ parent_check ++ l1_origin_check
+//! payload = block_count ++ origin_bits ++ block_tx_counts ++ txs
+//! txs = contract_creation_bits ++ y_parity_bits ++ tx_sigs ++ tx_tos ++ tx_datas ++ tx_nonces ++ tx_gases ++ protected_bits
 
 /// The span batch type
 pub const SPAN_BATCH_TYPE: u8 = 0x01;
@@ -35,3 +43,9 @@ pub use element::SpanBatchElement;
 
 mod builder;
 pub use builder::SpanBatchBuilder;
+
+mod transactions;
+pub use transactions::{
+    SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
+    SpanBatchLegacyTransactionData, SpanBatchTransactionData, SpanBatchTransactions,
+};

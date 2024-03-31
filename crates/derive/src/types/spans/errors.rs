@@ -11,8 +11,8 @@ pub enum SpanBatchError {
     BitfieldTooLong,
     /// Failed to set [alloy_primitives::U256] from big-endian slice
     InvalidBitSlice,
-    /// Empty Block Count
-    EmptyBlockCount,
+    /// Empty Span Batch
+    EmptySpanBatch,
     /// Encoding errors
     Encoding(EncodingError),
     /// Decoding errors
@@ -28,7 +28,7 @@ impl Display for SpanBatchError {
                 f,
                 "Failed to set [alloy_primitives::U256] from big-endian slice"
             ),
-            SpanBatchError::EmptyBlockCount => write!(f, "Empty Block Count"),
+            SpanBatchError::EmptySpanBatch => write!(f, "Empty Span Batch"),
             SpanBatchError::Encoding(e) => write!(f, "Encoding error: {:?}", e),
             SpanBatchError::Decoding(e) => write!(f, "Decoding error: {:?}", e),
         }
@@ -66,6 +66,16 @@ pub enum SpanDecodingError {
     L1OriginCheck,
     /// Failed to decode block count
     BlockCount,
+    /// Failed to decode block tx counts
+    BlockTxCounts,
+    /// Failed to decode transaction nonces
+    TxNonces,
+    /// Mismatch in length between the transaction type and signature arrays in a span batch transaction payload.
+    TypeSignatureLenMismatch,
+    /// Invalid transaction type
+    InvalidTransactionType,
+    /// Invalid transaction data
+    InvalidTransactionData,
 }
 
 impl Display for SpanDecodingError {
@@ -78,6 +88,13 @@ impl Display for SpanDecodingError {
             SpanDecodingError::ParentCheck => write!(f, "Failed to decode parent check"),
             SpanDecodingError::L1OriginCheck => write!(f, "Failed to decode L1 origin check"),
             SpanDecodingError::BlockCount => write!(f, "Failed to decode block count"),
+            SpanDecodingError::BlockTxCounts => write!(f, "Failed to decode block tx counts"),
+            SpanDecodingError::TxNonces => write!(f, "Failed to decode transaction nonces"),
+            SpanDecodingError::TypeSignatureLenMismatch => {
+                write!(f, "Mismatch in length between the transaction type and signature arrays in a span batch transaction payload")
+            }
+            SpanDecodingError::InvalidTransactionType => write!(f, "Invalid transaction type"),
+            SpanDecodingError::InvalidTransactionData => write!(f, "Invalid transaction data"),
         }
     }
 }

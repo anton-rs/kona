@@ -1,7 +1,9 @@
 //! Raw Span Batch
 
-use crate::types::spans::{SpanBatchPayload, SpanBatchPrefix};
-use crate::types::SPAN_BATCH_TYPE;
+use crate::types::{
+    spans::{SpanBatchPayload, SpanBatchPrefix},
+    SPAN_BATCH_TYPE,
+};
 
 /// Raw Span Batch
 #[derive(Debug, Clone, PartialEq, Eq)]
