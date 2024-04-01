@@ -18,8 +18,14 @@ pub use system_config::{
 mod rollup_config;
 pub use rollup_config::RollupConfig;
 
-pub mod spans;
-pub use spans::{SpanBatch, SpanBatchBuilder, SpanBatchElement, SPAN_BATCH_TYPE};
+pub mod batch;
+pub use batch::{
+    RawSpanBatch, SingleBatch, SpanBatch, SpanBatchBits, SpanBatchBuilder,
+    SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData, SpanBatchElement,
+    SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix,
+    SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
+    SPAN_BATCH_TYPE,
+};
 
 mod transaction;
 pub use transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxLegacy, TxType};
@@ -53,9 +59,6 @@ pub use channel::Channel;
 
 mod errors;
 pub use errors::{DecodeError, StageError, StageResult};
-
-mod single_batch;
-pub use single_batch::SingleBatch;
 
 /// A raw transaction
 #[derive(Debug, Clone, PartialEq, Eq)]

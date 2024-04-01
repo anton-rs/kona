@@ -1,6 +1,6 @@
 //! Raw Span Batch Prefix
 
-use crate::types::spans::{SpanBatchError, SpanDecodingError};
+use crate::types::{SpanBatchError, SpanDecodingError};
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
 

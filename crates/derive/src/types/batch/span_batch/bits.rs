@@ -1,8 +1,7 @@
 //! Module for working with span batch bits.
 
-use crate::types::spans::{SpanBatchError, MAX_SPAN_BATCH_SIZE};
-use alloc::vec;
-use alloc::vec::Vec;
+use crate::types::{SpanBatchError, MAX_SPAN_BATCH_SIZE};
+use alloc::{vec, vec::Vec};
 use alloy_rlp::Buf;
 use anyhow::Result;
 

@@ -2,10 +2,10 @@
 
 #![allow(unused)]
 
-use crate::types::spans::{RawSpanBatch, SpanBatchBits, SpanBatchPayload, SpanBatchPrefix};
-use crate::types::SpanBatchElement;
-use alloc::vec;
-use alloc::vec::Vec;
+use crate::types::{
+    RawSpanBatch, SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+};
+use alloc::{vec, vec::Vec};
 use alloy_primitives::FixedBytes;
 
 use super::SpanBatchError;

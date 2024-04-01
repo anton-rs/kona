@@ -3,8 +3,8 @@
 use alloc::vec::Vec;
 
 use crate::types::{
-    spans::{SpanBatchPayload, SpanBatchPrefix, SpanDecodingError},
-    RawTransaction, SpanBatchElement, SPAN_BATCH_TYPE,
+    RawTransaction, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix, SpanDecodingError,
+    SPAN_BATCH_TYPE,
 };
 
 use super::{SpanBatch, SpanBatchError};

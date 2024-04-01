@@ -1,6 +1,6 @@
 //! Raw Span Batch Payload
 
-use crate::types::spans::{
+use crate::types::{
     SpanBatchBits, SpanBatchError, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
 };
 use alloc::vec::Vec;

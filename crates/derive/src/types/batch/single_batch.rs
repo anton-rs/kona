@@ -1,9 +1,9 @@
 //! This module contains the [SingleBatch] type.
 
-use super::RawTransaction;
+use crate::types::RawTransaction;
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
-use alloy_rlp::{Decodable, Encodable};
+use alloy_rlp::{Decodable, Encodable, Header};
 
 /// Represents a single batch: a single encoded L2 block
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,6 +22,17 @@ pub struct SingleBatch {
 
 impl Encodable for SingleBatch {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length = self.parent_hash.length()
+            + self.epoch_num.length()
+            + self.epoch_hash.length()
+            + self.timestamp.length()
+            + self.transactions.length();
+        let header = Header {
+            list: true,
+            payload_length,
+        };
+        header.encode(out);
+
         self.parent_hash.encode(out);
         self.epoch_num.encode(out);
         self.epoch_hash.encode(out);
@@ -32,11 +43,18 @@ impl Encodable for SingleBatch {
 
 impl Decodable for SingleBatch {
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let header = Header::decode(buf)?;
+        let buf_len_start = buf.len();
+
         let parent_hash = Decodable::decode(buf)?;
         let epoch_num = Decodable::decode(buf)?;
         let epoch_hash = Decodable::decode(buf)?;
         let timestamp = Decodable::decode(buf)?;
         let transactions = Decodable::decode(buf)?;
+
+        if buf.len() != buf_len_start - header.payload_length {
+            return Err(alloy_rlp::Error::Overflow);
+        }
 
         Ok(SingleBatch {
             parent_hash,

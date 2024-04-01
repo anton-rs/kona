@@ -855,11 +855,8 @@ pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: u64) -> Result<bool, SpanBa
 mod test {
     use super::SpanBatchLegacyTransactionData;
     use crate::types::{
-        eip2930::AccessList,
-        spans::{
-            SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
-            SpanBatchTransactionData,
-        },
+        eip2930::AccessList, SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
+        SpanBatchTransactionData,
     };
     use alloc::vec::Vec;
     use alloy_primitives::U256;
