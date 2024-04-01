@@ -82,6 +82,11 @@ where
         self.prev.origin()
     }
 
+    /// Returns if the previous batch was the last in the span.
+    pub fn is_last_in_span(&self) -> bool {
+        self.next_spans.is_empty()
+    }
+
     /// Pops the next batch from the current queued up span-batch cache.
     /// The parent is used to set the parent hash of the batch.
     /// The parent is verified when the batch is later validated.

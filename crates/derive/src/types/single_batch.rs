@@ -5,7 +5,7 @@ use alloy_primitives::BlockHash;
 use alloy_rlp::{Decodable, Encodable};
 
 use super::batch_validity::BatchValidity;
-use super::block::{BlockInfo, L2BlockRef};
+use super::block::{BlockID, BlockInfo, L2BlockRef};
 use super::rollup_config::RollupConfig;
 use super::RawTransaction;
 
@@ -58,6 +58,14 @@ impl SingleBatch {
         self.transactions
             .iter()
             .any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
+    }
+
+    /// Returns the [BlockID] of the batch.
+    pub fn epoch(&self) -> BlockID {
+        BlockID {
+            number: self.epoch_num,
+            hash: self.epoch_hash,
+        }
     }
 
     /// Checks if the batch is valid.

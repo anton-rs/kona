@@ -1,7 +1,13 @@
 //! This module contains all of the types used within the derivation pipeline.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use alloc::vec::Vec;
 use alloy_rlp::{Decodable, Encodable};
+
+mod attributes;
+pub use attributes::{AttributesWithParent, PayloadAttributes};
 
 mod batch;
 pub use batch::{Batch, BatchWithInclusionBlock, SpanBatch};
@@ -37,7 +43,9 @@ mod receipt;
 pub use receipt::{Receipt, ReceiptWithBloom};
 
 mod payload;
-pub use payload::{ExecutionPayload, ExecutionPayloadEnvelope};
+pub use payload::{
+    ExecutionPayload, ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
+};
 
 mod eips;
 pub use eips::{
@@ -55,12 +63,13 @@ mod channel;
 pub use channel::Channel;
 
 mod errors;
-pub use errors::{StageError, StageResult};
+pub use errors::{ResetError, StageError, StageResult};
 
 mod single_batch;
 pub use single_batch::SingleBatch;
 
 /// A raw transaction
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Vec<u8>);
 
