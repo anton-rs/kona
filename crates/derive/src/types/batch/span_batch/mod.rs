@@ -44,8 +44,17 @@ pub use element::SpanBatchElement;
 mod builder;
 pub use builder::SpanBatchBuilder;
 
-mod transactions;
-pub use transactions::{
+mod signature;
+pub(crate) use signature::SpanBatchSignature;
+
+mod tx_data;
+pub use tx_data::{
     SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
-    SpanBatchLegacyTransactionData, SpanBatchTransactionData, SpanBatchTransactions,
+    SpanBatchLegacyTransactionData, SpanBatchTransactionData,
 };
+
+mod transactions;
+pub use transactions::SpanBatchTransactions;
+
+mod utils;
+pub(crate) use utils::{convert_v_to_y_parity, read_tx_data};
