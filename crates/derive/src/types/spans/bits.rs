@@ -129,6 +129,9 @@ mod test {
         fn test_encode_decode_roundtrip_span_bitlist(vec in vec(any::<u8>(), 0..5096)) {
             let bits = SpanBatchBits(vec);
             assert_eq!(SpanBatchBits::decode(&mut bits.as_ref(), bits.0.len() * 8).unwrap(), bits);
+            let mut encoded = Vec::new();
+            SpanBatchBits::encode(&mut encoded, bits.0.len() * 8, bits.as_ref()).unwrap();
+            assert_eq!(encoded, bits.0);
         }
     }
 
@@ -141,6 +144,7 @@ mod test {
         bits.set_bit(1, true);
         bits.set_bit(2, true);
         bits.set_bit(4, true);
+        bits.set_bit(7, true);
         assert_eq!(bits.0.len(), 1);
         assert_eq!(bits.get_bit(0), Some(1));
         assert_eq!(bits.get_bit(1), Some(1));

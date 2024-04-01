@@ -1,15 +1,13 @@
 //! This module contains the [SpanBatchTransactions] type and logic for encoding and decoding transactions in a span batch.
 
-use alloc::vec::Vec;
-use alloy_primitives::{Address, Signature, U256};
-use alloy_rlp::{Buf, Decodable, Encodable, Header, RlpDecodable, RlpEncodable};
-
+use super::{SpanBatchBits, SpanBatchError, SpanDecodingError};
 use crate::types::{
     eip2930::AccessList, network::Signed, Transaction, TxEip1559, TxEip2930, TxEnvelope, TxKind,
     TxLegacy, TxType,
 };
-
-use super::{SpanBatchBits, SpanBatchError, SpanDecodingError};
+use alloc::vec::Vec;
+use alloy_primitives::{Address, Signature, U256};
+use alloy_rlp::{Buf, Bytes, Decodable, Encodable, Header};
 
 /// This struct contains the decoded information for transactions in a span batch.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -58,31 +56,31 @@ pub enum SpanBatchTransactionData {
 }
 
 /// The transaction data for a legacy transaction within a span batch.
-#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpanBatchLegacyTransactionData {
     /// The ETH value of the transaction.
     pub value: U256,
     /// The gas price of the transaction.
     pub gas_price: U256,
     /// Transaction calldata.
-    pub data: Vec<u8>,
+    pub data: Bytes,
 }
 
 /// The transaction data for an EIP-2930 transaction within a span batch.
-#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpanBatchEip2930TransactionData {
     /// The ETH value of the transaction.
     pub value: U256,
     /// The gas price of the transaction.
     pub gas_price: U256,
     /// Transaction calldata.
-    pub data: Vec<u8>,
+    pub data: Bytes,
     /// Access list, used to pre-warm storage slots through static declaration.
     pub access_list: AccessList,
 }
 
 /// The transaction data for an EIP-1559 transaction within a span batch.
-#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpanBatchEip1559TransactionData {
     /// The ETH value of the transaction.
     pub value: U256,
@@ -91,7 +89,7 @@ pub struct SpanBatchEip1559TransactionData {
     /// Maximum priority fee per gas.
     pub max_priority_fee_per_gas: U256,
     /// Transaction calldata.
-    pub data: Vec<u8>,
+    pub data: Bytes,
     /// Access list, used to pre-warm storage slots through static declaration.
     pub access_list: AccessList,
 }
@@ -221,13 +219,13 @@ impl SpanBatchTransactions {
         let mut sigs = Vec::with_capacity(self.total_block_tx_count as usize);
         for _ in 0..self.total_block_tx_count {
             let r_val = U256::from_be_slice(&r[..32]);
-            let s_val = U256::from_be_slice(&r[32..]);
+            let s_val = U256::from_be_slice(&r[32..64]);
             sigs.push(SpanBatchSignature {
                 v: 0,
                 r: r_val,
                 s: s_val,
             });
-            *r = &r[64..];
+            r.advance(64);
         }
         self.tx_sigs = sigs;
         Ok(())
@@ -266,7 +264,7 @@ impl SpanBatchTransactions {
         for _ in 0..(self.total_block_tx_count - contract_creation_count) {
             let to = Address::from_slice(&r[..20]);
             tos.push(to);
-            *r = &r[20..];
+            r.advance(20);
         }
         self.tx_tos = tos;
         Ok(())
@@ -360,17 +358,13 @@ impl SpanBatchTransactions {
             let gas = self
                 .tx_gases
                 .get(idx as usize)
-                .ok_or(SpanBatchError::Decoding(
-                    SpanDecodingError::InvalidTransactionData,
-                ))?;
+                .ok_or(SpanBatchError::Decoding(SpanDecodingError::L1OriginNumber))?;
             let bit = self.contract_creation_bits.get_bit(idx as usize).ok_or(
                 SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData),
             )?;
             let to = if bit == 0 {
                 if self.tx_tos.len() <= to_idx {
-                    return Err(SpanBatchError::Decoding(
-                        SpanDecodingError::InvalidTransactionData,
-                    ));
+                    return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData));
                 }
                 to_idx += 1;
                 Some(self.tx_tos[to_idx - 1])
@@ -455,9 +449,11 @@ impl Encodable for SpanBatchTransactionData {
                 data.encode(out);
             }
             Self::Eip2930(data) => {
+                out.put_u8(1);
                 data.encode(out);
             }
             Self::Eip1559(data) => {
+                out.put_u8(2);
                 data.encode(out);
             }
         }
@@ -486,14 +482,14 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
                 SpanBatchLegacyTransactionData {
                     value: s.value,
                     gas_price: U256::from(s.gas_price),
-                    data: s.input().to_vec(),
+                    data: Bytes::from(s.input().to_vec()),
                 },
             )),
             TxEnvelope::Eip2930(s) => Ok(SpanBatchTransactionData::Eip2930(
                 SpanBatchEip2930TransactionData {
                     value: s.value,
                     gas_price: U256::from(s.gas_price),
-                    data: s.input().to_vec(),
+                    data: Bytes::from(s.input().to_vec()),
                     access_list: s.access_list.clone(),
                 },
             )),
@@ -502,7 +498,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
                     value: s.value,
                     max_fee_per_gas: U256::from(s.max_fee_per_gas),
                     max_priority_fee_per_gas: U256::from(s.max_priority_fee_per_gas),
-                    data: s.input().to_vec(),
+                    data: Bytes::from(s.input().to_vec()),
                     access_list: s.access_list.clone(),
                 },
             )),
@@ -637,6 +633,145 @@ impl SpanBatchTransactionData {
     }
 }
 
+impl Encodable for SpanBatchLegacyTransactionData {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length = self.value.length() + self.gas_price.length() + self.data.length();
+        let header = Header {
+            list: true,
+            payload_length,
+        };
+
+        header.encode(out);
+        self.value.encode(out);
+        self.gas_price.encode(out);
+        self.data.encode(out);
+    }
+}
+
+impl Decodable for SpanBatchLegacyTransactionData {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let header = Header::decode(buf)?;
+        if !header.list {
+            return Err(alloy_rlp::Error::Custom(
+                "Expected list data for Legacy transaction",
+            ));
+        }
+        let buf_len_start = buf.len();
+
+        let value = U256::decode(buf)?;
+        let gas_price = U256::decode(buf)?;
+        let data = Bytes::decode(buf)?;
+
+        if buf.len() != buf_len_start - header.payload_length {
+            return Err(alloy_rlp::Error::Custom("Invalid Legacy transaction RLP"));
+        }
+
+        Ok(Self {
+            value,
+            gas_price,
+            data,
+        })
+    }
+}
+
+impl Encodable for SpanBatchEip2930TransactionData {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length = self.value.length()
+            + self.gas_price.length()
+            + self.data.length()
+            + self.access_list.length();
+        let header = Header {
+            list: true,
+            payload_length,
+        };
+
+        header.encode(out);
+        self.value.encode(out);
+        self.gas_price.encode(out);
+        self.data.encode(out);
+        self.access_list.encode(out);
+    }
+}
+
+impl Decodable for SpanBatchEip2930TransactionData {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let header = Header::decode(buf)?;
+        if !header.list {
+            return Err(alloy_rlp::Error::Custom(
+                "Expected list data for EIP-2930 transaction",
+            ));
+        }
+        let buf_len_start = buf.len();
+
+        let value = U256::decode(buf)?;
+        let gas_price = U256::decode(buf)?;
+        let data = Bytes::decode(buf)?;
+        let access_list = AccessList::decode(buf)?;
+
+        if buf.len() != buf_len_start - header.payload_length {
+            return Err(alloy_rlp::Error::Custom("Invalid EIP-2930 transaction RLP"));
+        }
+
+        Ok(Self {
+            value,
+            gas_price,
+            data,
+            access_list,
+        })
+    }
+}
+
+impl Encodable for SpanBatchEip1559TransactionData {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length = self.value.length()
+            + self.max_fee_per_gas.length()
+            + self.max_priority_fee_per_gas.length()
+            + self.data.length()
+            + self.access_list.length();
+        let header = Header {
+            list: true,
+            payload_length,
+        };
+
+        header.encode(out);
+        self.value.encode(out);
+        self.max_fee_per_gas.encode(out);
+        self.max_priority_fee_per_gas.encode(out);
+        self.data.encode(out);
+        self.access_list.encode(out);
+    }
+}
+
+impl Decodable for SpanBatchEip1559TransactionData {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let header = Header::decode(buf)?;
+        if !header.list {
+            return Err(alloy_rlp::Error::Custom(
+                "Expected list data for EIP-1559 transaction",
+            ));
+        }
+        let buf_len_start = buf.len();
+
+        let value = U256::decode(buf)?;
+        let max_fee_per_gas = U256::decode(buf)?;
+        let max_priority_fee_per_gas = U256::decode(buf)?;
+        let data = Bytes::decode(buf)?;
+        let access_list = AccessList::decode(buf)?;
+
+        if buf.len() != buf_len_start - header.payload_length {
+            return Err(alloy_rlp::Error::Custom("Invalid EIP-1559 transaction RLP"));
+        }
+
+        Ok(Self {
+            value,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
+            data,
+            access_list,
+        })
+    }
+}
+
 impl From<Signature> for SpanBatchSignature {
     fn from(value: Signature) -> Self {
         Self {
@@ -709,5 +844,84 @@ pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: u64) -> Result<bool, SpanBa
         _ => Err(SpanBatchError::Decoding(
             SpanDecodingError::InvalidTransactionType,
         )),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::SpanBatchLegacyTransactionData;
+    use crate::types::{
+        eip2930::AccessList,
+        spans::{
+            SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
+            SpanBatchTransactionData,
+        },
+    };
+    use alloc::vec::Vec;
+    use alloy_primitives::U256;
+    use alloy_rlp::{Bytes, Decodable, Encodable};
+
+    #[test]
+    fn encode_legacy_tx_data_roundtrip() {
+        let legacy_tx = SpanBatchLegacyTransactionData {
+            value: U256::from(0xFF),
+            gas_price: U256::from(0xEE),
+            data: Bytes::from(alloc::vec![0x01, 0x02, 0x03]),
+        };
+
+        let mut encoded_buf = Vec::new();
+        SpanBatchTransactionData::Legacy(legacy_tx.clone()).encode(&mut encoded_buf);
+
+        let decoded = SpanBatchTransactionData::decode(&mut encoded_buf.as_slice()).unwrap();
+        let SpanBatchTransactionData::Legacy(legacy_decoded) = decoded else {
+            panic!("Expected SpanBatchLegacyTransactionData, got {:?}", decoded);
+        };
+
+        assert_eq!(legacy_tx, legacy_decoded);
+    }
+
+    #[test]
+    fn encode_eip2930_tx_data_roundtrip() {
+        let access_list_tx = SpanBatchEip2930TransactionData {
+            value: U256::from(0xFF),
+            gas_price: U256::from(0xEE),
+            data: Bytes::from(alloc::vec![0x01, 0x02, 0x03]),
+            access_list: AccessList::default(),
+        };
+        let mut encoded_buf = Vec::new();
+        SpanBatchTransactionData::Eip2930(access_list_tx.clone()).encode(&mut encoded_buf);
+
+        let decoded = SpanBatchTransactionData::decode(&mut encoded_buf.as_slice()).unwrap();
+        let SpanBatchTransactionData::Eip2930(access_list_decoded) = decoded else {
+            panic!(
+                "Expected SpanBatchEip2930TransactionData, got {:?}",
+                decoded
+            );
+        };
+
+        assert_eq!(access_list_tx, access_list_decoded);
+    }
+
+    #[test]
+    fn encode_eip1559_tx_data_roundtrip() {
+        let variable_fee_tx = SpanBatchEip1559TransactionData {
+            value: U256::from(0xFF),
+            max_fee_per_gas: U256::from(0xEE),
+            max_priority_fee_per_gas: U256::from(0xDD),
+            data: Bytes::from(alloc::vec![0x01, 0x02, 0x03]),
+            access_list: AccessList::default(),
+        };
+        let mut encoded_buf = Vec::new();
+        SpanBatchTransactionData::Eip1559(variable_fee_tx.clone()).encode(&mut encoded_buf);
+
+        let decoded = SpanBatchTransactionData::decode(&mut encoded_buf.as_slice()).unwrap();
+        let SpanBatchTransactionData::Eip1559(variable_fee_decoded) = decoded else {
+            panic!(
+                "Expected SpanBatchEip1559TransactionData, got {:?}",
+                decoded
+            );
+        };
+
+        assert_eq!(variable_fee_tx, variable_fee_decoded);
     }
 }
