@@ -1,9 +1,6 @@
 //! Span Batch Element
 
-#![allow(unused)]
-
-use super::SpanBatchTransactions;
-use crate::types::SingleBatch;
+use crate::types::{RawTransaction, SingleBatch};
 use alloc::vec::Vec;
 
 /// A single batch element is similar to the [SingleBatch] type
@@ -16,15 +13,15 @@ pub struct SpanBatchElement {
     /// The timestamp of the L2 block
     pub timestamp: u64,
     /// The transactions in the L2 block
-    pub transactions: Vec<Vec<u8>>,
+    pub transactions: Vec<RawTransaction>,
 }
 
-// impl From<SingleBatch> for SpanBatchElement {
-//     fn from(batch: SingleBatch) -> Self {
-//         SpanBatchElement {
-//             epoch_num: batch.epoch_num,
-//             timestamp: batch.timestamp,
-//             transactions: batch.transactions,
-//         }
-//     }
-// }
+impl From<SingleBatch> for SpanBatchElement {
+    fn from(batch: SingleBatch) -> Self {
+        SpanBatchElement {
+            epoch_num: batch.epoch_num,
+            timestamp: batch.timestamp,
+            transactions: batch.transactions,
+        }
+    }
+}

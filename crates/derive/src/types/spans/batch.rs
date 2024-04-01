@@ -8,6 +8,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
 
+use super::SpanBatchError;
+
 /// The span batch contains the input to build a span of L2 blocks in derived form.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpanBatch {
@@ -25,35 +27,35 @@ impl SpanBatch {
         self.batches[0].timestamp
     }
 
-    // /// Converts the span batch to a raw span batch.
-    // pub fn to_raw_span_batch(
-    //     &self,
-    //     origin_changed_bit: u8,
-    //     genesis_timestamp: u64,
-    //     chain_id: u64,
-    // ) -> RawSpanBatch {
-    //     let mut block_tx_counts = Vec::new();
-    //     let mut txs = Vec::new();
-    //     for batch in &self.batches {
-    //         block_tx_counts.push(batch.transactions.len() as u64);
-    //         for tx in &batch.transactions {
-    //             txs.extend_from_slice(&tx.0);
-    //         }
-    //     }
-    //
-    //     RawSpanBatch {
-    //         prefix: SpanBatchPrefix {
-    //             rel_timestamp: self.get_timestamp() - genesis_timestamp,
-    //             l1_origin_num: chain_id,
-    //             parent_check: self.parent_check,
-    //             l1_origin_check: self.l1_origin_check,
-    //         },
-    //         payload: SpanBatchPayload {
-    //             block_count: self.batches.len() as u64,
-    //             origin_bits: SpanBatchBits(vec![origin_changed_bit; self.batches.len()]),
-    //             block_tx_counts,
-    //             txs,
-    //         },
-    //     }
-    // }
+    /// Converts the span batch to a raw span batch.
+    pub fn to_raw_span_batch(
+        &self,
+        origin_changed_bit: u8,
+        genesis_timestamp: u64,
+        chain_id: u64,
+    ) -> Result<RawSpanBatch, SpanBatchError> {
+        if self.batches.is_empty() {
+            return Err(SpanBatchError::EmptySpanBatch);
+        }
+
+        let span_start = self.batches.first().ok_or(SpanBatchError::EmptySpanBatch)?;
+        let span_end = self.batches.last().ok_or(SpanBatchError::EmptySpanBatch)?;
+
+        // TODO: Need to expand the [SpanBatch] type, as implemented in `op-node`. It should have extra data, incl.
+        // the origin bits, block tx counts, and span batch txs.
+        Ok(RawSpanBatch {
+            prefix: SpanBatchPrefix {
+                rel_timestamp: span_start.timestamp - genesis_timestamp,
+                l1_origin_num: span_end.epoch_num,
+                parent_check: self.parent_check,
+                l1_origin_check: self.l1_origin_check,
+            },
+            payload: SpanBatchPayload {
+                block_count: self.batches.len() as u64,
+                origin_bits: todo!(),
+                block_tx_counts: todo!(),
+                txs: todo!(),
+            },
+        })
+    }
 }

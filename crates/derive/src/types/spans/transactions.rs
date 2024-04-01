@@ -6,7 +6,7 @@ use alloy_rlp::{Buf, Decodable, Encodable, Header, RlpDecodable, RlpEncodable};
 
 use crate::types::{
     eip2930::AccessList, network::Signed, Transaction, TxEip1559, TxEip2930, TxEnvelope, TxKind,
-    TxLegacy,
+    TxLegacy, TxType,
 };
 
 use super::{SpanBatchBits, SpanBatchError, SpanDecodingError};
@@ -392,14 +392,59 @@ impl SpanBatchTransactions {
     }
 
     /// Add raw transactions into the [SpanBatchTransactions].
-    pub fn add_txs(&mut self, _txs: Vec<Vec<u8>>, _chain_id: u64) -> Result<(), SpanBatchError> {
-        // let total_block_tx_count = txs.len() as u64;
-        // let offset = self.total_block_tx_count;
-        //
-        // for i in 0..total_block_tx_count {
-        //     // todo - RLP decode transaction and extract fields.
-        // }
-        todo!()
+    pub fn add_txs(&mut self, txs: Vec<Vec<u8>>, _chain_id: u64) -> Result<(), SpanBatchError> {
+        let total_block_tx_count = txs.len() as u64;
+        let offset = self.total_block_tx_count;
+
+        for i in 0..total_block_tx_count {
+            let tx_enveloped = TxEnvelope::decode(&mut txs[i as usize].as_slice())
+                .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
+            let span_batch_tx = SpanBatchTransactionData::try_from(&tx_enveloped)?;
+
+            let tx_type = tx_enveloped.tx_type();
+            if matches!(tx_type, TxType::Legacy) {
+                // TODO: Check protected signature
+                self.protected_bits
+                    .set_bit(self.legacy_tx_count as usize, false);
+                self.legacy_tx_count += 1;
+            }
+
+            // TODO: Check protected in contrast to chain ID
+
+            let (signature, to, nonce, gas) = match tx_enveloped {
+                TxEnvelope::Legacy(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
+                TxEnvelope::Eip2930(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
+                TxEnvelope::Eip1559(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
+                _ => {
+                    return Err(SpanBatchError::Decoding(
+                        SpanDecodingError::InvalidTransactionData,
+                    ))
+                }
+            };
+            let signature_v = signature.v().to_u64();
+            let y_parity_bit = convert_v_to_y_parity(signature_v, tx_type as u64)?;
+            let contract_creation_bit = match to {
+                TxKind::Call(address) => {
+                    self.tx_tos.push(address);
+                    0
+                }
+                TxKind::Create => 1,
+            };
+            let mut tx_data_buf = Vec::new();
+            span_batch_tx.encode(&mut tx_data_buf);
+
+            self.tx_sigs.push(signature.into());
+            self.contract_creation_bits
+                .set_bit((i + offset) as usize, contract_creation_bit == 1);
+            self.y_parity_bits
+                .set_bit((i + offset) as usize, y_parity_bit);
+            self.tx_nonces.push(nonce);
+            self.tx_datas.push(tx_data_buf);
+            self.tx_gases.push(gas);
+            self.tx_types.push(tx_type as u64);
+        }
+        self.total_block_tx_count += total_block_tx_count;
+        Ok(())
     }
 }
 
@@ -429,6 +474,42 @@ impl Decodable for SpanBatchTransactionData {
         }
         // Non-legacy transaction (EIP-2718 envelope encoding)
         Self::decode_typed(r)
+    }
+}
+
+impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
+    type Error = SpanBatchError;
+
+    fn try_from(tx_envelope: &TxEnvelope) -> Result<Self, Self::Error> {
+        match tx_envelope {
+            TxEnvelope::Legacy(s) => Ok(SpanBatchTransactionData::Legacy(
+                SpanBatchLegacyTransactionData {
+                    value: s.value,
+                    gas_price: U256::from(s.gas_price),
+                    data: s.input().to_vec(),
+                },
+            )),
+            TxEnvelope::Eip2930(s) => Ok(SpanBatchTransactionData::Eip2930(
+                SpanBatchEip2930TransactionData {
+                    value: s.value,
+                    gas_price: U256::from(s.gas_price),
+                    data: s.input().to_vec(),
+                    access_list: s.access_list.clone(),
+                },
+            )),
+            TxEnvelope::Eip1559(s) => Ok(SpanBatchTransactionData::Eip1559(
+                SpanBatchEip1559TransactionData {
+                    value: s.value,
+                    max_fee_per_gas: U256::from(s.max_fee_per_gas),
+                    max_priority_fee_per_gas: U256::from(s.max_priority_fee_per_gas),
+                    data: s.input().to_vec(),
+                    access_list: s.access_list.clone(),
+                },
+            )),
+            _ => Err(SpanBatchError::Decoding(
+                SpanDecodingError::InvalidTransactionType,
+            )),
+        }
     }
 }
 
@@ -552,6 +633,16 @@ impl SpanBatchTransactionData {
                     Signed::new_unchecked(eip1559_tx, signature, signature_hash);
                 Ok(TxEnvelope::Eip1559(signed_eip1559_tx))
             }
+        }
+    }
+}
+
+impl From<Signature> for SpanBatchSignature {
+    fn from(value: Signature) -> Self {
+        Self {
+            v: value.v().to_u64(),
+            r: value.r(),
+            s: value.s(),
         }
     }
 }

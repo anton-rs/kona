@@ -31,19 +31,6 @@ impl BlockInfo {
     }
 }
 
-// impl TryFrom<BlockWithTransactions> for BlockInfo {
-//     type Error = anyhow::Error;
-//
-//     fn try_from(block: BlockWithTransactions) -> anyhow::Result<Self> {
-//         Ok(BlockInfo {
-//             number: block.number.unwrap_or_default().to::<u64>(),
-//             hash: block.hash.unwrap_or_default(),
-//             parent_hash: block.parent_hash,
-//             timestamp: block.timestamp.to::<u64>(),
-//         })
-//     }
-// }
-
 /// A Block Identifier
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use crate::types::{
     spans::{SpanBatchPayload, SpanBatchPrefix, SpanDecodingError},
-    SpanBatchElement, SPAN_BATCH_TYPE,
+    RawTransaction, SpanBatchElement, SPAN_BATCH_TYPE,
 };
 
 use super::{SpanBatch, SpanBatchError};
@@ -69,7 +69,7 @@ impl RawSpanBatch {
             acc.push(SpanBatchElement {
                 epoch_num: block_origin_nums[i as usize],
                 timestamp: genesis_time + self.prefix.rel_timestamp + block_time * i,
-                transactions,
+                transactions: transactions.into_iter().map(RawTransaction).collect(),
             });
             acc
         });

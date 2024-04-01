@@ -94,4 +94,63 @@ impl SpanBatchBits {
             None
         }
     }
+
+    /// Sets a bit in the [SpanBatchBits] bitlist.
+    pub fn set_bit(&mut self, index: usize, value: bool) {
+        let byte_index = index / 8;
+        let bit_index = index % 8;
+
+        // Ensure the vector is large enough to contain the bit at 'index'.
+        // If not, resize the vector, filling with 0s.
+        if byte_index >= self.0.len() {
+            self.0.resize(byte_index + 1, 0);
+        }
+
+        // Retrieve the specific byte to modify
+        let byte = &mut self.0[byte_index];
+
+        if value {
+            // Set the bit to 1
+            *byte |= 1 << bit_index;
+        } else {
+            // Set the bit to 0
+            *byte &= !(1 << bit_index);
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use proptest::{collection::vec, prelude::any, proptest};
+
+    proptest! {
+        #[test]
+        fn test_encode_decode_roundtrip_span_bitlist(vec in vec(any::<u8>(), 0..5096)) {
+            let bits = SpanBatchBits(vec);
+            assert_eq!(SpanBatchBits::decode(&mut bits.as_ref(), bits.0.len() * 8).unwrap(), bits);
+        }
+    }
+
+    #[test]
+    fn test_static_set_get_bits_span_bitlist() {
+        let mut bits = SpanBatchBits::default();
+        assert!(bits.0.is_empty());
+
+        bits.set_bit(0, true);
+        bits.set_bit(1, true);
+        bits.set_bit(2, true);
+        bits.set_bit(4, true);
+        assert_eq!(bits.0.len(), 1);
+        assert_eq!(bits.get_bit(0), Some(1));
+        assert_eq!(bits.get_bit(1), Some(1));
+        assert_eq!(bits.get_bit(2), Some(1));
+        assert_eq!(bits.get_bit(3), Some(0));
+        assert_eq!(bits.get_bit(4), Some(1));
+
+        bits.set_bit(17, true);
+        assert_eq!(bits.get_bit(17), Some(1));
+        assert_eq!(bits.get_bit(32), None);
+        assert_eq!(bits.0.len(), 3);
+    }
 }
