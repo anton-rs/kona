@@ -1,7 +1,10 @@
 //! This module contains the eip2930 transaction data type for a span batch.
 
 use crate::types::eip2930::AccessList;
-use alloy_primitives::U256;
+use crate::types::{
+    network::Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930, TxEnvelope, TxKind,
+};
+use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, Decodable, Encodable, Header};
 
 /// The transaction data for an EIP-2930 transaction within a span batch.
@@ -15,6 +18,43 @@ pub struct SpanBatchEip2930TransactionData {
     pub data: Bytes,
     /// Access list, used to pre-warm storage slots through static declaration.
     pub access_list: AccessList,
+}
+
+impl SpanBatchEip2930TransactionData {
+    /// Converts [SpanBatchEip1559TransactionData] into a [TxEnvelope].
+    pub fn to_enveloped_tx(
+        &self,
+        nonce: u64,
+        gas: u64,
+        to: Option<Address>,
+        chain_id: u64,
+        signature: Signature,
+    ) -> Result<TxEnvelope, SpanBatchError> {
+        let access_list_tx = TxEip2930 {
+            chain_id,
+            nonce,
+            gas_price: u128::from_be_bytes(
+                self.gas_price.to_be_bytes::<32>()[16..]
+                    .try_into()
+                    .map_err(|_| {
+                        SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
+                    })?,
+            ),
+            gas_limit: gas,
+            to: if let Some(to) = to {
+                TxKind::Call(to)
+            } else {
+                TxKind::Create
+            },
+            value: self.value,
+            input: self.data.clone().into(),
+            access_list: self.access_list.clone(),
+        };
+        let signature_hash = access_list_tx.signature_hash();
+        let signed_access_list_tx =
+            Signed::new_unchecked(access_list_tx, signature, signature_hash);
+        Ok(TxEnvelope::Eip2930(signed_access_list_tx))
+    }
 }
 
 impl Encodable for SpanBatchEip2930TransactionData {
