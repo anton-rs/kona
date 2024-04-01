@@ -6,6 +6,7 @@ use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
+use alloc::sync::Arc;
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
 use anyhow::anyhow;
@@ -31,7 +32,7 @@ where
     CP: ChainProvider + Debug,
 {
     /// The rollup configuration.
-    cfg: RollupConfig,
+    cfg: Arc<RollupConfig>,
     /// Map of channels by ID.
     channels: HashMap<ChannelID, Channel>,
     /// Channels in FIFO order.
@@ -48,7 +49,7 @@ where
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP>) -> Self {
         Self {
-            cfg,
+            cfg: Arc::new(cfg),
             channels: HashMap::new(),
             channel_queue: VecDeque::new(),
             prev,

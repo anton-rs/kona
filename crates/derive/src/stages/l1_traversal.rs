@@ -5,11 +5,12 @@ use crate::{
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
 /// The L1 traversal stage of the derivation pipeline.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct L1Traversal<Provider: ChainProvider> {
     /// The current block in the traversal stage.
     pub(crate) block: Option<BlockInfo>,
@@ -20,7 +21,7 @@ pub struct L1Traversal<Provider: ChainProvider> {
     /// The system config
     pub system_config: SystemConfig,
     /// The rollup config
-    pub rollup_config: RollupConfig,
+    pub rollup_config: Arc<RollupConfig>,
 }
 
 impl<F: ChainProvider> L1Traversal<F> {
@@ -31,7 +32,7 @@ impl<F: ChainProvider> L1Traversal<F> {
             data_source,
             done: false,
             system_config: SystemConfig::default(),
-            rollup_config: cfg,
+            rollup_config: Arc::new(cfg),
         }
     }
 
