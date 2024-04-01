@@ -88,7 +88,11 @@ impl SpanBatchBits {
             // Shift the bits of the byte to the right, based on the bit index, and
             // mask it with 1 to isolate the bit we're interested in.
             // If the result is not zero, the bit is set to 1, otherwise it's 0.
-            Some(if byte & (1 << bit_index) != 0 { 1 } else { 0 })
+            Some(if byte & (1 << (8 - bit_index)) != 0 {
+                1
+            } else {
+                0
+            })
         } else {
             // Return None if the index is out of bounds
             None
@@ -111,10 +115,10 @@ impl SpanBatchBits {
 
         if value {
             // Set the bit to 1
-            *byte |= 1 << bit_index;
+            *byte |= 1 << (8 - bit_index);
         } else {
             // Set the bit to 0
-            *byte &= !(1 << bit_index);
+            *byte &= !(1 << (8 - bit_index));
         }
     }
 }

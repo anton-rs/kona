@@ -358,13 +358,17 @@ impl SpanBatchTransactions {
             let gas = self
                 .tx_gases
                 .get(idx as usize)
-                .ok_or(SpanBatchError::Decoding(SpanDecodingError::L1OriginNumber))?;
+                .ok_or(SpanBatchError::Decoding(
+                    SpanDecodingError::InvalidTransactionData,
+                ))?;
             let bit = self.contract_creation_bits.get_bit(idx as usize).ok_or(
                 SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData),
             )?;
             let to = if bit == 0 {
                 if self.tx_tos.len() <= to_idx {
-                    return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData));
+                    return Err(SpanBatchError::Decoding(
+                        SpanDecodingError::InvalidTransactionData,
+                    ));
                 }
                 to_idx += 1;
                 Some(self.tx_tos[to_idx - 1])
