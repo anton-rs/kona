@@ -10,11 +10,12 @@ pub(crate) const SPAN_BATCH_TYPE: u8 = 0x02;
 
 /// The Batch Type.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(u8)]
 pub enum BatchType {
     /// Single Batch.
-    Single = SINGLE_BATCH_TYPE as isize,
+    Single = SINGLE_BATCH_TYPE,
     /// Span Batch.
-    Span = SPAN_BATCH_TYPE as isize,
+    Span = SPAN_BATCH_TYPE,
 }
 
 impl From<u8> for BatchType {
