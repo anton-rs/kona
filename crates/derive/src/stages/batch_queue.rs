@@ -1,13 +1,14 @@
 //! This module contains the `BatchQueue` stage implementation.
 
-use crate::stages::channel_reader::ChannelReader;
-use crate::traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher};
-use crate::types::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch};
-use crate::types::{BlockInfo, L2BlockRef};
-use crate::types::{RollupConfig, SystemConfig};
-use crate::types::{StageError, StageResult};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use crate::{
+    stages::channel_reader::ChannelReader,
+    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher},
+    types::{
+        Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockRef, RollupConfig,
+        SingleBatch, StageError, StageResult, SystemConfig,
+    },
+};
+use alloc::{boxed::Box, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -134,9 +135,8 @@ where
         // It is the future origin that gets saved into the l1 blocks array.
         // We always update the origin of this stage if it's not the same so
         // after the update code runs, this is consistent.
-        let origin_behind = self
-            .origin
-            .map_or(true, |origin| origin.number < parent.l1_origin.number);
+        let origin_behind =
+            self.origin.map_or(true, |origin| origin.number < parent.l1_origin.number);
 
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
@@ -242,7 +242,8 @@ where
         let next_timestamp = parent.info.timestamp + self.cfg.block_time;
 
         // Go over all batches, in order of inclusion, and find the first batch we can accept.
-        // Filter in-place by only remembering the batches that may be processed in the future, or any undecided ones.
+        // Filter in-place by only remembering the batches that may be processed in the future, or
+        // any undecided ones.
         let mut remaining = Vec::new();
         for i in 0..self.batches.len() {
             let batch = &self.batches[i];
@@ -253,13 +254,14 @@ where
                 }
                 BatchValidity::Drop => {
                     // TODO: Log the drop reason with WARN level.
-                    // batch.log_context(self.log).warn("Dropping batch", "parent", parent.id(), "parent_time", parent.info.time);
+                    // batch.log_context(self.log).warn("Dropping batch", "parent", parent.id(),
+                    // "parent_time", parent.info.time);
                     continue;
                 }
                 BatchValidity::Accept => {
                     next_batch = Some(batch.clone());
-                    // Don't keep the current batch in the remaining items since we are processing it now,
-                    // but retain every batch we didn't get to yet.
+                    // Don't keep the current batch in the remaining items since we are processing
+                    // it now, but retain every batch we didn't get to yet.
                     remaining.extend_from_slice(&self.batches[i + 1..]);
                     break;
                 }
@@ -280,8 +282,8 @@ where
         // If the current epoch is too old compared to the L1 block we are at,
         // i.e. if the sequence window expired, we create empty batches for the current epoch
         let expiry_epoch = epoch.number + self.cfg.seq_window_size;
-        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty)
-            || expiry_epoch < parent.l1_origin.number;
+        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty) ||
+            expiry_epoch < parent.l1_origin.number;
         let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
 
         // TODO: Log the empty batch generation.
@@ -301,8 +303,8 @@ where
         let next_epoch = self.l1_blocks[1];
 
         // Fill with empty L2 blocks of the same epoch until we meet the time of the next L1 origin,
-        // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always generate a
-        // batch to ensure that we at least have one batch per epoch.
+        // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
+        // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
             // TODO: log next batch generation.
             return Ok(Batch::Single(SingleBatch {
@@ -317,7 +319,8 @@ where
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
         // TODO: log that the epoch is advanced.
-        // bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp, "next_epoch_time", nextEpoch.Time)
+        // bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp,
+        // "next_epoch_time", nextEpoch.Time)
         self.l1_blocks.remove(0);
         Err(StageError::Eof)
     }
@@ -331,18 +334,10 @@ where
             )
             .into());
         }
-        let origin = self
-            .origin
-            .ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
-        let data = BatchWithInclusionBlock {
-            inclusion_block: origin,
-            batch,
-        };
+        let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
+        let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
-        if data
-            .check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher)
-            .is_drop()
-        {
+        if data.check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher).is_drop() {
             return Ok(());
         }
         self.batches.push(data);

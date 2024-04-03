@@ -1,16 +1,8 @@
 //! This module contains all of the types used within the derivation pipeline.
 
 use alloc::vec::Vec;
+use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
-
-mod batch;
-pub use batch::{Batch, BatchWithInclusionBlock, SpanBatch};
-
-mod batch_type;
-pub use batch_type::BatchType;
-
-mod batch_validity;
-pub use batch_validity::BatchValidity;
 
 mod system_config;
 pub use system_config::{
@@ -21,29 +13,28 @@ pub use system_config::{
 mod rollup_config;
 pub use rollup_config::RollupConfig;
 
-mod transaction;
-pub use transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxLegacy, TxType};
+pub mod batch;
+pub use batch::{
+    Batch, BatchType, BatchValidity, BatchWithInclusionBlock, RawSpanBatch, SingleBatch, SpanBatch,
+    SpanBatchBits, SpanBatchBuilder, SpanBatchEip1559TransactionData,
+    SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
+    SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchTransactionData,
+    SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
+};
 
-mod network;
-pub use network::{Receipt as NetworkReceipt, Sealable, Sealed, Transaction, TxKind};
-
-mod header;
-pub use header::{Header, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
-
-mod block;
-pub use block::{BlockID, BlockId, BlockInfo, BlockKind, L2BlockRef};
-
-mod receipt;
-pub use receipt::{Receipt, ReceiptWithBloom};
+mod alloy;
+pub use alloy::{
+    calc_blob_gasprice, calc_excess_blob_gas, calc_next_block_base_fee, eip1559, eip2718, eip2930,
+    eip4788, eip4844, Header, NetworkReceipt, Receipt, ReceiptWithBloom, Sealable, Sealed, Signed,
+    Transaction, TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxKind, TxLegacy, TxType,
+    EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH,
+};
 
 mod payload;
 pub use payload::{ExecutionPayload, ExecutionPayloadEnvelope};
 
-mod eips;
-pub use eips::{
-    calc_blob_gasprice, calc_excess_blob_gas, calc_next_block_base_fee, eip1559, eip2718, eip2930,
-    eip4788, eip4844,
-};
+mod block;
+pub use block::{BlockID, BlockId, BlockInfo, BlockKind, L2BlockRef};
 
 mod genesis;
 pub use genesis::Genesis;
@@ -55,14 +46,11 @@ mod channel;
 pub use channel::Channel;
 
 mod errors;
-pub use errors::{StageError, StageResult};
-
-mod single_batch;
-pub use single_batch::SingleBatch;
+pub use errors::{DecodeError, StageError, StageResult};
 
 /// A raw transaction
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RawTransaction(pub Vec<u8>);
+pub struct RawTransaction(pub Bytes);
 
 impl RawTransaction {
     /// Returns if the transaction is empty
@@ -85,8 +73,14 @@ impl Encodable for RawTransaction {
 impl Decodable for RawTransaction {
     /// Decodes RLP encoded bytes into [RawTransaction] bytes
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let tx_bytes: Vec<u8> = Decodable::decode(buf)?;
+        let tx_bytes = Bytes::decode(buf)?;
         Ok(Self(tx_bytes))
+    }
+}
+
+impl AsRef<[u8]> for RawTransaction {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }
 

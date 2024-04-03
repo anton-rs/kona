@@ -1,8 +1,8 @@
 use crate::{cannon::syscall, BasicKernelInterface, FileDescriptor, RegisterSize};
 use anyhow::{anyhow, Result};
 
-/// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture. Exposes a safe
-/// interface for performing IO operations within the FPVM kernel.
+/// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target
+/// architecture. Exposes a safe interface for performing IO operations within the FPVM kernel.
 #[derive(Debug)]
 pub struct CannonIO;
 
@@ -11,9 +11,9 @@ pub struct CannonIO;
 /// See [Cannon System Call Specification](https://specs.optimism.io/experimental/fault-proof/cannon-fault-proof-vm.html#syscalls)
 ///
 /// **Note**: This is not an exhaustive list of system calls available to the `client` program,
-/// only the ones necessary for the [BasicKernelInterface] trait implementation. If an extension trait for
-/// the [BasicKernelInterface] trait is created for the `Cannon` kernel, this list should be extended
-/// accordingly.
+/// only the ones necessary for the [BasicKernelInterface] trait implementation. If an extension
+/// trait for the [BasicKernelInterface] trait is created for the `Cannon` kernel, this list should
+/// be extended accordingly.
 #[repr(u32)]
 pub(crate) enum SyscallNumber {
     /// Sets the Exited and ExitCode states to true and $a0 respectively.

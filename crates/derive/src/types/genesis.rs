@@ -13,7 +13,7 @@ pub struct Genesis {
     /// Timestamp of the L2 block.
     pub timestamp: u64,
     /// Initial system configuration values.
-    /// The L2 genesis block may not include transactions, and thus cannot encode the config values,
-    /// unlike later L2 blocks.
+    /// The L2 genesis block may not include transactions, and thus cannot encode the config
+    /// values, unlike later L2 blocks.
     pub system_config: SystemConfig,
 }

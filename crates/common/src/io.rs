@@ -85,22 +85,19 @@ mod native_io {
             // forget the file descriptor so that the `Drop` impl doesn't close it.
             std::mem::forget(file);
 
-            n.try_into()
-                .map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
+            n.try_into().map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
             let raw_fd: RegisterSize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
-            let n = file
-                .read(buf)
-                .map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
+            let n =
+                file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
 
             // forget the file descriptor so that the `Drop` impl doesn't close it.
             std::mem::forget(file);
 
-            n.try_into()
-                .map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
+            n.try_into().map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
         }
 
         fn exit(code: RegisterSize) -> ! {

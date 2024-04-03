@@ -6,7 +6,7 @@ use crate::{
     traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
-use alloc::{boxed::Box, collections::VecDeque};
+use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -22,8 +22,8 @@ use hashbrown::HashMap;
 /// Note: we prune before we ingest data.
 /// As we switch between ingesting data & reading, the prune step occurs at an odd point
 /// Specifically, the channel bank is not allowed to become too large between successive calls
-/// to `IngestData`. This means that we can do an ingest and then do a read while becoming too large.
-/// [ChannelBank] buffers channel frames, and emits full channel data
+/// to `IngestData`. This means that we can do an ingest and then do a read while becoming too
+/// large. [ChannelBank] buffers channel frames, and emits full channel data
 #[derive(Debug)]
 pub struct ChannelBank<DAP, CP>
 where
@@ -31,7 +31,7 @@ where
     CP: ChainProvider + Debug,
 {
     /// The rollup configuration.
-    cfg: RollupConfig,
+    cfg: Arc<RollupConfig>,
     /// Map of channels by ID.
     channels: HashMap<ChannelID, Channel>,
     /// Channels in FIFO order.
@@ -47,12 +47,7 @@ where
 {
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP>) -> Self {
-        Self {
-            cfg,
-            channels: HashMap::new(),
-            channel_queue: VecDeque::new(),
-            prev,
-        }
+        Self { cfg: Arc::new(cfg), channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
     /// Returns the L1 origin [BlockInfo].
@@ -70,14 +65,8 @@ where
     pub fn prune(&mut self) -> StageResult<()> {
         let mut total_size = self.size();
         while total_size > MAX_CHANNEL_BANK_SIZE {
-            let id = self
-                .channel_queue
-                .pop_front()
-                .ok_or(anyhow!("No channel to prune"))?;
-            let channel = self
-                .channels
-                .remove(&id)
-                .ok_or(anyhow!("Could not find channel"))?;
+            let id = self.channel_queue.pop_front().ok_or(anyhow!("No channel to prune"))?;
+            let channel = self.channels.remove(&id).ok_or(anyhow!("Could not find channel"))?;
             total_size -= channel.size();
         }
         Ok(())
@@ -119,10 +108,7 @@ where
         // Return an `Ok(None)` if the first channel is timed out. There may be more timed
         // out channels at the head of the queue and we want to remove them all.
         let first = self.channel_queue[0];
-        let channel = self
-            .channels
-            .get(&first)
-            .ok_or(anyhow!("Channel not found"))?;
+        let channel = self.channels.get(&first).ok_or(anyhow!("Channel not found"))?;
         let origin = self.origin().ok_or(anyhow!("No origin present"))?;
 
         // Remove all timed out channels from the front of the `channel_queue`.
@@ -132,11 +118,12 @@ where
             return Ok(None);
         }
 
-        // At this point we have removed all timed out channels from the front of the `channel_queue`.
-        // Pre-Canyon we simply check the first index.
+        // At this point we have removed all timed out channels from the front of the
+        // `channel_queue`. Pre-Canyon we simply check the first index.
         // Post-Canyon we read the entire channelQueue for the first ready channel.
         // If no channel is available, we return StageError::Eof.
-        // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2 timestamp.
+        // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2
+        // timestamp.
         if !self.cfg.is_canyon_active(origin.timestamp) {
             return self.try_read_channel_at_index(0).map(Some);
         }
@@ -149,8 +136,9 @@ where
         }
     }
 
-    /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out of the channel bank prior to
-    /// loading data in (unlike most other stages). This is to ensure maintain consistency around channel bank pruning which depends upon the order
+    /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out
+    /// of the channel bank prior to loading data in (unlike most other stages). This is to
+    /// ensure maintain consistency around channel bank pruning which depends upon the order
     /// of operations.
     pub async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         match self.read() {
@@ -169,15 +157,12 @@ where
         Err(StageError::NotEnoughData)
     }
 
-    /// Attempts to read the channel at the specified index. If the channel is not ready or timed out,
-    /// it will return an error.
+    /// Attempts to read the channel at the specified index. If the channel is not ready or timed
+    /// out, it will return an error.
     /// If the channel read was successful, it will remove the channel from the channel queue.
     fn try_read_channel_at_index(&mut self, index: usize) -> StageResult<Bytes> {
         let channel_id = self.channel_queue[index];
-        let channel = self
-            .channels
-            .get(&channel_id)
-            .ok_or(anyhow!("Channel not found"))?;
+        let channel = self.channels.get(&channel_id).ok_or(anyhow!("Channel not found"))?;
         let origin = self.origin().ok_or(anyhow!("No origin present"))?;
 
         let timed_out = channel.open_block_number() + self.cfg.channel_timeout < origin.number;
@@ -209,10 +194,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stages::frame_queue::tests::new_test_frames;
-    use crate::stages::l1_retrieval::L1Retrieval;
-    use crate::stages::l1_traversal::tests::new_test_traversal;
-    use crate::traits::test_utils::TestDAP;
+    use crate::{
+        stages::{
+            frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval,
+            l1_traversal::tests::new_test_traversal,
+        },
+        traits::test_utils::TestDAP,
+    };
     use alloc::vec;
 
     #[test]

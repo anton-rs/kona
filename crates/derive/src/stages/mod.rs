@@ -1,6 +1,6 @@
-//! This module contains each stage of the derivation pipeline, and offers a high-level API to functionally
-//! apply each stage's output as an input to the next stage, until finally arriving at the produced execution
-//! payloads.
+//! This module contains each stage of the derivation pipeline, and offers a high-level API to
+//! functionally apply each stage's output as an input to the next stage, until finally arriving at
+//! the produced execution payloads.
 //!
 //! **Stages:**
 //! 1. L1 Traversal

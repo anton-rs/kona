@@ -61,9 +61,7 @@ pub(crate) unsafe fn syscall1(n: RegisterSize, arg1: RegisterSize) -> RegisterSi
         options(nostack, preserves_flags)
     );
 
-    (err == 0)
-        .then_some(ret)
-        .unwrap_or_else(|| ret.wrapping_neg())
+    (err == 0).then_some(ret).unwrap_or_else(|| ret.wrapping_neg())
 }
 
 /// Issues a raw system call with 3 arguments. (e.g. read, write)
@@ -97,16 +95,12 @@ pub(crate) unsafe fn syscall3(
         options(nostack, preserves_flags)
     );
 
-    let value = (err == 0)
-        .then_some(ret)
-        .unwrap_or_else(|| ret.wrapping_neg());
+    let value = (err == 0).then_some(ret).unwrap_or_else(|| ret.wrapping_neg());
 
-    (value <= -4096isize as RegisterSize)
-        .then_some(value)
-        .ok_or_else(|| {
-            // Truncation of the error value is guaranteed to never occur due to
-            // the above check. This is the same check that musl uses:
-            // https://git.musl-libc.org/cgit/musl/tree/src/internal/syscall_ret.c?h=v1.1.15
-            -(value as i32)
-        })
+    (value <= -4096isize as RegisterSize).then_some(value).ok_or_else(|| {
+        // Truncation of the error value is guaranteed to never occur due to
+        // the above check. This is the same check that musl uses:
+        // https://git.musl-libc.org/cgit/musl/tree/src/internal/syscall_ret.c?h=v1.1.15
+        -(value as i32)
+    })
 }
