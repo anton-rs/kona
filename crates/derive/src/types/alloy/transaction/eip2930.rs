@@ -1,14 +1,14 @@
-use crate::types::network::{Signed, Transaction, TxKind};
+use crate::types::{eip2930::AccessList, Signed, Transaction, TxKind, TxType};
 use alloc::vec::Vec;
 use alloy_primitives::{keccak256, Bytes, ChainId, Signature, U256};
-use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable, Header, Result};
+use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable, Header};
 use core::mem;
 
-/// Legacy transaction.
+/// Transaction with an [`AccessList`] ([EIP-2930](https://eips.ethereum.org/EIPS/eip-2930)).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
-pub struct TxLegacy {
-    /// Added as EIP-155: Simple replay attack protection
-    pub chain_id: Option<ChainId>,
+pub struct TxEip2930 {
+    /// Added as EIP-pub 155: Simple replay attack protection
+    pub chain_id: ChainId,
     /// A scalar value equal to the number of transactions sent by the sender; formally Tn.
     pub nonce: u64,
     /// A scalar value equal to the number of
@@ -33,6 +33,12 @@ pub struct TxLegacy {
     /// in the case of contract creation, as an endowment
     /// to the newly created account; formally Tv.
     pub value: U256,
+    /// The accessList specifies a list of addresses and storage keys;
+    /// these addresses and storage keys are added into the `accessed_addresses`
+    /// and `accessed_storage_keys` global sets (introduced in EIP-2929).
+    /// A gas cost is charged, though at a discount relative to the cost of
+    /// accessing outside the list.
+    pub access_list: AccessList,
     /// Input has two uses depending if transaction is Create or Call (if `to` field is None or
     /// Some). pub init: An unlimited size byte array specifying the
     /// EVM-code for the account initialisation procedure CREATE,
@@ -41,49 +47,75 @@ pub struct TxLegacy {
     pub input: Bytes,
 }
 
-impl TxLegacy {
-    /// The EIP-2718 transaction type.
-    pub const TX_TYPE: isize = 0;
-
-    /// Calculates a heuristic for the in-memory size of the [TxLegacy] transaction.
+impl TxEip2930 {
+    /// Calculates a heuristic for the in-memory size of the [TxEip2930] transaction.
     #[inline]
     pub fn size(&self) -> usize {
-        mem::size_of::<Option<ChainId>>() + // chain_id
+        mem::size_of::<ChainId>() + // chain_id
         mem::size_of::<u64>() + // nonce
         mem::size_of::<u128>() + // gas_price
         mem::size_of::<u64>() + // gas_limit
         self.to.size() + // to
         mem::size_of::<U256>() + // value
+        self.access_list.size() + // access_list
         self.input.len() // input
     }
 
-    /// Outputs the length of the transaction's fields, without a RLP header or length of the
-    /// eip155 fields.
+    /// Decodes the inner [TxEip2930] fields from RLP bytes.
+    ///
+    /// NOTE: This assumes a RLP header has already been decoded, and _just_ decodes the following
+    /// RLP fields in the following order:
+    ///
+    /// - `chain_id`
+    /// - `nonce`
+    /// - `gas_price`
+    /// - `gas_limit`
+    /// - `to`
+    /// - `value`
+    /// - `data` (`input`)
+    /// - `access_list`
+    pub(crate) fn decode_inner(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Ok(Self {
+            chain_id: Decodable::decode(buf)?,
+            nonce: Decodable::decode(buf)?,
+            gas_price: Decodable::decode(buf)?,
+            gas_limit: Decodable::decode(buf)?,
+            to: Decodable::decode(buf)?,
+            value: Decodable::decode(buf)?,
+            input: Decodable::decode(buf)?,
+            access_list: Decodable::decode(buf)?,
+        })
+    }
+
+    /// Outputs the length of the transaction's fields, without a RLP header.
     pub(crate) fn fields_len(&self) -> usize {
         let mut len = 0;
+        len += self.chain_id.length();
         len += self.nonce.length();
         len += self.gas_price.length();
         len += self.gas_limit.length();
         len += self.to.length();
         len += self.value.length();
         len += self.input.0.length();
+        len += self.access_list.length();
         len
     }
 
-    /// Encodes only the transaction's fields into the desired buffer, without a RLP header or
-    /// eip155 fields.
+    /// Encodes only the transaction's fields into the desired buffer, without a RLP header.
     pub(crate) fn encode_fields(&self, out: &mut dyn BufMut) {
+        self.chain_id.encode(out);
         self.nonce.encode(out);
         self.gas_price.encode(out);
         self.gas_limit.encode(out);
         self.to.encode(out);
         self.value.encode(out);
         self.input.0.encode(out);
+        self.access_list.encode(out);
     }
 
     /// Inner encoding function that is used for both rlp [`Encodable`] trait and for calculating
-    /// hash.
-    pub fn encode_with_signature(&self, signature: &Signature, out: &mut dyn alloy_rlp::BufMut) {
+    /// hash that for eip2718 does not require rlp header
+    pub(crate) fn encode_with_signature(&self, signature: &Signature, out: &mut dyn BufMut) {
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
         let header = Header {
             list: true,
@@ -94,126 +126,89 @@ impl TxLegacy {
         signature.write_rlp_vrs(out);
     }
 
-    /// Output the length of the RLP signed transaction encoding.
-    pub fn payload_len_with_signature(&self, signature: &Signature) -> usize {
+    /// Output the length of the RLP signed transaction encoding, _without_ a RLP string header.
+    pub fn payload_len_with_signature_without_header(&self, signature: &Signature) -> usize {
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
-        // 'header length' + 'payload length'
-        length_of_length(payload_length) + payload_length
+        // 'transaction type byte length' + 'header length' + 'payload length'
+        1 + length_of_length(payload_length) + payload_length
     }
 
-    /// Encodes EIP-155 arguments into the desired buffer. Only encodes values
-    /// for legacy transactions.
-    pub(crate) fn encode_eip155_signing_fields(&self, out: &mut dyn BufMut) {
-        // if this is a legacy transaction without a chain ID, it must be pre-EIP-155
-        // and does not need to encode the chain ID for the signature hash encoding
-        if let Some(id) = self.chain_id {
-            // EIP-155 encodes the chain ID and two zeroes
-            id.encode(out);
-            0x00u8.encode(out);
-            0x00u8.encode(out);
-        }
+    /// Output the length of the RLP signed transaction encoding. This encodes with a RLP header.
+    pub fn payload_len_with_signature(&self, signature: &Signature) -> usize {
+        let len = self.payload_len_with_signature_without_header(signature);
+        length_of_length(len) + len
     }
 
-    /// Outputs the length of EIP-155 fields. Only outputs a non-zero value for EIP-155 legacy
-    /// transactions.
-    pub(crate) fn eip155_fields_len(&self) -> usize {
-        if let Some(id) = self.chain_id {
-            // EIP-155 encodes the chain ID and two zeroes, so we add 2 to the length of the chain
-            // ID to get the length of all 3 fields
-            // len(chain_id) + (0x00) + (0x00)
-            id.length() + 2
-        } else {
-            // this is either a pre-EIP-155 legacy transaction or a typed transaction
-            0
-        }
-    }
-
-    /// Decode the RLP fields of the transaction, without decoding an RLP
-    /// header.
-    pub(crate) fn decode_fields(data: &mut &[u8]) -> Result<Self> {
-        Ok(TxLegacy {
-            nonce: Decodable::decode(data)?,
-            gas_price: Decodable::decode(data)?,
-            gas_limit: Decodable::decode(data)?,
-            to: Decodable::decode(data)?,
-            value: Decodable::decode(data)?,
-            input: Decodable::decode(data)?,
-            chain_id: None,
-        })
+    /// Get transaction type.
+    pub const fn tx_type(&self) -> TxType {
+        TxType::Eip2930
     }
 }
 
-impl Encodable for TxLegacy {
+impl Encodable for TxEip2930 {
     fn encode(&self, out: &mut dyn BufMut) {
-        self.encode_for_signing(out)
+        Header {
+            list: true,
+            payload_length: self.fields_len(),
+        }
+        .encode(out);
+        self.encode_fields(out);
     }
 
     fn length(&self) -> usize {
-        let payload_length = self.fields_len() + self.eip155_fields_len();
-        // 'header length' + 'payload length'
+        let payload_length = self.fields_len();
         length_of_length(payload_length) + payload_length
     }
 }
 
-impl Decodable for TxLegacy {
-    fn decode(data: &mut &[u8]) -> Result<Self> {
+impl Decodable for TxEip2930 {
+    fn decode(data: &mut &[u8]) -> alloy_rlp::Result<Self> {
         let header = Header::decode(data)?;
         let remaining_len = data.len();
 
-        let transaction_payload_len = header.payload_length;
-
-        if transaction_payload_len > remaining_len {
+        if header.payload_length > remaining_len {
             return Err(alloy_rlp::Error::InputTooShort);
         }
 
-        let mut transaction = Self::decode_fields(data)?;
-
-        // If we still have data, it should be an eip-155 encoded chain_id
-        if !data.is_empty() {
-            transaction.chain_id = Some(Decodable::decode(data)?);
-            let _: U256 = Decodable::decode(data)?; // r
-            let _: U256 = Decodable::decode(data)?; // s
-        }
-
-        let decoded = remaining_len - data.len();
-        if decoded != transaction_payload_len {
-            return Err(alloy_rlp::Error::UnexpectedLength);
-        }
-
-        Ok(transaction)
+        Self::decode_inner(data)
     }
 }
 
-impl Transaction for TxLegacy {
+impl Transaction for TxEip2930 {
     type Signature = Signature;
     // type Receipt = ReceiptWithBloom;
 
     fn encode_for_signing(&self, out: &mut dyn BufMut) {
+        out.put_u8(self.tx_type() as u8);
         Header {
             list: true,
-            payload_length: self.fields_len() + self.eip155_fields_len(),
+            payload_length: self.fields_len(),
         }
         .encode(out);
         self.encode_fields(out);
-        self.encode_eip155_signing_fields(out);
     }
 
     fn payload_len_for_signature(&self) -> usize {
-        let payload_length = self.fields_len() + self.eip155_fields_len();
-        // 'header length' + 'payload length'
-        length_of_length(payload_length) + payload_length
+        let payload_length = self.fields_len();
+        // 'transaction type byte length' + 'header length' + 'payload length'
+        1 + length_of_length(payload_length) + payload_length
     }
 
     fn into_signed(self, signature: Signature) -> Signed<Self> {
-        let payload_length = self.fields_len() + signature.rlp_vrs_len();
+        let payload_length = 1 + self.fields_len() + signature.rlp_vrs_len();
         let mut buf = Vec::with_capacity(payload_length);
-        self.encode_with_signature(&signature, &mut buf);
+        buf.put_u8(TxType::Eip2930 as u8);
+        self.encode_signed(&signature, &mut buf);
         let hash = keccak256(&buf);
-        Signed::new_unchecked(self, signature, hash)
+
+        // Drop any v chain id value to ensure the signature format is correct at the time of
+        // combination for an EIP-2930 transaction. V should indicate the y-parity of the
+        // signature.
+        Signed::new_unchecked(self, signature.with_parity_bool(), hash)
     }
 
     fn encode_signed(&self, signature: &Signature, out: &mut dyn BufMut) {
-        self.encode_with_signature(signature, out);
+        self.encode_with_signature(signature, out)
     }
 
     fn decode_signed(buf: &mut &[u8]) -> alloy_rlp::Result<Signed<Self>> {
@@ -221,13 +216,9 @@ impl Transaction for TxLegacy {
         if !header.list {
             return Err(alloy_rlp::Error::UnexpectedString);
         }
-        let mut tx = Self::decode_fields(buf)?;
 
+        let tx = Self::decode_inner(buf)?;
         let signature = Signature::decode_rlp_vrs(buf)?;
-
-        let v = signature.v();
-
-        tx.chain_id = v.chain_id();
 
         Ok(tx.into_signed(signature))
     }
@@ -240,8 +231,8 @@ impl Transaction for TxLegacy {
         &mut self.input
     }
 
-    fn set_input(&mut self, data: Bytes) {
-        self.input = data;
+    fn set_input(&mut self, input: Bytes) {
+        self.input = input;
     }
 
     fn to(&self) -> TxKind {
@@ -261,11 +252,11 @@ impl Transaction for TxLegacy {
     }
 
     fn chain_id(&self) -> Option<ChainId> {
-        self.chain_id
+        Some(self.chain_id)
     }
 
     fn set_chain_id(&mut self, chain_id: ChainId) {
-        self.chain_id = Some(chain_id);
+        self.chain_id = chain_id;
     }
 
     fn nonce(&self) -> u64 {
@@ -280,8 +271,8 @@ impl Transaction for TxLegacy {
         self.gas_limit
     }
 
-    fn set_gas_limit(&mut self, gas_limit: u64) {
-        self.gas_limit = gas_limit;
+    fn set_gas_limit(&mut self, limit: u64) {
+        self.gas_limit = limit;
     }
 
     fn gas_price(&self) -> Option<U256> {

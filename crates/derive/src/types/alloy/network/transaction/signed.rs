@@ -1,4 +1,4 @@
-use crate::types::network::Transaction;
+use crate::types::Transaction;
 use alloc::{vec, vec::Vec};
 use alloy_primitives::{Signature, B256};
 use alloy_rlp::BufMut;

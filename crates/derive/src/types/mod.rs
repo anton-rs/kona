@@ -4,12 +4,6 @@ use alloc::vec::Vec;
 use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 
-mod batch;
-pub use batch::Batch;
-
-mod batch_type;
-pub use batch_type::BatchType;
-
 mod system_config;
 pub use system_config::{
     SystemAccounts, SystemConfig, SystemConfigUpdateType, CONFIG_UPDATE_EVENT_VERSION_0,
@@ -21,33 +15,23 @@ pub use rollup_config::RollupConfig;
 
 pub mod batch;
 pub use batch::{
-    RawSpanBatch, SingleBatch, SpanBatch, SpanBatchBits, SpanBatchBuilder,
+    Batch, BatchType, RawSpanBatch, SingleBatch, SpanBatch, SpanBatchBits, SpanBatchBuilder,
     SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData, SpanBatchElement,
     SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix,
     SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
     SPAN_BATCH_TYPE,
 };
 
-mod transaction;
-pub use transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxLegacy, TxType};
-
-mod network;
-pub use network::{Receipt as NetworkReceipt, Sealable, Sealed, Transaction, TxKind};
-
-mod header;
-pub use header::{Header, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
+mod alloy;
+pub use alloy::{
+    calc_blob_gasprice, calc_excess_blob_gas, calc_next_block_base_fee, eip1559, eip2718, eip2930,
+    eip4788, eip4844, Header, NetworkReceipt, Receipt, ReceiptWithBloom, Sealable, Sealed, Signed,
+    Transaction, TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxKind, TxLegacy, TxType,
+    EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH,
+};
 
 mod block;
 pub use block::{BlockId, BlockInfo, BlockKind};
-
-mod receipt;
-pub use receipt::{Receipt, ReceiptWithBloom};
-
-mod eips;
-pub use eips::{
-    calc_blob_gasprice, calc_excess_blob_gas, calc_next_block_base_fee, eip1559, eip2718, eip2930,
-    eip4788, eip4844,
-};
 
 mod genesis;
 pub use genesis::Genesis;

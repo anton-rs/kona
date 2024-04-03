@@ -57,7 +57,7 @@ mod test {
     use alloc::vec::Vec;
 
     #[test]
-    fn test_batch_type() {
+    fn test_batch_type_rlp_roundtrip() {
         let batch_type = BatchType::Single;
         let mut buf = Vec::new();
         batch_type.encode(&mut buf);

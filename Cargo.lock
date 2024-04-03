@@ -360,6 +360,7 @@ dependencies = [
  "async-trait",
  "hashbrown",
  "miniz_oxide",
+ "proptest",
  "serde",
  "tokio",
  "unsigned-varint",

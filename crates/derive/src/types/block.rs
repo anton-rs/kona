@@ -65,30 +65,3 @@ pub enum BlockKind {
     /// The latest finalized block.
     Finalized,
 }
-
-// /// A Block with Transactions
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-// #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-// #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-// pub struct Block {
-//     /// Header of the block.
-//     #[serde(flatten)]
-//     pub header: Header,
-//     /// Uncles' hashes.
-//     pub uncles: Vec<B256>,
-//     /// Block Transactions. In the case of an uncle block, this field is not included in RPC
-//     /// responses, and when deserialized, it will be set to [BlockTransactions::Uncle].
-//     #[serde(
-//         skip_serializing_if = "BlockTransactions::is_uncle",
-//         default = "BlockTransactions::uncle"
-//     )]
-//     pub transactions: BlockTransactions,
-//     /// Integer the size of this block in bytes.
-//     pub size: Option<U256>,
-//     /// Withdrawals in the block.
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub withdrawals: Option<Vec<Withdrawal>>,
-//     /// Support for arbitrary additional fields.
-//     #[serde(flatten)]
-//     pub other: OtherFields,
-// }

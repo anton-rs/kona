@@ -1,11 +1,10 @@
 //! This module contains the receipt types used within the derivation pipeline.
 
-use core::cmp::Ordering;
-
-use crate::types::transaction::TxType;
+use crate::types::TxType;
 use alloc::vec::Vec;
 use alloy_primitives::{Bloom, Log};
 use alloy_rlp::{length_of_length, Buf, BufMut, BytesMut, Decodable, Encodable};
+use core::cmp::Ordering;
 
 /// Receipt containing result of transaction execution.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

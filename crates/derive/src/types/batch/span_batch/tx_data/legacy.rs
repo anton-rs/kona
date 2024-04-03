@@ -1,7 +1,7 @@
 //! This module contains the legacy transaction data type for a span batch.
 
 use crate::types::{
-    network::Signed, SpanBatchError, SpanDecodingError, Transaction, TxEnvelope, TxKind, TxLegacy,
+    Signed, SpanBatchError, SpanDecodingError, Transaction, TxEnvelope, TxKind, TxLegacy,
 };
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};

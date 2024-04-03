@@ -2,7 +2,7 @@
 
 use crate::types::eip2930::AccessList;
 use crate::types::{
-    network::Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930, TxEnvelope, TxKind,
+    Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930, TxEnvelope, TxKind,
 };
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
