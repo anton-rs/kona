@@ -2,6 +2,8 @@
 
 use core::fmt::Display;
 
+use super::SpanBatchError;
+
 /// An error that is thrown within the stages of the derivation pipeline.
 #[derive(Debug)]
 pub enum StageError {
@@ -51,6 +53,8 @@ pub enum DecodeError {
     EmptyBuffer,
     /// Alloy RLP Encoding Error.
     AlloyRlpError(alloy_rlp::Error),
+    /// Span Batch Error.
+    SpanBatchError(SpanBatchError),
 }
 
 impl From<alloy_rlp::Error> for DecodeError {
@@ -74,6 +78,7 @@ impl Display for DecodeError {
         match self {
             DecodeError::EmptyBuffer => write!(f, "Empty buffer"),
             DecodeError::AlloyRlpError(e) => write!(f, "Alloy RLP Decoding Error: {}", e),
+            DecodeError::SpanBatchError(e) => write!(f, "Span Batch Decoding Error: {:?}", e),
         }
     }
 }

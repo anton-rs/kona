@@ -3,10 +3,10 @@
 use alloy_rlp::{Decodable, Encodable};
 
 /// The single batch type identifier.
-pub(crate) const SINGLE_BATCH_TYPE: u8 = 0x01;
+pub(crate) const SINGLE_BATCH_TYPE: u8 = 0x00;
 
 /// The span batch type identifier.
-pub(crate) const SPAN_BATCH_TYPE: u8 = 0x02;
+pub(crate) const SPAN_BATCH_TYPE: u8 = 0x01;
 
 /// The Batch Type.
 #[derive(Debug, Clone, PartialEq, Eq)]

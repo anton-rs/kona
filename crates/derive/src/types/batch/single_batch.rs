@@ -3,10 +3,10 @@
 use crate::types::RawTransaction;
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
-use alloy_rlp::{RlpDecodable, RlpEncodable};
+use alloy_rlp::{Decodable, Encodable};
 
 /// Represents a single batch: a single encoded L2 block
-#[derive(Debug, Default, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SingleBatch {
     /// Block hash of the previous L2 block. `B256::ZERO` if it has not been set by the Batch Queue.
     pub parent_hash: BlockHash,
@@ -26,6 +26,33 @@ impl SingleBatch {
         self.transactions
             .iter()
             .any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
+    }
+}
+
+impl Encodable for SingleBatch {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        self.parent_hash.encode(out);
+        self.epoch_num.encode(out);
+        self.epoch_hash.encode(out);
+        self.timestamp.encode(out);
+        self.transactions.encode(out);
+    }
+}
+
+impl Decodable for SingleBatch {
+    fn decode(rlp: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let parent_hash = BlockHash::decode(rlp)?;
+        let epoch_num = u64::decode(rlp)?;
+        let epoch_hash = BlockHash::decode(rlp)?;
+        let timestamp = u64::decode(rlp)?;
+        let transactions = Vec::<RawTransaction>::decode(rlp)?;
+        Ok(Self {
+            parent_hash,
+            epoch_num,
+            epoch_hash,
+            timestamp,
+            transactions,
+        })
     }
 }
 

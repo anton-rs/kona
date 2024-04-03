@@ -12,9 +12,6 @@
 
 use crate::MAX_RLP_BYTES_PER_CHANNEL;
 
-/// The span batch type
-pub const SPAN_BATCH_TYPE: u8 = 0x01;
-
 /// The maximum amount of bytes that will be needed to decode every span
 /// batch field. This value cannot be larger than [MAX_RLP_BYTES_PER_CHANNEL]
 /// because single batch cannot be larger than channel size.

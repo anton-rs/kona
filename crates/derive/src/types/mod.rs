@@ -19,7 +19,6 @@ pub use batch::{
     SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData, SpanBatchElement,
     SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix,
     SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
-    SPAN_BATCH_TYPE,
 };
 
 mod alloy;

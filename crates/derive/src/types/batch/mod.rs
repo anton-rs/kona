@@ -12,7 +12,7 @@ pub use span_batch::{
     RawSpanBatch, SpanBatch, SpanBatchBits, SpanBatchBuilder, SpanBatchEip1559TransactionData,
     SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
     SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchTransactionData,
-    SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE, SPAN_BATCH_TYPE,
+    SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
 };
 
 mod single_batch;
@@ -20,11 +20,12 @@ pub use single_batch::SingleBatch;
 
 /// A Batch.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum Batch {
     /// A single batch
     Single(SingleBatch),
     /// Span Batches
-    Span(SpanBatch),
+    Span(RawSpanBatch),
 }
 
 impl Batch {
@@ -35,9 +36,7 @@ impl Batch {
                 single_batch.encode(w);
                 Ok(())
             }
-            Self::Span(_span_batch) => {
-                unimplemented!()
-            }
+            Self::Span(span_batch) => span_batch.encode(w).map_err(DecodeError::SpanBatchError),
         }
     }
 
@@ -57,7 +56,8 @@ impl Batch {
                 Ok(Batch::Single(single_batch))
             }
             BatchType::Span => {
-                unimplemented!()
+                let span_batch = RawSpanBatch::decode(r).map_err(DecodeError::SpanBatchError)?;
+                Ok(Batch::Span(span_batch))
             }
         }
     }

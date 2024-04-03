@@ -3,8 +3,8 @@
 use alloc::vec::Vec;
 
 use crate::types::{
-    RawTransaction, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix, SpanDecodingError,
-    SPAN_BATCH_TYPE,
+    BatchType, RawTransaction, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+    SpanDecodingError,
 };
 
 use super::{SpanBatch, SpanBatchError};
@@ -20,8 +20,8 @@ pub struct RawSpanBatch {
 
 impl RawSpanBatch {
     /// Returns the batch type
-    pub fn get_batch_type(&self) -> u8 {
-        SPAN_BATCH_TYPE
+    pub fn get_batch_type(&self) -> BatchType {
+        BatchType::Span
     }
 
     /// Encodes the [RawSpanBatch] into a writer.
