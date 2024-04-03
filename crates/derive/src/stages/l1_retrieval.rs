@@ -39,12 +39,7 @@ where
 {
     /// Creates a new L1 retrieval stage with the given data availability provider and previous stage.
     pub fn new(prev: L1Traversal<CP, T>, provider: DAP, telemetry: T) -> Self {
-        Self {
-            prev,
-            telemetry,
-            provider,
-            data: None,
-        }
+        Self { prev, telemetry, provider, data: None }
     }
 
     /// Returns the current L1 block in the traversal stage, if it exists.
@@ -65,11 +60,8 @@ where
                 .prev
                 .next_l1_block()?
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
-            self.data = Some(
-                self.provider
-                    .open_data(&next, self.prev.system_config.batcher_addr)
-                    .await?,
-            );
+            self.data =
+                Some(self.provider.open_data(&next, self.prev.system_config.batcher_addr).await?);
         }
 
         let data = self.data.as_mut().expect("Cannot be None").next();
@@ -100,8 +92,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stages::l1_traversal::tests::new_test_traversal;
-    use crate::traits::test_utils::{TestDAP, TestIter, TestTelemetry};
+    use crate::{
+        stages::l1_traversal::tests::new_test_traversal,
+        traits::test_utils::{TestDAP, TestIter, TestTelemetry},
+    };
     use alloc::vec;
     use alloy_primitives::Address;
 
@@ -148,12 +142,7 @@ mod tests {
         let traversal = new_test_traversal(false, false);
         let telemetry = TestTelemetry::new();
         let dap = TestDAP { results: vec![] };
-        let mut retrieval = L1Retrieval {
-            prev: traversal,
-            telemetry,
-            provider: dap,
-            data: Some(data),
-        };
+        let mut retrieval = L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
@@ -170,12 +159,7 @@ mod tests {
         let telemetry = TestTelemetry::new();
         let traversal = new_test_traversal(true, true);
         let dap = TestDAP { results: vec![] };
-        let mut retrieval = L1Retrieval {
-            prev: traversal,
-            telemetry,
-            provider: dap,
-            data: Some(data),
-        };
+        let mut retrieval = L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap_err();
         assert_eq!(data, StageError::Eof);
         assert!(retrieval.data.is_none());

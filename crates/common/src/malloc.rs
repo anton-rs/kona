@@ -20,8 +20,8 @@ pub mod global_allocator {
     /// This function is unsafe because the caller must ensure:
     /// * The allocator has not already been initialized.
     /// * The provided memory region must be valid, non-null, and not used by anything else.
-    /// * After aligning the start and end addresses, the size of the heap must be > 0, or the function
-    ///   will panic.
+    /// * After aligning the start and end addresses, the size of the heap must be > 0, or the
+    ///   function will panic.
     pub unsafe fn init_allocator(heap_start_addr: *mut u8, heap_size: usize) {
         ALLOCATOR.lock().init(heap_start_addr, heap_size)
     }

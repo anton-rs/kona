@@ -37,12 +37,7 @@ pub struct Channel {
 impl Channel {
     /// Create a new [Channel] with the given [ChannelID] and [BlockInfo].
     pub fn new(id: ChannelID, open_block: BlockInfo) -> Self {
-        Self {
-            id,
-            open_block,
-            inputs: HashMap::new(),
-            ..Default::default()
-        }
+        Self { id, open_block, inputs: HashMap::new(), ..Default::default() }
     }
 
     /// Add a frame to the channel.
@@ -60,16 +55,10 @@ impl Channel {
             bail!("Frame ID does not match channel ID");
         }
         if frame.is_last && self.closed {
-            bail!(
-                "Cannot add ending frame to a closed channel. Channel ID: {:?}",
-                self.id
-            );
+            bail!("Cannot add ending frame to a closed channel. Channel ID: {:?}", self.id);
         }
         if self.inputs.contains_key(&frame.number) {
-            bail!(
-                "Frame number already exists in channel. Channel ID: {:?}",
-                self.id
-            );
+            bail!("Frame number already exists in channel. Channel ID: {:?}", self.id);
         }
         if self.closed && frame.number >= self.last_frame_number {
             bail!(
@@ -84,7 +73,8 @@ impl Channel {
             self.last_frame_number = frame.number;
             self.closed = true;
 
-            // Prune frames with a higher number than the last frame number when we receive a closing frame.
+            // Prune frames with a higher number than the last frame number when we receive a
+            // closing frame.
             if self.last_frame_number < self.highest_frame_number {
                 self.inputs.retain(|id, frame| {
                     self.estimated_size -= frame.size();
@@ -144,10 +134,7 @@ impl Channel {
     pub fn frame_data(&self) -> Result<Bytes> {
         let mut data = Vec::with_capacity(self.size());
         (0..=self.last_frame_number).try_for_each(|i| {
-            let frame = self
-                .inputs
-                .get(&i)
-                .ok_or_else(|| anyhow!("Frame not found"))?;
+            let frame = self.inputs.get(&i).ok_or_else(|| anyhow!("Frame not found"))?;
             data.extend_from_slice(&frame.data);
             Ok(())
         })?;
@@ -183,8 +170,8 @@ mod test {
         let block = BlockInfo::default();
         let mut channel = Channel::new(id, block);
 
-        if test_case.frames.len() != test_case.should_error.len()
-            || test_case.frames.len() != test_case.sizes.len()
+        if test_case.frames.len() != test_case.should_error.len() ||
+            test_case.frames.len() != test_case.sizes.len()
         {
             panic!("Test case length mismatch");
         }
@@ -206,28 +193,15 @@ mod test {
         let test_cases = [
             FrameValidityTestCase {
                 name: "wrong channel".to_string(),
-                frames: vec![Frame {
-                    id: [0xEE; 16],
-                    ..Default::default()
-                }],
+                frames: vec![Frame { id: [0xEE; 16], ..Default::default() }],
                 should_error: vec![true],
                 sizes: vec![0],
             },
             FrameValidityTestCase {
                 name: "double close".to_string(),
                 frames: vec![
-                    Frame {
-                        id,
-                        is_last: true,
-                        number: 2,
-                        data: b"four".to_vec(),
-                    },
-                    Frame {
-                        id,
-                        is_last: true,
-                        number: 1,
-                        ..Default::default()
-                    },
+                    Frame { id, is_last: true, number: 2, data: b"four".to_vec() },
+                    Frame { id, is_last: true, number: 1, ..Default::default() },
                 ],
                 should_error: vec![false, true],
                 sizes: vec![204, 204],
@@ -235,18 +209,8 @@ mod test {
             FrameValidityTestCase {
                 name: "duplicate frame".to_string(),
                 frames: vec![
-                    Frame {
-                        id,
-                        number: 2,
-                        data: b"four".to_vec(),
-                        ..Default::default()
-                    },
-                    Frame {
-                        id,
-                        number: 2,
-                        data: b"seven".to_vec(),
-                        ..Default::default()
-                    },
+                    Frame { id, number: 2, data: b"four".to_vec(), ..Default::default() },
+                    Frame { id, number: 2, data: b"seven".to_vec(), ..Default::default() },
                 ],
                 should_error: vec![false, true],
                 sizes: vec![204, 204],
@@ -254,18 +218,8 @@ mod test {
             FrameValidityTestCase {
                 name: "duplicate closing frames".to_string(),
                 frames: vec![
-                    Frame {
-                        id,
-                        number: 2,
-                        is_last: true,
-                        data: b"four".to_vec(),
-                    },
-                    Frame {
-                        id,
-                        number: 2,
-                        is_last: true,
-                        data: b"seven".to_vec(),
-                    },
+                    Frame { id, number: 2, is_last: true, data: b"four".to_vec() },
+                    Frame { id, number: 2, is_last: true, data: b"seven".to_vec() },
                 ],
                 should_error: vec![false, true],
                 sizes: vec![204, 204],
@@ -273,18 +227,8 @@ mod test {
             FrameValidityTestCase {
                 name: "frame past closing".to_string(),
                 frames: vec![
-                    Frame {
-                        id,
-                        number: 2,
-                        is_last: true,
-                        data: b"four".to_vec(),
-                    },
-                    Frame {
-                        id,
-                        number: 10,
-                        data: b"seven".to_vec(),
-                        ..Default::default()
-                    },
+                    Frame { id, number: 2, is_last: true, data: b"four".to_vec() },
+                    Frame { id, number: 10, data: b"seven".to_vec(), ..Default::default() },
                 ],
                 should_error: vec![false, true],
                 sizes: vec![204, 204],
@@ -292,18 +236,8 @@ mod test {
             FrameValidityTestCase {
                 name: "prune after close frame".to_string(),
                 frames: vec![
-                    Frame {
-                        id,
-                        number: 10,
-                        is_last: false,
-                        data: b"seven".to_vec(),
-                    },
-                    Frame {
-                        id,
-                        number: 2,
-                        is_last: true,
-                        data: b"four".to_vec(),
-                    },
+                    Frame { id, number: 10, is_last: false, data: b"seven".to_vec() },
+                    Frame { id, number: 2, is_last: true, data: b"four".to_vec() },
                 ],
                 should_error: vec![false, false],
                 sizes: vec![205, 204],
@@ -311,18 +245,8 @@ mod test {
             FrameValidityTestCase {
                 name: "multiple valid frames".to_string(),
                 frames: vec![
-                    Frame {
-                        id,
-                        number: 10,
-                        data: b"seven__".to_vec(),
-                        ..Default::default()
-                    },
-                    Frame {
-                        id,
-                        number: 2,
-                        data: b"four".to_vec(),
-                        ..Default::default()
-                    },
+                    Frame { id, number: 10, data: b"seven__".to_vec(), ..Default::default() },
+                    Frame { id, number: 2, data: b"four".to_vec(), ..Default::default() },
                 ],
                 should_error: vec![false, false],
                 sizes: vec![207, 411],

@@ -4,8 +4,7 @@ use crate::{
     traits::{ChainProvider, LogLevel, ResettableStage, TelemetryProvider},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
-use alloc::boxed::Box;
-use alloc::sync::Arc;
+use alloc::{boxed::Box, sync::Arc};
 use anyhow::anyhow;
 use async_trait::async_trait;
 
@@ -75,11 +74,7 @@ impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
                 return Err(StageError::Eof);
             }
         };
-
-        let next_l1_origin = self
-            .data_source
-            .block_info_by_number(block.number + 1)
-            .await?;
+        let next_l1_origin = self.data_source.block_info_by_number(block.number + 1).await?;
 
         // Check for reorgs
         if block.hash != next_l1_origin.parent_hash {
@@ -92,10 +87,7 @@ impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
         }
 
         // Fetch receipts.
-        let receipts = self
-            .data_source
-            .receipts_by_hash(next_l1_origin.hash)
-            .await?;
+        let receipts = self.data_source.receipts_by_hash(next_l1_origin.hash).await?;
         self.system_config.update_with_receipts(
             receipts.as_slice(),
             &self.rollup_config,
@@ -121,8 +113,10 @@ impl<F: ChainProvider + Send, T: TelemetryProvider + Send> ResettableStage for L
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::traits::test_utils::{TestChainProvider, TestTelemetry};
-    use crate::types::{Receipt, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
+    use crate::{
+        traits::test_utils::{TestChainProvider, TestTelemetry},
+        types::{Receipt, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
+    };
     use alloc::vec;
     use alloy_primitives::{address, b256, hex, Address, Bytes, Log, LogData, B256};
 
@@ -160,10 +154,7 @@ pub(crate) mod tests {
             provider.insert_block(1, block);
         }
         if receipts {
-            let mut receipt = Receipt {
-                success: true,
-                ..Receipt::default()
-            };
+            let mut receipt = Receipt { success: true, ..Receipt::default() };
             let bad = Log::new(
                 Address::from([2; 20]),
                 vec![CONFIG_UPDATE_TOPIC, B256::default()],
@@ -180,10 +171,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_l1_traversal() {
         let mut traversal = new_test_traversal(true, true);
-        assert_eq!(
-            traversal.next_l1_block().unwrap(),
-            Some(BlockInfo::default())
-        );
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
         assert!(traversal.advance_l1_block().await.is_ok());
     }
@@ -191,38 +179,23 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_l1_traversal_missing_receipts() {
         let mut traversal = new_test_traversal(true, false);
-        assert_eq!(
-            traversal.next_l1_block().unwrap(),
-            Some(BlockInfo::default())
-        );
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        matches!(
-            traversal.advance_l1_block().await.unwrap_err(),
-            StageError::Custom(_)
-        );
+        matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::Custom(_));
     }
 
     #[tokio::test]
     async fn test_l1_traversal_missing_blocks() {
         let mut traversal = new_test_traversal(false, false);
-        assert_eq!(
-            traversal.next_l1_block().unwrap(),
-            Some(BlockInfo::default())
-        );
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        matches!(
-            traversal.advance_l1_block().await.unwrap_err(),
-            StageError::Custom(_)
-        );
+        matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::Custom(_));
     }
 
     #[tokio::test]
     async fn test_system_config_updated() {
         let mut traversal = new_test_traversal(true, true);
-        assert_eq!(
-            traversal.next_l1_block().unwrap(),
-            Some(BlockInfo::default())
-        );
+        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
         assert!(traversal.advance_l1_block().await.is_ok());
         let expected = address!("000000000000000000000000000000000000bEEF");
