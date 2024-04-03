@@ -49,7 +49,7 @@ mod channel;
 pub use channel::Channel;
 
 mod errors;
-pub use errors::{StageError, StageResult};
+pub use errors::{DecodeError, StageError, StageResult};
 
 mod single_batch;
 pub use single_batch::SingleBatch;

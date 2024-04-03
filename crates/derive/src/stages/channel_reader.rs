@@ -6,7 +6,6 @@ use crate::{
     types::{Batch, BlockInfo, StageError, StageResult},
 };
 use alloc::vec::Vec;
-use alloy_rlp::Decodable;
 use anyhow::anyhow;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec;
@@ -48,12 +47,12 @@ where
             .as_mut()
             .unwrap()
             .next_batch()
-            .ok_or(anyhow!("no batch"))
+            .ok_or(StageError::NotEnoughData)
         {
             Ok(batch) => Ok(batch),
             Err(e) => {
                 self.next_channel();
-                Err(StageError::Custom(e))
+                Err(e)
             }
         }
     }
@@ -61,7 +60,11 @@ where
     /// Creates the batch reader from available channel data.
     async fn set_batch_reader(&mut self) -> StageResult<()> {
         if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(anyhow!("no channel"))?;
+            let channel = match self.prev.next_data().await {
+                Ok(Some(channel)) => channel,
+                Ok(None) => return Err(anyhow!("no channel").into()),
+                Err(err) => return Err(err),
+            };
             self.next_batch = Some(BatchReader::from(&channel[..]));
         }
         Ok(())
@@ -97,7 +100,7 @@ impl BatchReader {
         if let Some(data) = self.data.take() {
             self.decompressed = decompress_to_vec(&data).ok()?;
         }
-        let batch = Batch::decode(&mut self.decompressed.as_ref()).ok()?;
+        let batch = Batch::try_from(self.decompressed.as_ref()).ok()?;
         Some(batch)
     }
 }

@@ -2,8 +2,9 @@
 
 use super::batch_type::BatchType;
 use super::single_batch::SingleBatch;
+use crate::types::errors::DecodeError;
 
-use alloy_rlp::{Decodable, Encodable};
+use alloy_rlp::Decodable;
 
 // TODO: replace this with a span batch
 /// Span Batch.
@@ -19,34 +20,21 @@ pub enum Batch {
     Span(SpanBatch),
 }
 
-impl Decodable for Batch {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        // The buffer must have at least one identifier byte.
+impl TryFrom<&[u8]> for Batch {
+    type Error = DecodeError;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        let mut buf = bytes;
         if buf.is_empty() {
-            return Err(alloy_rlp::Error::Custom("Empty buffer"));
+            return Err(Self::Error::EmptyBuffer);
         }
         match BatchType::from(buf[0]) {
             BatchType::Single => {
-                let single_batch = SingleBatch::decode(buf)?;
+                let single_batch = SingleBatch::decode(&mut buf)?;
                 Ok(Batch::Single(single_batch))
             }
             BatchType::Span => {
                 // TODO: implement span batch decoding
-                unimplemented!()
-            }
-        }
-    }
-}
-
-impl Encodable for Batch {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        match self {
-            Batch::Single(single_batch) => {
-                BatchType::Single.encode(out);
-                single_batch.encode(out);
-            }
-            Batch::Span(_) => {
-                // TODO: implement span batch encoding
                 unimplemented!()
             }
         }
