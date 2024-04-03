@@ -79,7 +79,7 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        stages::l1_traversal::tests::new_test_traversal, traits::test_utils::TestDAP,
+        stages::l1_traversal::tests::new_populated_test_traversal, traits::test_utils::TestDAP,
         DERIVATION_VERSION_0,
     };
     use alloc::{vec, vec::Vec};
@@ -108,7 +108,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_empty_bytes() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
@@ -119,7 +119,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_no_frames_decoded() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
@@ -130,7 +130,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_wrong_derivation_version() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x01]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
@@ -141,7 +141,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_frame_too_short() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
@@ -153,7 +153,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_single_frame() {
         let data = new_encoded_test_frames(1);
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![Ok(data)] };
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
@@ -167,7 +167,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_multiple_frames() {
         let data = new_encoded_test_frames(3);
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![Ok(data)] };
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);

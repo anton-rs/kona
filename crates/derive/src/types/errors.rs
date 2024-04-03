@@ -1,5 +1,6 @@
 //! This module contains derivation errors thrown within the pipeline.
 
+use alloy_primitives::B256;
 use core::fmt::Display;
 
 use super::SpanBatchError;
@@ -12,12 +13,20 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// The stage detected a block reorg.
+    /// The first argument is the expected block hash.
+    /// The second argument is the paren_hash of the next l1 origin block.
+    ReorgDetected(B256, B256),
     /// Other wildcard error.
     Custom(anyhow::Error),
 }
 
 impl PartialEq<StageError> for StageError {
     fn eq(&self, other: &StageError) -> bool {
+        // if it's a reorg detected check the block hashes
+        if let (StageError::ReorgDetected(a, b), StageError::ReorgDetected(c, d)) = (self, other) {
+            return a == c && b == d;
+        }
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
@@ -41,6 +50,9 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::ReorgDetected(current, next) => {
+                write!(f, "Block reorg detected: {} -> {}", current, next)
+            }
             StageError::Custom(e) => write!(f, "Custom error: {}", e),
         }
     }

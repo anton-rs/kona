@@ -5,7 +5,6 @@ use crate::{
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
-use anyhow::anyhow;
 use async_trait::async_trait;
 
 /// The [L1Traversal] stage of the derivation pipeline.
@@ -75,12 +74,7 @@ impl<F: ChainProvider> L1Traversal<F> {
 
         // Check block hashes for reorgs.
         if block.hash != next_l1_origin.parent_hash {
-            return Err(anyhow!(
-                "Detected L1 reorg from {} to {} with conflicting parent",
-                block.hash,
-                next_l1_origin.hash
-            )
-            .into());
+            return Err(StageError::ReorgDetected(block.hash, next_l1_origin.parent_hash));
         }
 
         // Fetch receipts for the next l1 block and update the system config.
@@ -135,38 +129,48 @@ pub(crate) mod tests {
         }
     }
 
+    pub(crate) fn new_receipts() -> alloc::vec::Vec<Receipt> {
+        let mut receipt = Receipt { success: true, ..Receipt::default() };
+        let bad = Log::new(
+            Address::from([2; 20]),
+            vec![CONFIG_UPDATE_TOPIC, B256::default()],
+            Bytes::default(),
+        )
+        .unwrap();
+        receipt.logs = vec![new_update_batcher_log(), bad, new_update_batcher_log()];
+        vec![receipt.clone(), Receipt::default(), receipt]
+    }
+
     pub(crate) fn new_test_traversal(
-        blocks: bool,
-        receipts: bool,
+        blocks: alloc::vec::Vec<BlockInfo>,
+        receipts: alloc::vec::Vec<Receipt>,
     ) -> L1Traversal<TestChainProvider> {
         let mut provider = TestChainProvider::default();
         let rollup_config = RollupConfig {
             l1_system_config_address: L1_SYS_CONFIG_ADDR,
             ..RollupConfig::default()
         };
-        let block = BlockInfo::default();
-        if blocks {
-            provider.insert_block(0, block);
-            provider.insert_block(1, block);
+        for (i, block) in blocks.iter().enumerate() {
+            provider.insert_block(i as u64, *block);
         }
-        if receipts {
-            let mut receipt = Receipt { success: true, ..Receipt::default() };
-            let bad = Log::new(
-                Address::from([2; 20]),
-                vec![CONFIG_UPDATE_TOPIC, B256::default()],
-                Bytes::default(),
-            )
-            .unwrap();
-            receipt.logs = vec![new_update_batcher_log(), bad, new_update_batcher_log()];
-            let receipts = vec![receipt.clone(), Receipt::default(), receipt];
-            provider.insert_receipts(block.hash, receipts);
+        for (i, receipt) in receipts.iter().enumerate() {
+            let hash = blocks.get(i).map(|b| b.hash).unwrap_or_default();
+            provider.insert_receipts(hash, vec![receipt.clone()]);
         }
         L1Traversal::new(provider, rollup_config)
     }
 
+    pub(crate) fn new_populated_test_traversal() -> L1Traversal<TestChainProvider> {
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let receipts = new_receipts();
+        new_test_traversal(blocks, receipts)
+    }
+
     #[tokio::test]
     async fn test_l1_traversal() {
-        let mut traversal = new_test_traversal(true, true);
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
         assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
         assert!(traversal.advance_l1_block().await.is_ok());
@@ -174,15 +178,30 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_l1_traversal_missing_receipts() {
-        let mut traversal = new_test_traversal(true, false);
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let mut traversal = new_test_traversal(blocks, vec![]);
         assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
         matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::Custom(_));
     }
 
     #[tokio::test]
+    async fn test_l1_traversal_reorgs() {
+        let block = BlockInfo {
+            hash: b256!("3333333333333333333333333333333333333333333333333333333333333333"),
+            ..BlockInfo::default()
+        };
+        let blocks = vec![block, block];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
+        assert!(traversal.advance_l1_block().await.is_ok());
+        let err = traversal.advance_l1_block().await.unwrap_err();
+        assert_eq!(err, StageError::ReorgDetected(block.hash, block.parent_hash));
+    }
+
+    #[tokio::test]
     async fn test_l1_traversal_missing_blocks() {
-        let mut traversal = new_test_traversal(false, false);
+        let mut traversal = new_test_traversal(vec![], vec![]);
         assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
         matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::Custom(_));
@@ -190,7 +209,9 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_system_config_updated() {
-        let mut traversal = new_test_traversal(true, true);
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
         assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
         assert!(traversal.advance_l1_block().await.is_ok());

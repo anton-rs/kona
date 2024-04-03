@@ -196,8 +196,7 @@ mod tests {
     use super::*;
     use crate::{
         stages::{
-            frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval,
-            l1_traversal::tests::new_test_traversal,
+            frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval, l1_traversal::tests::*,
         },
         traits::test_utils::TestDAP,
     };
@@ -205,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_ingest_empty_origin() {
-        let mut traversal = new_test_traversal(false, false);
+        let mut traversal = new_test_traversal(vec![], vec![]);
         traversal.block = None;
         let dap = TestDAP::default();
         let retrieval = L1Retrieval::new(traversal, dap);
@@ -218,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_ingest_and_prune_channel_bank() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
@@ -246,7 +245,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_empty_channel_bank() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);

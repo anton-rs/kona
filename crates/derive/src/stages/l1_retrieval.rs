@@ -82,7 +82,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::l1_traversal::tests::new_test_traversal,
+        stages::l1_traversal::tests::*,
         traits::test_utils::{TestDAP, TestIter},
     };
     use alloc::vec;
@@ -90,7 +90,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
         let retrieval = L1Retrieval::new(traversal, dap);
         let expected = BlockInfo::default();
@@ -99,7 +99,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_retrieval_next_data() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let dap = TestDAP { results };
         let mut retrieval = L1Retrieval::new(traversal, dap);
@@ -126,7 +126,7 @@ mod tests {
         // Create a new traversal with no blocks or receipts.
         // This would bubble up an error if the prev stage
         // (traversal) is called in the retrieval stage.
-        let traversal = new_test_traversal(false, false);
+        let traversal = new_test_traversal(vec![], vec![]);
         let dap = TestDAP { results: vec![] };
         let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap();
@@ -142,7 +142,7 @@ mod tests {
             open_data_calls: vec![(BlockInfo::default(), Address::default())],
             results: vec![Err(StageError::Eof)],
         };
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
         let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap_err();
