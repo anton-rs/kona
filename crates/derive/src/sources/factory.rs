@@ -1,12 +1,12 @@
 //! Contains a Factory for creating a calldata and blob provider.
 
-use crate::sources::{BlobSource, CalldataSource, DataSource, PlasmaSource};
-use crate::traits::{BlobProvider, ChainProvider, DataAvailabilityProvider};
-use crate::types::{BlockInfo, RollupConfig};
-use alloc::boxed::Box;
-use alloc::fmt::Debug;
-use alloy_primitives::Address;
-use alloy_primitives::Bytes;
+use crate::{
+    sources::{BlobSource, CalldataSource, DataSource, PlasmaSource},
+    traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
+    types::{BlockInfo, RollupConfig},
+};
+use alloc::{boxed::Box, fmt::Debug};
+use alloy_primitives::{Address, Bytes};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 
@@ -81,9 +81,7 @@ where
                 });
             Ok(source)
         } else if self.plasma_enabled {
-            Ok(DataSource::Plasma(PlasmaSource::new(
-                self.chain_provider.clone(),
-            )))
+            Ok(DataSource::Plasma(PlasmaSource::new(self.chain_provider.clone())))
         } else {
             Err(anyhow!("No data source available"))
         }

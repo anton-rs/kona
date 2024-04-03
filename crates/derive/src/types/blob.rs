@@ -141,17 +141,11 @@ impl BlobData {
         output: &mut Vec<u8>,
     ) -> (u8, usize, usize, Option<BlobDecodingError>) {
         // two highest order bits of the first byte of each field element should always be 0
-        if self
-            .data
-            .as_ref()
-            .map_or(false, |data| data[input_pos] & 0b1100_0000 != 0)
-        {
+        if self.data.as_ref().map_or(false, |data| data[input_pos] & 0b1100_0000 != 0) {
             return (0, 0, 0, Some(BlobDecodingError::InvalidFieldElement));
         }
         output.extend_from_slice(
-            self.data
-                .as_ref()
-                .map_or(&[], |data| &data[input_pos + 1..input_pos + 32]),
+            self.data.as_ref().map_or(&[], |data| &data[input_pos + 1..input_pos + 32]),
         );
         (
             self.data.as_ref().map_or(0, |data| data[input_pos]),

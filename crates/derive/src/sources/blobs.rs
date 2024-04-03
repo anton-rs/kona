@@ -1,11 +1,10 @@
 //! Blob Data Source
 
-use crate::traits::{AsyncIterator, BlobProvider, ChainProvider};
-use crate::types::{
-    BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult, TxEnvelope, TxType,
+use crate::{
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
+    types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult, TxEnvelope, TxType},
 };
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -72,10 +71,7 @@ where
             }
             if tx.tx_type() != TxType::Eip4844 {
                 let calldata = tx.data().clone();
-                let blob_data = BlobData {
-                    data: None,
-                    calldata: Some(calldata),
-                };
+                let blob_data = BlobData { data: None, calldata: Some(calldata) };
                 data.push(blob_data);
                 continue;
             }
@@ -104,10 +100,8 @@ where
             return Ok(());
         }
 
-        let info = self
-            .chain_provider
-            .block_info_and_transactions_by_hash(self.block_ref.hash)
-            .await?;
+        let info =
+            self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
 
         let (mut data, blob_hashes) = self.extract_blob_data(info.1);
 
@@ -118,10 +112,7 @@ where
             return Ok(());
         }
 
-        let blobs = self
-            .blob_fetcher
-            .get_blobs(&self.block_ref, blob_hashes)
-            .await?;
+        let blobs = self.blob_fetcher.get_blobs(&self.block_ref, blob_hashes).await?;
 
         // Fill the blob pointers.
         let mut blob_index = 0;

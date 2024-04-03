@@ -1,7 +1,9 @@
 //! Plasma Data Source
 
-use crate::traits::{AsyncIterator, ChainProvider};
-use crate::types::StageResult;
+use crate::{
+    traits::{AsyncIterator, ChainProvider},
+    types::StageResult,
+};
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
@@ -26,12 +28,7 @@ where
 impl<CP: ChainProvider + Send> PlasmaSource<CP> {
     /// Instantiates a new plasma data source.
     pub fn new(chain_provider: CP) -> Self {
-        Self {
-            chain_provider,
-            commitment: Bytes::default(),
-            block_number: 0,
-            open: false,
-        }
+        Self { chain_provider, commitment: Bytes::default(), block_number: 0, open: false }
     }
 }
 

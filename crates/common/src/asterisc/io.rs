@@ -10,9 +10,9 @@ pub struct AsteriscIO;
 /// See https://jborza.com/post/2021-05-11-riscv-linux-syscalls/
 ///
 /// **Note**: This is not an exhaustive list of system calls available to the `client` program,
-/// only the ones necessary for the [BasicKernelInterface] trait implementation. If an extension trait for
-/// the [BasicKernelInterface] trait is created for the `asterisc` kernel, this list should be extended
-/// accordingly.
+/// only the ones necessary for the [BasicKernelInterface] trait implementation. If an extension
+/// trait for the [BasicKernelInterface] trait is created for the `asterisc` kernel, this list
+/// should be extended accordingly.
 #[repr(u32)]
 pub(crate) enum SyscallNumber {
     /// Sets the Exited and ExitCode states to true and $a0 respectively.

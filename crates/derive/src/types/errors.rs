@@ -5,6 +5,8 @@ use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
 
+use super::SpanBatchError;
+
 /// An error that is thrown within the stages of the derivation pipeline.
 #[derive(Debug)]
 pub enum StageError {
@@ -25,9 +27,9 @@ impl PartialEq<StageError> for StageError {
     fn eq(&self, other: &StageError) -> bool {
         matches!(
             (self, other),
-            (StageError::Eof, StageError::Eof)
-                | (StageError::NotEnoughData, StageError::NotEnoughData)
-                | (StageError::Custom(_), StageError::Custom(_))
+            (StageError::Eof, StageError::Eof) |
+                (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::Custom(_), StageError::Custom(_))
         )
     }
 }
@@ -54,11 +56,9 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
-            StageError::BlockFetch(hash) => write!(
-                f,
-                "Failed to fetch block info and transactions by hash: {}",
-                hash
-            ),
+            StageError::BlockFetch(hash) => {
+                write!(f, "Failed to fetch block info and transactions by hash: {}", hash)
+            }
             StageError::Empty => write!(f, "Empty"),
             StageError::Custom(e) => write!(f, "Custom error: {}", e),
         }
@@ -72,6 +72,8 @@ pub enum DecodeError {
     EmptyBuffer,
     /// Alloy RLP Encoding Error.
     AlloyRlpError(alloy_rlp::Error),
+    /// Span Batch Error.
+    SpanBatchError(SpanBatchError),
 }
 
 impl From<alloy_rlp::Error> for DecodeError {
@@ -84,8 +86,8 @@ impl PartialEq<DecodeError> for DecodeError {
     fn eq(&self, other: &DecodeError) -> bool {
         matches!(
             (self, other),
-            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer)
-                | (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
+            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer) |
+                (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
         )
     }
 }
@@ -95,6 +97,7 @@ impl Display for DecodeError {
         match self {
             DecodeError::EmptyBuffer => write!(f, "Empty buffer"),
             DecodeError::AlloyRlpError(e) => write!(f, "Alloy RLP Decoding Error: {}", e),
+            DecodeError::SpanBatchError(e) => write!(f, "Span Batch Decoding Error: {:?}", e),
         }
     }
 }

@@ -26,6 +26,7 @@ serde = { version = "1.0.197", default-features = false, features = ["derive"], 
 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["full"] }
+proptest = "1.4.0"
 
 [features]
 serde = ["dep:serde", "alloy-primitives/serde"]

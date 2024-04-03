@@ -1,11 +1,10 @@
 //! CallData Source
 
-use crate::traits::{AsyncIterator, ChainProvider};
-use crate::types::BlockInfo;
-use crate::types::StageError;
-use crate::types::StageResult;
-use alloc::boxed::Box;
-use alloc::collections::VecDeque;
+use crate::{
+    traits::{AsyncIterator, ChainProvider},
+    types::{BlockInfo, StageError, StageResult},
+};
+use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 
@@ -53,10 +52,8 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
             return Ok(());
         }
 
-        let (_, txs) = self
-            .chain_provider
-            .block_info_and_transactions_by_hash(self.block_ref.hash)
-            .await?;
+        let (_, txs) =
+            self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
 
         self.calldata = txs
             .iter()

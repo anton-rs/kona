@@ -1,8 +1,10 @@
 //! Data source
 
-use crate::sources::{BlobSource, CalldataSource, PlasmaSource};
-use crate::traits::{AsyncIterator, BlobProvider, ChainProvider};
-use crate::types::StageResult;
+use crate::{
+    sources::{BlobSource, CalldataSource, PlasmaSource},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
+    types::StageResult,
+};
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
