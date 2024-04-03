@@ -11,7 +11,8 @@ use alloc::{boxed::Box, collections::VecDeque};
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-/// The frame queue stage of the derivation pipeline.
+/// The [FrameQueue] stage of the derivation pipeline.
+///
 #[derive(Debug)]
 pub struct FrameQueue<DAP, CP>
 where
@@ -29,34 +30,39 @@ where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
 {
-    /// Create a new frame queue stage.
+    /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     pub fn new(prev: L1Retrieval<DAP, CP>) -> Self {
         Self { prev, queue: VecDeque::new() }
     }
 
-    /// Returns the L1 origin [BlockInfo].
+    /// Returns the L1 [BlockInfo] origin.
     pub fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
 
-    /// Fetches the next frame from the frame queue.
+    /// Fetches the next frame from the [FrameQueue].
     pub async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
-                    // TODO: what do we do with frame parsing errors?
                     if let Ok(frames) = Frame::parse_frames(data.as_ref()) {
                         self.queue.extend(frames);
+                    } else {
+                        // TODO: log parsing frame error
+                        // Failed to parse frames, but there may be more frames in the queue for
+                        // the pipeline to advance, so don't return an error here.
                     }
                 }
                 Err(e) => {
-                    return Err(anyhow!("Error fetching next data: {e}").into());
+                    // TODO: log retrieval error
+                    // The error must be bubbled up without a wrapper in case it's an EOF error.
+                    return Err(e);
                 }
             }
         }
         // If we did not add more frames but still have more data, retry this function.
         if self.queue.is_empty() {
-            return Err(anyhow!("Not enough data").into());
+            return Err(StageError::NotEnoughData);
         }
 
         self.queue.pop_front().ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
@@ -114,7 +120,7 @@ pub(crate) mod tests {
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
@@ -125,7 +131,7 @@ pub(crate) mod tests {
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
@@ -136,7 +142,7 @@ pub(crate) mod tests {
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Unsupported derivation version").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
@@ -147,7 +153,7 @@ pub(crate) mod tests {
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Frame too short to decode").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
@@ -161,7 +167,7 @@ pub(crate) mod tests {
         let frame = new_test_frames(1);
         assert_eq!(frame[0], frame_decoded);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::Eof);
     }
 
     #[tokio::test]
@@ -176,6 +182,6 @@ pub(crate) mod tests {
             assert_eq!(frame_decoded.number, i);
         }
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::Eof);
     }
 }

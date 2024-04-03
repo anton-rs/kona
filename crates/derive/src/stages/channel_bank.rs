@@ -255,6 +255,6 @@ mod tests {
         let err = channel_bank.read().unwrap_err();
         assert_eq!(err, StageError::Eof);
         let err = channel_bank.next_data().await.unwrap_err();
-        assert_eq!(err, StageError::Custom(anyhow!("Not Enough Data")));
+        assert_eq!(err, StageError::NotEnoughData);
     }
 }
