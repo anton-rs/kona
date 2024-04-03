@@ -3,9 +3,12 @@
 #![allow(unused)]
 
 use super::{SpanBatchError, SpanBatchTransactions};
-use crate::types::{
-    block::L2BlockInfo, BlockInfo, RawSpanBatch, SingleBatch, SpanBatchBits, SpanBatchElement,
-    SpanBatchPayload, SpanBatchPrefix,
+use crate::{
+    traits::SafeBlockFetcher,
+    types::{
+        BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
+        SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+    },
 };
 use alloc::{vec, vec::Vec};
 use alloy_primitives::FixedBytes;
@@ -35,6 +38,18 @@ impl SpanBatch {
     /// Returns the timestamp for the first batch in the span.
     pub fn get_timestamp(&self) -> u64 {
         self.batches[0].timestamp
+    }
+
+    /// Checks if the span batch is valid.
+    pub fn check_batch<BF: SafeBlockFetcher>(
+        &self,
+        _cfg: &RollupConfig,
+        _l1_blocks: &[BlockInfo],
+        _l2_safe_head: L2BlockInfo,
+        _inclusion_block: &BlockInfo,
+        _fetcher: &BF,
+    ) -> BatchValidity {
+        unimplemented!()
     }
 
     /// Converts the span batch to a raw span batch.

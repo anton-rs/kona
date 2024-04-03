@@ -5,6 +5,7 @@ use crate::{
     traits::{ChainProvider, DataAvailabilityProvider},
     types::{Batch, BlockInfo, StageError, StageResult},
 };
+
 use alloc::vec::Vec;
 use anyhow::anyhow;
 use core::fmt::Debug;
