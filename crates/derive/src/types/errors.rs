@@ -12,6 +12,12 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// No channels are available in the channel bank.
+    NoChannelsAvailable,
+    /// Failed to find channel.
+    ChannelNotFound,
+    /// Missing L1 origin.
+    MissingOrigin,
     /// Other wildcard error.
     Custom(anyhow::Error),
 }
@@ -22,6 +28,9 @@ impl PartialEq<StageError> for StageError {
             (self, other),
             (StageError::Eof, StageError::Eof) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
+                (StageError::ChannelNotFound, StageError::ChannelNotFound) |
+                (StageError::MissingOrigin, StageError::MissingOrigin) |
                 (StageError::Custom(_), StageError::Custom(_))
         )
     }
@@ -41,6 +50,9 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::NoChannelsAvailable => write!(f, "No channels available"),
+            StageError::ChannelNotFound => write!(f, "Channel not found"),
+            StageError::MissingOrigin => write!(f, "Missing L1 origin"),
             StageError::Custom(e) => write!(f, "Custom error: {}", e),
         }
     }

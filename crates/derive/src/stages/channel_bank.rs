@@ -65,8 +65,8 @@ where
     pub fn prune(&mut self) -> StageResult<()> {
         let mut total_size = self.size();
         while total_size > MAX_CHANNEL_BANK_SIZE {
-            let id = self.channel_queue.pop_front().ok_or(anyhow!("No channel to prune"))?;
-            let channel = self.channels.remove(&id).ok_or(anyhow!("Could not find channel"))?;
+            let id = self.channel_queue.pop_front().ok_or(StageError::NoChannelsAvailable)?;
+            let channel = self.channels.remove(&id).ok_or(StageError::ChannelNotFound)?;
             total_size -= channel.size();
         }
         Ok(())
@@ -74,7 +74,7 @@ where
 
     /// Adds new L1 data to the channel bank. Should only be called after all data has been read.
     pub fn ingest_frame(&mut self, frame: Frame) -> StageResult<()> {
-        let origin = *self.origin().ok_or(anyhow!("No origin"))?;
+        let origin = *self.origin().ok_or(StageError::MissingOrigin)?;
 
         // Get the channel for the frame, or create a new one if it doesn't exist.
         let current_channel = self.channels.entry(frame.id).or_insert_with(|| {
@@ -108,8 +108,8 @@ where
         // Return an `Ok(None)` if the first channel is timed out. There may be more timed
         // out channels at the head of the queue and we want to remove them all.
         let first = self.channel_queue[0];
-        let channel = self.channels.get(&first).ok_or(anyhow!("Channel not found"))?;
-        let origin = self.origin().ok_or(anyhow!("No origin present"))?;
+        let channel = self.channels.get(&first).ok_or(StageError::ChannelNotFound)?;
+        let origin = self.origin().ok_or(StageError::MissingOrigin)?;
 
         // Remove all timed out channels from the front of the `channel_queue`.
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
@@ -162,8 +162,8 @@ where
     /// If the channel read was successful, it will remove the channel from the channel queue.
     fn try_read_channel_at_index(&mut self, index: usize) -> StageResult<Bytes> {
         let channel_id = self.channel_queue[index];
-        let channel = self.channels.get(&channel_id).ok_or(anyhow!("Channel not found"))?;
-        let origin = self.origin().ok_or(anyhow!("No origin present"))?;
+        let channel = self.channels.get(&channel_id).ok_or(StageError::ChannelNotFound)?;
+        let origin = self.origin().ok_or(StageError::MissingOrigin)?;
 
         let timed_out = channel.open_block_number() + self.cfg.channel_timeout < origin.number;
         if timed_out || !channel.is_ready() {
@@ -213,7 +213,26 @@ mod tests {
         let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
-        assert_eq!(err, StageError::Custom(anyhow!("No origin")));
+        assert_eq!(err, StageError::MissingOrigin);
+    }
+
+    #[test]
+    fn test_ingest_invalid_frame() {
+        let traversal = new_test_traversal(false, false);
+        let dap = TestDAP::default();
+        let retrieval = L1Retrieval::new(traversal, dap);
+        let frame_queue = FrameQueue::new(retrieval);
+        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let frame = Frame { id: [0xFF; 16], ..Default::default() };
+        assert_eq!(channel_bank.size(), 0);
+        assert!(channel_bank.channels.is_empty());
+        assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
+        assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.channels.len(), 1);
+        // This should fail since the frame is already ingested.
+        assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
+        assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.channels.len(), 1);
     }
 
     #[test]
