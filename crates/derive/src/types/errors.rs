@@ -17,6 +17,10 @@ pub enum StageError {
     /// The first argument is the expected block hash.
     /// The second argument is the paren_hash of the next l1 origin block.
     ReorgDetected(B256, B256),
+    /// Receipt fetching error.
+    ReceiptFetch(anyhow::Error),
+    /// [super::BlockInfo] fetching error.
+    BlockInfoFetch(anyhow::Error),
     /// Other wildcard error.
     Custom(anyhow::Error),
 }
@@ -31,6 +35,8 @@ impl PartialEq<StageError> for StageError {
             (self, other),
             (StageError::Eof, StageError::Eof) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::ReceiptFetch(_), StageError::ReceiptFetch(_)) |
+                (StageError::BlockInfoFetch(_), StageError::BlockInfoFetch(_)) |
                 (StageError::Custom(_), StageError::Custom(_))
         )
     }
@@ -50,9 +56,11 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::ReceiptFetch(e) => write!(f, "Receipt fetch error: {}", e),
             StageError::ReorgDetected(current, next) => {
                 write!(f, "Block reorg detected: {} -> {}", current, next)
             }
+            StageError::BlockInfoFetch(e) => write!(f, "Block info fetch error: {}", e),
             StageError::Custom(e) => write!(f, "Custom error: {}", e),
         }
     }
