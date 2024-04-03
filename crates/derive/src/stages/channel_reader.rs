@@ -60,11 +60,7 @@ where
     /// Creates the batch reader from available channel data.
     async fn set_batch_reader(&mut self) -> StageResult<()> {
         if self.next_batch.is_none() {
-            let channel = match self.prev.next_data().await {
-                Ok(Some(channel)) => channel,
-                Ok(None) => return Err(anyhow!("no channel").into()),
-                Err(err) => return Err(err),
-            };
+            let channel = self.prev.next_data().await?.ok_or(anyhow!("no channel"))?;
             self.next_batch = Some(BatchReader::from(&channel[..]));
         }
         Ok(())
