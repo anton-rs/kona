@@ -1,7 +1,6 @@
 use crate::types::{
-    eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718},
-    network::Signed,
-    transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxLegacy},
+    eip2718::{Decodable2718, Eip2718Error, Encodable2718},
+    Signed, TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxLegacy,
 };
 use alloy_rlp::{length_of_length, Decodable, Encodable};
 

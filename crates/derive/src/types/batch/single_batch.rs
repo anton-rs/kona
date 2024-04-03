@@ -1,14 +1,14 @@
 //! This module contains the [SingleBatch] type.
 
-use super::RawTransaction;
+use crate::types::RawTransaction;
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
 use alloy_rlp::{Decodable, Encodable};
 
 /// Represents a single batch: a single encoded L2 block
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SingleBatch {
-    /// Block hash of the previous L2 block
+    /// Block hash of the previous L2 block. `B256::ZERO` if it has not been set by the Batch Queue.
     pub parent_hash: BlockHash,
     /// The batch epoch number. Same as the first L1 block number in the epoch.
     pub epoch_num: u64,
@@ -18,6 +18,15 @@ pub struct SingleBatch {
     pub timestamp: u64,
     /// The L2 block transactions in this batch
     pub transactions: Vec<RawTransaction>,
+}
+
+impl SingleBatch {
+    /// If any transactions are empty or deposited transaction types.
+    pub fn has_invalid_transactions(&self) -> bool {
+        self.transactions
+            .iter()
+            .any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
+    }
 }
 
 impl Encodable for SingleBatch {
@@ -31,14 +40,13 @@ impl Encodable for SingleBatch {
 }
 
 impl Decodable for SingleBatch {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let parent_hash = Decodable::decode(buf)?;
-        let epoch_num = Decodable::decode(buf)?;
-        let epoch_hash = Decodable::decode(buf)?;
-        let timestamp = Decodable::decode(buf)?;
-        let transactions = Decodable::decode(buf)?;
-
-        Ok(SingleBatch {
+    fn decode(rlp: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let parent_hash = BlockHash::decode(rlp)?;
+        let epoch_num = u64::decode(rlp)?;
+        let epoch_hash = BlockHash::decode(rlp)?;
+        let timestamp = u64::decode(rlp)?;
+        let transactions = Vec::<RawTransaction>::decode(rlp)?;
+        Ok(Self {
             parent_hash,
             epoch_num,
             epoch_hash,
@@ -48,21 +56,12 @@ impl Decodable for SingleBatch {
     }
 }
 
-impl SingleBatch {
-    /// If any transactions are empty or deposited transaction types.
-    pub fn has_invalid_transactions(&self) -> bool {
-        self.transactions
-            .iter()
-            .any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::SingleBatch;
     use crate::types::RawTransaction;
     use alloc::vec;
-    use alloy_primitives::B256;
+    use alloy_primitives::{hex, B256};
     use alloy_rlp::{BytesMut, Decodable, Encodable};
 
     #[test]
@@ -72,7 +71,7 @@ mod test {
             epoch_num: 0xFF,
             epoch_hash: B256::ZERO,
             timestamp: 0xEE,
-            transactions: vec![RawTransaction(vec![0x00])],
+            transactions: vec![RawTransaction(hex!("00").into())],
         };
 
         let mut out_buf = BytesMut::default();
@@ -89,7 +88,7 @@ mod test {
             epoch_num: 0xFF,
             epoch_hash: B256::ZERO,
             timestamp: 0xEE,
-            transactions: vec![RawTransaction(vec![0x7E])],
+            transactions: vec![RawTransaction(hex!("7E").into())],
         };
 
         assert!(single_batch.has_invalid_transactions());

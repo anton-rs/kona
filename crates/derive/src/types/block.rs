@@ -31,18 +31,28 @@ impl BlockInfo {
     }
 }
 
-// impl TryFrom<BlockWithTransactions> for BlockInfo {
-//     type Error = anyhow::Error;
-//
-//     fn try_from(block: BlockWithTransactions) -> anyhow::Result<Self> {
-//         Ok(BlockInfo {
-//             number: block.number.unwrap_or_default().to::<u64>(),
-//             hash: block.hash.unwrap_or_default(),
-//             parent_hash: block.parent_hash,
-//             timestamp: block.timestamp.to::<u64>(),
-//         })
-//     }
-// }
+/// L2 Block Header Info
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub struct L2BlockInfo {
+    /// The base [BlockInfo]
+    pub block_info: BlockInfo,
+    /// The L1 origin [BlockId]
+    pub l1_origin: BlockId,
+    /// The sequence number of the L2 block
+    pub seq_num: u64,
+}
+
+impl L2BlockInfo {
+    /// Instantiates a new [L2BlockInfo].
+    pub fn new(block_info: BlockInfo, l1_origin: BlockId, seq_num: u64) -> Self {
+        Self {
+            block_info,
+            l1_origin,
+            seq_num,
+        }
+    }
+}
 
 /// A Block Identifier
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -78,30 +88,3 @@ pub enum BlockKind {
     /// The latest finalized block.
     Finalized,
 }
-
-// /// A Block with Transactions
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-// #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-// #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-// pub struct Block {
-//     /// Header of the block.
-//     #[serde(flatten)]
-//     pub header: Header,
-//     /// Uncles' hashes.
-//     pub uncles: Vec<B256>,
-//     /// Block Transactions. In the case of an uncle block, this field is not included in RPC
-//     /// responses, and when deserialized, it will be set to [BlockTransactions::Uncle].
-//     #[serde(
-//         skip_serializing_if = "BlockTransactions::is_uncle",
-//         default = "BlockTransactions::uncle"
-//     )]
-//     pub transactions: BlockTransactions,
-//     /// Integer the size of this block in bytes.
-//     pub size: Option<U256>,
-//     /// Withdrawals in the block.
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub withdrawals: Option<Vec<Withdrawal>>,
-//     /// Support for arbitrary additional fields.
-//     #[serde(flatten)]
-//     pub other: OtherFields,
-// }

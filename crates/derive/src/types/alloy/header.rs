@@ -1,9 +1,7 @@
 use crate::types::{
-    eips::{
-        eip1559::{calc_next_block_base_fee, BaseFeeParams},
-        eip4844::{calc_blob_gasprice, calc_excess_blob_gas},
-    },
-    network::Sealable,
+    eip1559::{calc_next_block_base_fee, BaseFeeParams},
+    eip4844::{calc_blob_gasprice, calc_excess_blob_gas},
+    Sealable,
 };
 use alloc::vec::Vec;
 use alloy_primitives::{b256, keccak256, Address, BlockNumber, Bloom, Bytes, B256, B64, U256};

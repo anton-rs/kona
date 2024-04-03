@@ -1,8 +1,4 @@
-use crate::types::{
-    eips::eip2930::AccessList,
-    network::{Signed, Transaction, TxKind},
-    transaction::TxType,
-};
+use crate::types::{eip2930::AccessList, Signed, Transaction, TxKind, TxType};
 use alloc::vec::Vec;
 use alloy_primitives::{keccak256, Bytes, ChainId, Signature, U256};
 use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable, Header};

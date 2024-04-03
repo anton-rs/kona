@@ -2,7 +2,7 @@
 
 #![allow(unused, unreachable_pub)]
 
-use crate::types::eips::eip2718::Eip2718Envelope;
+use crate::types::eip2718::Eip2718Envelope;
 use alloc::vec::Vec;
 use alloy_primitives::B256;
 

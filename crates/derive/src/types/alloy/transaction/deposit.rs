@@ -1,7 +1,4 @@
-use crate::types::{
-    network::{Signed, Transaction, TxKind},
-    transaction::TxType,
-};
+use crate::types::{Signed, Transaction, TxKind, TxType};
 use alloc::vec::Vec;
 use alloy_primitives::{keccak256, Address, Bytes, ChainId, Signature, B256, U256};
 use alloy_rlp::{
