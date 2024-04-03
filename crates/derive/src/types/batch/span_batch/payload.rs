@@ -10,7 +10,8 @@ use alloc::vec::Vec;
 pub struct SpanBatchPayload {
     /// Number of L2 block in the span
     pub block_count: u64,
-    /// Standard span-batch bitlist of blockCount bits. Each bit indicates if the L1 origin is changed at the L2 block.
+    /// Standard span-batch bitlist of blockCount bits. Each bit indicates if the L1 origin is
+    /// changed at the L2 block.
     pub origin_bits: SpanBatchBits,
     /// List of transaction counts for each L2 block
     pub block_tx_counts: Vec<u64>,
@@ -47,7 +48,8 @@ impl SpanBatchPayload {
     pub fn decode_block_count(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
         let (block_count, remaining) = unsigned_varint::decode::u64(r)
             .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::BlockCount))?;
-        // The number of transactions in a single L2 block cannot be greater than [MAX_SPAN_BATCH_SIZE].
+        // The number of transactions in a single L2 block cannot be greater than
+        // [MAX_SPAN_BATCH_SIZE].
         if block_count as usize > MAX_SPAN_BATCH_SIZE {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
@@ -61,15 +63,17 @@ impl SpanBatchPayload {
 
     /// Decode block transaction counts from a reader.
     pub fn decode_block_tx_counts(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
-        // Initially allocate the vec with the block count, to reduce re-allocations in the first few blocks.
+        // Initially allocate the vec with the block count, to reduce re-allocations in the first
+        // few blocks.
         let mut block_tx_counts = Vec::with_capacity(self.block_count as usize);
 
         for _ in 0..self.block_count {
             let (block_tx_count, remaining) = unsigned_varint::decode::u64(r)
                 .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::BlockTxCounts))?;
 
-            // The number of transactions in a single L2 block cannot be greater than [MAX_SPAN_BATCH_SIZE].
-            // Every transaction will take at least a single byte.
+            // The number of transactions in a single L2 block cannot be greater than
+            // [MAX_SPAN_BATCH_SIZE]. Every transaction will take at least a single
+            // byte.
             if block_tx_count as usize > MAX_SPAN_BATCH_SIZE {
                 return Err(SpanBatchError::TooBigSpanBatchSize);
             }
@@ -87,14 +91,12 @@ impl SpanBatchPayload {
         }
 
         let total_block_tx_count =
-            self.block_tx_counts
-                .iter()
-                .try_fold(0u64, |acc, block_tx_count| {
-                    acc.checked_add(*block_tx_count)
-                        .ok_or(SpanBatchError::TooBigSpanBatchSize)
-                })?;
+            self.block_tx_counts.iter().try_fold(0u64, |acc, block_tx_count| {
+                acc.checked_add(*block_tx_count).ok_or(SpanBatchError::TooBigSpanBatchSize)
+            })?;
 
-        // The total number of transactions in a span batch cannot be greater than [MAX_SPAN_BATCH_SIZE].
+        // The total number of transactions in a span batch cannot be greater than
+        // [MAX_SPAN_BATCH_SIZE].
         if total_block_tx_count as usize > MAX_SPAN_BATCH_SIZE {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
@@ -111,10 +113,7 @@ impl SpanBatchPayload {
     /// Encode the block count into a writer.
     pub fn encode_block_count(&self, w: &mut Vec<u8>) {
         let mut u64_varint_buf = [0u8; 10];
-        w.extend_from_slice(unsigned_varint::encode::u64(
-            self.block_count,
-            &mut u64_varint_buf,
-        ));
+        w.extend_from_slice(unsigned_varint::encode::u64(self.block_count, &mut u64_varint_buf));
     }
 
     /// Encode the block transaction counts into a writer.
@@ -122,10 +121,7 @@ impl SpanBatchPayload {
         let mut u64_varint_buf = [0u8; 10];
         for block_tx_count in &self.block_tx_counts {
             u64_varint_buf.fill(0);
-            w.extend_from_slice(unsigned_varint::encode::u64(
-                *block_tx_count,
-                &mut u64_varint_buf,
-            ));
+            w.extend_from_slice(unsigned_varint::encode::u64(*block_tx_count, &mut u64_varint_buf));
         }
     }
 

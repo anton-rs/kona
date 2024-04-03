@@ -8,9 +8,8 @@ use alloy_rlp::{Buf, Header};
 /// Reads transaction data from a reader.
 pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatchError> {
     let mut tx_data = Vec::new();
-    let first_byte = *r.first().ok_or(SpanBatchError::Decoding(
-        SpanDecodingError::InvalidTransactionData,
-    ))?;
+    let first_byte =
+        *r.first().ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
     let mut tx_type = 0;
     if first_byte <= 0x7F {
         // EIP-2718: Non-legacy tx, so write tx type
@@ -20,8 +19,9 @@ pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatch
     }
 
     // Copy the reader, as we need to read the header to determine if the payload is a list.
-    // TODO(clabby): This is horribly inefficient. It'd be nice if we could peek at this rather than forcibly having to
-    // advance the buffer passed, should read more into the alloy rlp docs to see if this is possible.
+    // TODO(clabby): This is horribly inefficient. It'd be nice if we could peek at this rather than
+    // forcibly having to advance the buffer passed, should read more into the alloy rlp docs to
+    // see if this is possible.
     let r_copy = Vec::from(*r);
     let rlp_header = Header::decode(&mut r_copy.as_slice())
         .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
@@ -33,9 +33,7 @@ pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatch
         r.advance(payload_length_with_header);
         Ok(payload)
     } else {
-        Err(SpanBatchError::Decoding(
-            SpanDecodingError::InvalidTransactionData,
-        ))
+        Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))
     }?;
     tx_data.extend_from_slice(&tx_payload);
 
@@ -60,8 +58,6 @@ pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: TxType) -> Result<bool, Spa
             }
         }
         TxType::Eip2930 | TxType::Eip1559 => Ok(v == 1),
-        _ => Err(SpanBatchError::Decoding(
-            SpanDecodingError::InvalidTransactionType,
-        )),
+        _ => Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType)),
     }
 }

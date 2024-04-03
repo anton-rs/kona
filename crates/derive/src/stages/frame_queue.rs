@@ -31,10 +31,7 @@ where
 {
     /// Create a new frame queue stage.
     pub fn new(prev: L1Retrieval<DAP, CP>) -> Self {
-        Self {
-            prev,
-            queue: VecDeque::new(),
-        }
+        Self { prev, queue: VecDeque::new() }
     }
 
     /// Returns the L1 origin [BlockInfo].
@@ -62,9 +59,7 @@ where
             return Err(anyhow!("Not enough data").into());
         }
 
-        self.queue
-            .pop_front()
-            .ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
+        self.queue.pop_front().ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
     }
 }
 
@@ -83,11 +78,11 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::stages::l1_traversal::tests::new_test_traversal;
-    use crate::traits::test_utils::TestDAP;
-    use crate::DERIVATION_VERSION_0;
-    use alloc::vec;
-    use alloc::vec::Vec;
+    use crate::{
+        stages::l1_traversal::tests::new_test_traversal, traits::test_utils::TestDAP,
+        DERIVATION_VERSION_0,
+    };
+    use alloc::{vec, vec::Vec};
     use alloy_primitives::Bytes;
 
     pub(crate) fn new_test_frames(count: usize) -> Vec<Frame> {
@@ -159,9 +154,7 @@ pub(crate) mod tests {
     async fn test_frame_queue_single_frame() {
         let data = new_encoded_test_frames(1);
         let traversal = new_test_traversal(true, true);
-        let dap = TestDAP {
-            results: vec![Ok(data)],
-        };
+        let dap = TestDAP { results: vec![Ok(data)] };
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
         let frame_decoded = frame_queue.next_frame().await.unwrap();
@@ -175,9 +168,7 @@ pub(crate) mod tests {
     async fn test_frame_queue_multiple_frames() {
         let data = new_encoded_test_frames(3);
         let traversal = new_test_traversal(true, true);
-        let dap = TestDAP {
-            results: vec![Ok(data)],
-        };
+        let dap = TestDAP { results: vec![Ok(data)] };
         let retrieval = L1Retrieval::new(traversal, dap);
         let mut frame_queue = FrameQueue::new(retrieval);
         for i in 0..3 {

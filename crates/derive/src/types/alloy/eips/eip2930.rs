@@ -47,10 +47,7 @@ impl AccessList {
         self.0.into_iter().map(|item| {
             (
                 item.address,
-                item.storage_keys
-                    .into_iter()
-                    .map(|slot| U256::from_be_bytes(slot.0))
-                    .collect(),
+                item.storage_keys.into_iter().map(|slot| U256::from_be_bytes(slot.0)).collect(),
             )
         })
     }
@@ -60,10 +57,7 @@ impl AccessList {
         self.0.iter().map(|item| {
             (
                 item.address,
-                item.storage_keys
-                    .iter()
-                    .map(|slot| U256::from_be_bytes(slot.0))
-                    .collect(),
+                item.storage_keys.iter().map(|slot| U256::from_be_bytes(slot.0)).collect(),
             )
         })
     }
@@ -72,7 +66,7 @@ impl AccessList {
     #[inline]
     pub fn size(&self) -> usize {
         // take into account capacity
-        self.0.iter().map(AccessListItem::size).sum::<usize>()
-            + self.0.capacity() * mem::size_of::<AccessListItem>()
+        self.0.iter().map(AccessListItem::size).sum::<usize>() +
+            self.0.capacity() * mem::size_of::<AccessListItem>()
     }
 }

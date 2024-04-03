@@ -85,10 +85,7 @@ impl TxLegacy {
     /// hash.
     pub fn encode_with_signature(&self, signature: &Signature, out: &mut dyn alloy_rlp::BufMut) {
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
+        let header = Header { list: true, payload_length };
         header.encode(out);
         self.encode_fields(out);
         signature.write_rlp_vrs(out);
@@ -189,11 +186,8 @@ impl Transaction for TxLegacy {
     // type Receipt = ReceiptWithBloom;
 
     fn encode_for_signing(&self, out: &mut dyn BufMut) {
-        Header {
-            list: true,
-            payload_length: self.fields_len() + self.eip155_fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() + self.eip155_fields_len() }
+            .encode(out);
         self.encode_fields(out);
         self.encode_eip155_signing_fields(out);
     }

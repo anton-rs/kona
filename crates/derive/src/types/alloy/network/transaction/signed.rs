@@ -39,11 +39,7 @@ impl<T, Sig> Signed<T, Sig> {
 impl<T: Transaction> Signed<T> {
     /// Instantiate from a transaction and signature. Does not verify the signature.
     pub const fn new_unchecked(tx: T, signature: Signature, hash: B256) -> Self {
-        Self {
-            tx,
-            signature,
-            hash,
-        }
+        Self { tx, signature, hash }
     }
 
     /// Calculate the signing hash for the transaction.

@@ -20,9 +20,9 @@ impl PartialEq<StageError> for StageError {
     fn eq(&self, other: &StageError) -> bool {
         matches!(
             (self, other),
-            (StageError::Eof, StageError::Eof)
-                | (StageError::NotEnoughData, StageError::NotEnoughData)
-                | (StageError::Custom(_), StageError::Custom(_))
+            (StageError::Eof, StageError::Eof) |
+                (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::Custom(_), StageError::Custom(_))
         )
     }
 }
@@ -67,8 +67,8 @@ impl PartialEq<DecodeError> for DecodeError {
     fn eq(&self, other: &DecodeError) -> bool {
         matches!(
             (self, other),
-            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer)
-                | (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
+            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer) |
+                (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
         )
     }
 }

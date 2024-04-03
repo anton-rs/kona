@@ -37,8 +37,9 @@ impl RawSpanBatch {
         Ok(Self { prefix, payload })
     }
 
-    /// Converts a [RawSpanBatch] into a [SpanBatch], which has a list of [SpanBatchElement]s. Thos function does not
-    /// populate the [SpanBatch] with chain configuration data, which is required for making payload attributes.
+    /// Converts a [RawSpanBatch] into a [SpanBatch], which has a list of [SpanBatchElement]s. Thos
+    /// function does not populate the [SpanBatch] with chain configuration data, which is
+    /// required for making payload attributes.
     pub fn derive(
         &mut self,
         block_time: u64,
@@ -57,9 +58,9 @@ impl RawSpanBatch {
                 .payload
                 .origin_bits
                 .get_bit(i as usize)
-                .ok_or(SpanBatchError::Decoding(SpanDecodingError::L1OriginCheck))?
-                == 1
-                && i > 0
+                .ok_or(SpanBatchError::Decoding(SpanDecodingError::L1OriginCheck))? ==
+                1 &&
+                i > 0
             {
                 l1_origin_number -= 1;
             }
@@ -82,10 +83,7 @@ impl RawSpanBatch {
             acc.push(SpanBatchElement {
                 epoch_num: block_origin_nums[i as usize],
                 timestamp: genesis_time + self.prefix.rel_timestamp + block_time * i,
-                transactions: transactions
-                    .into_iter()
-                    .map(|v| RawTransaction(v.into()))
-                    .collect(),
+                transactions: transactions.into_iter().map(|v| RawTransaction(v.into())).collect(),
             });
             acc
         });

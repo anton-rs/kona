@@ -22,12 +22,7 @@ pub struct BlockInfo {
 impl BlockInfo {
     /// Instantiates a new [BlockInfo].
     pub fn new(hash: B256, number: u64, parent_hash: B256, timestamp: u64) -> Self {
-        Self {
-            hash,
-            number,
-            parent_hash,
-            timestamp,
-        }
+        Self { hash, number, parent_hash, timestamp }
     }
 }
 
@@ -46,11 +41,7 @@ pub struct L2BlockInfo {
 impl L2BlockInfo {
     /// Instantiates a new [L2BlockInfo].
     pub fn new(block_info: BlockInfo, l1_origin: BlockId, seq_num: u64) -> Self {
-        Self {
-            block_info,
-            l1_origin,
-            seq_num,
-        }
+        Self { block_info, l1_origin, seq_num }
     }
 }
 

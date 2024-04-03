@@ -1,8 +1,8 @@
 //! This module contains the eip2930 transaction data type for a span batch.
 
-use crate::types::eip2930::AccessList;
 use crate::types::{
-    Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930, TxEnvelope, TxKind,
+    eip2930::AccessList, Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930,
+    TxEnvelope, TxKind,
 };
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
@@ -34,18 +34,12 @@ impl SpanBatchEip2930TransactionData {
             chain_id,
             nonce,
             gas_price: u128::from_be_bytes(
-                self.gas_price.to_be_bytes::<32>()[16..]
-                    .try_into()
-                    .map_err(|_| {
-                        SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
-                    })?,
+                self.gas_price.to_be_bytes::<32>()[16..].try_into().map_err(|_| {
+                    SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
+                })?,
             ),
             gas_limit: gas,
-            to: if let Some(to) = to {
-                TxKind::Call(to)
-            } else {
-                TxKind::Create
-            },
+            to: if let Some(to) = to { TxKind::Call(to) } else { TxKind::Create },
             value: self.value,
             input: self.data.clone().into(),
             access_list: self.access_list.clone(),
@@ -77,10 +71,7 @@ mod test {
 
         let decoded = SpanBatchTransactionData::decode(&mut encoded_buf.as_slice()).unwrap();
         let SpanBatchTransactionData::Eip2930(access_list_decoded) = decoded else {
-            panic!(
-                "Expected SpanBatchEip2930TransactionData, got {:?}",
-                decoded
-            );
+            panic!("Expected SpanBatchEip2930TransactionData, got {:?}", decoded);
         };
 
         assert_eq!(access_list_tx, access_list_decoded);

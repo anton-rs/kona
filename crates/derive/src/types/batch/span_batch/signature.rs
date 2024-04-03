@@ -15,11 +15,7 @@ pub struct SpanBatchSignature {
 
 impl From<Signature> for SpanBatchSignature {
     fn from(value: Signature) -> Self {
-        Self {
-            v: value.v().to_u64(),
-            r: value.r(),
-            s: value.s(),
-        }
+        Self { v: value.v().to_u64(), r: value.r(), s: value.s() }
     }
 }
 
@@ -27,11 +23,7 @@ impl TryFrom<SpanBatchSignature> for Signature {
     type Error = SpanBatchError;
 
     fn try_from(value: SpanBatchSignature) -> Result<Self, Self::Error> {
-        Self::from_rs_and_parity(
-            value.r,
-            value.s,
-            convert_v_to_y_parity(value.v, TxType::Legacy)?,
-        )
-        .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionSignature))
+        Self::from_rs_and_parity(value.r, value.s, convert_v_to_y_parity(value.v, TxType::Legacy)?)
+            .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionSignature))
     }
 }

@@ -30,10 +30,7 @@ where
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: ChannelBank<DAP, CP>) -> Self {
-        Self {
-            prev,
-            next_batch: None,
-        }
+        Self { prev, next_batch: None }
     }
 
     /// Pulls out the next Batch from the available channel.
@@ -114,21 +111,13 @@ impl BatchReader {
 
 impl From<&[u8]> for BatchReader {
     fn from(data: &[u8]) -> Self {
-        Self {
-            data: Some(data.to_vec()),
-            decompressed: Vec::new(),
-            cursor: 0,
-        }
+        Self { data: Some(data.to_vec()), decompressed: Vec::new(), cursor: 0 }
     }
 }
 
 impl From<Vec<u8>> for BatchReader {
     fn from(data: Vec<u8>) -> Self {
-        Self {
-            data: Some(data),
-            decompressed: Vec::new(),
-            cursor: 0,
-        }
+        Self { data: Some(data), decompressed: Vec::new(), cursor: 0 }
     }
 }
 

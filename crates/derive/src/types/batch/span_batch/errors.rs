@@ -26,10 +26,9 @@ impl Display for SpanBatchError {
         match self {
             SpanBatchError::TooBigSpanBatchSize => write!(f, "The span batch is too big"),
             SpanBatchError::BitfieldTooLong => write!(f, "The bit field is too long"),
-            SpanBatchError::InvalidBitSlice => write!(
-                f,
-                "Failed to set [alloy_primitives::U256] from big-endian slice"
-            ),
+            SpanBatchError::InvalidBitSlice => {
+                write!(f, "Failed to set [alloy_primitives::U256] from big-endian slice")
+            }
             SpanBatchError::EmptySpanBatch => write!(f, "Empty Span Batch"),
             SpanBatchError::MissingL1Origin => write!(f, "Missing L1 origin"),
             SpanBatchError::Encoding(e) => write!(f, "Encoding error: {:?}", e),
@@ -73,7 +72,8 @@ pub enum SpanDecodingError {
     BlockTxCounts,
     /// Failed to decode transaction nonces
     TxNonces,
-    /// Mismatch in length between the transaction type and signature arrays in a span batch transaction payload.
+    /// Mismatch in length between the transaction type and signature arrays in a span batch
+    /// transaction payload.
     TypeSignatureLenMismatch,
     /// Invalid transaction type
     InvalidTransactionType,

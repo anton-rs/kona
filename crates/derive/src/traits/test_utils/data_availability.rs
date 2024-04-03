@@ -50,9 +50,6 @@ impl DataAvailabilityProvider for TestDAP {
                 Err(_) => Err(StageError::Eof),
             })
             .collect::<Vec<StageResult<Bytes>>>();
-        Ok(TestIter {
-            open_data_calls: vec![(*block_ref, batcher_address)],
-            results,
-        })
+        Ok(TestIter { open_data_calls: vec![(*block_ref, batcher_address)], results })
     }
 }

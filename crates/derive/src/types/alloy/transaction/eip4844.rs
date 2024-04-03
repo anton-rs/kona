@@ -195,10 +195,7 @@ impl TxEip4844 {
             .encode(out);
         }
         out.put_u8(self.tx_type() as u8);
-        let header = Header {
-            list: true,
-            payload_length,
-        };
+        let header = Header { list: true, payload_length };
         header.encode(out);
         self.encode_fields(out);
         signature.encode(out);
@@ -231,11 +228,7 @@ impl TxEip4844 {
     /// Note that there is no rlp header before the transaction type byte.
     pub fn encode_for_signing(&self, out: &mut dyn BufMut) {
         out.put_u8(self.tx_type() as u8);
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 

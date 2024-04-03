@@ -31,18 +31,12 @@ impl SpanBatchLegacyTransactionData {
             chain_id: Some(chain_id),
             nonce,
             gas_price: u128::from_be_bytes(
-                self.gas_price.to_be_bytes::<32>()[16..]
-                    .try_into()
-                    .map_err(|_| {
-                        SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
-                    })?,
+                self.gas_price.to_be_bytes::<32>()[16..].try_into().map_err(|_| {
+                    SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
+                })?,
             ),
             gas_limit: gas,
-            to: if let Some(to) = to {
-                TxKind::Call(to)
-            } else {
-                TxKind::Create
-            },
+            to: if let Some(to) = to { TxKind::Call(to) } else { TxKind::Create },
             value: self.value,
             input: self.data.clone().into(),
         };

@@ -1,8 +1,8 @@
 //! This module contains the eip1559 transaction data type for a span batch.
 
-use crate::types::eip2930::AccessList;
 use crate::types::{
-    Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip1559, TxEnvelope, TxKind,
+    eip2930::AccessList, Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip1559,
+    TxEnvelope, TxKind,
 };
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
@@ -36,25 +36,17 @@ impl SpanBatchEip1559TransactionData {
             chain_id,
             nonce,
             max_fee_per_gas: u128::from_be_bytes(
-                self.max_fee_per_gas.to_be_bytes::<32>()[16..]
-                    .try_into()
-                    .map_err(|_| {
-                        SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
-                    })?,
+                self.max_fee_per_gas.to_be_bytes::<32>()[16..].try_into().map_err(|_| {
+                    SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
+                })?,
             ),
             max_priority_fee_per_gas: u128::from_be_bytes(
-                self.max_priority_fee_per_gas.to_be_bytes::<32>()[16..]
-                    .try_into()
-                    .map_err(|_| {
-                        SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
-                    })?,
+                self.max_priority_fee_per_gas.to_be_bytes::<32>()[16..].try_into().map_err(
+                    |_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData),
+                )?,
             ),
             gas_limit: gas,
-            to: if let Some(to) = to {
-                TxKind::Call(to)
-            } else {
-                TxKind::Create
-            },
+            to: if let Some(to) = to { TxKind::Call(to) } else { TxKind::Create },
             value: self.value,
             input: self.data.clone().into(),
             access_list: self.access_list.clone(),
@@ -86,10 +78,7 @@ mod test {
 
         let decoded = SpanBatchTransactionData::decode(&mut encoded_buf.as_slice()).unwrap();
         let SpanBatchTransactionData::Eip1559(variable_fee_decoded) = decoded else {
-            panic!(
-                "Expected SpanBatchEip1559TransactionData, got {:?}",
-                decoded
-            );
+            panic!("Expected SpanBatchEip1559TransactionData, got {:?}", decoded);
         };
 
         assert_eq!(variable_fee_tx, variable_fee_decoded);

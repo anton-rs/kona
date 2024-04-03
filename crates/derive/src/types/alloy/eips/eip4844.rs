@@ -99,21 +99,9 @@ mod tests {
             (0, TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB, 0),
             // If the target blob gas is exceeded, the excessBlobGas should increase
             // by however much it was overshot
-            (
-                0,
-                (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) + 1,
-                DATA_GAS_PER_BLOB,
-            ),
-            (
-                1,
-                (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) + 1,
-                DATA_GAS_PER_BLOB + 1,
-            ),
-            (
-                1,
-                (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) + 2,
-                2 * DATA_GAS_PER_BLOB + 1,
-            ),
+            (0, (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) + 1, DATA_GAS_PER_BLOB),
+            (1, (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) + 1, DATA_GAS_PER_BLOB + 1),
+            (1, (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) + 2, 2 * DATA_GAS_PER_BLOB + 1),
             // The excess blob gas should decrease by however much the target was
             // under-shot, capped at zero.
             (
@@ -131,11 +119,7 @@ mod tests {
                 (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) - 2,
                 TARGET_DATA_GAS_PER_BLOCK - (2 * DATA_GAS_PER_BLOB),
             ),
-            (
-                DATA_GAS_PER_BLOB - 1,
-                (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) - 1,
-                0,
-            ),
+            (DATA_GAS_PER_BLOB - 1, (TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB) - 1, 0),
         ] {
             let actual = calc_excess_blob_gas(excess, blobs * DATA_GAS_PER_BLOB);
             assert_eq!(actual, expected, "test: {t:?}");

@@ -1,5 +1,5 @@
-//! This module contains utilities for handling async functions in the no_std environment. This allows for usage of
-//! async/await syntax for futures in a single thread.
+//! This module contains utilities for handling async functions in the no_std environment. This
+//! allows for usage of async/await syntax for futures in a single thread.
 
 use alloc::boxed::Box;
 use core::{
@@ -7,8 +7,8 @@ use core::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-/// This function busy waits on a future until it is ready. It uses a no-op waker to poll the future in a
-/// thread-blocking loop.
+/// This function busy waits on a future until it is ready. It uses a no-op waker to poll the future
+/// in a thread-blocking loop.
 pub fn block_on<T>(f: impl Future<Output = T>) -> T {
     let mut f = Box::pin(f);
 

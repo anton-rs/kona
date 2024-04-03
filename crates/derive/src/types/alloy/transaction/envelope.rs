@@ -140,28 +140,26 @@ impl Decodable for TxEnvelope {
 impl Decodable2718 for TxEnvelope {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, Eip2718Error> {
         match ty.try_into()? {
-            TxType::Legacy => Ok(Self::TaggedLegacy(
-                Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
-            )),
-            TxType::Eip2930 => Ok(Self::Eip2930(
-                Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
-            )),
-            TxType::Eip1559 => Ok(Self::Eip1559(
-                Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
-            )),
-            TxType::Eip4844 => Ok(Self::Eip4844(
-                Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
-            )),
-            TxType::Deposit => Ok(Self::Deposit(
-                Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
-            )),
+            TxType::Legacy => {
+                Ok(Self::TaggedLegacy(Decodable::decode(buf).map_err(Eip2718Error::RlpError)?))
+            }
+            TxType::Eip2930 => {
+                Ok(Self::Eip2930(Decodable::decode(buf).map_err(Eip2718Error::RlpError)?))
+            }
+            TxType::Eip1559 => {
+                Ok(Self::Eip1559(Decodable::decode(buf).map_err(Eip2718Error::RlpError)?))
+            }
+            TxType::Eip4844 => {
+                Ok(Self::Eip4844(Decodable::decode(buf).map_err(Eip2718Error::RlpError)?))
+            }
+            TxType::Deposit => {
+                Ok(Self::Deposit(Decodable::decode(buf).map_err(Eip2718Error::RlpError)?))
+            }
         }
     }
 
     fn fallback_decode(buf: &mut &[u8]) -> Result<Self, Eip2718Error> {
-        Ok(TxEnvelope::Legacy(
-            Decodable::decode(buf).map_err(Eip2718Error::RlpError)?,
-        ))
+        Ok(TxEnvelope::Legacy(Decodable::decode(buf).map_err(Eip2718Error::RlpError)?))
     }
 }
 

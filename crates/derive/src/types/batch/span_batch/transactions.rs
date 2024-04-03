@@ -1,12 +1,13 @@
-//! This module contains the [SpanBatchTransactions] type and logic for encoding and decoding transactions in a span batch.
+//! This module contains the [SpanBatchTransactions] type and logic for encoding and decoding
+//! transactions in a span batch.
 
 use alloc::vec::Vec;
 use alloy_primitives::{Address, U256};
 use alloy_rlp::{Buf, Decodable, Encodable};
 
-use super::{convert_v_to_y_parity, read_tx_data};
 use super::{
-    SpanBatchBits, SpanBatchError, SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError,
+    convert_v_to_y_parity, read_tx_data, SpanBatchBits, SpanBatchError, SpanBatchSignature,
+    SpanBatchTransactionData, SpanDecodingError,
 };
 use crate::types::{RawTransaction, Transaction, TxEnvelope, TxKind, TxType};
 
@@ -66,11 +67,7 @@ impl SpanBatchTransactions {
 
     /// Encode the contract creation bits into a writer.
     pub fn encode_contract_creation_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(
-            w,
-            self.total_block_tx_count as usize,
-            &self.contract_creation_bits,
-        )?;
+        SpanBatchBits::encode(w, self.total_block_tx_count as usize, &self.contract_creation_bits)?;
         Ok(())
     }
 
@@ -155,11 +152,7 @@ impl SpanBatchTransactions {
         for _ in 0..self.total_block_tx_count {
             let r_val = U256::from_be_slice(&r[..32]);
             let s_val = U256::from_be_slice(&r[32..64]);
-            sigs.push(SpanBatchSignature {
-                v: 0,
-                r: r_val,
-                s: s_val,
-            });
+            sigs.push(SpanBatchSignature { v: 0, r: r_val, s: s_val });
             r.advance(64);
         }
         self.tx_sigs = sigs;
@@ -210,7 +203,8 @@ impl SpanBatchTransactions {
         let mut tx_datas = Vec::new();
         let mut tx_types = Vec::new();
 
-        // Do not need the transaction data header because the RLP stream already includes the length information.
+        // Do not need the transaction data header because the RLP stream already includes the
+        // length information.
         for _ in 0..self.total_block_tx_count {
             let (tx_data, tx_type) = read_tx_data(r)?;
             tx_datas.push(tx_data);
@@ -228,26 +222,17 @@ impl SpanBatchTransactions {
 
     /// Returns the number of contract creation transactions in the span batch.
     pub fn contract_creation_count(&self) -> u64 {
-        self.contract_creation_bits
-            .0
-            .iter()
-            .map(|b| b.count_ones() as u64)
-            .sum()
+        self.contract_creation_bits.0.iter().map(|b| b.count_ones() as u64).sum()
     }
 
     /// Recover the `v` values of the transaction signatures.
     pub fn recover_v(&mut self, chain_id: u64) -> Result<(), SpanBatchError> {
         if self.tx_sigs.len() != self.tx_types.len() {
-            return Err(SpanBatchError::Decoding(
-                SpanDecodingError::TypeSignatureLenMismatch,
-            ));
+            return Err(SpanBatchError::Decoding(SpanDecodingError::TypeSignatureLenMismatch));
         }
         let mut protected_bits_idx = 0;
         for (i, tx_type) in self.tx_types.iter().enumerate() {
-            let bit = self
-                .y_parity_bits
-                .get_bit(i)
-                .ok_or(SpanBatchError::BitfieldTooLong)?;
+            let bit = self.y_parity_bits.get_bit(i).ok_or(SpanBatchError::BitfieldTooLong)?;
             let v = match tx_type {
                 TxType::Legacy => {
                     // Legacy transaction
@@ -261,9 +246,7 @@ impl SpanBatchTransactions {
                     }
                 }
                 TxType::Eip2930 | TxType::Eip1559 => Ok(bit as u64),
-                _ => Err(SpanBatchError::Decoding(
-                    SpanDecodingError::InvalidTransactionType,
-                )),
+                _ => Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType)),
             }?;
             self.tx_sigs.get_mut(i).expect("Transaction must exist").v = v;
         }
@@ -281,23 +264,18 @@ impl SpanBatchTransactions {
             let nonce = self
                 .tx_nonces
                 .get(idx as usize)
-                .ok_or(SpanBatchError::Decoding(
-                    SpanDecodingError::InvalidTransactionData,
-                ))?;
+                .ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
             let gas = self
                 .tx_gases
                 .get(idx as usize)
-                .ok_or(SpanBatchError::Decoding(
-                    SpanDecodingError::InvalidTransactionData,
-                ))?;
-            let bit = self.contract_creation_bits.get_bit(idx as usize).ok_or(
-                SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData),
-            )?;
+                .ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
+            let bit = self
+                .contract_creation_bits
+                .get_bit(idx as usize)
+                .ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
             let to = if bit == 0 {
                 if self.tx_tos.len() <= to_idx {
-                    return Err(SpanBatchError::Decoding(
-                        SpanDecodingError::InvalidTransactionData,
-                    ));
+                    return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData));
                 }
                 to_idx += 1;
                 Some(self.tx_tos[to_idx - 1])
@@ -307,9 +285,7 @@ impl SpanBatchTransactions {
             let sig = *self
                 .tx_sigs
                 .get(idx as usize)
-                .ok_or(SpanBatchError::Decoding(
-                    SpanDecodingError::InvalidTransactionData,
-                ))?;
+                .ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
             let tx_envelope = tx.to_enveloped_tx(*nonce, *gas, to, chain_id, sig.try_into()?)?;
             let mut buf = Vec::new();
             tx_envelope.encode(&mut buf);
@@ -335,8 +311,7 @@ impl SpanBatchTransactions {
             let tx_type = tx_enveloped.tx_type();
             if matches!(tx_type, TxType::Legacy) {
                 // TODO: Check protected signature
-                self.protected_bits
-                    .set_bit(self.legacy_tx_count as usize, false);
+                self.protected_bits.set_bit(self.legacy_tx_count as usize, false);
                 self.legacy_tx_count += 1;
             }
 
@@ -347,9 +322,7 @@ impl SpanBatchTransactions {
                 TxEnvelope::Eip2930(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
                 TxEnvelope::Eip1559(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
                 _ => {
-                    return Err(SpanBatchError::Decoding(
-                        SpanDecodingError::InvalidTransactionData,
-                    ))
+                    return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))
                 }
             };
             let signature_v = signature.v().to_u64();
@@ -365,10 +338,8 @@ impl SpanBatchTransactions {
             span_batch_tx.encode(&mut tx_data_buf);
 
             self.tx_sigs.push(signature.into());
-            self.contract_creation_bits
-                .set_bit((i + offset) as usize, contract_creation_bit == 1);
-            self.y_parity_bits
-                .set_bit((i + offset) as usize, y_parity_bit);
+            self.contract_creation_bits.set_bit((i + offset) as usize, contract_creation_bit == 1);
+            self.y_parity_bits.set_bit((i + offset) as usize, y_parity_bit);
             self.tx_nonces.push(nonce);
             self.tx_datas.push(tx_data_buf);
             self.tx_gases.push(gas);

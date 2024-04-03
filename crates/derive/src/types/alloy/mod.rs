@@ -1,4 +1,5 @@
-//! This module contains `alloy` types that have been ported from various alloy crates to support `no_std`.
+//! This module contains `alloy` types that have been ported from various alloy crates to support
+//! `no_std`.
 
 mod transaction;
 pub use transaction::{TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxLegacy, TxType};
