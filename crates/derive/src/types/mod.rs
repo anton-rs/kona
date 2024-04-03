@@ -63,6 +63,12 @@ impl Decodable for RawTransaction {
     }
 }
 
+impl AsRef<[u8]> for RawTransaction {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 /// A single L2 block derived from a batch.
 #[derive(Debug, Clone)]
 pub struct BlockInput {

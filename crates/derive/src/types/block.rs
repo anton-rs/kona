@@ -31,6 +31,29 @@ impl BlockInfo {
     }
 }
 
+/// L2 Block Header Info
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub struct L2BlockInfo {
+    /// The base [BlockInfo]
+    pub block_info: BlockInfo,
+    /// The L1 origin [BlockId]
+    pub l1_origin: BlockId,
+    /// The sequence number of the L2 block
+    pub seq_num: u64,
+}
+
+impl L2BlockInfo {
+    /// Instantiates a new [L2BlockInfo].
+    pub fn new(block_info: BlockInfo, l1_origin: BlockId, seq_num: u64) -> Self {
+        Self {
+            block_info,
+            l1_origin,
+            seq_num,
+        }
+    }
+}
+
 /// A Block Identifier
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

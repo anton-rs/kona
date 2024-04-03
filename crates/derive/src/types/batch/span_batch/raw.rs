@@ -19,6 +19,11 @@ pub struct RawSpanBatch {
 }
 
 impl RawSpanBatch {
+    /// Returns the batch type
+    pub fn get_batch_type(&self) -> u8 {
+        SPAN_BATCH_TYPE
+    }
+
     /// Encodes the [RawSpanBatch] into a writer.
     pub fn encode(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
         self.prefix.encode_prefix(w);
@@ -32,7 +37,8 @@ impl RawSpanBatch {
         Ok(Self { prefix, payload })
     }
 
-    /// Converts a [RawSpanBatch] into a [SpanBatch], which has a list of [SpanBatchElement]s.
+    /// Converts a [RawSpanBatch] into a [SpanBatch], which has a list of [SpanBatchElement]s. Thos function does not
+    /// populate the [SpanBatch] with chain configuration data, which is required for making payload attributes.
     pub fn derive(
         &mut self,
         block_time: u64,
@@ -88,12 +94,8 @@ impl RawSpanBatch {
             parent_check: self.prefix.parent_check,
             l1_origin_check: self.prefix.l1_origin_check,
             batches,
+            ..Default::default()
         })
-    }
-
-    /// Returns the batch type
-    pub fn get_batch_type(&self) -> u8 {
-        SPAN_BATCH_TYPE
     }
 }
 

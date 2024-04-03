@@ -133,7 +133,7 @@ impl SpanBatchBits {
 
     /// Calculates the bit length of the [SpanBatchBits] bitfield.
     pub fn bit_len(&self) -> usize {
-        if let Some((ref top_word, rest)) = self.0.split_last() {
+        if let Some((top_word, rest)) = self.0.split_last() {
             // Calculate bit length. Rust's leading_zeros counts zeros from the MSB, so subtract from total bits.
             let significant_bits = 8 - top_word.leading_zeros() as usize;
 

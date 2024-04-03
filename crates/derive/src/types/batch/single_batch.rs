@@ -6,9 +6,9 @@ use alloy_primitives::BlockHash;
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 
 /// Represents a single batch: a single encoded L2 block
-#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
 pub struct SingleBatch {
-    /// Block hash of the previous L2 block
+    /// Block hash of the previous L2 block. `B256::ZERO` if it has not been set by the Batch Queue.
     pub parent_hash: BlockHash,
     /// The batch epoch number. Same as the first L1 block number in the epoch.
     pub epoch_num: u64,

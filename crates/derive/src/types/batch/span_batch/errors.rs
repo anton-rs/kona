@@ -13,6 +13,8 @@ pub enum SpanBatchError {
     InvalidBitSlice,
     /// Empty Span Batch
     EmptySpanBatch,
+    /// Missing L1 origin
+    MissingL1Origin,
     /// Encoding errors
     Encoding(EncodingError),
     /// Decoding errors
@@ -29,6 +31,7 @@ impl Display for SpanBatchError {
                 "Failed to set [alloy_primitives::U256] from big-endian slice"
             ),
             SpanBatchError::EmptySpanBatch => write!(f, "Empty Span Batch"),
+            SpanBatchError::MissingL1Origin => write!(f, "Missing L1 origin"),
             SpanBatchError::Encoding(e) => write!(f, "Encoding error: {:?}", e),
             SpanBatchError::Decoding(e) => write!(f, "Decoding error: {:?}", e),
         }

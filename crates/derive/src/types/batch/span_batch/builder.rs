@@ -28,11 +28,7 @@ impl SpanBatchBuilder {
         SpanBatchBuilder {
             genesis_timestamp,
             chain_id,
-            span_batch: SpanBatch {
-                parent_check: FixedBytes::<20>::default(),
-                l1_origin_check: FixedBytes::<20>::default(),
-                batches: Vec::new(),
-            },
+            span_batch: SpanBatch::default(),
             origin_changed_bit: 0,
         }
     }
@@ -44,11 +40,7 @@ impl SpanBatchBuilder {
 
     /// Resets the span batch builder.
     pub fn reset(&mut self) {
-        self.span_batch = SpanBatch {
-            parent_check: FixedBytes::<20>::default(),
-            l1_origin_check: FixedBytes::<20>::default(),
-            batches: Vec::new(),
-        };
+        self.span_batch = SpanBatch::default();
         self.origin_changed_bit = 0;
     }
 

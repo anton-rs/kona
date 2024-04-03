@@ -8,7 +8,7 @@ use super::{convert_v_to_y_parity, read_tx_data};
 use super::{
     SpanBatchBits, SpanBatchError, SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError,
 };
-use crate::types::{Transaction, TxEnvelope, TxKind, TxType};
+use crate::types::{RawTransaction, Transaction, TxEnvelope, TxKind, TxType};
 
 /// This struct contains the decoded information for transactions in a span batch.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -319,12 +319,16 @@ impl SpanBatchTransactions {
     }
 
     /// Add raw transactions into the [SpanBatchTransactions].
-    pub fn add_txs(&mut self, txs: Vec<Vec<u8>>, _chain_id: u64) -> Result<(), SpanBatchError> {
+    pub fn add_txs(
+        &mut self,
+        txs: Vec<RawTransaction>,
+        _chain_id: u64,
+    ) -> Result<(), SpanBatchError> {
         let total_block_tx_count = txs.len() as u64;
         let offset = self.total_block_tx_count;
 
         for i in 0..total_block_tx_count {
-            let tx_enveloped = TxEnvelope::decode(&mut txs[i as usize].as_slice())
+            let tx_enveloped = TxEnvelope::decode(&mut txs[i as usize].as_ref())
                 .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
             let span_batch_tx = SpanBatchTransactionData::try_from(&tx_enveloped)?;
 
