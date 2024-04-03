@@ -96,7 +96,7 @@ impl BatchReader {
         if let Some(data) = self.data.take() {
             self.decompressed = decompress_to_vec(&data).ok()?;
         }
-        let batch = Batch::try_from(self.decompressed.as_ref()).ok()?;
+        let batch = Batch::decode(&mut self.decompressed.as_ref()).ok()?;
         Some(batch)
     }
 }

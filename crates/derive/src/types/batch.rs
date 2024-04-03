@@ -20,17 +20,15 @@ pub enum Batch {
     Span(SpanBatch),
 }
 
-impl TryFrom<&[u8]> for Batch {
-    type Error = DecodeError;
-
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        let mut buf = bytes;
-        if buf.is_empty() {
-            return Err(Self::Error::EmptyBuffer);
+impl Batch {
+    /// Attempts to decode a batch from a byte slice.
+    pub fn decode(r: &mut &[u8]) -> Result<Self, DecodeError> {
+        if r.is_empty() {
+            return Err(DecodeError::EmptyBuffer);
         }
-        match BatchType::from(buf[0]) {
+        match BatchType::from(r[0]) {
             BatchType::Single => {
-                let single_batch = SingleBatch::decode(&mut buf)?;
+                let single_batch = SingleBatch::decode(r)?;
                 Ok(Batch::Single(single_batch))
             }
             BatchType::Span => {
