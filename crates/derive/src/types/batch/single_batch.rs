@@ -1,7 +1,7 @@
 //! This module contains the [SingleBatch] type.
 
 use super::validity::BatchValidity;
-use crate::types::{BlockInfo, L2BlockRef, RawTransaction, RollupConfig};
+use crate::types::{BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
 use alloy_rlp::{Decodable, Encodable};
@@ -33,7 +33,7 @@ impl SingleBatch {
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
-        l2_safe_head: L2BlockRef,
+        l2_safe_head: L2BlockInfo,
         inclusion_block: &BlockInfo,
     ) -> BatchValidity {
         // Sanity check input consistency
@@ -43,7 +43,7 @@ impl SingleBatch {
         }
 
         let epoch = l1_blocks[0];
-        let next_timestamp = l2_safe_head.info.timestamp + cfg.block_time;
+        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
         if self.timestamp > next_timestamp {
             // TODO: trace log: "received out-of-order batch for future processing after next batch"
             return BatchValidity::Future;
@@ -55,7 +55,7 @@ impl SingleBatch {
 
         // Dependent on the above timestamp check.
         // If the timestamp is correct, then it must build on top of the safe head.
-        if self.parent_hash != l2_safe_head.info.hash {
+        if self.parent_hash != l2_safe_head.block_info.hash {
             // TODO: warn log: "ignoring batch with mismatching parent hash", "current_safe_head",
             // l2_safe_head.info.hash
             return BatchValidity::Drop;

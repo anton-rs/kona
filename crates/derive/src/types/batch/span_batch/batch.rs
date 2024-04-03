@@ -6,8 +6,8 @@ use super::{SpanBatchError, SpanBatchTransactions};
 use crate::{
     traits::SafeBlockFetcher,
     types::{
-        block::L2BlockInfo, BatchValidity, BlockInfo, L2BlockRef, RawSpanBatch, RollupConfig,
-        SingleBatch, SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+        BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
+        SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
     },
 };
 use alloc::{vec, vec::Vec};
@@ -45,7 +45,7 @@ impl SpanBatch {
         &self,
         _cfg: &RollupConfig,
         _l1_blocks: &[BlockInfo],
-        _l2_safe_head: L2BlockRef,
+        _l2_safe_head: L2BlockInfo,
         _inclusion_block: &BlockInfo,
         _fetcher: &BF,
     ) -> BatchValidity {

@@ -4,7 +4,7 @@
 use super::DecodeError;
 use crate::{
     traits::SafeBlockFetcher,
-    types::{BlockInfo, L2BlockRef, RollupConfig},
+    types::{BlockInfo, L2BlockInfo, RollupConfig},
 };
 use alloc::vec::Vec;
 use alloy_rlp::{Buf, Decodable, Encodable};
@@ -45,7 +45,7 @@ impl BatchWithInclusionBlock {
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
-        l2_safe_head: L2BlockRef,
+        l2_safe_head: L2BlockInfo,
         fetcher: &BF,
     ) -> BatchValidity {
         match &self.batch {

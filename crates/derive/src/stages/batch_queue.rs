@@ -4,7 +4,7 @@ use crate::{
     stages::channel_reader::ChannelReader,
     traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher},
     types::{
-        Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockRef, RollupConfig,
+        Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
@@ -86,22 +86,22 @@ where
     /// Pops the next batch from the current queued up span-batch cache.
     /// The parent is used to set the parent hash of the batch.
     /// The parent is verified when the batch is later validated.
-    pub fn pop_next_batch(&mut self, parent: L2BlockRef) -> Option<SingleBatch> {
+    pub fn pop_next_batch(&mut self, parent: L2BlockInfo) -> Option<SingleBatch> {
         if self.next_spans.is_empty() {
-            return None;
+            panic!("Invalid state: must have next spans to pop");
         }
         let mut next = self.next_spans.remove(0);
-        next.parent_hash = parent.info.hash;
+        next.parent_hash = parent.block_info.hash;
         Some(next)
     }
 
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
-    pub async fn next_batch(&mut self, parent: L2BlockRef) -> StageResult<SingleBatch> {
+    pub async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
-            if self.next_spans[0].timestamp == parent.info.timestamp + self.cfg.block_time {
+            if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
                 return self
                     .pop_next_batch(parent)
                     .ok_or(anyhow!("failed to pop next batch from span batch").into());
@@ -122,7 +122,7 @@ where
         if !self.l1_blocks.is_empty() && parent.l1_origin.number > self.l1_blocks[0].number {
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
-                    self.l1_blocks.drain(0..=i);
+                    self.l1_blocks.drain(0..i);
                     // TODO: log that the pipelien has advanced the epoch.
                     // TODO: metrice the internal epoch advancement.
                     break;
@@ -144,7 +144,8 @@ where
         if self.origin != self.prev.origin().copied() {
             self.origin = self.prev.origin().cloned();
             if !origin_behind {
-                self.l1_blocks.push(*self.origin.as_ref().unwrap());
+                let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
+                self.l1_blocks.push(*origin);
             } else {
                 // This is to handle the special case of startup.
                 // At startup, the batch queue is reset and includes the
@@ -175,7 +176,7 @@ where
             if out_of_data {
                 return Err(StageError::Eof);
             }
-            return Err(StageError::Custom(anyhow!("Not Enough Data")));
+            return Err(StageError::NotEnoughData);
         }
 
         // Attempt to derive more batches.
@@ -186,7 +187,7 @@ where
                     if out_of_data {
                         return Err(StageError::Eof);
                     }
-                    return Err(StageError::Custom(anyhow!("Not Enough Data")));
+                    return Err(StageError::NotEnoughData);
                 }
                 _ => return Err(e),
             },
@@ -197,7 +198,7 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = sb.get_singular_batches(&self.l1_blocks, parent); // .ok_or_else(|| anyhow!("failed to get singular batches from span batch"))?;
+                let batches = sb.get_singular_batches(&self.l1_blocks, parent);
                 self.next_spans = batches;
                 let nb = self
                     .pop_next_batch(parent)
@@ -211,7 +212,7 @@ where
     /// Follows the validity rules imposed on consecutive batches.
     /// Based on currently available buffered batch and L1 origin information.
     /// A [StageError::Eof] is returned if no batch can be derived yet.
-    pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockRef) -> StageResult<Batch> {
+    pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockInfo) -> StageResult<Batch> {
         // Cannot derive a batch if no origin was prepared.
         if self.l1_blocks.is_empty() {
             return Err(StageError::Custom(anyhow!(
@@ -229,7 +230,7 @@ where
         // but don't advance the L2 Safe Head's epoch
         if parent.l1_origin != epoch.id() && parent.l1_origin.number != epoch.number - 1 {
             return Err(StageError::Custom(anyhow!(
-                "buffered L1 chain epoch {} in batch queue does not match safe head origin {}",
+                "buffered L1 chain epoch {} in batch queue does not match safe head origin {:?}",
                 epoch,
                 parent.l1_origin
             )));
@@ -239,7 +240,7 @@ where
         // We may not have sufficient information to proceed filtering, and then we stop.
         // There may be none: in that case we force-create an empty batch
         let mut next_batch = None;
-        let next_timestamp = parent.info.timestamp + self.cfg.block_time;
+        let next_timestamp = parent.block_info.timestamp + self.cfg.block_time;
 
         // Go over all batches, in order of inclusion, and find the first batch we can accept.
         // Filter in-place by only remembering the batches that may be processed in the future, or
@@ -308,7 +309,7 @@ where
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
             // TODO: log next batch generation.
             return Ok(Batch::Single(SingleBatch {
-                parent_hash: parent.info.hash,
+                parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
                 epoch_hash: epoch.hash,
                 timestamp: next_timestamp,
@@ -326,13 +327,10 @@ where
     }
 
     /// Adds a batch to the queue.
-    pub fn add_batch(&mut self, batch: Batch, parent: L2BlockRef) -> StageResult<()> {
+    pub fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
-            return Err(anyhow!(
-                "cannot add batch with timestamp {}, no origin was prepared",
-                batch.timestamp()
-            )
-            .into());
+            // TODO: log that the batch cannot be added without an origin
+            panic!("Cannot add batch without an origin");
         }
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
         let data = BatchWithInclusionBlock { inclusion_block: origin, batch };

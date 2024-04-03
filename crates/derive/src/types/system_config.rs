@@ -247,8 +247,8 @@ mod test {
     fn mock_rollup_config(system_config: SystemConfig) -> RollupConfig {
         RollupConfig {
             genesis: Genesis {
-                l1: crate::types::BlockId::Number(0),
-                l2: crate::types::BlockId::Number(0),
+                l1: crate::types::BlockID::default(),
+                l2: crate::types::BlockID::default(),
                 timestamp: 0,
                 system_config,
             },

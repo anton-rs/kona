@@ -34,7 +34,7 @@ mod payload;
 pub use payload::{ExecutionPayload, ExecutionPayloadEnvelope};
 
 mod block;
-pub use block::{BlockID, BlockId, BlockInfo, BlockKind, L2BlockRef};
+pub use block::{BlockID, BlockInfo, BlockKind, L2BlockInfo};
 
 mod genesis;
 pub use genesis::Genesis;

@@ -5,8 +5,8 @@ use alloc::vec::Vec;
 use crate::{
     traits::SafeBlockFetcher,
     types::{
-        BatchType, BatchValidity, BlockInfo, L2BlockRef, RawTransaction, RollupConfig, SingleBatch,
-        SpanBatchElement, SpanBatchPayload, SpanBatchPrefix, SpanDecodingError,
+        BatchType, BatchValidity, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig,
+        SingleBatch, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix, SpanDecodingError,
     },
 };
 
@@ -37,7 +37,7 @@ impl RawSpanBatch {
         &self,
         _cfg: &RollupConfig,
         _l1_blocks: &[BlockInfo],
-        _l2_safe_head: L2BlockRef,
+        _l2_safe_head: L2BlockInfo,
         _inclusion_block: &BlockInfo,
         _fetcher: &BF,
     ) -> BatchValidity {
@@ -48,7 +48,7 @@ impl RawSpanBatch {
     pub fn get_singular_batches(
         &self,
         _l1_blocks: &[BlockInfo],
-        _parent: L2BlockRef,
+        _parent: L2BlockInfo,
     ) -> Vec<SingleBatch> {
         unimplemented!()
     }
