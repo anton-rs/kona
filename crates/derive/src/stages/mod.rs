@@ -24,7 +24,9 @@ pub use frame_queue::FrameQueue;
 mod channel_bank;
 pub use channel_bank::ChannelBank;
 
-mod batch_queue;
 mod channel_reader;
+pub use channel_reader::ChannelReader;
+
+mod batch_queue;
 mod engine_queue;
 mod payload_derivation;

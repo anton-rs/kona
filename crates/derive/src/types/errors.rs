@@ -64,3 +64,37 @@ impl Display for StageError {
         }
     }
 }
+
+/// A decoding error.
+#[derive(Debug)]
+pub enum DecodeError {
+    /// The buffer is empty.
+    EmptyBuffer,
+    /// Alloy RLP Encoding Error.
+    AlloyRlpError(alloy_rlp::Error),
+}
+
+impl From<alloy_rlp::Error> for DecodeError {
+    fn from(e: alloy_rlp::Error) -> Self {
+        DecodeError::AlloyRlpError(e)
+    }
+}
+
+impl PartialEq<DecodeError> for DecodeError {
+    fn eq(&self, other: &DecodeError) -> bool {
+        matches!(
+            (self, other),
+            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer)
+                | (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
+        )
+    }
+}
+
+impl Display for DecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            DecodeError::EmptyBuffer => write!(f, "Empty buffer"),
+            DecodeError::AlloyRlpError(e) => write!(f, "Alloy RLP Decoding Error: {}", e),
+        }
+    }
+}
