@@ -67,14 +67,8 @@ impl SpanBatchPrefix {
     /// Encodes the [SpanBatchPrefix] into a writer.
     pub fn encode_prefix(&self, w: &mut Vec<u8>) {
         let mut u64_buf = [0u8; 10];
-        w.extend_from_slice(unsigned_varint::encode::u64(
-            self.rel_timestamp,
-            &mut u64_buf,
-        ));
-        w.extend_from_slice(unsigned_varint::encode::u64(
-            self.l1_origin_num,
-            &mut u64_buf,
-        ));
+        w.extend_from_slice(unsigned_varint::encode::u64(self.rel_timestamp, &mut u64_buf));
+        w.extend_from_slice(unsigned_varint::encode::u64(self.l1_origin_num, &mut u64_buf));
         w.extend_from_slice(self.parent_check.as_slice());
         w.extend_from_slice(self.l1_origin_check.as_slice());
     }
@@ -98,9 +92,6 @@ mod test {
         let mut buf = Vec::new();
         expected.encode_prefix(&mut buf);
 
-        assert_eq!(
-            SpanBatchPrefix::decode_prefix(&mut buf.as_slice()).unwrap(),
-            expected
-        );
+        assert_eq!(SpanBatchPrefix::decode_prefix(&mut buf.as_slice()).unwrap(), expected);
     }
 }

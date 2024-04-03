@@ -2,8 +2,7 @@
 
 #![allow(unused)]
 
-use crate::types::SingleBatch;
-use crate::types::{RawSpanBatch, SpanBatch, SpanBatchElement};
+use crate::types::{RawSpanBatch, SingleBatch, SpanBatch, SpanBatchElement};
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
 

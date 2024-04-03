@@ -40,12 +40,12 @@ pub fn calc_next_block_base_fee(
         // increased base fee.
         core::cmp::Ordering::Greater => {
             // Calculate the increase in base fee based on the formula defined by EIP-1559.
-            base_fee
-                + (core::cmp::max(
+            base_fee +
+                (core::cmp::max(
                     // Ensure a minimum increase of 1.
                     1,
-                    base_fee as u128 * (gas_used - gas_target) as u128
-                        / (gas_target as u128 * base_fee_params.max_change_denominator as u128),
+                    base_fee as u128 * (gas_used - gas_target) as u128 /
+                        (gas_target as u128 * base_fee_params.max_change_denominator as u128),
                 ) as u64)
         }
         // If the gas used in the current block is less than the gas target, calculate a new
@@ -53,8 +53,8 @@ pub fn calc_next_block_base_fee(
         core::cmp::Ordering::Less => {
             // Calculate the decrease in base fee based on the formula defined by EIP-1559.
             base_fee.saturating_sub(
-                (base_fee as u128 * (gas_target - gas_used) as u128
-                    / (gas_target as u128 * base_fee_params.max_change_denominator as u128))
+                (base_fee as u128 * (gas_target - gas_used) as u128 /
+                    (gas_target as u128 * base_fee_params.max_change_denominator as u128))
                     as u64,
             )
         }
@@ -69,10 +69,7 @@ mod tests {
 
     #[test]
     fn min_protocol_sanity() {
-        assert_eq!(
-            MIN_PROTOCOL_BASE_FEE_U256.to::<u64>(),
-            MIN_PROTOCOL_BASE_FEE
-        );
+        assert_eq!(MIN_PROTOCOL_BASE_FEE_U256.to::<u64>(), MIN_PROTOCOL_BASE_FEE);
     }
 
     #[test]

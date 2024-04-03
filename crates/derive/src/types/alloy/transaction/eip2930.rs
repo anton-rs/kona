@@ -117,10 +117,7 @@ impl TxEip2930 {
     /// hash that for eip2718 does not require rlp header
     pub(crate) fn encode_with_signature(&self, signature: &Signature, out: &mut dyn BufMut) {
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
+        let header = Header { list: true, payload_length };
         header.encode(out);
         self.encode_fields(out);
         signature.write_rlp_vrs(out);
@@ -147,11 +144,7 @@ impl TxEip2930 {
 
 impl Encodable for TxEip2930 {
     fn encode(&self, out: &mut dyn BufMut) {
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 
@@ -180,11 +173,7 @@ impl Transaction for TxEip2930 {
 
     fn encode_for_signing(&self, out: &mut dyn BufMut) {
         out.put_u8(self.tx_type() as u8);
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 

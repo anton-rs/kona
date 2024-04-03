@@ -29,8 +29,8 @@ impl From<SpanBatchBits> for Vec<u8> {
 
 impl SpanBatchBits {
     /// Decodes a standard span-batch bitlist from a reader.
-    /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8 bits.
-    /// The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
+    /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8
+    /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
     pub fn decode(b: &mut &[u8], bit_length: usize) -> Result<Self, SpanBatchError> {
         let buffer_len = bit_length / 8 + if bit_length % 8 != 0 { 1 } else { 0 };
         if buffer_len > MAX_SPAN_BATCH_SIZE {
@@ -59,8 +59,8 @@ impl SpanBatchBits {
     }
 
     /// Encodes a standard span-batch bitlist.
-    /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8 bits.
-    /// The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
+    /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8
+    /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
     pub fn encode(
         w: &mut Vec<u8>,
         bit_length: usize,
@@ -97,11 +97,7 @@ impl SpanBatchBits {
             // Shift the bits of the byte to the right, based on the bit index, and
             // mask it with 1 to isolate the bit we're interested in.
             // If the result is not zero, the bit is set to 1, otherwise it's 0.
-            Some(if byte & (1 << (8 - bit_index)) != 0 {
-                1
-            } else {
-                0
-            })
+            Some(if byte & (1 << (8 - bit_index)) != 0 { 1 } else { 0 })
         } else {
             // Return None if the index is out of bounds
             None
@@ -134,10 +130,12 @@ impl SpanBatchBits {
     /// Calculates the bit length of the [SpanBatchBits] bitfield.
     pub fn bit_len(&self) -> usize {
         if let Some((top_word, rest)) = self.0.split_last() {
-            // Calculate bit length. Rust's leading_zeros counts zeros from the MSB, so subtract from total bits.
+            // Calculate bit length. Rust's leading_zeros counts zeros from the MSB, so subtract
+            // from total bits.
             let significant_bits = 8 - top_word.leading_zeros() as usize;
 
-            // Return total bits, taking into account the full words in `rest` and the significant bits in `top`.
+            // Return total bits, taking into account the full words in `rest` and the significant
+            // bits in `top`.
             rest.len() * 8 + significant_bits
         } else {
             // If the slice is empty, return 0.

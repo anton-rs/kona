@@ -142,10 +142,7 @@ impl TxEip1559 {
         out: &mut dyn alloy_rlp::BufMut,
     ) {
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
+        let header = Header { list: true, payload_length };
         header.encode(out);
         self.encode_fields(out);
         signature.write_rlp_vrs(out);
@@ -186,11 +183,7 @@ impl TxEip1559 {
 
 impl Encodable for TxEip1559 {
     fn encode(&self, out: &mut dyn BufMut) {
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 
@@ -218,11 +211,7 @@ impl Transaction for TxEip1559 {
 
     fn encode_for_signing(&self, out: &mut dyn alloy_rlp::BufMut) {
         out.put_u8(self.tx_type() as u8);
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 
@@ -370,10 +359,6 @@ mod tests {
 
         let signed_tx = tx.into_signed(sig);
         assert_eq!(*signed_tx.hash(), hash, "Expected same hash");
-        assert_eq!(
-            signed_tx.recover_signer().unwrap(),
-            signer,
-            "Recovering signer should pass."
-        );
+        assert_eq!(signed_tx.recover_signer().unwrap(), signer, "Recovering signer should pass.");
     }
 }

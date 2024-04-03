@@ -151,11 +151,7 @@ pub trait Encodable2718: Sized + Send + Sync + 'static {
     /// simply the legacy encoding.
     fn network_encode(&self, out: &mut dyn BufMut) {
         if !self.is_legacy() {
-            Header {
-                list: false,
-                payload_length: self.encode_2718_len(),
-            }
-            .encode(out);
+            Header { list: false, payload_length: self.encode_2718_len() }.encode(out);
         }
 
         self.encode_2718(out);

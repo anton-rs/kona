@@ -8,7 +8,8 @@ use alloy_rlp::{Decodable, Encodable};
 /// Represents a single batch: a single encoded L2 block
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SingleBatch {
-    /// Block hash of the previous L2 block. `B256::ZERO` if it has not been set by the Batch Queue.
+    /// Block hash of the previous L2 block. `B256::ZERO` if it has not been set by the Batch
+    /// Queue.
     pub parent_hash: BlockHash,
     /// The batch epoch number. Same as the first L1 block number in the epoch.
     pub epoch_num: u64,
@@ -23,9 +24,7 @@ pub struct SingleBatch {
 impl SingleBatch {
     /// If any transactions are empty or deposited transaction types.
     pub fn has_invalid_transactions(&self) -> bool {
-        self.transactions
-            .iter()
-            .any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
+        self.transactions.iter().any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
     }
 }
 
@@ -46,13 +45,7 @@ impl Decodable for SingleBatch {
         let epoch_hash = BlockHash::decode(rlp)?;
         let timestamp = u64::decode(rlp)?;
         let transactions = Vec::<RawTransaction>::decode(rlp)?;
-        Ok(Self {
-            parent_hash,
-            epoch_num,
-            epoch_hash,
-            timestamp,
-            transactions,
-        })
+        Ok(Self { parent_hash, epoch_num, epoch_hash, timestamp, transactions })
     }
 }
 

@@ -206,10 +206,7 @@ impl Header {
     ///
     /// Returns a `None` if no excess blob gas is set, no EIP-4844 support
     pub fn next_block_excess_blob_gas(&self) -> Option<u64> {
-        Some(calc_excess_blob_gas(
-            self.excess_blob_gas?,
-            self.blob_gas_used?,
-        ))
+        Some(calc_excess_blob_gas(self.excess_blob_gas?, self.blob_gas_used?))
     }
 
     /// Calculate a heuristic for the in-memory size of the [Header].
@@ -257,19 +254,19 @@ impl Header {
 
         if let Some(base_fee) = self.base_fee_per_gas {
             length += U256::from(base_fee).length();
-        } else if self.withdrawals_root.is_some()
-            || self.blob_gas_used.is_some()
-            || self.excess_blob_gas.is_some()
-            || self.parent_beacon_block_root.is_some()
+        } else if self.withdrawals_root.is_some() ||
+            self.blob_gas_used.is_some() ||
+            self.excess_blob_gas.is_some() ||
+            self.parent_beacon_block_root.is_some()
         {
             length += 1; // EMPTY LIST CODE
         }
 
         if let Some(root) = self.withdrawals_root {
             length += root.length();
-        } else if self.blob_gas_used.is_some()
-            || self.excess_blob_gas.is_some()
-            || self.parent_beacon_block_root.is_some()
+        } else if self.blob_gas_used.is_some() ||
+            self.excess_blob_gas.is_some() ||
+            self.parent_beacon_block_root.is_some()
         {
             length += 1; // EMPTY STRING CODE
         }
@@ -303,10 +300,8 @@ impl Header {
 
 impl Encodable for Header {
     fn encode(&self, out: &mut dyn BufMut) {
-        let list_header = alloy_rlp::Header {
-            list: true,
-            payload_length: self.header_payload_length(),
-        };
+        let list_header =
+            alloy_rlp::Header { list: true, payload_length: self.header_payload_length() };
         list_header.encode(out);
         self.parent_hash.encode(out);
         self.ommers_hash.encode(out);
@@ -328,10 +323,10 @@ impl Encodable for Header {
         // but withdrawals root is present.
         if let Some(ref base_fee) = self.base_fee_per_gas {
             U256::from(*base_fee).encode(out);
-        } else if self.withdrawals_root.is_some()
-            || self.blob_gas_used.is_some()
-            || self.excess_blob_gas.is_some()
-            || self.parent_beacon_block_root.is_some()
+        } else if self.withdrawals_root.is_some() ||
+            self.blob_gas_used.is_some() ||
+            self.excess_blob_gas.is_some() ||
+            self.parent_beacon_block_root.is_some()
         {
             out.put_u8(EMPTY_LIST_CODE);
         }
@@ -340,9 +335,9 @@ impl Encodable for Header {
         // but blob gas used is present.
         if let Some(ref root) = self.withdrawals_root {
             root.encode(out);
-        } else if self.blob_gas_used.is_some()
-            || self.excess_blob_gas.is_some()
-            || self.parent_beacon_block_root.is_some()
+        } else if self.blob_gas_used.is_some() ||
+            self.excess_blob_gas.is_some() ||
+            self.parent_beacon_block_root.is_some()
         {
             out.put_u8(EMPTY_STRING_CODE);
         }
@@ -414,11 +409,7 @@ impl Decodable for Header {
         };
 
         if started_len - buf.len() < rlp_head.payload_length {
-            if buf
-                .first()
-                .map(|b| *b == EMPTY_LIST_CODE)
-                .unwrap_or_default()
-            {
+            if buf.first().map(|b| *b == EMPTY_LIST_CODE).unwrap_or_default() {
                 buf.advance(1)
             } else {
                 this.base_fee_per_gas = Some(U256::decode(buf)?.to::<u64>());
@@ -427,11 +418,7 @@ impl Decodable for Header {
 
         // Withdrawals root for post-shanghai headers
         if started_len - buf.len() < rlp_head.payload_length {
-            if buf
-                .first()
-                .map(|b| *b == EMPTY_STRING_CODE)
-                .unwrap_or_default()
-            {
+            if buf.first().map(|b| *b == EMPTY_STRING_CODE).unwrap_or_default() {
                 buf.advance(1)
             } else {
                 this.withdrawals_root = Some(Decodable::decode(buf)?);
@@ -440,11 +427,7 @@ impl Decodable for Header {
 
         // Blob gas used and excess blob gas for post-cancun headers
         if started_len - buf.len() < rlp_head.payload_length {
-            if buf
-                .first()
-                .map(|b| *b == EMPTY_LIST_CODE)
-                .unwrap_or_default()
-            {
+            if buf.first().map(|b| *b == EMPTY_LIST_CODE).unwrap_or_default() {
                 buf.advance(1)
             } else {
                 this.blob_gas_used = Some(U256::decode(buf)?.to::<u64>());
@@ -452,11 +435,7 @@ impl Decodable for Header {
         }
 
         if started_len - buf.len() < rlp_head.payload_length {
-            if buf
-                .first()
-                .map(|b| *b == EMPTY_LIST_CODE)
-                .unwrap_or_default()
-            {
+            if buf.first().map(|b| *b == EMPTY_LIST_CODE).unwrap_or_default() {
                 buf.advance(1)
             } else {
                 this.excess_blob_gas = Some(U256::decode(buf)?.to::<u64>());

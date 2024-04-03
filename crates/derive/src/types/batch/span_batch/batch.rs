@@ -67,8 +67,9 @@ impl SpanBatch {
         })
     }
 
-    /// Converts all [SpanBatchElement]s after the L2 safe head to [SingleBatch]es. The resulting [SingleBatch]es do
-    /// not contain a parent hash, as it is populated by the Batch Queue stage.
+    /// Converts all [SpanBatchElement]s after the L2 safe head to [SingleBatch]es. The resulting
+    /// [SingleBatch]es do not contain a parent hash, as it is populated by the Batch Queue
+    /// stage.
     pub fn get_singular_batches(
         &self,
         l1_origins: Vec<BlockInfo>,
@@ -112,11 +113,7 @@ impl SpanBatch {
             panic!("Batch is not ordered");
         }
 
-        let SingleBatch {
-            epoch_hash,
-            parent_hash,
-            ..
-        } = singular_batch;
+        let SingleBatch { epoch_hash, parent_hash, .. } = singular_batch;
 
         // Always append the new batch and set the L1 origin check.
         self.batches.push(singular_batch.into());
@@ -124,7 +121,8 @@ impl SpanBatch {
         self.l1_origin_check = epoch_hash[..20].try_into().expect("Sub-slice cannot fail");
 
         let epoch_bit = if self.batches.len() == 1 {
-            // If there is only one batch, initialize the parent check and set the epoch bit based on the sequence number.
+            // If there is only one batch, initialize the parent check and set the epoch bit based
+            // on the sequence number.
             self.parent_check = parent_hash[..20].try_into().expect("Sub-slice cannot fail");
             seq_num == 0
         } else {

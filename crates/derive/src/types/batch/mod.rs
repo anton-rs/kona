@@ -1,4 +1,5 @@
-//! This module contains the batch types for the OP Stack derivation pipeline: [SpanBatch] & [SingleBatch].
+//! This module contains the batch types for the OP Stack derivation pipeline: [SpanBatch] &
+//! [SingleBatch].
 
 use super::DecodeError;
 use alloc::vec::Vec;

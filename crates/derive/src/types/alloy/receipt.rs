@@ -82,10 +82,10 @@ impl ReceiptWithBloom {
     }
 
     fn payload_len(&self) -> usize {
-        let mut payload_len = self.receipt.success.length()
-            + self.receipt.cumulative_gas_used.length()
-            + self.bloom.length()
-            + self.receipt.logs.len();
+        let mut payload_len = self.receipt.success.length() +
+            self.receipt.cumulative_gas_used.length() +
+            self.bloom.length() +
+            self.receipt.logs.len();
         if self.receipt.tx_type == TxType::Deposit {
             if let Some(deposit_nonce) = self.receipt.deposit_nonce {
                 payload_len += deposit_nonce.length();
@@ -99,10 +99,7 @@ impl ReceiptWithBloom {
 
     /// Returns the rlp header for the receipt payload.
     fn receipt_rlp_header(&self) -> alloy_rlp::Header {
-        alloy_rlp::Header {
-            list: true,
-            payload_length: self.payload_len(),
-        }
+        alloy_rlp::Header { list: true, payload_length: self.payload_len() }
     }
 
     /// Encodes the receipt data.
@@ -134,10 +131,7 @@ impl ReceiptWithBloom {
 
         if with_header {
             let payload_length = payload.len() + 1;
-            let header = alloy_rlp::Header {
-                list: false,
-                payload_length,
-            };
+            let header = alloy_rlp::Header { list: false, payload_length };
             header.encode(out);
         }
 
@@ -177,12 +171,10 @@ impl ReceiptWithBloom {
         let receipt = match tx_type {
             TxType::Deposit => {
                 let remaining = |b: &[u8]| rlp_head.payload_length - (started_len - b.len()) > 0;
-                let deposit_nonce = remaining(b)
-                    .then(|| alloy_rlp::Decodable::decode(b))
-                    .transpose()?;
-                let deposit_receipt_version = remaining(b)
-                    .then(|| alloy_rlp::Decodable::decode(b))
-                    .transpose()?;
+                let deposit_nonce =
+                    remaining(b).then(|| alloy_rlp::Decodable::decode(b)).transpose()?;
+                let deposit_receipt_version =
+                    remaining(b).then(|| alloy_rlp::Decodable::decode(b)).transpose()?;
 
                 Receipt {
                     tx_type,
@@ -240,9 +232,9 @@ impl alloy_rlp::Decodable for ReceiptWithBloom {
         // a receipt is either encoded as a string (non legacy) or a list (legacy).
         // We should not consume the buffer if we are decoding a legacy receipt, so let's
         // check if the first byte is between 0x80 and 0xbf.
-        let rlp_type = *buf.first().ok_or(alloy_rlp::Error::Custom(
-            "cannot decode a receipt from empty bytes",
-        ))?;
+        let rlp_type = *buf
+            .first()
+            .ok_or(alloy_rlp::Error::Custom("cannot decode a receipt from empty bytes"))?;
 
         match rlp_type.cmp(&alloy_rlp::EMPTY_LIST_CODE) {
             Ordering::Less => {
@@ -271,9 +263,9 @@ impl alloy_rlp::Decodable for ReceiptWithBloom {
                     _ => Err(alloy_rlp::Error::Custom("invalid receipt type")),
                 }
             }
-            Ordering::Equal => Err(alloy_rlp::Error::Custom(
-                "an empty list is not a valid receipt encoding",
-            )),
+            Ordering::Equal => {
+                Err(alloy_rlp::Error::Custom("an empty list is not a valid receipt encoding"))
+            }
             Ordering::Greater => Self::decode_receipt(buf, TxType::Legacy),
         }
     }

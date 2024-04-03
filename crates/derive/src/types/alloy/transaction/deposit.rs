@@ -78,14 +78,14 @@ impl TxDeposit {
     /// Outputs the length of the transaction's fields, without a RLP header or length of the
     /// eip155 fields.
     pub(crate) fn fields_len(&self) -> usize {
-        self.source_hash.length()
-            + self.from.length()
-            + self.to.length()
-            + self.mint.map_or(1, |mint| mint.length())
-            + self.value.length()
-            + self.gas_limit.length()
-            + self.is_system_transaction.length()
-            + self.input.0.length()
+        self.source_hash.length() +
+            self.from.length() +
+            self.to.length() +
+            self.mint.map_or(1, |mint| mint.length()) +
+            self.value.length() +
+            self.gas_limit.length() +
+            self.is_system_transaction.length() +
+            self.input.0.length()
     }
 
     /// Encodes only the transaction's fields into the desired buffer, without a RLP header.
@@ -112,10 +112,7 @@ impl TxDeposit {
     /// just the header and transaction rlp.
     pub(crate) fn encode_with_signature(&self, _: &Signature, out: &mut dyn alloy_rlp::BufMut) {
         let payload_length = self.fields_len();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
+        let header = Header { list: true, payload_length };
         header.encode(out);
         self.encode_fields(out);
     }
@@ -144,11 +141,7 @@ impl TxDeposit {
 
 impl Encodable for TxDeposit {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 
@@ -176,11 +169,7 @@ impl Transaction for TxDeposit {
 
     fn encode_for_signing(&self, out: &mut dyn alloy_rlp::BufMut) {
         out.put_u8(self.tx_type() as u8);
-        Header {
-            list: true,
-            payload_length: self.fields_len(),
-        }
-        .encode(out);
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
     }
 

@@ -1,7 +1,9 @@
 //! Data Sources Test Utilities
 
-use crate::traits::ChainProvider;
-use crate::types::{BlockInfo, Receipt};
+use crate::{
+    traits::ChainProvider,
+    types::{BlockInfo, Receipt},
+};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::B256;
 use anyhow::Result;

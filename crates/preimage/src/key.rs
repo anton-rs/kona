@@ -1,27 +1,30 @@
-//! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from the preimage oracle.
+//! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
+//! the preimage oracle.
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum PreimageKeyType {
-    /// Local key types are local to a given instance of a fault-proof and context dependent. Commonly these local keys
-    /// are mapped to bootstrap data for the fault proof program.
+    /// Local key types are local to a given instance of a fault-proof and context dependent.
+    /// Commonly these local keys are mapped to bootstrap data for the fault proof program.
     Local = 1,
-    /// Keccak256 key types are global and context independent. Preimages are mapped from the low-order 31 bytes of
-    /// the preimage's `keccak256` digest to the preimage itself.
+    /// Keccak256 key types are global and context independent. Preimages are mapped from the
+    /// low-order 31 bytes of the preimage's `keccak256` digest to the preimage itself.
     #[default]
     Keccak256 = 2,
     /// GlobalGeneric key types are reserved for future use.
     GlobalGeneric = 3,
-    /// Sha256 key types are global and context independent. Preimages are mapped from the low-order 31 bytes of
-    /// the preimage's `sha256` digest to the preimage itself.
+    /// Sha256 key types are global and context independent. Preimages are mapped from the
+    /// low-order 31 bytes of the preimage's `sha256` digest to the preimage itself.
     Sha256 = 4,
-    /// Blob key types are global and context independent. Blob keys are constructed as `keccak256(commitment ++ z)`,
-    /// and then the high-order byte of the digest is set to the type byte.
+    /// Blob key types are global and context independent. Blob keys are constructed as
+    /// `keccak256(commitment ++ z)`, and then the high-order byte of the digest is set to the
+    /// type byte.
     Blob = 5,
 }
 
-/// A preimage key is a 32-byte value that identifies a preimage that may be fetched from the oracle.
+/// A preimage key is a 32-byte value that identifies a preimage that may be fetched from the
+/// oracle.
 ///
 /// **Layout**:
 /// |  Bits   | Description |
@@ -35,23 +38,20 @@ pub struct PreimageKey {
 }
 
 impl PreimageKey {
-    /// Creates a new [PreimageKey] from a 32-byte value and a [PreimageKeyType]. The 32-byte value will be truncated
-    /// to 31 bytes by taking the low-order 31 bytes.
+    /// Creates a new [PreimageKey] from a 32-byte value and a [PreimageKeyType]. The 32-byte value
+    /// will be truncated to 31 bytes by taking the low-order 31 bytes.
     pub fn new(key: [u8; 32], key_type: PreimageKeyType) -> Self {
         let mut data = [0u8; 31];
         data.copy_from_slice(&key[1..]);
         Self { data, key_type }
     }
 
-    /// Creates a new local [PreimageKey] from a 64-bit local identifier. The local identifier will be written into the
-    /// low-order 8 bytes of the big-endian 31-byte data field.
+    /// Creates a new local [PreimageKey] from a 64-bit local identifier. The local identifier will
+    /// be written into the low-order 8 bytes of the big-endian 31-byte data field.
     pub fn new_local(local_ident: u64) -> Self {
         let mut data = [0u8; 31];
         data[23..].copy_from_slice(&local_ident.to_be_bytes());
-        Self {
-            data,
-            key_type: PreimageKeyType::Local,
-        }
+        Self { data, key_type: PreimageKeyType::Local }
     }
 
     /// Returns the [PreimageKeyType] for the [PreimageKey].

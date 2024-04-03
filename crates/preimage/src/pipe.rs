@@ -1,5 +1,5 @@
-//! This module contains a rudamentary pipe between two file descriptors, using [kona_common::io] for
-//! reading and writing from the file descriptors.
+//! This module contains a rudamentary pipe between two file descriptors, using [kona_common::io]
+//! for reading and writing from the file descriptors.
 
 use anyhow::{bail, Result};
 use kona_common::{io, FileDescriptor, RegisterSize};
@@ -16,10 +16,7 @@ pub struct PipeHandle {
 impl PipeHandle {
     /// Create a new [PipeHandle] from two file descriptors.
     pub const fn new(read_handle: FileDescriptor, write_handle: FileDescriptor) -> Self {
-        Self {
-            read_handle,
-            write_handle,
-        }
+        Self { read_handle, write_handle }
     }
 
     /// Read from the pipe into the given buffer.
