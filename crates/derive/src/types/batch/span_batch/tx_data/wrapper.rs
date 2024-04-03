@@ -4,7 +4,7 @@ use super::{
     SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
     SpanBatchLegacyTransactionData,
 };
-use crate::types::{SpanBatchError, SpanDecodingError, Transaction, TxEnvelope};
+use crate::types::{SpanBatchError, SpanDecodingError, Transaction, TxEnvelope, TxType};
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, Decodable, Encodable};
 
@@ -26,11 +26,11 @@ impl Encodable for SpanBatchTransactionData {
                 data.encode(out);
             }
             Self::Eip2930(data) => {
-                out.put_u8(1);
+                out.put_u8(TxType::Eip2930 as u8);
                 data.encode(out);
             }
             Self::Eip1559(data) => {
-                out.put_u8(2);
+                out.put_u8(TxType::Eip1559 as u8);
                 data.encode(out);
             }
         }
@@ -88,11 +88,11 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
 
 impl SpanBatchTransactionData {
     /// Returns the transaction type of the [SpanBatchTransactionData].
-    pub fn tx_type(&self) -> u8 {
+    pub fn tx_type(&self) -> TxType {
         match self {
-            Self::Legacy(_) => 0,
-            Self::Eip2930(_) => 1,
-            Self::Eip1559(_) => 2,
+            Self::Legacy(_) => TxType::Legacy,
+            Self::Eip2930(_) => TxType::Eip2930,
+            Self::Eip1559(_) => TxType::Eip1559,
         }
     }
 
@@ -102,11 +102,14 @@ impl SpanBatchTransactionData {
             return Err(alloy_rlp::Error::Custom("Invalid transaction data"));
         }
 
-        match b[0] {
-            1 => Ok(SpanBatchTransactionData::Eip2930(
+        match b[0]
+            .try_into()
+            .map_err(|_| alloy_rlp::Error::Custom("Invalid tx type"))?
+        {
+            TxType::Eip2930 => Ok(SpanBatchTransactionData::Eip2930(
                 SpanBatchEip2930TransactionData::decode(&mut &b[1..])?,
             )),
-            2 => Ok(SpanBatchTransactionData::Eip1559(
+            TxType::Eip1559 => Ok(SpanBatchTransactionData::Eip1559(
                 SpanBatchEip1559TransactionData::decode(&mut &b[1..])?,
             )),
             _ => Err(alloy_rlp::Error::Custom("Invalid transaction type")),

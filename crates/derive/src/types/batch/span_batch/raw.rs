@@ -69,7 +69,10 @@ impl RawSpanBatch {
             acc.push(SpanBatchElement {
                 epoch_num: block_origin_nums[i as usize],
                 timestamp: genesis_time + self.prefix.rel_timestamp + block_time * i,
-                transactions: transactions.into_iter().map(RawTransaction).collect(),
+                transactions: transactions
+                    .into_iter()
+                    .map(|v| RawTransaction(v.into()))
+                    .collect(),
             });
             acc
         });

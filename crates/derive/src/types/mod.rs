@@ -1,6 +1,7 @@
 //! This module contains all of the types used within the derivation pipeline.
 
 use alloc::vec::Vec;
+use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 
 mod batch;
@@ -62,7 +63,7 @@ pub use errors::{DecodeError, StageError, StageResult};
 
 /// A raw transaction
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RawTransaction(pub Vec<u8>);
+pub struct RawTransaction(pub Bytes);
 
 impl Encodable for RawTransaction {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
@@ -73,7 +74,7 @@ impl Encodable for RawTransaction {
 impl Decodable for RawTransaction {
     /// Decodes RLP encoded bytes into [RawTransaction] bytes
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let tx_bytes: Vec<u8> = Decodable::decode(buf)?;
+        let tx_bytes = Bytes::decode(buf)?;
         Ok(Self(tx_bytes))
     }
 }

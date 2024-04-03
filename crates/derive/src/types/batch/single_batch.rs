@@ -3,10 +3,10 @@
 use crate::types::RawTransaction;
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
-use alloy_rlp::{Decodable, Encodable, Header};
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 
 /// Represents a single batch: a single encoded L2 block
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
 pub struct SingleBatch {
     /// Block hash of the previous L2 block
     pub parent_hash: BlockHash,
@@ -18,52 +18,6 @@ pub struct SingleBatch {
     pub timestamp: u64,
     /// The L2 block transactions in this batch
     pub transactions: Vec<RawTransaction>,
-}
-
-impl Encodable for SingleBatch {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        let payload_length = self.parent_hash.length()
-            + self.epoch_num.length()
-            + self.epoch_hash.length()
-            + self.timestamp.length()
-            + self.transactions.length();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
-        header.encode(out);
-
-        self.parent_hash.encode(out);
-        self.epoch_num.encode(out);
-        self.epoch_hash.encode(out);
-        self.timestamp.encode(out);
-        self.transactions.encode(out);
-    }
-}
-
-impl Decodable for SingleBatch {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let header = Header::decode(buf)?;
-        let buf_len_start = buf.len();
-
-        let parent_hash = Decodable::decode(buf)?;
-        let epoch_num = Decodable::decode(buf)?;
-        let epoch_hash = Decodable::decode(buf)?;
-        let timestamp = Decodable::decode(buf)?;
-        let transactions = Decodable::decode(buf)?;
-
-        if buf.len() != buf_len_start - header.payload_length {
-            return Err(alloy_rlp::Error::Overflow);
-        }
-
-        Ok(SingleBatch {
-            parent_hash,
-            epoch_num,
-            epoch_hash,
-            timestamp,
-            transactions,
-        })
-    }
 }
 
 impl SingleBatch {
@@ -80,7 +34,7 @@ mod test {
     use super::SingleBatch;
     use crate::types::RawTransaction;
     use alloc::vec;
-    use alloy_primitives::B256;
+    use alloy_primitives::{hex, B256};
     use alloy_rlp::{BytesMut, Decodable, Encodable};
 
     #[test]
@@ -90,7 +44,7 @@ mod test {
             epoch_num: 0xFF,
             epoch_hash: B256::ZERO,
             timestamp: 0xEE,
-            transactions: vec![RawTransaction(vec![0x00])],
+            transactions: vec![RawTransaction(hex!("00").into())],
         };
 
         let mut out_buf = BytesMut::default();
@@ -107,7 +61,7 @@ mod test {
             epoch_num: 0xFF,
             epoch_hash: B256::ZERO,
             timestamp: 0xEE,
-            transactions: vec![RawTransaction(vec![0x7E])],
+            transactions: vec![RawTransaction(hex!("7E").into())],
         };
 
         assert!(single_batch.has_invalid_transactions());

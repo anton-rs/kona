@@ -5,10 +5,10 @@ use crate::types::{
     network::Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930, TxEnvelope, TxKind,
 };
 use alloy_primitives::{Address, Signature, U256};
-use alloy_rlp::{Bytes, Decodable, Encodable, Header};
+use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
 
 /// The transaction data for an EIP-2930 transaction within a span batch.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
 pub struct SpanBatchEip2930TransactionData {
     /// The ETH value of the transaction.
     pub value: U256,
@@ -21,7 +21,7 @@ pub struct SpanBatchEip2930TransactionData {
 }
 
 impl SpanBatchEip2930TransactionData {
-    /// Converts [SpanBatchEip1559TransactionData] into a [TxEnvelope].
+    /// Converts [SpanBatchEip2930TransactionData] into a [TxEnvelope].
     pub fn to_enveloped_tx(
         &self,
         nonce: u64,
@@ -57,58 +57,12 @@ impl SpanBatchEip2930TransactionData {
     }
 }
 
-impl Encodable for SpanBatchEip2930TransactionData {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        let payload_length = self.value.length()
-            + self.gas_price.length()
-            + self.data.length()
-            + self.access_list.length();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
-
-        header.encode(out);
-        self.value.encode(out);
-        self.gas_price.encode(out);
-        self.data.encode(out);
-        self.access_list.encode(out);
-    }
-}
-
-impl Decodable for SpanBatchEip2930TransactionData {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let header = Header::decode(buf)?;
-        if !header.list {
-            return Err(alloy_rlp::Error::Custom(
-                "Expected list data for EIP-2930 transaction",
-            ));
-        }
-        let buf_len_start = buf.len();
-
-        let value = U256::decode(buf)?;
-        let gas_price = U256::decode(buf)?;
-        let data = Bytes::decode(buf)?;
-        let access_list = AccessList::decode(buf)?;
-
-        if buf.len() != buf_len_start - header.payload_length {
-            return Err(alloy_rlp::Error::Custom("Invalid EIP-2930 transaction RLP"));
-        }
-
-        Ok(Self {
-            value,
-            gas_price,
-            data,
-            access_list,
-        })
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::types::SpanBatchTransactionData;
     use alloc::vec::Vec;
+    use alloy_rlp::{Decodable, Encodable};
 
     #[test]
     fn encode_eip2930_tx_data_roundtrip() {

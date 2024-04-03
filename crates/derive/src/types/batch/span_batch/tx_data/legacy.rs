@@ -4,10 +4,10 @@ use crate::types::{
     network::Signed, SpanBatchError, SpanDecodingError, Transaction, TxEnvelope, TxKind, TxLegacy,
 };
 use alloy_primitives::{Address, Signature, U256};
-use alloy_rlp::{Bytes, Decodable, Encodable, Header};
+use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
 
 /// The transaction data for a legacy transaction within a span batch.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
 pub struct SpanBatchLegacyTransactionData {
     /// The ETH value of the transaction.
     pub value: U256,
@@ -52,52 +52,12 @@ impl SpanBatchLegacyTransactionData {
     }
 }
 
-impl Encodable for SpanBatchLegacyTransactionData {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        let payload_length = self.value.length() + self.gas_price.length() + self.data.length();
-        let header = Header {
-            list: true,
-            payload_length,
-        };
-
-        header.encode(out);
-        self.value.encode(out);
-        self.gas_price.encode(out);
-        self.data.encode(out);
-    }
-}
-
-impl Decodable for SpanBatchLegacyTransactionData {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let header = Header::decode(buf)?;
-        if !header.list {
-            return Err(alloy_rlp::Error::Custom(
-                "Expected list data for Legacy transaction",
-            ));
-        }
-        let buf_len_start = buf.len();
-
-        let value = U256::decode(buf)?;
-        let gas_price = U256::decode(buf)?;
-        let data = Bytes::decode(buf)?;
-
-        if buf.len() != buf_len_start - header.payload_length {
-            return Err(alloy_rlp::Error::Custom("Invalid Legacy transaction RLP"));
-        }
-
-        Ok(Self {
-            value,
-            gas_price,
-            data,
-        })
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::types::SpanBatchTransactionData;
     use alloc::vec::Vec;
+    use alloy_rlp::{Decodable, Encodable as _};
     // use alloy_primitives::B256;
 
     // #[test]

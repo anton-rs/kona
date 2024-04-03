@@ -1,12 +1,12 @@
 //! Utilities for Span Batch Encoding and Decoding.
 
+use super::{SpanBatchError, SpanDecodingError};
+use crate::types::TxType;
 use alloc::vec::Vec;
 use alloy_rlp::{Buf, Header};
 
-use super::{SpanBatchError, SpanDecodingError};
-
 /// Reads transaction data from a reader.
-pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, u8), SpanBatchError> {
+pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatchError> {
     let mut tx_data = Vec::new();
     let first_byte = *r.first().ok_or(SpanBatchError::Decoding(
         SpanDecodingError::InvalidTransactionData,
@@ -39,13 +39,18 @@ pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, u8), SpanBatchErro
     }?;
     tx_data.extend_from_slice(&tx_payload);
 
-    Ok((tx_data, tx_type))
+    Ok((
+        tx_data,
+        tx_type
+            .try_into()
+            .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType))?,
+    ))
 }
 
 /// Converts a `v` value to a y parity bit, from the transaaction type.
-pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: u64) -> Result<bool, SpanBatchError> {
+pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: TxType) -> Result<bool, SpanBatchError> {
     match tx_type {
-        0 => {
+        TxType::Legacy => {
             if v != 27 && v != 28 {
                 // EIP-155: v = 2 * chain_id + 35 + yParity
                 Ok((v - 35) & 1 == 1)
@@ -54,7 +59,7 @@ pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: u64) -> Result<bool, SpanBa
                 Ok(v - 27 == 1)
             }
         }
-        1 | 2 => Ok(v == 1),
+        TxType::Eip2930 | TxType::Eip1559 => Ok(v == 1),
         _ => Err(SpanBatchError::Decoding(
             SpanDecodingError::InvalidTransactionType,
         )),

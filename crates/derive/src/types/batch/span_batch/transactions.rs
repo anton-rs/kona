@@ -32,7 +32,7 @@ pub struct SpanBatchTransactions {
     /// The protected bits, standard span-batch bitlist.
     pub protected_bits: SpanBatchBits,
     /// The types of the transactions.
-    pub tx_types: Vec<u64>,
+    pub tx_types: Vec<TxType>,
     /// Total legacy transaction count in the span batch.
     pub legacy_tx_count: u64,
 }
@@ -222,8 +222,8 @@ impl SpanBatchTransactions {
         for _ in 0..self.total_block_tx_count {
             let (tx_data, tx_type) = read_tx_data(r)?;
             tx_datas.push(tx_data);
-            tx_types.push(tx_type as u64);
-            if tx_type == 0 {
+            tx_types.push(tx_type);
+            if matches!(tx_type, TxType::Legacy) {
                 self.legacy_tx_count += 1;
             }
         }
@@ -257,7 +257,7 @@ impl SpanBatchTransactions {
                 .get_bit(i)
                 .ok_or(SpanBatchError::BitfieldTooLong)?;
             let v = match tx_type {
-                0 => {
+                TxType::Legacy => {
                     // Legacy transaction
                     let protected_bit = self
                         .protected_bits
@@ -271,10 +271,7 @@ impl SpanBatchTransactions {
                         Ok(chain_id * 2 + 35 + bit as u64)
                     }
                 }
-                1 | 2 => {
-                    // EIP-2930 + EIP-1559
-                    Ok(bit as u64)
-                }
+                TxType::Eip2930 | TxType::Eip1559 => Ok(bit as u64),
                 _ => Err(SpanBatchError::Decoding(
                     SpanDecodingError::InvalidTransactionType,
                 )),
@@ -363,7 +360,7 @@ impl SpanBatchTransactions {
                 }
             };
             let signature_v = signature.v().to_u64();
-            let y_parity_bit = convert_v_to_y_parity(signature_v, tx_type as u64)?;
+            let y_parity_bit = convert_v_to_y_parity(signature_v, tx_type)?;
             let contract_creation_bit = match to {
                 TxKind::Call(address) => {
                     self.tx_tos.push(address);
@@ -382,7 +379,7 @@ impl SpanBatchTransactions {
             self.tx_nonces.push(nonce);
             self.tx_datas.push(tx_data_buf);
             self.tx_gases.push(gas);
-            self.tx_types.push(tx_type as u64);
+            self.tx_types.push(tx_type);
         }
         self.total_block_tx_count += total_block_tx_count;
         Ok(())
