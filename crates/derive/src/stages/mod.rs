@@ -3,6 +3,7 @@
 //! the produced execution payloads.
 //!
 //! **Stages:**
+//!
 //! 1. L1 Traversal
 //! 2. L1 Retrieval
 //! 3. Frame Queue
@@ -10,7 +11,7 @@
 //! 5. Channel Reader (Batch Decoding)
 //! 6. Batch Queue
 //! 7. Payload Attributes Derivation
-//! 8. Engine Queue
+//! 8. (Omitted) Engine Queue
 
 mod l1_traversal;
 pub use l1_traversal::L1Traversal;
