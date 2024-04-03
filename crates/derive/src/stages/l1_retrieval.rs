@@ -6,7 +6,6 @@ use crate::{
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
-use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
@@ -47,7 +46,7 @@ where
     /// Retrieves the next data item from the L1 retrieval stage.
     /// If there is data, it pushes it into the next stage.
     /// If there is no data, it returns an error.
-    pub async fn next_data(&mut self) -> StageResult<Bytes> {
+    pub async fn next_data(&mut self) -> StageResult<DAP::Item> {
         if self.data.is_none() {
             let next = self
                 .prev
@@ -66,14 +65,14 @@ where
             .expect("Cannot be None")
             .next()
             .await
-            .unwrap_or(Err(StageError::Eof));
+            .ok_or(StageError::Eof);
         match data {
-            Ok(data) => Ok(data),
-            Err(StageError::Eof) => {
+            Ok(Ok(data)) => Ok(data),
+            Err(StageError::Eof) | Ok(Err(StageError::Eof)) => {
                 self.data = None;
                 Err(StageError::Eof)
             }
-            Err(e) => Err(e),
+            Ok(Err(e)) | Err(e) => Err(e),
         }
     }
 }
@@ -97,6 +96,7 @@ mod tests {
     use crate::traits::test_utils::{TestDAP, TestIter};
     use alloc::vec;
     use alloy_primitives::Address;
+    use alloy_primitives::Bytes;
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
