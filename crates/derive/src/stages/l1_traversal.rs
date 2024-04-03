@@ -85,11 +85,14 @@ impl<F: ChainProvider> L1Traversal<F> {
             Ok(receipts) => receipts,
             Err(e) => return Err(StageError::ReceiptFetch(e)),
         };
-        self.system_config.update_with_receipts(
+
+        if let Err(e) = self.system_config.update_with_receipts(
             receipts.as_slice(),
             &self.rollup_config,
             next_l1_origin.timestamp,
-        )?;
+        ) {
+            return Err(StageError::SystemConfigUpdate(e));
+        }
 
         self.block = Some(next_l1_origin);
         self.done = false;
@@ -212,7 +215,23 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_system_config_updated() {
+    async fn test_l1_traversal_system_config_update_fails() {
+        let first = b256!("3333333333333333333333333333333333333333333333333333333333333333");
+        let second = b256!("4444444444444444444444444444444444444444444444444444444444444444");
+        let block1 = BlockInfo { hash: first, ..BlockInfo::default() };
+        let block2 = BlockInfo { hash: second, ..BlockInfo::default() };
+        let blocks = vec![block1, block2];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
+        assert!(traversal.advance_l1_block().await.is_ok());
+        // Only the second block should fail since the second receipt
+        // contains invalid logs that will error for a system config update.
+        let err = traversal.advance_l1_block().await.unwrap_err();
+        matches!(err, StageError::SystemConfigUpdate(_));
+    }
+
+    #[tokio::test]
+    async fn test_l1_traversal_system_config_updated() {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);

@@ -21,6 +21,8 @@ pub enum StageError {
     ReceiptFetch(anyhow::Error),
     /// [super::BlockInfo] fetching error.
     BlockInfoFetch(anyhow::Error),
+    /// [super::SystemConfig] update error.
+    SystemConfigUpdate(anyhow::Error),
     /// Other wildcard error.
     Custom(anyhow::Error),
 }
@@ -37,6 +39,7 @@ impl PartialEq<StageError> for StageError {
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
                 (StageError::ReceiptFetch(_), StageError::ReceiptFetch(_)) |
                 (StageError::BlockInfoFetch(_), StageError::BlockInfoFetch(_)) |
+                (StageError::SystemConfigUpdate(_), StageError::SystemConfigUpdate(_)) |
                 (StageError::Custom(_), StageError::Custom(_))
         )
     }
@@ -57,6 +60,7 @@ impl Display for StageError {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
             StageError::ReceiptFetch(e) => write!(f, "Receipt fetch error: {}", e),
+            StageError::SystemConfigUpdate(e) => write!(f, "System config update error: {}", e),
             StageError::ReorgDetected(current, next) => {
                 write!(f, "Block reorg detected: {} -> {}", current, next)
             }
