@@ -6,8 +6,8 @@ use alloy_primitives::{Address, U256};
 use alloy_rlp::{Buf, Decodable, Encodable};
 
 use super::{
-    convert_v_to_y_parity, read_tx_data, SpanBatchBits, SpanBatchError, SpanBatchSignature,
-    SpanBatchTransactionData, SpanDecodingError,
+    convert_v_to_y_parity, read_tx_data, utils::is_protected_v, SpanBatchBits, SpanBatchError,
+    SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError,
 };
 use crate::types::{RawTransaction, Transaction, TxEnvelope, TxKind, TxType};
 
@@ -298,7 +298,7 @@ impl SpanBatchTransactions {
     pub fn add_txs(
         &mut self,
         txs: Vec<RawTransaction>,
-        _chain_id: u64,
+        chain_id: u64,
     ) -> Result<(), SpanBatchError> {
         let total_block_tx_count = txs.len() as u64;
         let offset = self.total_block_tx_count;
@@ -310,21 +310,34 @@ impl SpanBatchTransactions {
 
             let tx_type = tx_enveloped.tx_type();
             if matches!(tx_type, TxType::Legacy) {
-                // TODO: Check protected signature
-                self.protected_bits.set_bit(self.legacy_tx_count as usize, false);
+                let protected_bit = is_protected_v(&tx_enveloped);
+                self.protected_bits.set_bit(self.legacy_tx_count as usize, protected_bit);
                 self.legacy_tx_count += 1;
             }
 
-            // TODO: Check protected in contrast to chain ID
-
-            let (signature, to, nonce, gas) = match tx_enveloped {
-                TxEnvelope::Legacy(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
-                TxEnvelope::Eip2930(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
-                TxEnvelope::Eip1559(s) => (*s.signature(), s.to(), s.nonce(), s.gas_limit()),
+            let (signature, to, nonce, gas, tx_chain_id) = match &tx_enveloped {
+                TxEnvelope::Legacy(s) => {
+                    (*s.signature(), s.to(), s.nonce(), s.gas_limit(), s.chain_id())
+                }
+                TxEnvelope::Eip2930(s) => {
+                    (*s.signature(), s.to(), s.nonce(), s.gas_limit(), s.chain_id())
+                }
+                TxEnvelope::Eip1559(s) => {
+                    (*s.signature(), s.to(), s.nonce(), s.gas_limit(), s.chain_id())
+                }
                 _ => {
                     return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))
                 }
             };
+
+            if is_protected_v(&tx_enveloped) &&
+                tx_chain_id
+                    .ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))? !=
+                    chain_id
+            {
+                return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData));
+            }
+
             let signature_v = signature.v().to_u64();
             let y_parity_bit = convert_v_to_y_parity(signature_v, tx_type)?;
             let contract_creation_bit = match to {
