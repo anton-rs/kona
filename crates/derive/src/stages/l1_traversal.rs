@@ -108,8 +108,9 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
     use crate::traits::test_utils::TestChainProvider;
-    use crate::types::{Receipt, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
+    use crate::types::Receipt;
     use alloc::vec;
     use alloy_primitives::{address, b256, hex, Address, Bytes, Log, LogData, B256};
 
