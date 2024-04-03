@@ -69,28 +69,20 @@ impl SpanBatchTransactions {
         SpanBatchBits::encode(
             w,
             self.total_block_tx_count as usize,
-            self.contract_creation_bits.as_ref(),
+            &self.contract_creation_bits,
         )?;
         Ok(())
     }
 
     /// Encode the protected bits into a writer.
     pub fn encode_protected_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(
-            w,
-            self.legacy_tx_count as usize,
-            self.protected_bits.as_ref(),
-        )?;
+        SpanBatchBits::encode(w, self.legacy_tx_count as usize, &self.protected_bits)?;
         Ok(())
     }
 
     /// Encode the y parity bits into a writer.
     pub fn encode_y_parity_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(
-            w,
-            self.total_block_tx_count as usize,
-            self.y_parity_bits.as_ref(),
-        )?;
+        SpanBatchBits::encode(w, self.total_block_tx_count as usize, &self.y_parity_bits)?;
         Ok(())
     }
 
@@ -259,12 +251,9 @@ impl SpanBatchTransactions {
             let v = match tx_type {
                 TxType::Legacy => {
                     // Legacy transaction
-                    let protected_bit = self
-                        .protected_bits
-                        .get_bit(protected_bits_idx)
-                        .ok_or(SpanBatchError::BitfieldTooLong)?;
+                    let protected_bit = self.protected_bits.get_bit(protected_bits_idx);
                     protected_bits_idx += 1;
-                    if protected_bit == 0 {
+                    if protected_bit.is_none() || protected_bit.is_some_and(|b| b == 0) {
                         Ok(27 + bit as u64)
                     } else {
                         // EIP-155

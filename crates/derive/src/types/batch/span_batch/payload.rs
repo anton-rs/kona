@@ -105,7 +105,7 @@ impl SpanBatchPayload {
 
     /// Encode the origin bits into a writer.
     pub fn encode_origin_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(w, self.block_count as usize, self.origin_bits.as_ref())
+        SpanBatchBits::encode(w, self.block_count as usize, &self.origin_bits)
     }
 
     /// Encode the block count into a writer.

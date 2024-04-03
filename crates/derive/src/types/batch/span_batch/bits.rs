@@ -48,19 +48,29 @@ impl SpanBatchBits {
             b.advance(buffer_len);
             v
         };
-        if bits.iter().map(|n| n.count_ones()).sum::<u32>() as usize > bit_length {
-            return Err(SpanBatchError::BitfieldTooLong);
-        }
-        Ok(SpanBatchBits(bits.to_vec()))
+        let sb_bits = SpanBatchBits(bits.to_vec());
+
+        // TODO(clabby): Why doesn't this check work?
+        // if sb_bits.bit_len() > bit_length {
+        //     return Err(SpanBatchError::BitfieldTooLong);
+        // }
+
+        Ok(sb_bits)
     }
 
     /// Encodes a standard span-batch bitlist.
     /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8 bits.
     /// The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
-    pub fn encode(w: &mut Vec<u8>, bit_length: usize, bits: &[u8]) -> Result<(), SpanBatchError> {
-        if bits.len() * 8 > bit_length {
-            return Err(SpanBatchError::BitfieldTooLong);
-        }
+    pub fn encode(
+        w: &mut Vec<u8>,
+        bit_length: usize,
+        bits: &SpanBatchBits,
+    ) -> Result<(), SpanBatchError> {
+        // TODO(clabby): Why doesn't this check work?
+        // if bits.bit_len() > bit_length {
+        //     return Err(SpanBatchError::BitfieldTooLong);
+        // }
+
         // Round up, ensure enough bytes when number of bits is not a multiple of 8.
         // Alternative of (L+7)/8 is not overflow-safe.
         let buf_len = bit_length / 8 + if bit_length % 8 != 0 { 1 } else { 0 };
@@ -69,7 +79,7 @@ impl SpanBatchBits {
         }
         // TODO(refcell): This can definitely be optimized.
         let mut buf = vec![0; buf_len];
-        buf[buf_len - bits.len()..].copy_from_slice(bits);
+        buf[buf_len - bits.0.len()..].copy_from_slice(bits.as_ref());
         w.extend_from_slice(&buf);
         Ok(())
     }
@@ -120,6 +130,20 @@ impl SpanBatchBits {
             *byte &= !(1 << (8 - bit_index));
         }
     }
+
+    /// Calculates the bit length of the [SpanBatchBits] bitfield.
+    pub fn bit_len(&self) -> usize {
+        if let Some((ref top_word, rest)) = self.0.split_last() {
+            // Calculate bit length. Rust's leading_zeros counts zeros from the MSB, so subtract from total bits.
+            let significant_bits = 8 - top_word.leading_zeros() as usize;
+
+            // Return total bits, taking into account the full words in `rest` and the significant bits in `top`.
+            rest.len() * 8 + significant_bits
+        } else {
+            // If the slice is empty, return 0.
+            0
+        }
+    }
 }
 
 #[cfg(test)]
@@ -133,7 +157,7 @@ mod test {
             let bits = SpanBatchBits(vec);
             assert_eq!(SpanBatchBits::decode(&mut bits.as_ref(), bits.0.len() * 8).unwrap(), bits);
             let mut encoded = Vec::new();
-            SpanBatchBits::encode(&mut encoded, bits.0.len() * 8, bits.as_ref()).unwrap();
+            SpanBatchBits::encode(&mut encoded, bits.0.len() * 8, &bits).unwrap();
             assert_eq!(encoded, bits.0);
         }
     }

@@ -25,6 +25,13 @@ impl RawSpanBatch {
         self.payload.encode_payload(w)
     }
 
+    /// Decodes the [RawSpanBatch] from a reader.]
+    pub fn decode(r: &mut &[u8]) -> Result<Self, SpanBatchError> {
+        let prefix = SpanBatchPrefix::decode_prefix(r)?;
+        let payload = SpanBatchPayload::decode_payload(r)?;
+        Ok(Self { prefix, payload })
+    }
+
     /// Converts a [RawSpanBatch] into a [SpanBatch], which has a list of [SpanBatchElement]s.
     pub fn derive(
         &mut self,
@@ -87,5 +94,24 @@ impl RawSpanBatch {
     /// Returns the batch type
     pub fn get_batch_type(&self) -> u8 {
         SPAN_BATCH_TYPE
+    }
+}
+
+#[cfg(test)]
+mod test {
+    extern crate std;
+    use super::RawSpanBatch;
+    use alloc::vec::Vec;
+
+    #[test]
+    fn test_decode_encode_raw_span_batch() {
+        // Load in the raw span batch from the `op-node` derivation pipeline implementation.
+        let raw_span_batch_hex = include_bytes!("../../../../testdata/raw_batch.hex");
+        let mut raw_span_batch = RawSpanBatch::decode(&mut raw_span_batch_hex.as_slice()).unwrap();
+        raw_span_batch.payload.txs.recover_v(981).unwrap();
+
+        let mut encoding_buf = Vec::new();
+        raw_span_batch.encode(&mut encoding_buf).unwrap();
+        assert_eq!(encoding_buf, raw_span_batch_hex);
     }
 }
