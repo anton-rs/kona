@@ -1,8 +1,7 @@
 //! Test Utilities for Telemetry
 
 use crate::traits::{LogLevel, TelemetryProvider};
-use alloc::rc::Rc;
-use alloc::vec::Vec;
+use alloc::{rc::Rc, vec::Vec};
 use alloy_primitives::Bytes;
 use core::cell::RefCell;
 

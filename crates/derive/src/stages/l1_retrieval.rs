@@ -37,7 +37,8 @@ where
     CP: ChainProvider,
     T: TelemetryProvider,
 {
-    /// Creates a new L1 retrieval stage with the given data availability provider and previous stage.
+    /// Creates a new L1 retrieval stage with the given data availability provider and previous
+    /// stage.
     pub fn new(prev: L1Traversal<CP, T>, provider: DAP, telemetry: T) -> Self {
         Self { prev, telemetry, provider, data: None }
     }
@@ -142,7 +143,8 @@ mod tests {
         let traversal = new_test_traversal(false, false);
         let telemetry = TestTelemetry::new();
         let dap = TestDAP { results: vec![] };
-        let mut retrieval = L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
+        let mut retrieval =
+            L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
@@ -159,7 +161,8 @@ mod tests {
         let telemetry = TestTelemetry::new();
         let traversal = new_test_traversal(true, true);
         let dap = TestDAP { results: vec![] };
-        let mut retrieval = L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
+        let mut retrieval =
+            L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap_err();
         assert_eq!(data, StageError::Eof);
         assert!(retrieval.data.is_none());

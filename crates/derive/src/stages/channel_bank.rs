@@ -126,10 +126,8 @@ where
     pub fn read(&mut self) -> StageResult<Option<Bytes>> {
         // Bail if there are no channels to read from.
         if self.channel_queue.is_empty() {
-            self.telemetry.write(
-                alloy_primitives::Bytes::from("No channels to read from"),
-                LogLevel::Debug,
-            );
+            self.telemetry
+                .write(alloy_primitives::Bytes::from("No channels to read from"), LogLevel::Debug);
             return Err(StageError::Eof);
         }
 

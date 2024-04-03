@@ -40,10 +40,8 @@ where
     /// Pulls out the next Batch from the available channel.
     pub async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
-            self.telemetry.write(
-                alloc::format!("Failed to set batch reader: {:?}", e),
-                LogLevel::Error,
-            );
+            self.telemetry
+                .write(alloc::format!("Failed to set batch reader: {:?}", e), LogLevel::Error);
             self.next_channel();
             return Err(e);
         }

@@ -92,7 +92,8 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        stages::l1_traversal::tests::new_test_traversal, traits::test_utils::{TestDAP, TestTelemetry},
+        stages::l1_traversal::tests::new_test_traversal,
+        traits::test_utils::{TestDAP, TestTelemetry},
         DERIVATION_VERSION_0,
     };
     use alloc::{vec, vec::Vec};
