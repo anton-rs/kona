@@ -74,9 +74,9 @@ impl SystemConfig {
 
             receipt.logs.iter().try_for_each(|log| {
                 let topics = log.topics();
-                if log.address == rollup_config.l1_system_config_address
-                    && !topics.is_empty()
-                    && topics[0] == CONFIG_UPDATE_TOPIC
+                if log.address == rollup_config.l1_system_config_address &&
+                    !topics.is_empty() &&
+                    topics[0] == CONFIG_UPDATE_TOPIC
                 {
                     self.process_config_update_log(log, rollup_config, l1_time)?;
                 }
@@ -86,16 +86,17 @@ impl SystemConfig {
         Ok(())
     }
 
-    /// Decodes an EVM log entry emitted by the system config contract and applies it as a [SystemConfig] change.
+    /// Decodes an EVM log entry emitted by the system config contract and applies it as a
+    /// [SystemConfig] change.
     ///
     /// Parse log data for:
     ///
     /// ```text
-    ///event ConfigUpdate(
+    /// event ConfigUpdate(
     ///    uint256 indexed version,
     ///    UpdateType indexed updateType,
     ///    bytes data
-    ///);
+    /// );
     /// ```
     fn process_config_update_log(
         &mut self,
@@ -246,8 +247,8 @@ mod test {
     fn mock_rollup_config(system_config: SystemConfig) -> RollupConfig {
         RollupConfig {
             genesis: Genesis {
-                l1: crate::types::BlockId::Number(0),
-                l2: crate::types::BlockId::Number(0),
+                l1: crate::types::BlockID::default(),
+                l2: crate::types::BlockID::default(),
                 timestamp: 0,
                 system_config,
             },
@@ -293,9 +294,7 @@ mod test {
         };
 
         // Update the batcher address.
-        system_config
-            .process_config_update_log(&update_log, &rollup_config, 0)
-            .unwrap();
+        system_config.process_config_update_log(&update_log, &rollup_config, 0).unwrap();
 
         assert_eq!(
             system_config.batcher_addr,
@@ -324,9 +323,7 @@ mod test {
         };
 
         // Update the batcher address.
-        system_config
-            .process_config_update_log(&update_log, &rollup_config, 0)
-            .unwrap();
+        system_config.process_config_update_log(&update_log, &rollup_config, 0).unwrap();
 
         assert_eq!(system_config.l1_fee_overhead, U256::from(0xbabe));
         assert_eq!(system_config.l1_fee_scalar, U256::from(0xbeef));
@@ -353,9 +350,7 @@ mod test {
         };
 
         // Update the batcher address.
-        system_config
-            .process_config_update_log(&update_log, &rollup_config, 10)
-            .unwrap();
+        system_config.process_config_update_log(&update_log, &rollup_config, 10).unwrap();
 
         assert_eq!(system_config.l1_fee_overhead, U256::from(0));
         assert_eq!(system_config.l1_fee_scalar, U256::from(0xbeef));
@@ -382,9 +377,7 @@ mod test {
         };
 
         // Update the batcher address.
-        system_config
-            .process_config_update_log(&update_log, &rollup_config, 0)
-            .unwrap();
+        system_config.process_config_update_log(&update_log, &rollup_config, 0).unwrap();
 
         assert_eq!(system_config.gas_limit, U256::from(0xbeef));
     }

@@ -1,11 +1,13 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
-use crate::stages::batch_queue::BatchQueue;
-use crate::traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher};
-use crate::types::{AttributesWithParent, PayloadAttributes, SingleBatch};
-use crate::types::{BlockID, BlockInfo, L2BlockRef};
-use crate::types::{ResetError, StageError, StageResult};
-use crate::types::{RollupConfig, SystemConfig};
+use crate::{
+    stages::batch_queue::BatchQueue,
+    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher},
+    types::{
+        AttributesWithParent, BlockID, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError,
+        RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
+    },
+};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -14,7 +16,7 @@ pub trait AttributesBuilder {
     /// Prepare the payload attributes.
     fn prepare_payload_attributes(
         &self,
-        l2_parent: L2BlockRef,
+        l2_parent: L2BlockInfo,
         epoch: BlockID,
     ) -> anyhow::Result<PayloadAttributes>;
 }
@@ -58,13 +60,7 @@ where
 {
     /// Create a new [AttributesQueue] stage.
     pub fn new(cfg: RollupConfig, prev: BatchQueue<DAP, CP, BF>, builder: AB) -> Self {
-        Self {
-            cfg,
-            prev,
-            is_last_in_span: false,
-            batch: None,
-            builder,
-        }
+        Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 
     /// Returns the L1 origin [BlockInfo].
@@ -73,7 +69,7 @@ where
     }
 
     /// Loads a batch from the previous stage if needed.
-    pub async fn load_batch(&mut self, parent: L2BlockRef) -> StageResult<SingleBatch> {
+    pub async fn load_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
         if self.batch.is_none() {
             let batch = self.prev.next_batch(parent).await?;
             self.batch = Some(batch);
@@ -85,18 +81,15 @@ where
     /// Returns the next payload attributes from the current batch.
     pub async fn next_attributes(
         &mut self,
-        parent: L2BlockRef,
+        parent: L2BlockInfo,
     ) -> StageResult<AttributesWithParent> {
         // Load the batch
         let batch = self.load_batch(parent).await?;
 
         // Construct the payload attributes from the loaded batch
         let attributes = self.create_next_attributes(batch, parent).await?;
-        let populated_attributes = AttributesWithParent {
-            attributes,
-            parent,
-            is_last_in_span: self.is_last_in_span,
-        };
+        let populated_attributes =
+            AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
 
         // Clear out the local state once we will succeed
         self.batch = None;
@@ -106,33 +99,29 @@ where
 
     /// Creates the next attributes.
     /// Transforms a [SingleBatch] into [PayloadAttributes].
-    /// This sets `NoTxPool` and appends the batched transactions to the attributes transaction list.
+    /// This sets `NoTxPool` and appends the batched transactions to the attributes transaction
+    /// list.
     pub async fn create_next_attributes(
         &mut self,
         batch: SingleBatch,
-        parent: L2BlockRef,
+        parent: L2BlockInfo,
     ) -> StageResult<PayloadAttributes> {
         // Sanity check parent hash
-        if batch.parent_hash != parent.info.hash {
+        if batch.parent_hash != parent.block_info.hash {
             return Err(StageError::Reset(ResetError::BadParentHash(
                 batch.parent_hash,
-                parent.info.hash,
+                parent.block_info.hash,
             )));
         }
 
         // Sanity check timestamp
-        let actual = parent.info.timestamp + self.cfg.block_time;
+        let actual = parent.block_info.timestamp + self.cfg.block_time;
         if actual != batch.timestamp {
-            return Err(StageError::Reset(ResetError::BadTimestamp(
-                batch.timestamp,
-                actual,
-            )));
+            return Err(StageError::Reset(ResetError::BadTimestamp(batch.timestamp, actual)));
         }
 
         // Prepare the payload attributes
-        let mut attributes = self
-            .builder
-            .prepare_payload_attributes(parent, batch.epoch())?;
+        let mut attributes = self.builder.prepare_payload_attributes(parent, batch.epoch())?;
         attributes.no_tx_pool = true;
         attributes.transactions.extend(batch.transactions);
 

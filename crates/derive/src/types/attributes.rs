@@ -3,9 +3,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::block::L2BlockRef;
-use super::payload::Withdrawals;
-use super::RawTransaction;
+use super::{block::L2BlockInfo, payload::Withdrawals, RawTransaction};
 use alloc::vec::Vec;
 use alloy_primitives::{Address, B256};
 
@@ -22,7 +20,8 @@ pub struct PayloadAttributes {
     /// Suggested value for the coinbase field of the new payload.
     #[cfg_attr(feature = "serde", serde(rename = "suggestedFeeRecipient"))]
     pub fee_recipient: Address,
-    /// Withdrawals to include into the block -- should be nil or empty depending on Shanghai enablement.
+    /// Withdrawals to include into the block -- should be nil or empty depending on Shanghai
+    /// enablement.
     #[cfg_attr(feature = "serde", serde(rename = "withdrawals"))]
     pub withdrawals: Option<Withdrawals>,
     /// Parent beacon block root optional extension in Dencun.
@@ -47,19 +46,15 @@ pub struct AttributesWithParent {
     /// The payload attributes.
     pub attributes: PayloadAttributes,
     /// The parent block reference.
-    pub parent: L2BlockRef,
+    pub parent: L2BlockInfo,
     /// Whether the current batch is the last in its span.
     pub is_last_in_span: bool,
 }
 
 impl AttributesWithParent {
     /// Create a new [AttributesWithParent] instance.
-    pub fn new(attributes: PayloadAttributes, parent: L2BlockRef, is_last_in_span: bool) -> Self {
-        Self {
-            attributes,
-            parent,
-            is_last_in_span,
-        }
+    pub fn new(attributes: PayloadAttributes, parent: L2BlockInfo, is_last_in_span: bool) -> Self {
+        Self { attributes, parent, is_last_in_span }
     }
 
     /// Returns the payload attributes.
@@ -68,7 +63,7 @@ impl AttributesWithParent {
     }
 
     /// Returns the parent block reference.
-    pub fn parent(&self) -> &L2BlockRef {
+    pub fn parent(&self) -> &L2BlockInfo {
         &self.parent
     }
 

@@ -1,13 +1,14 @@
 //! This module contains the `BatchQueue` stage implementation.
 
-use crate::stages::channel_reader::ChannelReader;
-use crate::traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher};
-use crate::types::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch};
-use crate::types::{BlockInfo, L2BlockRef};
-use crate::types::{RollupConfig, SystemConfig};
-use crate::types::{StageError, StageResult};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use crate::{
+    stages::channel_reader::ChannelReader,
+    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher},
+    types::{
+        Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
+        SingleBatch, StageError, StageResult, SystemConfig,
+    },
+};
+use alloc::{boxed::Box, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -90,22 +91,22 @@ where
     /// Pops the next batch from the current queued up span-batch cache.
     /// The parent is used to set the parent hash of the batch.
     /// The parent is verified when the batch is later validated.
-    pub fn pop_next_batch(&mut self, parent: L2BlockRef) -> Option<SingleBatch> {
+    pub fn pop_next_batch(&mut self, parent: L2BlockInfo) -> Option<SingleBatch> {
         if self.next_spans.is_empty() {
-            return None;
+            panic!("Invalid state: must have next spans to pop");
         }
         let mut next = self.next_spans.remove(0);
-        next.parent_hash = parent.info.hash;
+        next.parent_hash = parent.block_info.hash;
         Some(next)
     }
 
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
-    pub async fn next_batch(&mut self, parent: L2BlockRef) -> StageResult<SingleBatch> {
+    pub async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
-            if self.next_spans[0].timestamp == parent.info.timestamp + self.cfg.block_time {
+            if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
                 return self
                     .pop_next_batch(parent)
                     .ok_or(anyhow!("failed to pop next batch from span batch").into());
@@ -126,7 +127,7 @@ where
         if !self.l1_blocks.is_empty() && parent.l1_origin.number > self.l1_blocks[0].number {
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
-                    self.l1_blocks.drain(0..=i);
+                    self.l1_blocks.drain(0..i);
                     // TODO: log that the pipelien has advanced the epoch.
                     // TODO: metrice the internal epoch advancement.
                     break;
@@ -139,9 +140,8 @@ where
         // It is the future origin that gets saved into the l1 blocks array.
         // We always update the origin of this stage if it's not the same so
         // after the update code runs, this is consistent.
-        let origin_behind = self
-            .origin
-            .map_or(true, |origin| origin.number < parent.l1_origin.number);
+        let origin_behind =
+            self.origin.map_or(true, |origin| origin.number < parent.l1_origin.number);
 
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
@@ -149,7 +149,8 @@ where
         if self.origin != self.prev.origin().copied() {
             self.origin = self.prev.origin().cloned();
             if !origin_behind {
-                self.l1_blocks.push(*self.origin.as_ref().unwrap());
+                let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
+                self.l1_blocks.push(*origin);
             } else {
                 // This is to handle the special case of startup.
                 // At startup, the batch queue is reset and includes the
@@ -180,7 +181,7 @@ where
             if out_of_data {
                 return Err(StageError::Eof);
             }
-            return Err(StageError::Custom(anyhow!("Not Enough Data")));
+            return Err(StageError::NotEnoughData);
         }
 
         // Attempt to derive more batches.
@@ -191,7 +192,7 @@ where
                     if out_of_data {
                         return Err(StageError::Eof);
                     }
-                    return Err(StageError::Custom(anyhow!("Not Enough Data")));
+                    return Err(StageError::NotEnoughData);
                 }
                 _ => return Err(e),
             },
@@ -202,7 +203,7 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = sb.get_singular_batches(&self.l1_blocks, parent); // .ok_or_else(|| anyhow!("failed to get singular batches from span batch"))?;
+                let batches = sb.get_singular_batches(&self.l1_blocks, parent);
                 self.next_spans = batches;
                 let nb = self
                     .pop_next_batch(parent)
@@ -216,7 +217,7 @@ where
     /// Follows the validity rules imposed on consecutive batches.
     /// Based on currently available buffered batch and L1 origin information.
     /// A [StageError::Eof] is returned if no batch can be derived yet.
-    pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockRef) -> StageResult<Batch> {
+    pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockInfo) -> StageResult<Batch> {
         // Cannot derive a batch if no origin was prepared.
         if self.l1_blocks.is_empty() {
             return Err(StageError::Custom(anyhow!(
@@ -234,7 +235,7 @@ where
         // but don't advance the L2 Safe Head's epoch
         if parent.l1_origin != epoch.id() && parent.l1_origin.number != epoch.number - 1 {
             return Err(StageError::Custom(anyhow!(
-                "buffered L1 chain epoch {} in batch queue does not match safe head origin {}",
+                "buffered L1 chain epoch {} in batch queue does not match safe head origin {:?}",
                 epoch,
                 parent.l1_origin
             )));
@@ -244,10 +245,11 @@ where
         // We may not have sufficient information to proceed filtering, and then we stop.
         // There may be none: in that case we force-create an empty batch
         let mut next_batch = None;
-        let next_timestamp = parent.info.timestamp + self.cfg.block_time;
+        let next_timestamp = parent.block_info.timestamp + self.cfg.block_time;
 
         // Go over all batches, in order of inclusion, and find the first batch we can accept.
-        // Filter in-place by only remembering the batches that may be processed in the future, or any undecided ones.
+        // Filter in-place by only remembering the batches that may be processed in the future, or
+        // any undecided ones.
         let mut remaining = Vec::new();
         for i in 0..self.batches.len() {
             let batch = &self.batches[i];
@@ -258,13 +260,14 @@ where
                 }
                 BatchValidity::Drop => {
                     // TODO: Log the drop reason with WARN level.
-                    // batch.log_context(self.log).warn("Dropping batch", "parent", parent.id(), "parent_time", parent.info.time);
+                    // batch.log_context(self.log).warn("Dropping batch", "parent", parent.id(),
+                    // "parent_time", parent.info.time);
                     continue;
                 }
                 BatchValidity::Accept => {
                     next_batch = Some(batch.clone());
-                    // Don't keep the current batch in the remaining items since we are processing it now,
-                    // but retain every batch we didn't get to yet.
+                    // Don't keep the current batch in the remaining items since we are processing
+                    // it now, but retain every batch we didn't get to yet.
                     remaining.extend_from_slice(&self.batches[i + 1..]);
                     break;
                 }
@@ -285,8 +288,8 @@ where
         // If the current epoch is too old compared to the L1 block we are at,
         // i.e. if the sequence window expired, we create empty batches for the current epoch
         let expiry_epoch = epoch.number + self.cfg.seq_window_size;
-        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty)
-            || expiry_epoch < parent.l1_origin.number;
+        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty) ||
+            expiry_epoch < parent.l1_origin.number;
         let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
 
         // TODO: Log the empty batch generation.
@@ -306,12 +309,12 @@ where
         let next_epoch = self.l1_blocks[1];
 
         // Fill with empty L2 blocks of the same epoch until we meet the time of the next L1 origin,
-        // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always generate a
-        // batch to ensure that we at least have one batch per epoch.
+        // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
+        // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
             // TODO: log next batch generation.
             return Ok(Batch::Single(SingleBatch {
-                parent_hash: parent.info.hash,
+                parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
                 epoch_hash: epoch.hash,
                 timestamp: next_timestamp,
@@ -322,32 +325,22 @@ where
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
         // TODO: log that the epoch is advanced.
-        // bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp, "next_epoch_time", nextEpoch.Time)
+        // bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp,
+        // "next_epoch_time", nextEpoch.Time)
         self.l1_blocks.remove(0);
         Err(StageError::Eof)
     }
 
     /// Adds a batch to the queue.
-    pub fn add_batch(&mut self, batch: Batch, parent: L2BlockRef) -> StageResult<()> {
+    pub fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
-            return Err(anyhow!(
-                "cannot add batch with timestamp {}, no origin was prepared",
-                batch.timestamp()
-            )
-            .into());
+            // TODO: log that the batch cannot be added without an origin
+            panic!("Cannot add batch without an origin");
         }
-        let origin = self
-            .origin
-            .ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
-        let data = BatchWithInclusionBlock {
-            inclusion_block: origin,
-            batch,
-        };
+        let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
+        let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
-        if data
-            .check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher)
-            .is_drop()
-        {
+        if data.check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher).is_drop() {
             return Ok(());
         }
         self.batches.push(data);

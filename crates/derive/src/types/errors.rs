@@ -1,5 +1,6 @@
 //! This module contains derivation errors thrown within the pipeline.
 
+use super::SpanBatchError;
 use alloy_primitives::B256;
 use core::fmt::Display;
 
@@ -24,9 +25,9 @@ impl PartialEq<StageError> for StageError {
     fn eq(&self, other: &StageError) -> bool {
         matches!(
             (self, other),
-            (StageError::Eof, StageError::Eof)
-                | (StageError::NotEnoughData, StageError::NotEnoughData)
-                | (StageError::Custom(_), StageError::Custom(_))
+            (StageError::Eof, StageError::Eof) |
+                (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::Custom(_), StageError::Custom(_))
         )
     }
 }
@@ -52,10 +53,12 @@ impl Display for StageError {
 #[derive(Debug)]
 pub enum ResetError {
     /// The batch has a bad parent hash.
-    /// The first argument is the expected parent hash, and the second argument is the actual parent hash.
+    /// The first argument is the expected parent hash, and the second argument is the actual
+    /// parent hash.
     BadParentHash(B256, B256),
     /// The batch has a bad timestamp.
-    /// The first argument is the expected timestamp, and the second argument is the actual timestamp.
+    /// The first argument is the expected timestamp, and the second argument is the actual
+    /// timestamp.
     BadTimestamp(u64, u64),
 }
 
@@ -82,6 +85,43 @@ impl Display for ResetError {
             ResetError::BadTimestamp(expected, actual) => {
                 write!(f, "Bad timestamp: expected {}, got {}", expected, actual)
             }
+        }
+    }
+}
+
+/// A decoding error.
+#[derive(Debug)]
+pub enum DecodeError {
+    /// The buffer is empty.
+    EmptyBuffer,
+    /// Alloy RLP Encoding Error.
+    AlloyRlpError(alloy_rlp::Error),
+    /// Span Batch Error.
+    SpanBatchError(SpanBatchError),
+}
+
+impl From<alloy_rlp::Error> for DecodeError {
+    fn from(e: alloy_rlp::Error) -> Self {
+        DecodeError::AlloyRlpError(e)
+    }
+}
+
+impl PartialEq<DecodeError> for DecodeError {
+    fn eq(&self, other: &DecodeError) -> bool {
+        matches!(
+            (self, other),
+            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer) |
+                (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
+        )
+    }
+}
+
+impl Display for DecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            DecodeError::EmptyBuffer => write!(f, "Empty buffer"),
+            DecodeError::AlloyRlpError(e) => write!(f, "Alloy RLP Decoding Error: {}", e),
+            DecodeError::SpanBatchError(e) => write!(f, "Span Batch Decoding Error: {:?}", e),
         }
     }
 }

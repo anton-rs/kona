@@ -26,29 +26,35 @@ pub struct RollupConfig {
     /// The L2 chain ID
     pub l2_chain_id: u64,
     /// `regolith_time` sets the activation time of the Regolith network-upgrade:
-    /// a pre-mainnet Bedrock change that addresses findings of the Sherlock contest related to deposit attributes.
-    /// "Regolith" is the loose deposited rock that sits on top of Bedrock.
-    /// Active if regolith_time != None && L2 block timestamp >= Some(regolith_time), inactive otherwise.
+    /// a pre-mainnet Bedrock change that addresses findings of the Sherlock contest related to
+    /// deposit attributes. "Regolith" is the loose deposited rock that sits on top of Bedrock.
+    /// Active if regolith_time != None && L2 block timestamp >= Some(regolith_time), inactive
+    /// otherwise.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub regolith_time: Option<u64>,
     /// `canyon_time` sets the activation time of the Canyon network upgrade.
-    /// Active if `canyon_time` != None && L2 block timestamp >= Some(canyon_time), inactive otherwise.
+    /// Active if `canyon_time` != None && L2 block timestamp >= Some(canyon_time), inactive
+    /// otherwise.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub canyon_time: Option<u64>,
     /// `delta_time` sets the activation time of the Delta network upgrade.
-    /// Active if `delta_time` != None && L2 block timestamp >= Some(delta_time), inactive otherwise.
+    /// Active if `delta_time` != None && L2 block timestamp >= Some(delta_time), inactive
+    /// otherwise.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub delta_time: Option<u64>,
     /// `ecotone_time` sets the activation time of the Ecotone network upgrade.
-    /// Active if `ecotone_time` != None && L2 block timestamp >= Some(ecotone_time), inactive otherwise.
+    /// Active if `ecotone_time` != None && L2 block timestamp >= Some(ecotone_time), inactive
+    /// otherwise.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ecotone_time: Option<u64>,
     /// `fjord_time` sets the activation time of the Fjord network upgrade.
-    /// Active if `fjord_time` != None && L2 block timestamp >= Some(fjord_time), inactive otherwise.
+    /// Active if `fjord_time` != None && L2 block timestamp >= Some(fjord_time), inactive
+    /// otherwise.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub fjord_time: Option<u64>,
-    /// `interop_time` sets the activation time for an experimental feature-set, activated like a hardfork.
-    /// Active if `interop_time` != None && L2 block timestamp >= Some(interop_time), inactive otherwise.
+    /// `interop_time` sets the activation time for an experimental feature-set, activated like a
+    /// hardfork. Active if `interop_time` != None && L2 block timestamp >= Some(interop_time),
+    /// inactive otherwise.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub interop_time: Option<u64>,
     /// `batch_inbox_address` is the L1 address that batches are sent to.
@@ -59,13 +65,15 @@ pub struct RollupConfig {
     pub l1_system_config_address: Address,
     /// `protocol_versions_address` is the L1 address that the protocol versions are stored at.
     pub protocol_versions_address: Address,
-    /// `blobs_enabled_l1_timestamp` is the timestamp to start reading blobs as a batch data source. Optional.
+    /// `blobs_enabled_l1_timestamp` is the timestamp to start reading blobs as a batch data
+    /// source. Optional.
     #[cfg_attr(
         feature = "serde",
         serde(rename = "blobs_data", skip_serializing_if = "Option::is_none")
     )]
     pub blobs_enabled_l1_timestamp: Option<u64>,
-    /// `da_challenge_address` is the L1 address that the data availability challenge contract is stored at.
+    /// `da_challenge_address` is the L1 address that the data availability challenge contract is
+    /// stored at.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub da_challenge_address: Option<Address>,
 }
