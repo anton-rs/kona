@@ -157,9 +157,9 @@ where
     F: ChainProvider + Send,
     B: BlobProvider + Send,
 {
-    type Item = StageResult<Bytes>;
+    type Item = Bytes;
 
-    async fn next(&mut self) -> Option<Self::Item> {
+    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
         if self.load_blobs().await.is_err() {
             return Some(Err(StageError::BlockFetch(self.block_ref.hash)));
         }

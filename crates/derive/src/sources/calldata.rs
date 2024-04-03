@@ -79,9 +79,9 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 
 #[async_trait]
 impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
-    type Item = StageResult<Bytes>;
+    type Item = Bytes;
 
-    async fn next(&mut self) -> Option<Self::Item> {
+    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
         if self.load_calldata().await.is_err() {
             return Some(Err(StageError::BlockFetch(self.block_ref.hash)));
         }

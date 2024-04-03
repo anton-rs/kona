@@ -46,7 +46,7 @@ mod channel;
 pub use channel::Channel;
 
 mod errors;
-pub use errors::{StageError, StageResult};
+pub use errors::{into_frames, StageError, StageResult};
 
 mod single_batch;
 pub use single_batch::SingleBatch;

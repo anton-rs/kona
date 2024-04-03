@@ -21,9 +21,9 @@ pub struct TestIter {
 
 #[async_trait]
 impl AsyncIterator for TestIter {
-    type Item = StageResult<Bytes>;
+    type Item = Bytes;
 
-    async fn next(&mut self) -> Option<Self::Item> {
+    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
         Some(self.results.pop().unwrap_or_else(|| Err(StageError::Eof)))
     }
 }
@@ -37,7 +37,7 @@ pub struct TestDAP {
 
 #[async_trait]
 impl DataAvailabilityProvider for TestDAP {
-    type Item = StageResult<Bytes>;
+    type Item = Bytes;
     type DataIter = TestIter;
 
     async fn open_data(

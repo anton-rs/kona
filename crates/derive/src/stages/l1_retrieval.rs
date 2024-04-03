@@ -67,12 +67,12 @@ where
             .await
             .ok_or(StageError::Eof);
         match data {
-            Ok(data) => Ok(data),
-            Err(StageError::Eof) => {
+            Ok(Ok(data)) => Ok(data),
+            Err(StageError::Eof) | Ok(Err(StageError::Eof)) => {
                 self.data = None;
                 Err(StageError::Eof)
             }
-            Err(e) => Err(e),
+            Ok(Err(e)) | Err(e) => Err(e),
         }
     }
 }
@@ -114,7 +114,7 @@ mod tests {
         let dap = TestDAP { results };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         assert_eq!(retrieval.data, None);
-        let data = retrieval.next_data().await.unwrap().unwrap();
+        let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
         let retrieval_data = retrieval.data.as_ref().unwrap();
@@ -143,7 +143,7 @@ mod tests {
             provider: dap,
             data: Some(data),
         };
-        let data = retrieval.next_data().await.unwrap().unwrap();
+        let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
         let retrieval_data = retrieval.data.as_ref().unwrap();

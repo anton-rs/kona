@@ -4,8 +4,8 @@ use core::fmt::Debug;
 
 use super::l1_retrieval::L1Retrieval;
 use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider, IntoFrames, ResettableStage},
-    types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
+    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage},
+    types::{into_frames, BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use anyhow::anyhow;
@@ -47,8 +47,7 @@ where
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
-                    // TODO: what do we do with frame parsing errors?
-                    if let Ok(frames) = data.into_frames() {
+                    if let Ok(frames) = into_frames(Ok(data)) {
                         self.queue.extend(frames);
                     }
                 }

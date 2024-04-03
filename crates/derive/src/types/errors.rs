@@ -1,9 +1,8 @@
 //! This module contains derivation errors thrown within the pipeline.
 
 use super::Frame;
-use crate::traits::IntoFrames;
 use alloc::vec::Vec;
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
 
 /// An error that is thrown within the stages of the derivation pipeline.
@@ -36,12 +35,11 @@ impl PartialEq<StageError> for StageError {
 /// A result type for the derivation pipeline stages.
 pub type StageResult<T> = Result<T, StageError>;
 
-impl<T: Into<alloy_primitives::Bytes>> IntoFrames for StageResult<T> {
-    fn into_frames(self) -> anyhow::Result<Vec<Frame>> {
-        match self {
-            Ok(data) => Ok(Frame::parse_frames(&data.into())?),
-            Err(e) => Err(anyhow::anyhow!(e)),
-        }
+/// Converts a stage result into a vector of frames.
+pub fn into_frames<T: Into<Bytes>>(result: StageResult<T>) -> anyhow::Result<Vec<Frame>> {
+    match result {
+        Ok(data) => Ok(Frame::parse_frames(&data.into())?),
+        Err(e) => Err(anyhow::anyhow!(e)),
     }
 }
 

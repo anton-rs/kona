@@ -28,9 +28,9 @@ where
     CP: ChainProvider + Send,
     B: BlobProvider + Send,
 {
-    type Item = StageResult<Bytes>;
+    type Item = Bytes;
 
-    async fn next(&mut self) -> Option<Self::Item> {
+    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
         match self {
             DataSource::Calldata(c) => c.next().await,
             DataSource::Blob(b) => b.next().await,
