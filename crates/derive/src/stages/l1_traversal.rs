@@ -1,4 +1,4 @@
-//! Contains the L1 traversal stage of the derivation pipeline.
+//! Contains the [L1Traversal] stage of the derivation pipeline.
 
 use crate::{
     traits::{ChainProvider, ResettableStage},
@@ -8,18 +8,24 @@ use alloc::{boxed::Box, sync::Arc};
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-/// The L1 traversal stage of the derivation pipeline.
+/// The [L1Traversal] stage of the derivation pipeline.
+///
+/// This stage sits at the bottom of the pipeline, holding a handle to the data source
+/// (a [ChainProvider] implementation) and the current L1 [BlockInfo] in the pipeline,
+/// which are used to traverse the L1 chain. When the [L1Traversal] stage is advanced,
+/// it fetches the next L1 [BlockInfo] from the data source and updates the [SystemConfig]
+/// with the receipts from the block.
 #[derive(Debug, Clone)]
 pub struct L1Traversal<Provider: ChainProvider> {
     /// The current block in the traversal stage.
     pub(crate) block: Option<BlockInfo>,
     /// The data source for the traversal stage.
     data_source: Provider,
-    /// Signals whether or not the traversal stage has been completed.
+    /// Signals whether or not the traversal stage is complete.
     done: bool,
-    /// The system config
+    /// The system config.
     pub system_config: SystemConfig,
-    /// The rollup config
+    /// A reference to the rollup config.
     pub rollup_config: Arc<RollupConfig>,
 }
 
@@ -40,9 +46,10 @@ impl<F: ChainProvider> L1Traversal<F> {
         &self.data_source
     }
 
-    /// Returns the next L1 block in the traversal stage, if the stage has not been completed.
-    /// This function can only be called once, and will return `None` on subsequent calls
-    /// unless the stage is reset.
+    /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
+    /// This function can only be called once while the stage is in progress, and will return
+    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
+    /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
     pub fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
         if !self.done {
             self.done = true;
@@ -52,19 +59,21 @@ impl<F: ChainProvider> L1Traversal<F> {
         }
     }
 
-    /// Returns the current L1 block in the traversal stage, if it exists.
+    /// Returns the current L1 [BlockInfo] in the [L1Traversal] stage, if it exists.
     pub fn origin(&self) -> Option<&BlockInfo> {
         self.block.as_ref()
     }
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
+    /// This function fetches the next L1 [BlockInfo] from the data source and updates the
+    /// [SystemConfig] with the receipts from the block.
     pub async fn advance_l1_block(&mut self) -> StageResult<()> {
-        // Pull the next block or return EOF which has special
-        // handling further up the pipeline.
+        // Pull the next block or return EOF.
+        // StageError::EOF has special handling further up the pipeline.
         let block = self.block.ok_or(StageError::Eof)?;
         let next_l1_origin = self.data_source.block_info_by_number(block.number + 1).await?;
 
-        // Check for reorgs
+        // Check block hashes for reorgs.
         if block.hash != next_l1_origin.parent_hash {
             return Err(anyhow!(
                 "Detected L1 reorg from {} to {} with conflicting parent",
@@ -74,7 +83,7 @@ impl<F: ChainProvider> L1Traversal<F> {
             .into());
         }
 
-        // Fetch receipts.
+        // Fetch receipts for the next l1 block and update the system config.
         let receipts = self.data_source.receipts_by_hash(next_l1_origin.hash).await?;
         self.system_config.update_with_receipts(
             receipts.as_slice(),
