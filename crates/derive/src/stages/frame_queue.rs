@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 
 /// The [FrameQueue] stage of the derivation pipeline.
-///
+/// This stage takes the output of the [L1Retrieval] stage and parses it into frames.
 #[derive(Debug)]
 pub struct FrameQueue<DAP, CP>
 where
