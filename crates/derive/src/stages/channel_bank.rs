@@ -88,8 +88,8 @@ where
     pub fn ingest_frame(&mut self, frame: Frame) -> StageResult<()> {
         let origin = *self.origin().ok_or(anyhow!("No origin"))?;
 
+        // Get the channel for the frame, or create a new one if it doesn't exist.
         let current_channel = self.channels.entry(frame.id).or_insert_with(|| {
-            // Create a new channel
             let channel = Channel::new(frame.id, origin);
             self.channel_queue.push_back(frame.id);
             channel
