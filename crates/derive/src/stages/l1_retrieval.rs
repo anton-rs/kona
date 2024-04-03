@@ -10,7 +10,11 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-/// The L1 retrieval stage of the derivation pipeline.
+/// The [L1Retrieval] stage of the derivation pipeline.
+/// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
+/// [L1Retrieval] fetches the associated data from a specified
+/// [DataAvailabilityProvider]. This data is returned as a generic
+/// [DataIter] that can be iterated over.
 #[derive(Debug)]
 pub struct L1Retrieval<DAP, CP>
 where
@@ -30,20 +34,20 @@ where
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
 {
-    /// Creates a new L1 retrieval stage with the given data availability provider and previous
-    /// stage.
+    /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
+    /// stage and given [DataAvailabilityProvider].
     pub fn new(prev: L1Traversal<CP>, provider: DAP) -> Self {
         Self { prev, provider, data: None }
     }
 
-    /// Returns the current L1 block in the traversal stage, if it exists.
+    /// Returns the current L1 [BlockInfo] origin from the previous
+    /// [L1Traversal] stage.
     pub fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
 
-    /// Retrieves the next data item from the L1 retrieval stage.
-    /// If there is data, it pushes it into the next stage.
-    /// If there is no data, it returns an error.
+    /// Retrieves the next data item from the [L1Retrieval] stage.
+    /// Returns an error if there is no data.
     pub async fn next_data(&mut self) -> StageResult<Bytes> {
         if self.data.is_none() {
             let next = self
