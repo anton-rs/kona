@@ -2,10 +2,15 @@
 //! pipeline.
 
 mod data_sources;
-pub use data_sources::{AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider};
+pub use data_sources::{
+    AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, SafeBlockFetcher,
+};
 
 mod stages;
 pub use stages::ResettableStage;
+
+mod telemetry;
+pub use telemetry::{LogLevel, TelemetryProvider};
 
 #[cfg(test)]
 pub mod test_utils;

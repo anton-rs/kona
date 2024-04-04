@@ -2,40 +2,52 @@
 
 use super::L1Traversal;
 use crate::{
-    traits::{AsyncIterator, ChainProvider, DataAvailabilityProvider, ResettableStage},
+    traits::{
+        AsyncIterator, ChainProvider, DataAvailabilityProvider, LogLevel, ResettableStage,
+        TelemetryProvider,
+    },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-/// The L1 retrieval stage of the derivation pipeline.
+/// The [L1Retrieval] stage of the derivation pipeline.
+/// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
+/// [L1Retrieval] fetches the associated data from a specified
+/// [DataAvailabilityProvider]. This data is returned as a generic
+/// [DataIter] that can be iterated over.
 #[derive(Debug)]
-pub struct L1Retrieval<DAP, CP>
+pub struct L1Retrieval<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
+    T: TelemetryProvider,
 {
     /// The previous stage in the pipeline.
-    pub prev: L1Traversal<CP>,
+    pub prev: L1Traversal<CP, T>,
+    /// Telemetry provider for the L1 retrieval stage.
+    pub telemetry: T,
     /// The data availability provider to use for the L1 retrieval stage.
     pub provider: DAP,
     /// The current data iterator.
     pub(crate) data: Option<DAP::DataIter>,
 }
 
-impl<DAP, CP> L1Retrieval<DAP, CP>
+impl<DAP, CP, T> L1Retrieval<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider,
     CP: ChainProvider,
+    T: TelemetryProvider,
 {
-    /// Creates a new L1 retrieval stage with the given data availability provider and previous
-    /// stage.
-    pub fn new(prev: L1Traversal<CP>, provider: DAP) -> Self {
-        Self { prev, provider, data: None }
+    /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
+    /// stage and given [DataAvailabilityProvider].
+    pub fn new(prev: L1Traversal<CP, T>, provider: DAP, telemetry: T) -> Self {
+        Self { prev, telemetry, provider, data: None }
     }
 
-    /// Returns the current L1 block in the traversal stage, if it exists.
+    /// Returns the current L1 [BlockInfo] origin from the previous
+    /// [L1Traversal] stage.
     pub fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
@@ -45,6 +57,10 @@ where
     /// If there is no data, it returns an error.
     pub async fn next_data(&mut self) -> StageResult<DAP::Item> {
         if self.data.is_none() {
+            self.telemetry.write(
+                alloc::format!("Retrieving data for block: {:?}", self.prev.block),
+                LogLevel::Debug,
+            );
             let next = self
                 .prev
                 .next_l1_block()?
@@ -66,10 +82,11 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP> ResettableStage for L1Retrieval<DAP, CP>
+impl<DAP, CP, T> ResettableStage for L1Retrieval<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider + Send,
     CP: ChainProvider + Send,
+    T: TelemetryProvider + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
         self.data = Some(self.provider.open_data(&base, cfg.batcher_addr).await?);
@@ -81,27 +98,29 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::l1_traversal::tests::new_test_traversal,
-        traits::test_utils::{TestDAP, TestIter},
+        stages::l1_traversal::tests::*,
+        traits::test_utils::{TestDAP, TestIter, TestTelemetry},
     };
     use alloc::vec;
     use alloy_primitives::{Address, Bytes};
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
-        let retrieval = L1Retrieval::new(traversal, dap);
+        let telemetry = TestTelemetry::new();
+        let retrieval = L1Retrieval::new(traversal, dap, telemetry);
         let expected = BlockInfo::default();
         assert_eq!(retrieval.origin(), Some(&expected));
     }
 
     #[tokio::test]
     async fn test_l1_retrieval_next_data() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let dap = TestDAP { results };
-        let mut retrieval = L1Retrieval::new(traversal, dap);
+        let telemetry = TestTelemetry::new();
+        let mut retrieval = L1Retrieval::new(traversal, dap, telemetry);
         assert_eq!(retrieval.data, None);
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
@@ -125,9 +144,11 @@ mod tests {
         // Create a new traversal with no blocks or receipts.
         // This would bubble up an error if the prev stage
         // (traversal) is called in the retrieval stage.
-        let traversal = new_test_traversal(false, false);
+        let telemetry = TestTelemetry::new();
+        let traversal = new_test_traversal(vec![], vec![]);
         let dap = TestDAP { results: vec![] };
-        let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
+        let mut retrieval =
+            L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
@@ -141,9 +162,11 @@ mod tests {
             open_data_calls: vec![(BlockInfo::default(), Address::default())],
             results: vec![Err(StageError::Eof)],
         };
-        let traversal = new_test_traversal(true, true);
+        let telemetry = TestTelemetry::new();
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
-        let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
+        let mut retrieval =
+            L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap_err();
         assert_eq!(data, StageError::Eof);
         assert!(retrieval.data.is_none());

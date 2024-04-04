@@ -1,7 +1,7 @@
 //! Utilities for Span Batch Encoding and Decoding.
 
 use super::{SpanBatchError, SpanDecodingError};
-use crate::types::TxType;
+use crate::types::{TxEnvelope, TxType};
 use alloc::vec::Vec;
 use alloy_rlp::{Buf, Header};
 
@@ -59,5 +59,20 @@ pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: TxType) -> Result<bool, Spa
         }
         TxType::Eip2930 | TxType::Eip1559 => Ok(v == 1),
         _ => Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType)),
+    }
+}
+
+/// Checks if the signature of the passed [TxEnvelope] is protected.
+pub(crate) fn is_protected_v(tx: &TxEnvelope) -> bool {
+    match tx {
+        TxEnvelope::Legacy(tx) | TxEnvelope::TaggedLegacy(tx) => {
+            let v = tx.signature().v().to_u64();
+            if 64 - v.leading_zeros() <= 8 {
+                return v != 27 && v != 28 && v != 1 && v != 0;
+            }
+            // anything not 27 or 28 is considered protected
+            true
+        }
+        _ => true,
     }
 }

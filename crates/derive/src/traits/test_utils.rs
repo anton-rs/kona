@@ -5,3 +5,6 @@ pub use data_sources::TestChainProvider;
 
 pub mod data_availability;
 pub use data_availability::{TestDAP, TestIter};
+
+mod telemetry;
+pub use telemetry::TestTelemetry;

@@ -1,7 +1,10 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation
 //! pipeline's stages.
 
-use crate::types::{Blob, BlockInfo, IndexedBlobHash, Receipt, StageResult, TxEnvelope};
+use crate::types::{
+    Blob, BlockInfo, ExecutionPayloadEnvelope, IndexedBlobHash, L2BlockInfo, Receipt, StageResult,
+    TxEnvelope,
+};
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
@@ -55,6 +58,18 @@ pub trait AsyncIterator {
     /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is
     /// exhausted.
     async fn next(&mut self) -> Option<StageResult<Self::Item>>;
+}
+
+/// Describes the functionality of a data source that fetches safe blocks.
+#[async_trait]
+pub trait SafeBlockFetcher {
+    /// Returns the L2 block info given a block number.
+    /// Errors if the block does not exist.
+    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo>;
+
+    /// Returns an execution payload for a given number.
+    /// Errors if the execution payload does not exist.
+    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope>;
 }
 
 /// Describes the functionality of a data source that can provide data availability information.

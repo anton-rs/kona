@@ -2,9 +2,10 @@
 
 use super::channel_bank::ChannelBank;
 use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider},
+    traits::{ChainProvider, DataAvailabilityProvider, LogLevel, TelemetryProvider},
     types::{Batch, BlockInfo, StageError, StageResult},
 };
+
 use alloc::vec::Vec;
 use anyhow::anyhow;
 use core::fmt::Debug;
@@ -12,30 +13,36 @@ use miniz_oxide::inflate::decompress_to_vec_zlib;
 
 /// [ChannelReader] is a stateful stage that does the following:
 #[derive(Debug)]
-pub struct ChannelReader<DAP, CP>
+pub struct ChannelReader<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
 {
     /// The previous stage of the derivation pipeline.
-    prev: ChannelBank<DAP, CP>,
+    prev: ChannelBank<DAP, CP, T>,
+    /// Telemetry
+    telemetry: T,
     /// The batch reader.
     next_batch: Option<BatchReader>,
 }
 
-impl<DAP, CP> ChannelReader<DAP, CP>
+impl<DAP, CP, T> ChannelReader<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: ChannelBank<DAP, CP>) -> Self {
-        Self { prev, next_batch: None }
+    pub fn new(prev: ChannelBank<DAP, CP, T>, telemetry: T) -> Self {
+        Self { prev, telemetry, next_batch: None }
     }
 
     /// Pulls out the next Batch from the available channel.
     pub async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
+            self.telemetry
+                .write(alloc::format!("Failed to set batch reader: {:?}", e), LogLevel::Error);
             self.next_channel();
             return Err(e);
         }

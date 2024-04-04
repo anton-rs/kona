@@ -5,20 +5,18 @@ use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 
 mod system_config;
-pub use system_config::{
-    SystemAccounts, SystemConfig, SystemConfigUpdateType, CONFIG_UPDATE_EVENT_VERSION_0,
-    CONFIG_UPDATE_TOPIC,
-};
+pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
 
 mod rollup_config;
 pub use rollup_config::RollupConfig;
 
 pub mod batch;
 pub use batch::{
-    Batch, BatchType, RawSpanBatch, SingleBatch, SpanBatch, SpanBatchBits, SpanBatchBuilder,
-    SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData, SpanBatchElement,
-    SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix,
-    SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
+    Batch, BatchType, BatchValidity, BatchWithInclusionBlock, RawSpanBatch, SingleBatch, SpanBatch,
+    SpanBatchBits, SpanBatchBuilder, SpanBatchEip1559TransactionData,
+    SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
+    SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchTransactionData,
+    SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
 };
 
 mod alloy;
@@ -29,8 +27,11 @@ pub use alloy::{
     EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH,
 };
 
+mod payload;
+pub use payload::{ExecutionPayload, ExecutionPayloadEnvelope};
+
 mod block;
-pub use block::{BlockId, BlockInfo, BlockKind};
+pub use block::{BlockID, BlockInfo, BlockKind, L2BlockInfo};
 
 mod blob;
 pub use blob::{Blob, BlobData, IndexedBlobHash};
@@ -50,6 +51,18 @@ pub use errors::{into_frames, DecodeError, StageError, StageResult};
 /// A raw transaction
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Bytes);
+
+impl RawTransaction {
+    /// Returns if the transaction is empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Returns if the transaction is a deposit
+    pub fn is_deposit(&self) -> bool {
+        !self.0.is_empty() && self.0[0] == 0x7E
+    }
+}
 
 impl Encodable for RawTransaction {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {

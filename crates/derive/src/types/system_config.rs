@@ -1,16 +1,10 @@
 //! This module contains the [SystemConfig] type.
 
 use super::{Receipt, RollupConfig};
-use alloy_primitives::{address, b256, Address, Log, B256, U256};
+use crate::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
+use alloy_primitives::{address, Address, Log, U256};
 use alloy_sol_types::{sol, SolType};
 use anyhow::{anyhow, bail, Result};
-
-/// `keccak256("ConfigUpdate(uint256,uint8,bytes)")`
-pub const CONFIG_UPDATE_TOPIC: B256 =
-    b256!("1d2b0bda21d56b8bd12d4f94ebacffdfb35f5e226f84b461103bb8beab6353be");
-
-/// The initial version of the system config event log.
-pub const CONFIG_UPDATE_EVENT_VERSION_0: B256 = B256::ZERO;
 
 /// Optimism system config contract values
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -240,15 +234,15 @@ mod test {
 
     use super::*;
     use alloc::vec;
-    use alloy_primitives::{hex, LogData};
+    use alloy_primitives::{b256, hex, LogData, B256};
 
     extern crate std;
 
     fn mock_rollup_config(system_config: SystemConfig) -> RollupConfig {
         RollupConfig {
             genesis: Genesis {
-                l1: crate::types::BlockId::Number(0),
-                l2: crate::types::BlockId::Number(0),
+                l1: crate::types::BlockID::default(),
+                l2: crate::types::BlockID::default(),
                 timestamp: 0,
                 system_config,
             },
