@@ -1,20 +1,28 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use crate::{
-    stages::channel_reader::ChannelReader,
     traits::{
-        ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher,
-        TelemetryProvider,
+        OriginProvider, ResettableStage, SafeBlockFetcher,
+        TelemetryProvider, LogLevel,
     },
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
+use alloy_primitives::Bytes;
 use alloc::{boxed::Box, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
+
+/// A [Batch] provider for the [BatchQueue] stage.
+/// Concretely, this is the previous stage in the pipeline.
+#[async_trait]
+pub trait BatchQueueProvider {
+    /// Pulls out the next [Batch] from the available channel.
+    async fn next_batch(&mut self) -> StageResult<Batch>;
+}
 
 /// [BatchQueue] is responsible for o rdering unordered batches
 /// and gnerating empty batches when the sequence window has passed.
@@ -31,19 +39,21 @@ use core::fmt::Debug;
 /// It is internally responsible for making sure that batches with L1 inclusions block outside it's
 /// working range are not considered or pruned.
 #[derive(Debug)]
-pub struct BatchQueue<DAP, CP, BF, T>
+pub struct BatchQueue<P, BF, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: BatchQueueProvider + OriginProvider + Debug,
     BF: SafeBlockFetcher + Debug,
     T: TelemetryProvider + Debug,
 {
     /// The rollup config.
     cfg: RollupConfig,
     /// The previous stage of the derivation pipeline.
-    prev: ChannelReader<DAP, CP, T>,
+    prev: P,
     /// The l1 block ref
     origin: Option<BlockInfo>,
+
+    /// Telemetry
+    telemetry: T,
 
     /// A consecutive, time-centric window of L1 Blocks.
     /// Every L1 origin of unsafe L2 Blocks must be included in this list.
@@ -63,29 +73,35 @@ where
     fetcher: BF,
 }
 
-impl<DAP, CP, BF, T> BatchQueue<DAP, CP, BF, T>
+impl<P, BF, T> OriginProvider for BatchQueue<P, BF, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: BatchQueueProvider + OriginProvider + Debug,
+    BF: SafeBlockFetcher + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.origin.as_ref()
+    }
+}
+
+impl<P, BF, T> BatchQueue<P, BF, T>
+where
+    P: BatchQueueProvider + OriginProvider + Debug,
     BF: SafeBlockFetcher + Debug,
     T: TelemetryProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
-    pub fn new(cfg: RollupConfig, prev: ChannelReader<DAP, CP, T>, fetcher: BF) -> Self {
+    pub fn new(cfg: RollupConfig, prev: P, telemetry: T, fetcher: BF) -> Self {
         Self {
             cfg,
             prev,
             origin: None,
+            telemetry,
             l1_blocks: Vec::new(),
             batches: Vec::new(),
             next_spans: Vec::new(),
             fetcher,
         }
-    }
-
-    /// Returns the L1 origin [BlockInfo].
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
     }
 
     /// Pops the next batch from the current queued up span-batch cache.
@@ -114,9 +130,12 @@ where
             // Parent block does not match the next batch.
             // Means the previously returned batch is invalid.
             // Drop cached batches and find another batch.
+            self.telemetry.write(
+                Bytes::from(
+                    alloc::format!("Parent block does not match the next batch. Dropping {} cached batches.", self.next_spans.len())),
+                LogLevel::Warning,
+            );
             self.next_spans.clear();
-            // TODO: log that the provided parent block does not match the next batch.
-            // TODO: metrice the internal batch drop.
         }
 
         // If the epoch is advanced, update the l1 blocks.
@@ -128,8 +147,7 @@ where
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
                     self.l1_blocks.drain(0..i);
-                    // TODO: log that the pipelien has advanced the epoch.
-                    // TODO: metrice the internal epoch advancement.
+                    self.telemetry.write(Bytes::from("Adancing epoch"), LogLevel::Info);
                     break;
                 }
             }
@@ -158,7 +176,12 @@ where
                 // reset is called, the origin behind is false.
                 self.l1_blocks.clear();
             }
-            // TODO: log batch queue origin advancement.
+            self.telemetry.write(
+                Bytes::from(
+                    alloc::format!("Batch queue advanced origin: {:?}", self.origin)
+                ),
+                LogLevel::Info,
+            );
         }
 
         // Load more data into the batch queue.
@@ -168,7 +191,7 @@ where
                 if !origin_behind {
                     self.add_batch(b, parent).ok();
                 } else {
-                    // TODO: metrice when the batch is dropped because the origin is behind.
+                    self.telemetry.write(Bytes::from("[Batch Dropped]: Origin is behind"), LogLevel::Warning);
                 }
             }
             Err(StageError::Eof) => out_of_data = true,
@@ -349,10 +372,9 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP, BF, T> ResettableStage for BatchQueue<DAP, CP, BF, T>
+impl<P, BF, T> ResettableStage for BatchQueue<P, BF, T>
 where
-    DAP: DataAvailabilityProvider + Send + Debug,
-    CP: ChainProvider + Send + Debug,
+    P: BatchQueueProvider + OriginProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
     T: TelemetryProvider + Send + Debug,
 {

@@ -28,7 +28,10 @@ mod channel_reader;
 pub use channel_reader::ChannelReader;
 
 mod batch_queue;
-pub use batch_queue::BatchQueue;
+pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
 mod engine_queue;
 mod payload_derivation;
+
+#[cfg(test)]
+pub mod test_utils;
