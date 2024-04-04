@@ -133,9 +133,9 @@ pub(crate) mod tests {
     use crate::{
         params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
         traits::test_utils::{TestChainProvider, TestTelemetry},
-        types::Receipt,
     };
     use alloc::vec;
+    use alloy_consensus::Receipt;
     use alloy_primitives::{address, b256, hex, Bytes, Log, LogData, B256};
 
     const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");
@@ -157,7 +157,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn new_receipts() -> alloc::vec::Vec<Receipt> {
-        let mut receipt = Receipt { success: true, ..Receipt::default() };
+        let mut receipt = Receipt { status: true, ..Receipt::default() };
         let bad = Log::new(
             Address::from([2; 20]),
             vec![CONFIG_UPDATE_TOPIC, B256::default()],

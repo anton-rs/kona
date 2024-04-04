@@ -2,10 +2,10 @@
 //! pipeline's stages.
 
 use crate::types::{
-    Blob, BlockInfo, ExecutionPayloadEnvelope, IndexedBlobHash, L2BlockInfo, Receipt, StageResult,
-    TxEnvelope,
+    Blob, BlockInfo, ExecutionPayloadEnvelope, IndexedBlobHash, L2BlockInfo, StageResult,
 };
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
+use alloy_consensus::{Receipt, TxEnvelope};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;

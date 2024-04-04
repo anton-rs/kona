@@ -9,7 +9,9 @@ use super::{
     convert_v_to_y_parity, read_tx_data, utils::is_protected_v, SpanBatchBits, SpanBatchError,
     SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError,
 };
-use crate::types::{RawTransaction, Transaction, TxEnvelope, TxKind, TxType};
+use crate::types::RawTransaction;
+use alloy_consensus::{Transaction, TxEnvelope, TxType};
+use alloy_primitives::TxKind;
 
 /// This struct contains the decoded information for transactions in a span batch.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -316,14 +318,17 @@ impl SpanBatchTransactions {
             }
 
             let (signature, to, nonce, gas, tx_chain_id) = match &tx_enveloped {
-                TxEnvelope::Legacy(s) => {
-                    (*s.signature(), s.to(), s.nonce(), s.gas_limit(), s.chain_id())
+                TxEnvelope::Legacy(tx) => {
+                    let (tx, sig) = (tx.tx(), tx.signature());
+                    (sig, tx.to(), tx.nonce(), tx.gas_limit(), tx.chain_id())
                 }
-                TxEnvelope::Eip2930(s) => {
-                    (*s.signature(), s.to(), s.nonce(), s.gas_limit(), s.chain_id())
+                TxEnvelope::Eip2930(tx) => {
+                    let (tx, sig) = (tx.tx(), tx.signature());
+                    (sig, tx.to(), tx.nonce(), tx.gas_limit(), tx.chain_id())
                 }
-                TxEnvelope::Eip1559(s) => {
-                    (*s.signature(), s.to(), s.nonce(), s.gas_limit(), s.chain_id())
+                TxEnvelope::Eip1559(tx) => {
+                    let (tx, sig) = (tx.tx(), tx.signature());
+                    (sig, tx.to(), tx.nonce(), tx.gas_limit(), tx.chain_id())
                 }
                 _ => {
                     return Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))
@@ -350,7 +355,7 @@ impl SpanBatchTransactions {
             let mut tx_data_buf = Vec::new();
             span_batch_tx.encode(&mut tx_data_buf);
 
-            self.tx_sigs.push(signature.into());
+            self.tx_sigs.push((*signature).into());
             self.contract_creation_bits.set_bit((i + offset) as usize, contract_creation_bit == 1);
             self.y_parity_bits.set_bit((i + offset) as usize, y_parity_bit);
             self.tx_nonces.push(nonce);

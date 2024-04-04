@@ -25,14 +25,6 @@ pub use batch::{
     SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
 };
 
-mod alloy;
-pub use alloy::{
-    calc_blob_gasprice, calc_excess_blob_gas, calc_next_block_base_fee, eip1559, eip2718, eip2930,
-    eip4788, eip4844, Header, NetworkReceipt, Receipt, ReceiptWithBloom, Sealable, Sealed, Signed,
-    Transaction, TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxKind, TxLegacy, TxType,
-    EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH,
-};
-
 mod payload;
 pub use payload::{
     ExecutionPayload, ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,

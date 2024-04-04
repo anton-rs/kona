@@ -1,7 +1,8 @@
 //! This module contains the [SystemConfig] type.
 
-use super::{Receipt, RollupConfig};
+use super::RollupConfig;
 use crate::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
+use alloy_consensus::Receipt;
 use alloy_primitives::{address, Address, Log, U256};
 use alloy_sol_types::{sol, SolType};
 use anyhow::{anyhow, bail, Result};
@@ -62,7 +63,7 @@ impl SystemConfig {
         l1_time: u64,
     ) -> Result<()> {
         for receipt in receipts {
-            if !receipt.success {
+            if !receipt.status {
                 continue;
             }
 

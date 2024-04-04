@@ -1,10 +1,9 @@
 //! This module contains the eip2930 transaction data type for a span batch.
 
-use crate::types::{
-    eip2930::AccessList, Signed, SpanBatchError, SpanDecodingError, Transaction, TxEip2930,
-    TxEnvelope, TxKind,
-};
-use alloy_primitives::{Address, Signature, U256};
+use crate::types::{SpanBatchError, SpanDecodingError};
+use alloy_consensus::{SignableTransaction, Signed, TxEip2930, TxEnvelope};
+use alloy_eips::eip2930::AccessList;
+use alloy_primitives::{Address, Signature, TxKind, U256};
 use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
 
 /// The transaction data for an EIP-2930 transaction within a span batch.
