@@ -2,7 +2,7 @@
 
 use crate::{
     traits::ChainProvider,
-    types::{BlockInfo, Receipt},
+    types::{BlockInfo, Receipt, TxEnvelope},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::B256;
@@ -62,5 +62,18 @@ impl ChainProvider for TestChainProvider {
         } else {
             Err(anyhow::anyhow!("Receipts not found"))
         }
+    }
+
+    async fn block_info_and_transactions_by_hash(
+        &self,
+        hash: B256,
+    ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
+        let block = self
+            .blocks
+            .iter()
+            .find(|(_, b)| b.hash == hash)
+            .map(|(_, b)| *b)
+            .ok_or_else(|| anyhow::anyhow!("Block not found"))?;
+        Ok((block, Vec::new()))
     }
 }

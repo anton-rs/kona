@@ -3,13 +3,12 @@
 use super::L1Traversal;
 use crate::{
     traits::{
-        ChainProvider, DataAvailabilityProvider, DataIter, LogLevel, OriginProvider,
+        AsyncIterator, ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider,
         ResettableStage, TelemetryProvider,
     },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
-use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
@@ -47,9 +46,10 @@ where
         Self { prev, telemetry, provider, data: None }
     }
 
-    /// Retrieves the next data item from the [L1Retrieval] stage.
-    /// Returns an error if there is no data.
-    pub async fn next_data(&mut self) -> StageResult<Bytes> {
+    /// Retrieves the next data item from the L1 retrieval stage.
+    /// If there is data, it pushes it into the next stage.
+    /// If there is no data, it returns an error.
+    pub async fn next_data(&mut self) -> StageResult<DAP::Item> {
         if self.data.is_none() {
             self.telemetry.write(
                 alloc::format!("Retrieving data for block: {:?}", self.prev.block),
@@ -63,14 +63,14 @@ where
                 Some(self.provider.open_data(&next, self.prev.system_config.batcher_addr).await?);
         }
 
-        let data = self.data.as_mut().expect("Cannot be None").next();
+        let data = self.data.as_mut().expect("Cannot be None").next().await.ok_or(StageError::Eof);
         match data {
-            Ok(data) => Ok(data),
-            Err(StageError::Eof) => {
+            Ok(Ok(data)) => Ok(data),
+            Err(StageError::Eof) | Ok(Err(StageError::Eof)) => {
                 self.data = None;
                 Err(StageError::Eof)
             }
-            Err(e) => Err(e),
+            Ok(Err(e)) | Err(e) => Err(e),
         }
     }
 }
@@ -107,7 +107,7 @@ mod tests {
         traits::test_utils::{TestDAP, TestIter, TestTelemetry},
     };
     use alloc::vec;
-    use alloy_primitives::Address;
+    use alloy_primitives::{Address, Bytes};
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {

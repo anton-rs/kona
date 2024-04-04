@@ -41,6 +41,9 @@ pub use payload::{
 mod block;
 pub use block::{BlockID, BlockInfo, BlockKind, L2BlockInfo};
 
+mod blob;
+pub use blob::{Blob, BlobData, IndexedBlobHash};
+
 mod genesis;
 pub use genesis::Genesis;
 

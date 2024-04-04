@@ -8,7 +8,7 @@ use crate::{
         ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, ResettableStage,
         TelemetryProvider,
     },
-    types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
+    types::{into_frames, BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use anyhow::anyhow;
@@ -47,7 +47,7 @@ where
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
-                    if let Ok(frames) = Frame::parse_frames(data.as_ref()) {
+                    if let Ok(frames) = into_frames(Ok(data)) {
                         self.queue.extend(frames);
                     } else {
                         // TODO: log parsing frame error
@@ -62,6 +62,7 @@ where
                 }
             }
         }
+
         // If we did not add more frames but still have more data, retry this function.
         if self.queue.is_empty() {
             self.telemetry.write(

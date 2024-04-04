@@ -1,7 +1,9 @@
 //! This module contains derivation errors thrown within the pipeline.
 
 use super::SpanBatchError;
-use alloy_primitives::B256;
+use crate::types::Frame;
+use alloc::vec::Vec;
+use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
 
 /// A result type for the derivation pipeline stages.
@@ -15,6 +17,10 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// Failed to fetch block info and transactions by hash.
+    BlockFetch(B256),
+    /// No item returned from the previous stage iterator.
+    Empty,
     /// No channels are available in the channel bank.
     NoChannelsAvailable,
     /// Failed to find channel.
@@ -64,6 +70,14 @@ impl PartialEq<StageError> for StageError {
     }
 }
 
+/// Converts a stage result into a vector of frames.
+pub fn into_frames<T: Into<Bytes>>(result: StageResult<T>) -> anyhow::Result<Vec<Frame>> {
+    match result {
+        Ok(data) => Ok(Frame::parse_frames(&data.into())?),
+        Err(e) => Err(anyhow::anyhow!(e)),
+    }
+}
+
 impl From<anyhow::Error> for StageError {
     fn from(e: anyhow::Error) -> Self {
         StageError::Custom(e)
@@ -75,6 +89,10 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::BlockFetch(hash) => {
+                write!(f, "Failed to fetch block info and transactions by hash: {}", hash)
+            }
+            StageError::Empty => write!(f, "Empty"),
             StageError::NoChannelsAvailable => write!(f, "No channels available"),
             StageError::ChannelNotFound => write!(f, "Channel not found"),
             StageError::MissingOrigin => write!(f, "Missing L1 origin"),
