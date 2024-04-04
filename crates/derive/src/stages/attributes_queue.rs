@@ -170,8 +170,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        AttributesQueue, BlockInfo, L2BlockInfo, PayloadAttributes, RollupConfig, SingleBatch,
-        StageError, StageResult,
+        AttributesQueue, AttributesWithParent, BlockInfo, L2BlockInfo, PayloadAttributes,
+        RollupConfig, SingleBatch, StageError, StageResult,
     };
     use crate::{
         stages::test_utils::{new_mock_batch_queue, MockAttributesBuilder, MockBatchQueue},
@@ -297,5 +297,30 @@ mod tests {
         let parent = L2BlockInfo::default();
         let result = attributes_queue.next_attributes(parent).await.unwrap_err();
         assert_eq!(result, StageError::Eof);
+    }
+
+    #[tokio::test]
+    async fn test_next_attributes_load_batch_last_in_span() {
+        let cfg = RollupConfig::default();
+        let telemetry = TestTelemetry::new();
+        let mock_batch_queue = new_mock_batch_queue(None, vec![Ok(Default::default())]);
+        let mut pa = PayloadAttributes::default();
+        let mock_builder = MockAttributesBuilder { attributes: vec![Ok(pa.clone())] };
+        let mut aq = AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_builder);
+        // If we load the batch, we should get the last in span.
+        // But it won't take it so it will be available in the next_attributes call.
+        let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();
+        // This should successfully construct the next payload attributes.
+        // It should also reset the last in span flag and clear the batch.
+        let attributes = aq.next_attributes(L2BlockInfo::default()).await.unwrap();
+        pa.no_tx_pool = true;
+        let populated_attributes = AttributesWithParent {
+            attributes: pa,
+            parent: L2BlockInfo::default(),
+            is_last_in_span: true,
+        };
+        assert_eq!(attributes, populated_attributes);
+        assert!(!aq.is_last_in_span);
+        assert!(aq.batch.is_none());
     }
 }
