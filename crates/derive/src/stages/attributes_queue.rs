@@ -310,6 +310,8 @@ mod tests {
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
         let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();
+        assert!(aq.is_last_in_span);
+        assert!(aq.batch.is_some());
         // This should successfully construct the next payload attributes.
         // It should also reset the last in span flag and clear the batch.
         let attributes = aq.next_attributes(L2BlockInfo::default()).await.unwrap();
