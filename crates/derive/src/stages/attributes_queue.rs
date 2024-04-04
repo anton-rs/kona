@@ -73,11 +73,6 @@ where
         Self { cfg, prev, telemetry, is_last_in_span: false, batch: None, builder }
     }
 
-    /// Returns the L1 origin [BlockInfo].
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
-    }
-
     /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
     pub async fn load_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
         if self.batch.is_none() {
@@ -147,6 +142,17 @@ where
         );
 
         Ok(attributes)
+    }
+}
+
+impl<P, T, AB> OriginProvider for AttributesQueue<P, T, AB>
+where
+    P: AttributesProvider + OriginProvider + Debug,
+    T: TelemetryProvider + Debug,
+    AB: AttributesBuilder + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
     }
 }
 
