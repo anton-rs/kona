@@ -12,20 +12,29 @@ use alloc::boxed::Box;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
+/// Provides L1 blocks for the [L1Retrieval] stage.
+/// This is the previous stage in the pipeline.
+#[async_trait]
+pub trait L1RetrievalProvider {
+    /// Returns the next L1 block to retrieve data for.
+    async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
+}
+
+
 /// The [L1Retrieval] stage of the derivation pipeline.
 /// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
 /// [L1Retrieval] fetches the associated data from a specified
 /// [DataAvailabilityProvider]. This data is returned as a generic
 /// [DataIter] that can be iterated over.
 #[derive(Debug)]
-pub struct L1Retrieval<DAP, CP, T>
+pub struct L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    P: L1RetrievalProvider + OriginProvider,
     T: TelemetryProvider,
 {
     /// The previous stage in the pipeline.
-    pub prev: L1Traversal<CP, T>,
+    pub prev: P,
     /// Telemetry provider for the L1 retrieval stage.
     pub telemetry: T,
     /// The data availability provider to use for the L1 retrieval stage.
@@ -34,10 +43,10 @@ where
     pub(crate) data: Option<DAP::DataIter>,
 }
 
-impl<DAP, CP, T> L1Retrieval<DAP, CP, T>
+impl<DAP, P, T> L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    P: L1RetrievalProvider + OriginProvider,
     T: TelemetryProvider,
 {
     /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
@@ -75,10 +84,10 @@ where
     }
 }
 
-impl<DAP, CP, T> OriginProvider for L1Retrieval<DAP, CP, T>
+impl<DAP, P, T> OriginProvider for L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    P: L1RetrievalProvider + OriginProvider,
     T: TelemetryProvider,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -87,10 +96,10 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP, T> ResettableStage for L1Retrieval<DAP, CP, T>
+impl<DAP, P, T> ResettableStage for L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider + Send,
-    CP: ChainProvider + Send,
+    P: L1RetrievalProvider + OriginProvider + Send,
     T: TelemetryProvider + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
