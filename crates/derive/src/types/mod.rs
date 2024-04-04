@@ -1,8 +1,14 @@
 //! This module contains all of the types used within the derivation pipeline.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use alloc::vec::Vec;
 use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
+
+mod attributes;
+pub use attributes::{AttributesWithParent, PayloadAttributes};
 
 mod system_config;
 pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
@@ -28,7 +34,9 @@ pub use alloy::{
 };
 
 mod payload;
-pub use payload::{ExecutionPayload, ExecutionPayloadEnvelope};
+pub use payload::{
+    ExecutionPayload, ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
+};
 
 mod block;
 pub use block::{BlockID, BlockInfo, BlockKind, L2BlockInfo};
@@ -43,10 +51,11 @@ mod channel;
 pub use channel::Channel;
 
 mod errors;
-pub use errors::{DecodeError, StageError, StageResult};
+pub use errors::*;
 
 /// A raw transaction
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Bytes);
 
 impl RawTransaction {
