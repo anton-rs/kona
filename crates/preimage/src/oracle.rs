@@ -14,8 +14,9 @@ impl OracleReader {
         Self { pipe_handle }
     }
 
-    /// Set the preimage key for the global oracle reader. This will overwrite any existing key, and block until the
-    /// host has prepared the preimage and responded with the length of the preimage.
+    /// Set the preimage key for the global oracle reader. This will overwrite any existing key, and
+    /// block until the host has prepared the preimage and responded with the length of the
+    /// preimage.
     fn write_key(&mut self, key: PreimageKey) -> Result<usize> {
         // Write the key to the host so that it can prepare the preimage.
         let key_bytes: [u8; 32] = key.into();
@@ -29,8 +30,8 @@ impl OracleReader {
 }
 
 impl PreimageOracleClient for OracleReader {
-    /// Get the data corresponding to the currently set key from the host. Return the data in a new heap allocated
-    /// `Vec<u8>`
+    /// Get the data corresponding to the currently set key from the host. Return the data in a new
+    /// heap allocated `Vec<u8>`
     fn get(&mut self, key: PreimageKey) -> Result<Vec<u8>> {
         let length = self.write_key(key)?;
         let mut data_buffer = alloc::vec![0; length];
@@ -41,18 +42,15 @@ impl PreimageOracleClient for OracleReader {
         Ok(data_buffer)
     }
 
-    /// Get the data corresponding to the currently set key from the host. Write the data into the provided buffer
+    /// Get the data corresponding to the currently set key from the host. Write the data into the
+    /// provided buffer
     fn get_exact(&mut self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
         // Write the key to the host and read the length of the preimage.
         let length = self.write_key(key)?;
 
         // Ensure the buffer is the correct size.
         if buf.len() != length {
-            bail!(
-                "Buffer size {} does not match preimage size {}",
-                buf.len(),
-                length
-            );
+            bail!("Buffer size {} does not match preimage size {}", buf.len(), length);
         }
 
         self.pipe_handle.read_exact(buf)?;
@@ -71,8 +69,9 @@ mod test {
     use std::{fs::File, os::fd::AsRawFd};
     use tempfile::tempfile;
 
-    /// Test struct containing the [OracleReader] and a [PipeHandle] for the host, plus the open [File]s. The [File]s
-    /// are stored in this struct so that they are not dropped until the end of the test.
+    /// Test struct containing the [OracleReader] and a [PipeHandle] for the host, plus the open
+    /// [File]s. The [File]s are stored in this struct so that they are not dropped until the
+    /// end of the test.
     ///
     /// TODO: Swap host pipe handle to oracle writer once it exists.
     #[derive(Debug)]
@@ -83,8 +82,8 @@ mod test {
         _write_file: File,
     }
 
-    /// Helper for creating a new [OracleReader] and [PipeHandle] for testing. The file channel is over two temporary
-    /// files.
+    /// Helper for creating a new [OracleReader] and [PipeHandle] for testing. The file channel is
+    /// over two temporary files.
     ///
     /// TODO: Swap host pipe handle to oracle writer once it exists.
     fn client_and_host() -> ClientAndHost {
@@ -98,12 +97,7 @@ mod test {
 
         let oracle_reader = OracleReader::new(client_handle);
 
-        ClientAndHost {
-            oracle_reader,
-            host_handle,
-            _read_file: read_file,
-            _write_file: write_file,
-        }
+        ClientAndHost { oracle_reader, host_handle, _read_file: read_file, _write_file: write_file }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -113,9 +107,7 @@ mod test {
         let (mut oracle_reader, host_handle) = (sys.oracle_reader, sys.host_handle);
 
         let client = tokio::task::spawn(async move {
-            oracle_reader
-                .get(PreimageKey::new([0u8; 32], PreimageKeyType::Keccak256))
-                .unwrap()
+            oracle_reader.get(PreimageKey::new([0u8; 32], PreimageKeyType::Keccak256)).unwrap()
         });
         let host = tokio::task::spawn(async move {
             let mut length_and_data: [u8; 8 + 10] = [0u8; 8 + 10];

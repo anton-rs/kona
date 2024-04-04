@@ -2,50 +2,54 @@
 
 use super::channel_bank::ChannelBank;
 use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider},
+    traits::{ChainProvider, DataAvailabilityProvider, LogLevel, TelemetryProvider},
     types::{Batch, BlockInfo, StageError, StageResult},
 };
+
 use alloc::vec::Vec;
 use anyhow::anyhow;
 use core::fmt::Debug;
-use miniz_oxide::inflate::decompress_to_vec;
+use miniz_oxide::inflate::decompress_to_vec_zlib;
 
 /// [ChannelReader] is a stateful stage that does the following:
 #[derive(Debug)]
-pub struct ChannelReader<DAP, CP>
+pub struct ChannelReader<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
 {
     /// The previous stage of the derivation pipeline.
-    prev: ChannelBank<DAP, CP>,
+    prev: ChannelBank<DAP, CP, T>,
+    /// Telemetry
+    telemetry: T,
     /// The batch reader.
     next_batch: Option<BatchReader>,
 }
 
-impl<DAP, CP> ChannelReader<DAP, CP>
+impl<DAP, CP, T> ChannelReader<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: ChannelBank<DAP, CP>) -> Self {
-        Self {
-            prev,
-            next_batch: None,
-        }
+    pub fn new(prev: ChannelBank<DAP, CP, T>, telemetry: T) -> Self {
+        Self { prev, telemetry, next_batch: None }
     }
 
     /// Pulls out the next Batch from the available channel.
     pub async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
+            self.telemetry
+                .write(alloc::format!("Failed to set batch reader: {:?}", e), LogLevel::Error);
             self.next_channel();
             return Err(e);
         }
         match self
             .next_batch
             .as_mut()
-            .unwrap()
+            .expect("Cannot be None")
             .next_batch()
             .ok_or(StageError::NotEnoughData)
         {
@@ -88,24 +92,60 @@ pub(crate) struct BatchReader {
     data: Option<Vec<u8>>,
     /// Decompressed data.
     decompressed: Vec<u8>,
+    /// The current cursor in the `decompressed` data.
+    cursor: usize,
 }
 
 impl BatchReader {
     /// Pulls out the next batch from the reader.
     pub(crate) fn next_batch(&mut self) -> Option<Batch> {
+        // If the data is not already decompressed, decompress it.
         if let Some(data) = self.data.take() {
-            self.decompressed = decompress_to_vec(&data).ok()?;
+            let decompressed_data = decompress_to_vec_zlib(&data).ok()?;
+            self.decompressed = decompressed_data;
         }
-        let batch = Batch::decode(&mut self.decompressed.as_ref()).ok()?;
+
+        // Decompress and RLP decode the batch data, before finally decoding the batch itself.
+        let mut decompressed_reader = self.decompressed.as_slice();
+        let batch = Batch::decode(&mut decompressed_reader).ok()?;
+
+        // Advance the cursor on the reader.
+        self.cursor += self.decompressed.len() - decompressed_reader.len();
+
         Some(batch)
     }
 }
 
 impl From<&[u8]> for BatchReader {
     fn from(data: &[u8]) -> Self {
-        Self {
-            data: Some(data.to_vec()),
-            decompressed: Vec::new(),
-        }
+        Self { data: Some(data.to_vec()), decompressed: Vec::new(), cursor: 0 }
+    }
+}
+
+impl From<Vec<u8>> for BatchReader {
+    fn from(data: Vec<u8>) -> Self {
+        Self { data: Some(data), decompressed: Vec::new(), cursor: 0 }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{stages::channel_reader::BatchReader, types::BatchType};
+    use alloc::vec;
+    use miniz_oxide::deflate::compress_to_vec_zlib;
+
+    // TODO(clabby): More tests here for multiple batches, integration w/ channel bank, etc.
+
+    #[test]
+    fn test_batch_reader() {
+        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
+        let mut typed_data = vec![BatchType::Span as u8];
+        typed_data.extend_from_slice(raw_data.as_slice());
+
+        let compressed_raw_data = compress_to_vec_zlib(typed_data.as_slice(), 5);
+        let mut reader = BatchReader::from(compressed_raw_data);
+        reader.next_batch().unwrap();
+
+        assert_eq!(reader.cursor, typed_data.len());
     }
 }

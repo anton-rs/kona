@@ -22,43 +22,57 @@ pub struct BlockInfo {
 impl BlockInfo {
     /// Instantiates a new [BlockInfo].
     pub fn new(hash: B256, number: u64, parent_hash: B256, timestamp: u64) -> Self {
-        Self {
-            hash,
-            number,
-            parent_hash,
-            timestamp,
-        }
+        Self { hash, number, parent_hash, timestamp }
+    }
+
+    /// Returns the block ID.
+    pub fn id(&self) -> BlockID {
+        BlockID { hash: self.hash, number: self.number }
     }
 }
 
-// impl TryFrom<BlockWithTransactions> for BlockInfo {
-//     type Error = anyhow::Error;
-//
-//     fn try_from(block: BlockWithTransactions) -> anyhow::Result<Self> {
-//         Ok(BlockInfo {
-//             number: block.number.unwrap_or_default().to::<u64>(),
-//             hash: block.hash.unwrap_or_default(),
-//             parent_hash: block.parent_hash,
-//             timestamp: block.timestamp.to::<u64>(),
-//         })
-//     }
-// }
-
-/// A Block Identifier
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum BlockId {
-    /// The block hash
-    Hash(BlockHash),
-    /// The block number
-    Number(BlockNumber),
-    /// The block kind
-    Kind(BlockKind),
+impl core::fmt::Display for BlockInfo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "BlockInfo {{ hash: {}, number: {}, parent_hash: {}, timestamp: {} }}",
+            self.hash, self.number, self.parent_hash, self.timestamp
+        )
+    }
 }
 
-impl Default for BlockId {
-    fn default() -> Self {
-        BlockId::Kind(BlockKind::Latest)
+/// Block ID identifies a block by its hash and number
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub struct BlockID {
+    /// The block hash
+    pub hash: BlockHash,
+    /// The block number
+    pub number: BlockNumber,
+}
+
+impl core::fmt::Display for BlockID {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{{ hash: {}, number: {} }}", self.hash, self.number)
+    }
+}
+
+/// L2 Block Header Info
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub struct L2BlockInfo {
+    /// The base [BlockInfo]
+    pub block_info: BlockInfo,
+    /// The L1 origin [BlockID]
+    pub l1_origin: BlockID,
+    /// The sequence number of the L2 block
+    pub seq_num: u64,
+}
+
+impl L2BlockInfo {
+    /// Instantiates a new [L2BlockInfo].
+    pub fn new(block_info: BlockInfo, l1_origin: BlockID, seq_num: u64) -> Self {
+        Self { block_info, l1_origin, seq_num }
     }
 }
 
@@ -78,30 +92,3 @@ pub enum BlockKind {
     /// The latest finalized block.
     Finalized,
 }
-
-// /// A Block with Transactions
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-// #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-// #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-// pub struct Block {
-//     /// Header of the block.
-//     #[serde(flatten)]
-//     pub header: Header,
-//     /// Uncles' hashes.
-//     pub uncles: Vec<B256>,
-//     /// Block Transactions. In the case of an uncle block, this field is not included in RPC
-//     /// responses, and when deserialized, it will be set to [BlockTransactions::Uncle].
-//     #[serde(
-//         skip_serializing_if = "BlockTransactions::is_uncle",
-//         default = "BlockTransactions::uncle"
-//     )]
-//     pub transactions: BlockTransactions,
-//     /// Integer the size of this block in bytes.
-//     pub size: Option<U256>,
-//     /// Withdrawals in the block.
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub withdrawals: Option<Vec<Withdrawal>>,
-//     /// Support for arbitrary additional fields.
-//     #[serde(flatten)]
-//     pub other: OtherFields,
-// }

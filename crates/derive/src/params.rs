@@ -34,6 +34,6 @@ pub const CONFIG_UPDATE_TOPIC: B256 =
 pub const CONFIG_UPDATE_EVENT_VERSION_0: B256 = B256::ZERO;
 
 /// Frames cannot be larger than 1MB.
-/// Data transactions that carry frames are generally not larger than 128 KB due to L1 network conditions,
-/// but we leave space to grow larger anyway (gas limit allows for more data).
+/// Data transactions that carry frames are generally not larger than 128 KB due to L1 network
+/// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
 pub const MAX_FRAME_LEN: usize = 1000;
