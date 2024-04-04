@@ -5,7 +5,8 @@ use core::fmt::Debug;
 use super::l1_retrieval::L1Retrieval;
 use crate::{
     traits::{
-        ChainProvider, DataAvailabilityProvider, LogLevel, ResettableStage, TelemetryProvider,
+        ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, ResettableStage,
+        TelemetryProvider,
     },
     types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
@@ -41,11 +42,6 @@ where
         Self { prev, telemetry, queue: VecDeque::new() }
     }
 
-    /// Returns the L1 [BlockInfo] origin.
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
-    }
-
     /// Fetches the next frame from the [FrameQueue].
     pub async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
@@ -78,6 +74,17 @@ where
         }
 
         self.queue.pop_front().ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
+    }
+}
+
+impl<DAP, CP, T> OriginProvider for FrameQueue<DAP, CP, T>
+where
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
     }
 }
 

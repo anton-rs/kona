@@ -1,7 +1,11 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use crate::{
-    traits::{LogLevel, OriginProvider, ResettableStage, SafeBlockFetcher, TelemetryProvider},
+    stages::channel_reader::ChannelReader,
+    traits::{
+        ChainProvider, DataAvailabilityProvider, OriginProvider, ResettableStage, SafeBlockFetcher,
+        TelemetryProvider, LogLevel,
+    },
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -374,12 +378,24 @@ where
     }
 }
 
+impl<DAP, CP, BF, T> OriginProvider for BatchQueue<DAP, CP, BF, T>
+where
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
+    BF: SafeBlockFetcher + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
+    }
+}
+
 #[async_trait]
 impl<P, BF, T> ResettableStage for BatchQueue<P, BF, T>
 where
     P: BatchQueueProvider + OriginProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Debug + Sync,
 {
     async fn reset(&mut self, base: BlockInfo, _: SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.

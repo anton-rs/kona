@@ -27,6 +27,7 @@ serde = { version = "1.0.197", default-features = false, features = ["derive"], 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["full"] }
 proptest = "1.4.0"
+spin = { version = "0.9.8", features = ["mutex"] } # Spin is used for testing synchronization primitives
 
 [features]
 serde = ["dep:serde", "alloy-primitives/serde"]
