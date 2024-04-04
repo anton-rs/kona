@@ -2,7 +2,7 @@
 //! pipeline.
 
 mod data_sources;
-pub use data_sources::{ChainProvider, DataAvailabilityProvider, DataIter, SafeBlockFetcher};
+pub use data_sources::*;
 
 mod stages;
 pub use stages::ResettableStage;

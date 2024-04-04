@@ -1,11 +1,7 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    stages::batch_queue::BatchQueue,
-    traits::{
-        ChainProvider, DataAvailabilityProvider, LogLevel, ResettableStage, SafeBlockFetcher,
-        TelemetryProvider,
-    },
+    traits::{LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{
         AttributesWithParent, BlockID, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError,
         RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
@@ -19,13 +15,23 @@ use core::fmt::Debug;
 pub trait AttributesBuilder {
     /// Prepare the payload attributes.
     fn prepare_payload_attributes(
-        &self,
+        &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockID,
     ) -> anyhow::Result<PayloadAttributes>;
 }
 
-/// [AttributesQueue] accepts batches from the [super::BatchQueue] stage
+/// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
+#[async_trait]
+pub trait AttributesProvider {
+    /// Returns the next valid batch upon the given safe head.
+    async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch>;
+
+    /// Returns whether the current batch is the last in its span.
+    fn is_last_in_span(&self) -> bool;
+}
+
+/// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [PayloadAttributes]. The outputted payload
 /// attributes cannot be buffered because each batch->attributes transformation
 /// pulls in data about the current L2 safe head.
@@ -36,18 +42,16 @@ pub trait AttributesBuilder {
 /// This stage can be reset by clearing its batch buffer.
 /// This stage does not need to retain any references to L1 blocks.
 #[derive(Debug)]
-pub struct AttributesQueue<DAP, CP, BF, T, AB>
+pub struct AttributesQueue<P, T, AB>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
-    BF: SafeBlockFetcher + Debug,
+    P: AttributesProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// The rollup config.
     cfg: RollupConfig,
     /// The previous stage of the derivation pipeline.
-    prev: BatchQueue<DAP, CP, BF, T>,
+    prev: P,
     /// Telemetry provider.
     telemetry: T,
     /// Whether the current batch is the last in its span.
@@ -58,21 +62,14 @@ where
     builder: AB,
 }
 
-impl<DAP, CP, BF, T, AB> AttributesQueue<DAP, CP, BF, T, AB>
+impl<P, T, AB> AttributesQueue<P, T, AB>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
-    BF: SafeBlockFetcher + Debug,
+    P: AttributesProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
-    pub fn new(
-        cfg: RollupConfig,
-        prev: BatchQueue<DAP, CP, BF, T>,
-        telemetry: T,
-        builder: AB,
-    ) -> Self {
+    pub fn new(cfg: RollupConfig, prev: P, telemetry: T, builder: AB) -> Self {
         Self { cfg, prev, telemetry, is_last_in_span: false, batch: None, builder }
     }
 
@@ -153,19 +150,41 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP, BF, T, AB> ResettableStage for AttributesQueue<DAP, CP, BF, T, AB>
+impl<P, T, AB> ResettableStage for AttributesQueue<P, T, AB>
 where
-    DAP: DataAvailabilityProvider + Send + Debug,
-    CP: ChainProvider + Send + Debug,
-    BF: SafeBlockFetcher + Send + Debug,
+    P: AttributesProvider + OriginProvider + Send + Debug,
     T: TelemetryProvider + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
     async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
         self.telemetry.write(Bytes::from("resetting attributes queue"), LogLevel::Info);
-        // TODO: metrice the reset
+        // TODO: metrice the reset using telemetry
+        // telemetry can provide a method of logging and metricing
         self.batch = None;
         self.is_last_in_span = false;
         Err(StageError::Eof)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AttributesQueue, L2BlockInfo, RollupConfig, StageError};
+    use crate::{
+        stages::test_utils::{new_mock_batch_queue, MockAttributesBuilder},
+        traits::test_utils::TestTelemetry,
+    };
+    use alloc::vec;
+
+    #[tokio::test]
+    async fn test_load_batch_eof() {
+        let cfg = RollupConfig::default();
+        let telemetry = TestTelemetry::new();
+        let mock_batch_queue = new_mock_batch_queue(None, vec![]);
+        let mock_attributes_builder = MockAttributesBuilder::default();
+        let mut attributes_queue =
+            AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_attributes_builder);
+        let parent = L2BlockInfo::default();
+        let result = attributes_queue.load_batch(parent).await.unwrap_err();
+        assert_eq!(result, StageError::Eof);
     }
 }
