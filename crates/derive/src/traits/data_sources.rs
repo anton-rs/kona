@@ -30,6 +30,12 @@ pub(crate) trait PlasmaProvider {
     async fn get_input(&self, commitment: &[u8], block_number: u64) -> Result<Bytes>;
 }
 
+/// Provides a method for accessing the pipeline origin.
+pub trait OriginProvider {
+    /// Returns the optional L1 [BlockInfo] origin.
+    fn origin(&self) -> Option<&BlockInfo>;
+}
+
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
 pub trait ChainProvider {

@@ -1,7 +1,7 @@
 //! Contains the [L1Traversal] stage of the derivation pipeline.
 
 use crate::{
-    traits::{ChainProvider, LogLevel, ResettableStage, TelemetryProvider},
+    traits::{ChainProvider, LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
@@ -61,11 +61,6 @@ impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
         }
     }
 
-    /// Returns the current L1 [BlockInfo] in the [L1Traversal] stage, if it exists.
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.block.as_ref()
-    }
-
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
     /// This function fetches the next L1 [BlockInfo] from the data source and updates the
     /// [SystemConfig] with the receipts from the block.
@@ -109,6 +104,12 @@ impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
         self.block = Some(next_l1_origin);
         self.done = false;
         Ok(())
+    }
+}
+
+impl<F: ChainProvider, T: TelemetryProvider> OriginProvider for L1Traversal<F, T> {
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.block.as_ref()
     }
 }
 

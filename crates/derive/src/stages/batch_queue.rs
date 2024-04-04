@@ -3,7 +3,7 @@
 use crate::{
     stages::channel_reader::ChannelReader,
     traits::{
-        ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher,
+        ChainProvider, DataAvailabilityProvider, OriginProvider, ResettableStage, SafeBlockFetcher,
         TelemetryProvider,
     },
     types::{
@@ -83,9 +83,9 @@ where
         }
     }
 
-    /// Returns the L1 origin [BlockInfo].
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
+    /// Returns if the previous batch was the last in the span.
+    pub fn is_last_in_span(&self) -> bool {
+        self.next_spans.is_empty()
     }
 
     /// Pops the next batch from the current queued up span-batch cache.
@@ -348,13 +348,25 @@ where
     }
 }
 
+impl<DAP, CP, BF, T> OriginProvider for BatchQueue<DAP, CP, BF, T>
+where
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
+    BF: SafeBlockFetcher + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
+    }
+}
+
 #[async_trait]
 impl<DAP, CP, BF, T> ResettableStage for BatchQueue<DAP, CP, BF, T>
 where
     DAP: DataAvailabilityProvider + Send + Debug,
     CP: ChainProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Debug + Sync,
 {
     async fn reset(&mut self, base: BlockInfo, _: SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.

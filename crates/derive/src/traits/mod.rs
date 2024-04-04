@@ -2,9 +2,7 @@
 //! pipeline.
 
 mod data_sources;
-pub use data_sources::{
-    AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, SafeBlockFetcher,
-};
+pub use data_sources::*;
 
 mod stages;
 pub use stages::ResettableStage;
