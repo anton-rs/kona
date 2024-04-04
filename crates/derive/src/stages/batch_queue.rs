@@ -1,17 +1,14 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use crate::{
-    traits::{
-        OriginProvider, ResettableStage, SafeBlockFetcher,
-        TelemetryProvider, LogLevel,
-    },
+    traits::{LogLevel, OriginProvider, ResettableStage, SafeBlockFetcher, TelemetryProvider},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
-use alloy_primitives::Bytes;
 use alloc::{boxed::Box, vec::Vec};
+use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -136,8 +133,10 @@ where
             // Means the previously returned batch is invalid.
             // Drop cached batches and find another batch.
             self.telemetry.write(
-                Bytes::from(
-                    alloc::format!("Parent block does not match the next batch. Dropping {} cached batches.", self.next_spans.len())),
+                Bytes::from(alloc::format!(
+                    "Parent block does not match the next batch. Dropping {} cached batches.",
+                    self.next_spans.len()
+                )),
                 LogLevel::Warning,
             );
             self.next_spans.clear();
@@ -182,9 +181,7 @@ where
                 self.l1_blocks.clear();
             }
             self.telemetry.write(
-                Bytes::from(
-                    alloc::format!("Batch queue advanced origin: {:?}", self.origin)
-                ),
+                Bytes::from(alloc::format!("Batch queue advanced origin: {:?}", self.origin)),
                 LogLevel::Info,
             );
         }
@@ -196,7 +193,8 @@ where
                 if !origin_behind {
                     self.add_batch(b, parent).ok();
                 } else {
-                    self.telemetry.write(Bytes::from("[Batch Dropped]: Origin is behind"), LogLevel::Warning);
+                    self.telemetry
+                        .write(Bytes::from("[Batch Dropped]: Origin is behind"), LogLevel::Warning);
                 }
             }
             Err(StageError::Eof) => out_of_data = true,

@@ -1,11 +1,12 @@
 //! Test [ChannelReader] utilities and mock implementation.
 
-use alloc::vec::Vec;
-use alloc::boxed::Box;
+use crate::{
+    stages::BatchQueueProvider,
+    traits::OriginProvider,
+    types::{Batch, BlockInfo, StageError, StageResult},
+};
+use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use crate::stages::BatchQueueProvider;
-use crate::traits::OriginProvider;
-use crate::types::{StageResult, BlockInfo, StageError, Batch};
 
 /// A mock implementation of [ChannelReader] for testing purposes.
 #[derive(Debug, Default)]
