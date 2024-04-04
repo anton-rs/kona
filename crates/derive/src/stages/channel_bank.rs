@@ -243,11 +243,12 @@ mod tests {
 
     #[test]
     fn test_ingest_invalid_frame() {
-        let traversal = new_test_traversal(false, false);
+        let traversal = new_test_traversal(vec![], vec![]);
         let dap = TestDAP::default();
-        let retrieval = L1Retrieval::new(traversal, dap);
-        let frame_queue = FrameQueue::new(retrieval);
-        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
+        let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
+        let mut channel_bank =
+            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
         let frame = Frame { id: [0xFF; 16], ..Default::default() };
         assert_eq!(channel_bank.size(), 0);
         assert!(channel_bank.channels.is_empty());
