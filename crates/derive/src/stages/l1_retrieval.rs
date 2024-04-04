@@ -3,8 +3,8 @@
 use super::L1Traversal;
 use crate::{
     traits::{
-        AsyncIterator, ChainProvider, DataAvailabilityProvider, LogLevel, ResettableStage,
-        TelemetryProvider, OriginProvider,
+        AsyncIterator, ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider,
+        ResettableStage, TelemetryProvider,
     },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
