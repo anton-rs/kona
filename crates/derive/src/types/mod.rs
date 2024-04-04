@@ -5,10 +5,7 @@ use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 
 mod system_config;
-pub use system_config::{
-    SystemAccounts, SystemConfig, SystemConfigUpdateType, CONFIG_UPDATE_EVENT_VERSION_0,
-    CONFIG_UPDATE_TOPIC,
-};
+pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
 
 mod rollup_config;
 pub use rollup_config::RollupConfig;
