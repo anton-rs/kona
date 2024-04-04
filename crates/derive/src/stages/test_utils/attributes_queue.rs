@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 #[derive(Debug, Default)]
 pub struct MockAttributesBuilder {
     /// The attributes to return.
-    attributes: Vec<anyhow::Result<PayloadAttributes>>,
+    pub attributes: Vec<anyhow::Result<PayloadAttributes>>,
 }
 
 impl AttributesBuilder for MockAttributesBuilder {

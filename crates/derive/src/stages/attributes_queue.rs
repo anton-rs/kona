@@ -78,7 +78,7 @@ where
         self.prev.origin()
     }
 
-    /// Loads a batch from the previous stage if needed.
+    /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
     pub async fn load_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
         if self.batch.is_none() {
             let batch = self.prev.next_batch(parent).await?;
@@ -88,29 +88,27 @@ where
         self.batch.as_ref().cloned().ok_or(StageError::Eof)
     }
 
-    /// Returns the next payload attributes from the current batch.
+    /// Returns the next [AttributesWithParent] from the current batch.
     pub async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,
     ) -> StageResult<AttributesWithParent> {
-        // Load the batch
+        // Load the batch.
         let batch = self.load_batch(parent).await?;
 
-        // Construct the payload attributes from the loaded batch
+        // Construct the payload attributes from the loaded batch.
         let attributes = self.create_next_attributes(batch, parent).await?;
         let populated_attributes =
             AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
 
-        // Clear out the local state once we will succeed
+        // Clear out the local state once payload attributes are prepared.
         self.batch = None;
         self.is_last_in_span = false;
         Ok(populated_attributes)
     }
 
-    /// Creates the next attributes.
-    /// Transforms a [SingleBatch] into [PayloadAttributes].
-    /// This sets `NoTxPool` and appends the batched transactions to the attributes transaction
-    /// list.
+    /// Creates the next attributes, transforming a [SingleBatch] into [PayloadAttributes].
+    /// This sets `no_tx_pool` and appends the batched txs to the attributes tx list.
     pub async fn create_next_attributes(
         &mut self,
         batch: SingleBatch,
@@ -132,7 +130,10 @@ where
 
         // Prepare the payload attributes
         let tx_count = batch.transactions.len();
-        let mut attributes = self.builder.prepare_payload_attributes(parent, batch.epoch())?;
+        let mut attributes = self
+            .builder
+            .prepare_payload_attributes(parent, batch.epoch())
+            .map_err(StageError::AttributesBuild)?;
         attributes.no_tx_pool = true;
         attributes.transactions.extend(batch.transactions);
 
@@ -169,11 +170,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        AttributesQueue, BlockInfo, L2BlockInfo, RollupConfig, SingleBatch, StageError, StageResult,
+        AttributesQueue, BlockInfo, L2BlockInfo, PayloadAttributes, RollupConfig, SingleBatch,
+        StageError, StageResult,
     };
     use crate::{
         stages::test_utils::{new_mock_batch_queue, MockAttributesBuilder, MockBatchQueue},
         traits::test_utils::TestTelemetry,
+        types::RawTransaction,
     };
     use alloc::{vec, vec::Vec};
     use alloy_primitives::b256;
@@ -255,6 +258,37 @@ mod tests {
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
+    }
+
+    #[tokio::test]
+    async fn test_create_next_attributes_preparation_fails() {
+        let mut attributes_queue = new_attributes_queue(None, None, vec![]);
+        let parent = L2BlockInfo::default();
+        let batch = SingleBatch::default();
+        let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
+        assert_eq!(
+            result,
+            StageError::AttributesBuild(anyhow::anyhow!("missing payload attribute"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_next_attributes_success() {
+        let cfg = RollupConfig::default();
+        let telemetry = TestTelemetry::new();
+        let mock_batch_queue = new_mock_batch_queue(None, vec![]);
+        let mut payload_attributes = PayloadAttributes::default();
+        let mock_builder =
+            MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
+        let mut aq = AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_builder);
+        let parent = L2BlockInfo::default();
+        let txs = vec![RawTransaction::default(), RawTransaction::default()];
+        let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
+        let attributes = aq.create_next_attributes(batch, parent).await.unwrap();
+        // update the expected attributes
+        payload_attributes.no_tx_pool = true;
+        payload_attributes.transactions.extend(txs);
+        assert_eq!(attributes, payload_attributes);
     }
 
     #[tokio::test]

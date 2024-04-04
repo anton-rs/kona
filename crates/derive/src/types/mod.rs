@@ -55,7 +55,7 @@ pub use errors::*;
 
 /// A raw transaction
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Bytes);
 
 impl RawTransaction {
