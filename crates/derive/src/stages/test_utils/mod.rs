@@ -12,3 +12,6 @@ pub use frame_queue::MockFrameQueueProvider;
 
 mod channel_bank;
 pub use channel_bank::MockChannelBankProvider;
+
+mod channel_reader;
+pub use channel_reader::MockChannelReaderProvider;

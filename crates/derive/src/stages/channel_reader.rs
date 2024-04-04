@@ -6,9 +6,8 @@ use crate::{
     types::{Batch, BlockInfo, StageError, StageResult},
 };
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
-use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
@@ -33,7 +32,7 @@ where
     /// The previous stage of the derivation pipeline.
     prev: P,
     /// Telemetry
-    telemetry: T,
+    telemetry: Arc<T>,
     /// The batch reader.
     next_batch: Option<BatchReader>,
 }
@@ -44,14 +43,14 @@ where
     T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: P, telemetry: T) -> Self {
+    pub fn new(prev: P, telemetry: Arc<T>) -> Self {
         Self { prev, telemetry, next_batch: None }
     }
 
     /// Creates the batch reader from available channel data.
     async fn set_batch_reader(&mut self) -> StageResult<()> {
         if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(anyhow!("no channel"))?;
+            let channel = self.prev.next_data().await?.ok_or(StageError::NoChannel)?;
             self.next_batch = Some(BatchReader::from(&channel[..]));
         }
         Ok(())
@@ -68,7 +67,7 @@ where
 impl<P, T> BatchQueueProvider for ChannelReader<P, T>
 where
     P: ChannelReaderProvider + OriginProvider + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Sync + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
@@ -151,11 +150,58 @@ impl From<Vec<u8>> for BatchReader {
 
 #[cfg(test)]
 mod test {
-    use crate::{stages::channel_reader::BatchReader, types::BatchType};
+    use super::*;
+    use crate::{
+        stages::test_utils::MockChannelReaderProvider, traits::test_utils::TestTelemetry,
+        types::BatchType,
+    };
     use alloc::vec;
     use miniz_oxide::deflate::compress_to_vec_zlib;
 
-    // TODO(clabby): More tests here for multiple batches, integration w/ channel bank, etc.
+    fn new_compressed_batch_data() -> Bytes {
+        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
+        let mut typed_data = vec![BatchType::Span as u8];
+        typed_data.extend_from_slice(raw_data.as_slice());
+        compress_to_vec_zlib(typed_data.as_slice(), 5).into()
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_batch_reader_set_fails() {
+        let mock = MockChannelReaderProvider::new(vec![Err(StageError::Eof)]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        assert_eq!(reader.next_batch().await, Err(StageError::Eof));
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_batch_reader_no_data() {
+        let mock = MockChannelReaderProvider::new(vec![Ok(None)]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        assert_eq!(reader.next_batch().await, Err(StageError::NoChannel));
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_not_enough_data() {
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(Bytes::default()))]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        assert_eq!(reader.next_batch().await, Err(StageError::NotEnoughData));
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_succeeds() {
+        let raw = new_compressed_batch_data();
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(raw))]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        let res = reader.next_batch().await.unwrap();
+        matches!(res, Batch::Span(_));
+        assert!(reader.next_batch.is_some());
+    }
 
     #[test]
     fn test_batch_reader() {
