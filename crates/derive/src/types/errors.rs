@@ -15,6 +15,8 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// Failed to build the [super::PayloadAttributes] for the next batch.
+    AttributesBuild(anyhow::Error),
     /// Reset the pipeline.
     Reset(ResetError),
     /// The stage detected a block reorg.
@@ -37,10 +39,14 @@ impl PartialEq<StageError> for StageError {
         if let (StageError::ReorgDetected(a, b), StageError::ReorgDetected(c, d)) = (self, other) {
             return a == c && b == d;
         }
+        if let (StageError::Reset(a), StageError::Reset(b)) = (self, other) {
+            return a == b;
+        }
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::AttributesBuild(_), StageError::AttributesBuild(_)) |
                 (StageError::ReceiptFetch(_), StageError::ReceiptFetch(_)) |
                 (StageError::BlockInfoFetch(_), StageError::BlockInfoFetch(_)) |
                 (StageError::SystemConfigUpdate(_), StageError::SystemConfigUpdate(_)) |
@@ -60,6 +66,7 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::AttributesBuild(e) => write!(f, "Attributes build error: {}", e),
             StageError::Reset(e) => write!(f, "Reset error: {}", e),
             StageError::ReceiptFetch(e) => write!(f, "Receipt fetch error: {}", e),
             StageError::SystemConfigUpdate(e) => write!(f, "System config update error: {}", e),

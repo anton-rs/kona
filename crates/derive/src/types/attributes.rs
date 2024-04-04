@@ -9,7 +9,7 @@ use alloy_primitives::{Address, B256};
 
 /// Payload attributes.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct PayloadAttributes {
     /// Value for the timestamp field of the new payload.
     #[cfg_attr(feature = "serde", serde(rename = "timestamp"))]

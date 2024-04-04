@@ -33,3 +33,6 @@ pub use batch_queue::BatchQueue;
 
 mod attributes_queue;
 pub use attributes_queue::AttributesQueue;
+
+#[cfg(test)]
+pub mod test_utils;
