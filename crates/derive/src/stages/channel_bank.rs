@@ -46,8 +46,8 @@ where
     CP: ChainProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP>) -> Self {
-        Self { cfg: Arc::new(cfg), channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
+    pub fn new(cfg: Arc<RollupConfig>, prev: FrameQueue<DAP, CP>) -> Self {
+        Self { cfg, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
     /// Returns the L1 origin [BlockInfo].
@@ -210,7 +210,7 @@ mod tests {
         let dap = TestDAP::default();
         let retrieval = L1Retrieval::new(traversal, dap);
         let frame_queue = FrameQueue::new(retrieval);
-        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let mut channel_bank = ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue);
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
         assert_eq!(err, StageError::Custom(anyhow!("No origin")));
@@ -223,7 +223,7 @@ mod tests {
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
         let frame_queue = FrameQueue::new(retrieval);
-        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let mut channel_bank = ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue);
         let mut frames = new_test_frames(100000);
         // Ingest frames until the channel bank is full and it stops increasing in size
         let mut current_size = 0;
@@ -251,7 +251,7 @@ mod tests {
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap);
         let frame_queue = FrameQueue::new(retrieval);
-        let mut channel_bank = ChannelBank::new(RollupConfig::default(), frame_queue);
+        let mut channel_bank = ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue);
         let err = channel_bank.read().unwrap_err();
         assert_eq!(err, StageError::Eof);
         let err = channel_bank.next_data().await.unwrap_err();
