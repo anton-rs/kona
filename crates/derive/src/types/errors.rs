@@ -15,6 +15,12 @@ pub enum StageError {
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
+    /// No channels are available in the channel bank.
+    NoChannelsAvailable,
+    /// Failed to find channel.
+    ChannelNotFound,
+    /// Missing L1 origin.
+    MissingOrigin,
     /// Failed to build the [super::PayloadAttributes] for the next batch.
     AttributesBuild(anyhow::Error),
     /// Reset the pipeline.
@@ -46,6 +52,9 @@ impl PartialEq<StageError> for StageError {
             (self, other),
             (StageError::Eof, StageError::Eof) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
+                (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
+                (StageError::ChannelNotFound, StageError::ChannelNotFound) |
+                (StageError::MissingOrigin, StageError::MissingOrigin) |
                 (StageError::AttributesBuild(_), StageError::AttributesBuild(_)) |
                 (StageError::ReceiptFetch(_), StageError::ReceiptFetch(_)) |
                 (StageError::BlockInfoFetch(_), StageError::BlockInfoFetch(_)) |
@@ -66,6 +75,9 @@ impl Display for StageError {
         match self {
             StageError::Eof => write!(f, "End of file"),
             StageError::NotEnoughData => write!(f, "Not enough data"),
+            StageError::NoChannelsAvailable => write!(f, "No channels available"),
+            StageError::ChannelNotFound => write!(f, "Channel not found"),
+            StageError::MissingOrigin => write!(f, "Missing L1 origin"),
             StageError::AttributesBuild(e) => write!(f, "Attributes build error: {}", e),
             StageError::Reset(e) => write!(f, "Reset error: {}", e),
             StageError::ReceiptFetch(e) => write!(f, "Receipt fetch error: {}", e),
