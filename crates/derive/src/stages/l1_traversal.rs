@@ -25,13 +25,13 @@ pub struct L1Traversal<Provider: ChainProvider> {
 
 impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
-    pub fn new(data_source: F, cfg: RollupConfig) -> Self {
+    pub fn new(data_source: F, cfg: Arc<RollupConfig>) -> Self {
         Self {
             block: Some(BlockInfo::default()),
             data_source,
             done: false,
             system_config: SystemConfig::default(),
-            rollup_config: Arc::new(cfg),
+            rollup_config: cfg,
         }
     }
 
@@ -152,7 +152,7 @@ pub(crate) mod tests {
             let receipts = vec![receipt.clone(), Receipt::default(), receipt];
             provider.insert_receipts(block.hash, receipts);
         }
-        L1Traversal::new(provider, rollup_config)
+        L1Traversal::new(provider, Arc::new(rollup_config))
     }
 
     #[tokio::test]
