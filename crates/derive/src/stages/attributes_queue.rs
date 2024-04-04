@@ -180,7 +180,9 @@ mod tests {
         RollupConfig, SingleBatch, StageError, StageResult,
     };
     use crate::{
-        stages::test_utils::{new_mock_batch_queue, MockAttributesBuilder, MockBatchQueue},
+        stages::test_utils::{
+            new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
+        },
         traits::test_utils::TestTelemetry,
         types::RawTransaction,
     };
@@ -191,10 +193,10 @@ mod tests {
         cfg: Option<RollupConfig>,
         origin: Option<BlockInfo>,
         batches: Vec<StageResult<SingleBatch>>,
-    ) -> AttributesQueue<MockBatchQueue, TestTelemetry, MockAttributesBuilder> {
+    ) -> AttributesQueue<MockAttributesProvider, TestTelemetry, MockAttributesBuilder> {
         let cfg = cfg.unwrap_or_default();
         let telemetry = TestTelemetry::new();
-        let mock_batch_queue = new_mock_batch_queue(origin, batches);
+        let mock_batch_queue = new_attributes_provider(origin, batches);
         let mock_attributes_builder = MockAttributesBuilder::default();
         AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_attributes_builder)
     }
@@ -282,11 +284,11 @@ mod tests {
     async fn test_create_next_attributes_success() {
         let cfg = RollupConfig::default();
         let telemetry = TestTelemetry::new();
-        let mock_batch_queue = new_mock_batch_queue(None, vec![]);
+        let mock = new_attributes_provider(None, vec![]);
         let mut payload_attributes = PayloadAttributes::default();
         let mock_builder =
             MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
-        let mut aq = AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_builder);
+        let mut aq = AttributesQueue::new(cfg, mock, telemetry, mock_builder);
         let parent = L2BlockInfo::default();
         let txs = vec![RawTransaction::default(), RawTransaction::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
@@ -309,10 +311,10 @@ mod tests {
     async fn test_next_attributes_load_batch_last_in_span() {
         let cfg = RollupConfig::default();
         let telemetry = TestTelemetry::new();
-        let mock_batch_queue = new_mock_batch_queue(None, vec![Ok(Default::default())]);
+        let mock = new_attributes_provider(None, vec![Ok(Default::default())]);
         let mut pa = PayloadAttributes::default();
         let mock_builder = MockAttributesBuilder { attributes: vec![Ok(pa.clone())] };
-        let mut aq = AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_builder);
+        let mut aq = AttributesQueue::new(cfg, mock, telemetry, mock_builder);
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
         let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();

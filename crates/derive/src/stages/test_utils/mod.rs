@@ -2,10 +2,12 @@
 //! mock implementations of the various stages for testing.
 
 mod batch_queue;
-pub use batch_queue::{new_mock_batch_queue, MockBatchQueue};
+pub use batch_queue::MockBatchQueueProvider;
 
 mod attributes_queue;
-pub use attributes_queue::MockAttributesBuilder;
+pub use attributes_queue::{
+    new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
+};
 
 mod frame_queue;
 pub use frame_queue::MockFrameQueueProvider;

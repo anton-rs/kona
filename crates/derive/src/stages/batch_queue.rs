@@ -1,6 +1,7 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use crate::{
+    stages::attributes_queue::AttributesProvider,
     traits::{LogLevel, OriginProvider, ResettableStage, SafeBlockFetcher, TelemetryProvider},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
@@ -92,11 +93,6 @@ where
         }
     }
 
-    /// Returns if the previous batch was the last in the span.
-    pub fn is_last_in_span(&self) -> bool {
-        self.next_spans.is_empty()
-    }
-
     /// Pops the next batch from the current queued up span-batch cache.
     /// The parent is used to set the parent hash of the batch.
     /// The parent is verified when the batch is later validated.
@@ -107,119 +103,6 @@ where
         let mut next = self.next_spans.remove(0);
         next.parent_hash = parent.block_info.hash;
         Some(next)
-    }
-
-    /// Returns the next valid batch upon the given safe head.
-    /// Also returns the boolean that indicates if the batch is the last block in the batch.
-    pub async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
-        if !self.next_spans.is_empty() {
-            // There are cached singular batches derived from the span batch.
-            // Check if the next cached batch matches the given parent block.
-            if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
-                return self
-                    .pop_next_batch(parent)
-                    .ok_or(anyhow!("failed to pop next batch from span batch").into());
-            }
-            // Parent block does not match the next batch.
-            // Means the previously returned batch is invalid.
-            // Drop cached batches and find another batch.
-            self.next_spans.clear();
-            // TODO: log that the provided parent block does not match the next batch.
-            // TODO: metrice the internal batch drop.
-        }
-
-        // If the epoch is advanced, update the l1 blocks.
-        // Advancing epoch must be done after the pipeline successfully applies the entire span
-        // batch to the chain.
-        // Because the span batch can be reverted during processing the batch, then we must
-        // preserve existing l1 blocks to verify the epochs of the next candidate batch.
-        if !self.l1_blocks.is_empty() && parent.l1_origin.number > self.l1_blocks[0].number {
-            for (i, block) in self.l1_blocks.iter().enumerate() {
-                if parent.l1_origin.number == block.number {
-                    self.l1_blocks.drain(0..i);
-                    self.telemetry
-                        .write(Bytes::from("Advancing internal L1 blocks"), LogLevel::Info);
-                    break;
-                }
-            }
-            // If the origin of the parent block is not included, we must advance the origin.
-        }
-
-        // NOTE: The origin is used to determine if it's behind.
-        // It is the future origin that gets saved into the l1 blocks array.
-        // We always update the origin of this stage if it's not the same so
-        // after the update code runs, this is consistent.
-        let origin_behind =
-            self.origin.map_or(true, |origin| origin.number < parent.l1_origin.number);
-
-        // Advance the origin if needed.
-        // The entire pipeline has the same origin.
-        // Batches prior to the l1 origin of the l2 safe head are not accepted.
-        if self.origin != self.prev.origin().copied() {
-            self.origin = self.prev.origin().cloned();
-            if !origin_behind {
-                let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
-                self.l1_blocks.push(*origin);
-            } else {
-                // This is to handle the special case of startup.
-                // At startup, the batch queue is reset and includes the
-                // l1 origin. That is the only time where immediately after
-                // reset is called, the origin behind is false.
-                self.l1_blocks.clear();
-            }
-            // TODO: log batch queue origin advancement.
-        }
-
-        // Load more data into the batch queue.
-        let mut out_of_data = false;
-        match self.prev.next_batch().await {
-            Ok(b) => {
-                if !origin_behind {
-                    self.add_batch(b, parent).ok();
-                } else {
-                    // TODO: metrice when the batch is dropped because the origin is behind.
-                }
-            }
-            Err(StageError::Eof) => out_of_data = true,
-            Err(e) => return Err(e),
-        }
-
-        // Skip adding the data unless up to date with the origin,
-        // but still fully empty the previous stages.
-        if origin_behind {
-            if out_of_data {
-                return Err(StageError::Eof);
-            }
-            return Err(StageError::NotEnoughData);
-        }
-
-        // Attempt to derive more batches.
-        let batch = match self.derive_next_batch(out_of_data, parent) {
-            Ok(b) => b,
-            Err(e) => match e {
-                StageError::Eof => {
-                    if out_of_data {
-                        return Err(StageError::Eof);
-                    }
-                    return Err(StageError::NotEnoughData);
-                }
-                _ => return Err(e),
-            },
-        };
-
-        // If the next batch is derived from the span batch, it's the last batch of the span.
-        // For singular batches, the span batch cache should be empty.
-        match batch {
-            Batch::Single(sb) => Ok(sb),
-            Batch::Span(sb) => {
-                let batches = sb.get_singular_batches(&self.l1_blocks, parent);
-                self.next_spans = batches;
-                let nb = self
-                    .pop_next_batch(parent)
-                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))?;
-                Ok(nb)
-            }
-        }
     }
 
     /// Derives the next batch to apply on top of the current L2 safe head.
@@ -357,6 +240,132 @@ where
     }
 }
 
+#[async_trait]
+impl<P, BF, T> AttributesProvider for BatchQueue<P, BF, T>
+where
+    P: BatchQueueProvider + OriginProvider + Send + Debug,
+    BF: SafeBlockFetcher + Send + Debug,
+    T: TelemetryProvider + Send + Debug,
+{
+    /// Returns the next valid batch upon the given safe head.
+    /// Also returns the boolean that indicates if the batch is the last block in the batch.
+    async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
+        if !self.next_spans.is_empty() {
+            // There are cached singular batches derived from the span batch.
+            // Check if the next cached batch matches the given parent block.
+            if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
+                return self
+                    .pop_next_batch(parent)
+                    .ok_or(anyhow!("failed to pop next batch from span batch").into());
+            }
+            // Parent block does not match the next batch.
+            // Means the previously returned batch is invalid.
+            // Drop cached batches and find another batch.
+            self.next_spans.clear();
+            // TODO: log that the provided parent block does not match the next batch.
+            // TODO: metrice the internal batch drop.
+        }
+
+        // If the epoch is advanced, update the l1 blocks.
+        // Advancing epoch must be done after the pipeline successfully applies the entire span
+        // batch to the chain.
+        // Because the span batch can be reverted during processing the batch, then we must
+        // preserve existing l1 blocks to verify the epochs of the next candidate batch.
+        if !self.l1_blocks.is_empty() && parent.l1_origin.number > self.l1_blocks[0].number {
+            for (i, block) in self.l1_blocks.iter().enumerate() {
+                if parent.l1_origin.number == block.number {
+                    self.l1_blocks.drain(0..i);
+                    self.telemetry
+                        .write(Bytes::from("Advancing internal L1 blocks"), LogLevel::Info);
+                    break;
+                }
+            }
+            // If the origin of the parent block is not included, we must advance the origin.
+        }
+
+        // NOTE: The origin is used to determine if it's behind.
+        // It is the future origin that gets saved into the l1 blocks array.
+        // We always update the origin of this stage if it's not the same so
+        // after the update code runs, this is consistent.
+        let origin_behind =
+            self.origin.map_or(true, |origin| origin.number < parent.l1_origin.number);
+
+        // Advance the origin if needed.
+        // The entire pipeline has the same origin.
+        // Batches prior to the l1 origin of the l2 safe head are not accepted.
+        if self.origin != self.prev.origin().copied() {
+            self.origin = self.prev.origin().cloned();
+            if !origin_behind {
+                let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
+                self.l1_blocks.push(*origin);
+            } else {
+                // This is to handle the special case of startup.
+                // At startup, the batch queue is reset and includes the
+                // l1 origin. That is the only time where immediately after
+                // reset is called, the origin behind is false.
+                self.l1_blocks.clear();
+            }
+            // TODO: log batch queue origin advancement.
+        }
+
+        // Load more data into the batch queue.
+        let mut out_of_data = false;
+        match self.prev.next_batch().await {
+            Ok(b) => {
+                if !origin_behind {
+                    self.add_batch(b, parent).ok();
+                } else {
+                    // TODO: metrice when the batch is dropped because the origin is behind.
+                }
+            }
+            Err(StageError::Eof) => out_of_data = true,
+            Err(e) => return Err(e),
+        }
+
+        // Skip adding the data unless up to date with the origin,
+        // but still fully empty the previous stages.
+        if origin_behind {
+            if out_of_data {
+                return Err(StageError::Eof);
+            }
+            return Err(StageError::NotEnoughData);
+        }
+
+        // Attempt to derive more batches.
+        let batch = match self.derive_next_batch(out_of_data, parent) {
+            Ok(b) => b,
+            Err(e) => match e {
+                StageError::Eof => {
+                    if out_of_data {
+                        return Err(StageError::Eof);
+                    }
+                    return Err(StageError::NotEnoughData);
+                }
+                _ => return Err(e),
+            },
+        };
+
+        // If the next batch is derived from the span batch, it's the last batch of the span.
+        // For singular batches, the span batch cache should be empty.
+        match batch {
+            Batch::Single(sb) => Ok(sb),
+            Batch::Span(sb) => {
+                let batches = sb.get_singular_batches(&self.l1_blocks, parent);
+                self.next_spans = batches;
+                let nb = self
+                    .pop_next_batch(parent)
+                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))?;
+                Ok(nb)
+            }
+        }
+    }
+
+    /// Returns if the previous batch was the last in the span.
+    fn is_last_in_span(&self) -> bool {
+        self.next_spans.is_empty()
+    }
+}
+
 impl<P, BF, T> OriginProvider for BatchQueue<P, BF, T>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
@@ -388,5 +397,69 @@ where
         self.l1_blocks.push(base);
         self.next_spans.clear();
         Err(StageError::Eof)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        stages::{channel_reader::BatchReader, test_utils::MockBatchQueueProvider},
+        traits::test_utils::{MockBlockFetcher, TestTelemetry},
+        types::BatchType,
+    };
+    use alloc::vec;
+    use miniz_oxide::deflate::compress_to_vec_zlib;
+
+    fn new_batch_reader() -> BatchReader {
+        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
+        let mut typed_data = vec![BatchType::Span as u8];
+        typed_data.extend_from_slice(raw_data.as_slice());
+        let compressed = compress_to_vec_zlib(typed_data.as_slice(), 5);
+        BatchReader::from(compressed)
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_not_enough_data() {
+        let mut reader = new_batch_reader();
+        let batch = reader.next_batch().unwrap();
+        let mock = MockBatchQueueProvider::new(vec![Ok(batch)]);
+        let telemetry = TestTelemetry::new();
+        let fetcher = MockBlockFetcher::default();
+        let mut bq = BatchQueue::new(RollupConfig::default(), mock, telemetry, fetcher);
+        let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
+        assert_eq!(res, StageError::NotEnoughData);
+        assert!(bq.is_last_in_span());
+    }
+
+    // TODO(refcell): The batch reader here loops forever.
+    //                Maybe the cursor isn't being used?
+    // #[tokio::test]
+    // async fn test_next_batch_succeeds() {
+    //     let mut reader = new_batch_reader();
+    //     let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+    //     while let Some(batch) = reader.next_batch() {
+    //         batch_vec.push(Ok(batch));
+    //     }
+    //     let mock = MockBatchQueueProvider::new(batch_vec);
+    //     let telemetry = TestTelemetry::new();
+    //     let fetcher = MockBlockFetcher::default();
+    //     let mut bq = BatchQueue::new(RollupConfig::default(), mock, telemetry, fetcher);
+    //     let res = bq.next_batch(L2BlockInfo::default()).await.unwrap();
+    //     assert_eq!(res, SingleBatch::default());
+    //     assert!(bq.is_last_in_span());
+    // }
+
+    #[tokio::test]
+    async fn test_batch_queue_empty_bytes() {
+        let telemetry = TestTelemetry::new();
+        let data = vec![Ok(Batch::Single(SingleBatch::default()))];
+        let cfg = RollupConfig::default();
+        let mock = MockBatchQueueProvider::new(data);
+        let fetcher = MockBlockFetcher::default();
+        let mut bq = BatchQueue::new(cfg, mock, telemetry, fetcher);
+        let parent = L2BlockInfo::default();
+        let result = bq.next_batch(parent).await;
+        assert!(result.is_err());
     }
 }
