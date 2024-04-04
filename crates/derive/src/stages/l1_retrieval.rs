@@ -13,7 +13,11 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-/// The L1 retrieval stage of the derivation pipeline.
+/// The [L1Retrieval] stage of the derivation pipeline.
+/// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
+/// [L1Retrieval] fetches the associated data from a specified
+/// [DataAvailabilityProvider]. This data is returned as a generic
+/// [DataIter] that can be iterated over.
 #[derive(Debug)]
 pub struct L1Retrieval<DAP, CP, T>
 where
@@ -37,20 +41,20 @@ where
     CP: ChainProvider,
     T: TelemetryProvider,
 {
-    /// Creates a new L1 retrieval stage with the given data availability provider and previous
-    /// stage.
+    /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
+    /// stage and given [DataAvailabilityProvider].
     pub fn new(prev: L1Traversal<CP, T>, provider: DAP, telemetry: T) -> Self {
         Self { prev, telemetry, provider, data: None }
     }
 
-    /// Returns the current L1 block in the traversal stage, if it exists.
+    /// Returns the current L1 [BlockInfo] origin from the previous
+    /// [L1Traversal] stage.
     pub fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
 
-    /// Retrieves the next data item from the L1 retrieval stage.
-    /// If there is data, it pushes it into the next stage.
-    /// If there is no data, it returns an error.
+    /// Retrieves the next data item from the [L1Retrieval] stage.
+    /// Returns an error if there is no data.
     pub async fn next_data(&mut self) -> StageResult<Bytes> {
         if self.data.is_none() {
             self.telemetry.write(
@@ -94,7 +98,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::l1_traversal::tests::new_test_traversal,
+        stages::l1_traversal::tests::*,
         traits::test_utils::{TestDAP, TestIter, TestTelemetry},
     };
     use alloc::vec;
@@ -102,7 +106,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
         let telemetry = TestTelemetry::new();
         let retrieval = L1Retrieval::new(traversal, dap, telemetry);
@@ -112,7 +116,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_retrieval_next_data() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let dap = TestDAP { results };
         let telemetry = TestTelemetry::new();
@@ -140,8 +144,8 @@ mod tests {
         // Create a new traversal with no blocks or receipts.
         // This would bubble up an error if the prev stage
         // (traversal) is called in the retrieval stage.
-        let traversal = new_test_traversal(false, false);
         let telemetry = TestTelemetry::new();
+        let traversal = new_test_traversal(vec![], vec![]);
         let dap = TestDAP { results: vec![] };
         let mut retrieval =
             L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };
@@ -159,7 +163,7 @@ mod tests {
             results: vec![Err(StageError::Eof)],
         };
         let telemetry = TestTelemetry::new();
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
         let mut retrieval =
             L1Retrieval { prev: traversal, telemetry, provider: dap, data: Some(data) };

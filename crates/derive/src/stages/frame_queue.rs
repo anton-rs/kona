@@ -13,7 +13,8 @@ use alloc::{boxed::Box, collections::VecDeque};
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-/// The frame queue stage of the derivation pipeline.
+/// The [FrameQueue] stage of the derivation pipeline.
+/// This stage takes the output of the [L1Retrieval] stage and parses it into frames.
 #[derive(Debug)]
 pub struct FrameQueue<DAP, CP, T>
 where
@@ -35,28 +36,33 @@ where
     CP: ChainProvider + Debug,
     T: TelemetryProvider + Debug,
 {
-    /// Create a new frame queue stage.
+    /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     pub fn new(prev: L1Retrieval<DAP, CP, T>, telemetry: T) -> Self {
         Self { prev, telemetry, queue: VecDeque::new() }
     }
 
-    /// Returns the L1 origin [BlockInfo].
+    /// Returns the L1 [BlockInfo] origin.
     pub fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
 
-    /// Fetches the next frame from the frame queue.
+    /// Fetches the next frame from the [FrameQueue].
     pub async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
-                    // TODO: what do we do with frame parsing errors?
                     if let Ok(frames) = Frame::parse_frames(data.as_ref()) {
                         self.queue.extend(frames);
+                    } else {
+                        // TODO: log parsing frame error
+                        // Failed to parse frames, but there may be more frames in the queue for
+                        // the pipeline to advance, so don't return an error here.
                     }
                 }
                 Err(e) => {
-                    return Err(anyhow!("Error fetching next data: {e}").into());
+                    // TODO: log retrieval error
+                    // The error must be bubbled up without a wrapper in case it's an EOF error.
+                    return Err(e);
                 }
             }
         }
@@ -68,7 +74,7 @@ where
                 ),
                 LogLevel::Debug,
             );
-            return Err(anyhow!("Not enough data").into());
+            return Err(StageError::NotEnoughData);
         }
 
         self.queue.pop_front().ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
@@ -92,7 +98,7 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        stages::l1_traversal::tests::new_test_traversal,
+        stages::l1_traversal::tests::new_populated_test_traversal,
         traits::test_utils::{TestDAP, TestTelemetry},
         DERIVATION_VERSION_0,
     };
@@ -123,56 +129,56 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_empty_bytes() {
         let telemetry = TestTelemetry::new();
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
     async fn test_frame_queue_no_frames_decoded() {
         let telemetry = TestTelemetry::new();
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
     async fn test_frame_queue_wrong_derivation_version() {
         let telemetry = TestTelemetry::new();
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x01]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Unsupported derivation version").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
     async fn test_frame_queue_frame_too_short() {
         let telemetry = TestTelemetry::new();
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Frame too short to decode").into());
+        assert_eq!(err, StageError::NotEnoughData);
     }
 
     #[tokio::test]
     async fn test_frame_queue_single_frame() {
         let data = new_encoded_test_frames(1);
         let telemetry = TestTelemetry::new();
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![Ok(data)] };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
@@ -180,14 +186,14 @@ pub(crate) mod tests {
         let frame = new_test_frames(1);
         assert_eq!(frame[0], frame_decoded);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::Eof);
     }
 
     #[tokio::test]
     async fn test_frame_queue_multiple_frames() {
         let telemetry = TestTelemetry::new();
         let data = new_encoded_test_frames(3);
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![Ok(data)] };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
@@ -196,6 +202,6 @@ pub(crate) mod tests {
             assert_eq!(frame_decoded.number, i);
         }
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, anyhow!("Not enough data").into());
+        assert_eq!(err, StageError::Eof);
     }
 }

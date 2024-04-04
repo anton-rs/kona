@@ -52,14 +52,8 @@ where
     T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: RollupConfig, prev: FrameQueue<DAP, CP, T>, telemetry: T) -> Self {
-        Self {
-            cfg: Arc::new(cfg),
-            telemetry,
-            channels: HashMap::new(),
-            channel_queue: VecDeque::new(),
-            prev,
-        }
+    pub fn new(cfg: Arc<RollupConfig>, prev: FrameQueue<DAP, CP, T>, telemetry: T) -> Self {
+        Self { cfg, telemetry, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
     /// Returns the L1 origin [BlockInfo].
@@ -227,8 +221,7 @@ mod tests {
     use super::*;
     use crate::{
         stages::{
-            frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval,
-            l1_traversal::tests::new_test_traversal,
+            frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval, l1_traversal::tests::*,
         },
         traits::test_utils::{TestDAP, TestTelemetry},
     };
@@ -236,13 +229,13 @@ mod tests {
 
     #[test]
     fn test_ingest_empty_origin() {
-        let mut traversal = new_test_traversal(false, false);
+        let mut traversal = new_test_traversal(vec![], vec![]);
         traversal.block = None;
         let dap = TestDAP::default();
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
         let mut channel_bank =
-            ChannelBank::new(RollupConfig::default(), frame_queue, TestTelemetry::new());
+            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
         assert_eq!(err, StageError::Custom(anyhow!("No origin")));
@@ -250,13 +243,13 @@ mod tests {
 
     #[test]
     fn test_ingest_and_prune_channel_bank() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
         let mut channel_bank =
-            ChannelBank::new(RollupConfig::default(), frame_queue, TestTelemetry::new());
+            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
         let mut frames = new_test_frames(100000);
         // Ingest frames until the channel bank is full and it stops increasing in size
         let mut current_size = 0;
@@ -279,16 +272,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_empty_channel_bank() {
-        let traversal = new_test_traversal(true, true);
+        let traversal = new_populated_test_traversal();
         let results = vec![Ok(Bytes::from(vec![0x00]))];
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
         let mut channel_bank =
-            ChannelBank::new(RollupConfig::default(), frame_queue, TestTelemetry::new());
+            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
         let err = channel_bank.read().unwrap_err();
         assert_eq!(err, StageError::Eof);
         let err = channel_bank.next_data().await.unwrap_err();
-        assert_eq!(err, StageError::Custom(anyhow!("Not Enough Data")));
+        assert_eq!(err, StageError::NotEnoughData);
     }
 }
