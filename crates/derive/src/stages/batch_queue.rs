@@ -1,11 +1,7 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use crate::{
-    stages::channel_reader::ChannelReader,
-    traits::{
-        ChainProvider, DataAvailabilityProvider, OriginProvider, ResettableStage, SafeBlockFetcher,
-        TelemetryProvider, LogLevel,
-    },
+    traits::{LogLevel, OriginProvider, ResettableStage, SafeBlockFetcher, TelemetryProvider},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -72,17 +68,6 @@ where
 
     /// Used to validate the batches.
     fetcher: BF,
-}
-
-impl<P, BF, T> OriginProvider for BatchQueue<P, BF, T>
-where
-    P: BatchQueueProvider + OriginProvider + Debug,
-    BF: SafeBlockFetcher + Debug,
-    T: TelemetryProvider + Debug,
-{
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.origin.as_ref()
-    }
 }
 
 impl<P, BF, T> BatchQueue<P, BF, T>
@@ -378,10 +363,9 @@ where
     }
 }
 
-impl<DAP, CP, BF, T> OriginProvider for BatchQueue<DAP, CP, BF, T>
+impl<P, BF, T> OriginProvider for BatchQueue<P, BF, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: BatchQueueProvider + OriginProvider + Debug,
     BF: SafeBlockFetcher + Debug,
     T: TelemetryProvider + Debug,
 {
