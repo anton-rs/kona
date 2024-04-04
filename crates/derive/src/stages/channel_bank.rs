@@ -226,108 +226,85 @@ where
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::{
-//         stages::{
-//             frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval,
-// l1_traversal::tests::*,         },
-//         traits::test_utils::{TestDAP, TestTelemetry},
-//     };
-//     use alloc::vec;
-//
-//     #[test]
-//     fn test_ingest_empty_origin() {
-//         let mut traversal = new_test_traversal(vec![], vec![]);
-//         traversal.block = None;
-//         let dap = TestDAP::default();
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-//         let telemetry = Arc::new(TestTelemetry::new());
-//         let mut channel_bank = ChannelBank::new(
-//             Arc::new(RollupConfig::default()),
-//             frame_queue,
-//             Arc::clone(&telemetry),
-//         );
-//         let frame = Frame::default();
-//         let err = channel_bank.ingest_frame(frame).unwrap_err();
-//         assert_eq!(err, StageError::MissingOrigin);
-//     }
-//
-//     #[test]
-//     fn test_ingest_invalid_frame() {
-//         let traversal = new_test_traversal(vec![], vec![]);
-//         let dap = TestDAP::default();
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-//         let telem = Arc::new(TestTelemetry::new());
-//         let mut channel_bank =
-//             ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, Arc::clone(&telem));
-//         let frame = Frame { id: [0xFF; 16], ..Default::default() };
-//         assert_eq!(channel_bank.size(), 0);
-//         assert!(channel_bank.channels.is_empty());
-//         assert_eq!(telem.count_calls(LogLevel::Warning), 0);
-//         assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
-//         assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
-//         assert_eq!(channel_bank.channels.len(), 1);
-//         // This should fail since the frame is already ingested.
-//         assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
-//         assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
-//         assert_eq!(channel_bank.channels.len(), 1);
-//         assert_eq!(telem.count_calls(LogLevel::Warning), 1);
-//     }
-//
-//     #[test]
-//     fn test_ingest_and_prune_channel_bank() {
-//         let traversal = new_populated_test_traversal();
-//         let results = vec![Ok(Bytes::from(vec![0x00]))];
-//         let dap = TestDAP { results };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-//         let telemetry = Arc::new(TestTelemetry::new());
-//         let mut channel_bank = ChannelBank::new(
-//             Arc::new(RollupConfig::default()),
-//             frame_queue,
-//             Arc::clone(&telemetry),
-//         );
-//         let mut frames = new_test_frames(100000);
-//         // Ingest frames until the channel bank is full and it stops increasing in size
-//         let mut current_size = 0;
-//         let next_frame = frames.pop().unwrap();
-//         channel_bank.ingest_frame(next_frame).unwrap();
-//         while channel_bank.size() > current_size {
-//             current_size = channel_bank.size();
-//             let next_frame = frames.pop().unwrap();
-//             channel_bank.ingest_frame(next_frame).unwrap();
-//             assert!(channel_bank.size() <= MAX_CHANNEL_BANK_SIZE);
-//         }
-//         // There should be a bunch of frames leftover
-//         assert!(!frames.is_empty());
-//         // If we ingest one more frame, the channel bank should prune
-//         // and the size should be the same
-//         let next_frame = frames.pop().unwrap();
-//         channel_bank.ingest_frame(next_frame).unwrap();
-//         assert_eq!(channel_bank.size(), current_size);
-//     }
-//
-//     #[tokio::test]
-//     async fn test_read_empty_channel_bank() {
-//         let traversal = new_populated_test_traversal();
-//         let results = vec![Ok(Bytes::from(vec![0x00]))];
-//         let dap = TestDAP { results };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-//         let telemetry = Arc::new(TestTelemetry::new());
-//         let mut channel_bank = ChannelBank::new(
-//             Arc::new(RollupConfig::default()),
-//             frame_queue,
-//             Arc::clone(&telemetry),
-//         );
-//         let err = channel_bank.read().unwrap_err();
-//         assert_eq!(err, StageError::Eof);
-//         let err = channel_bank.next_data().await.unwrap_err();
-//         assert_eq!(err, StageError::NotEnoughData);
-//     }
-// }
-//
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        stages::{frame_queue::tests::new_test_frames, test_utils::MockChannelBankProvider},
+        traits::test_utils::TestTelemetry,
+    };
+    use alloc::vec;
+
+    #[test]
+    fn test_ingest_empty_origin() {
+        let mut mock = MockChannelBankProvider::new(vec![]);
+        mock.block_info = None;
+        let telemetry = Arc::new(TestTelemetry::new());
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
+        let frame = Frame::default();
+        let err = channel_bank.ingest_frame(frame).unwrap_err();
+        assert_eq!(err, StageError::MissingOrigin);
+    }
+
+    #[test]
+    fn test_ingest_invalid_frame() {
+        let mock = MockChannelBankProvider::new(vec![]);
+        let telem = Arc::new(TestTelemetry::new());
+        let mut channel_bank =
+            ChannelBank::new(Arc::new(RollupConfig::default()), mock, Arc::clone(&telem));
+        let frame = Frame { id: [0xFF; 16], ..Default::default() };
+        assert_eq!(channel_bank.size(), 0);
+        assert!(channel_bank.channels.is_empty());
+        assert_eq!(telem.count_calls(LogLevel::Warning), 0);
+        assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
+        assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.channels.len(), 1);
+        // This should fail since the frame is already ingested.
+        assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
+        assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.channels.len(), 1);
+        assert_eq!(telem.count_calls(LogLevel::Warning), 1);
+    }
+
+    #[test]
+    fn test_ingest_and_prune_channel_bank() {
+        use alloc::vec::Vec;
+        let mut frames: Vec<Frame> = new_test_frames(100000);
+        // let data = frames.iter().map(|f| Ok(f)).collect::<Vec<StageResult<Frame>>>();
+        let mock = MockChannelBankProvider::new(vec![]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
+        // Ingest frames until the channel bank is full and it stops increasing in size
+        let mut current_size = 0;
+        let next_frame = frames.pop().unwrap();
+        channel_bank.ingest_frame(next_frame).unwrap();
+        while channel_bank.size() > current_size {
+            current_size = channel_bank.size();
+            let next_frame = frames.pop().unwrap();
+            channel_bank.ingest_frame(next_frame).unwrap();
+            assert!(channel_bank.size() <= MAX_CHANNEL_BANK_SIZE);
+        }
+        // There should be a bunch of frames leftover
+        assert!(!frames.is_empty());
+        // If we ingest one more frame, the channel bank should prune
+        // and the size should be the same
+        let next_frame = frames.pop().unwrap();
+        channel_bank.ingest_frame(next_frame).unwrap();
+        assert_eq!(channel_bank.size(), current_size);
+    }
+
+    #[tokio::test]
+    async fn test_read_empty_channel_bank() {
+        let frames = new_test_frames(1);
+        let mock = MockChannelBankProvider::new(vec![Ok(frames[0].clone())]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
+        let err = channel_bank.read().unwrap_err();
+        assert_eq!(err, StageError::Eof);
+        let err = channel_bank.next_data().await.unwrap_err();
+        assert_eq!(err, StageError::NotEnoughData);
+    }
+}

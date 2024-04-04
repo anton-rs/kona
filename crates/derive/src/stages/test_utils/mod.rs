@@ -6,3 +6,9 @@ pub use batch_queue::{new_mock_batch_queue, MockBatchQueue};
 
 mod attributes_queue;
 pub use attributes_queue::MockAttributesBuilder;
+
+mod frame_queue;
+pub use frame_queue::MockFrameQueueProvider;
+
+mod channel_bank;
+pub use channel_bank::MockChannelBankProvider;

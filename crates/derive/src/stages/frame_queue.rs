@@ -115,115 +115,100 @@ where
     }
 }
 
-// #[cfg(test)]
-// pub(crate) mod tests {
-//     use super::*;
-//     use crate::{
-//         // stages::l1_traversal::tests::new_populated_test_traversal,
-//         // traits::test_utils::{TestDAP, TestTelemetry},
-//         DERIVATION_VERSION_0,
-//     };
-//     use alloc::{vec, vec::Vec};
-//     use alloy_primitives::Bytes;
-//
-//     pub(crate) fn new_test_frames(count: usize) -> Vec<Frame> {
-//         (0..count)
-//             .map(|i| Frame {
-//                 id: [0xFF; 16],
-//                 number: i as u16,
-//                 data: vec![0xDD; 50],
-//                 is_last: i == count - 1,
-//             })
-//             .collect()
-//     }
-//
-//     pub(crate) fn new_encoded_test_frames(count: usize) -> Bytes {
-//         let frames = new_test_frames(count);
-//         let mut bytes = Vec::new();
-//         bytes.extend_from_slice(&[DERIVATION_VERSION_0]);
-//         for frame in frames.iter() {
-//             bytes.extend_from_slice(&frame.encode());
-//         }
-//         Bytes::from(bytes)
-//     }
-//
-//     #[tokio::test]
-//     async fn test_frame_queue_empty_bytes() {
-//         let telemetry = TestTelemetry::new();
-//         let traversal = new_populated_test_traversal();
-//         let results = vec![Ok(Bytes::from(vec![0x00]))];
-//         let dap = TestDAP { results };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
-//         let err = frame_queue.next_frame().await.unwrap_err();
-//         assert_eq!(err, StageError::NotEnoughData);
-//     }
-//
-//     #[tokio::test]
-//     async fn test_frame_queue_no_frames_decoded() {
-//         let telemetry = TestTelemetry::new();
-//         let traversal = new_populated_test_traversal();
-//         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
-//         let dap = TestDAP { results };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
-//         let err = frame_queue.next_frame().await.unwrap_err();
-//         assert_eq!(err, StageError::NotEnoughData);
-//     }
-//
-//     #[tokio::test]
-//     async fn test_frame_queue_wrong_derivation_version() {
-//         let telemetry = TestTelemetry::new();
-//         let traversal = new_populated_test_traversal();
-//         let results = vec![Ok(Bytes::from(vec![0x01]))];
-//         let dap = TestDAP { results };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
-//         let err = frame_queue.next_frame().await.unwrap_err();
-//         assert_eq!(err, StageError::NotEnoughData);
-//     }
-//
-//     #[tokio::test]
-//     async fn test_frame_queue_frame_too_short() {
-//         let telemetry = TestTelemetry::new();
-//         let traversal = new_populated_test_traversal();
-//         let results = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
-//         let dap = TestDAP { results };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
-//         let err = frame_queue.next_frame().await.unwrap_err();
-//         assert_eq!(err, StageError::NotEnoughData);
-//     }
-//
-//     #[tokio::test]
-//     async fn test_frame_queue_single_frame() {
-//         let data = new_encoded_test_frames(1);
-//         let telemetry = TestTelemetry::new();
-//         let traversal = new_populated_test_traversal();
-//         let dap = TestDAP { results: vec![Ok(data)] };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
-//         let frame_decoded = frame_queue.next_frame().await.unwrap();
-//         let frame = new_test_frames(1);
-//         assert_eq!(frame[0], frame_decoded);
-//         let err = frame_queue.next_frame().await.unwrap_err();
-//         assert_eq!(err, StageError::Eof);
-//     }
-//
-//     #[tokio::test]
-//     async fn test_frame_queue_multiple_frames() {
-//         let telemetry = TestTelemetry::new();
-//         let data = new_encoded_test_frames(3);
-//         let traversal = new_populated_test_traversal();
-//         let dap = TestDAP { results: vec![Ok(data)] };
-//         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-//         let mut frame_queue = FrameQueue::new(retrieval, telemetry);
-//         for i in 0..3 {
-//             let frame_decoded = frame_queue.next_frame().await.unwrap();
-//             assert_eq!(frame_decoded.number, i);
-//         }
-//         let err = frame_queue.next_frame().await.unwrap_err();
-//         assert_eq!(err, StageError::Eof);
-//     }
-// }
-//
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+    use crate::{
+        stages::test_utils::MockFrameQueueProvider, traits::test_utils::TestTelemetry,
+        DERIVATION_VERSION_0,
+    };
+    use alloc::{vec, vec::Vec};
+
+    pub(crate) fn new_test_frames(count: usize) -> Vec<Frame> {
+        (0..count)
+            .map(|i| Frame {
+                id: [0xFF; 16],
+                number: i as u16,
+                data: vec![0xDD; 50],
+                is_last: i == count - 1,
+            })
+            .collect()
+    }
+
+    pub(crate) fn new_encoded_test_frames(count: usize) -> Bytes {
+        let frames = new_test_frames(count);
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&[DERIVATION_VERSION_0]);
+        for frame in frames.iter() {
+            bytes.extend_from_slice(&frame.encode());
+        }
+        Bytes::from(bytes)
+    }
+
+    #[tokio::test]
+    async fn test_frame_queue_empty_bytes() {
+        let telemetry = TestTelemetry::new();
+        let data = vec![Ok(Bytes::from(vec![0x00]))];
+        let mock = MockFrameQueueProvider { data };
+        let mut frame_queue = FrameQueue::new(mock, telemetry);
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, StageError::NotEnoughData);
+    }
+
+    #[tokio::test]
+    async fn test_frame_queue_no_frames_decoded() {
+        let telemetry = TestTelemetry::new();
+        let data = vec![Err(StageError::Eof), Ok(Bytes::default())];
+        let mock = MockFrameQueueProvider { data };
+        let mut frame_queue = FrameQueue::new(mock, telemetry);
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, StageError::NotEnoughData);
+    }
+
+    #[tokio::test]
+    async fn test_frame_queue_wrong_derivation_version() {
+        let telemetry = TestTelemetry::new();
+        let data = vec![Ok(Bytes::from(vec![0x01]))];
+        let mock = MockFrameQueueProvider { data };
+        let mut frame_queue = FrameQueue::new(mock, telemetry);
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, StageError::NotEnoughData);
+    }
+
+    #[tokio::test]
+    async fn test_frame_queue_frame_too_short() {
+        let telemetry = TestTelemetry::new();
+        let data = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
+        let mock = MockFrameQueueProvider { data };
+        let mut frame_queue = FrameQueue::new(mock, telemetry);
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, StageError::NotEnoughData);
+    }
+
+    #[tokio::test]
+    async fn test_frame_queue_single_frame() {
+        let data = new_encoded_test_frames(1);
+        let telemetry = TestTelemetry::new();
+        let mock = MockFrameQueueProvider { data: vec![Ok(data)] };
+        let mut frame_queue = FrameQueue::new(mock, telemetry);
+        let frame_decoded = frame_queue.next_frame().await.unwrap();
+        let frame = new_test_frames(1);
+        assert_eq!(frame[0], frame_decoded);
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, StageError::Eof);
+    }
+
+    #[tokio::test]
+    async fn test_frame_queue_multiple_frames() {
+        let telemetry = TestTelemetry::new();
+        let data = new_encoded_test_frames(3);
+        let mock = MockFrameQueueProvider { data: vec![Ok(data)] };
+        let mut frame_queue = FrameQueue::new(mock, telemetry);
+        for i in 0..3 {
+            let frame_decoded = frame_queue.next_frame().await.unwrap();
+            assert_eq!(frame_decoded.number, i);
+        }
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, StageError::Eof);
+    }
+}
