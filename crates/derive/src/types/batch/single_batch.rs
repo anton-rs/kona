@@ -1,7 +1,7 @@
 //! This module contains the [SingleBatch] type.
 
 use super::validity::BatchValidity;
-use crate::types::{BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
+use crate::types::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
 use alloy_rlp::{Decodable, Encodable};
@@ -26,6 +26,11 @@ impl SingleBatch {
     /// If any transactions are empty or deposited transaction types.
     pub fn has_invalid_transactions(&self) -> bool {
         self.transactions.iter().any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
+    }
+
+    /// Returns the [BlockID] of the batch.
+    pub fn epoch(&self) -> BlockID {
+        BlockID { number: self.epoch_num, hash: self.epoch_hash }
     }
 
     /// Checks if the batch is valid.

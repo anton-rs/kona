@@ -3,6 +3,14 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bytes, B256, U256};
 
+/// Fixed and variable memory costs for a payload.
+/// ~1000 bytes per payload, with some margin for overhead like map data.
+pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
+
+/// Memory overhead per payload transaction.
+/// 24 bytes per tx overhead (size of slice header in memory).
+pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +24,17 @@ pub struct ExecutionPayloadEnvelope {
     /// The inner execution payload.
     #[cfg_attr(feature = "serde", serde(rename = "executionPayload"))]
     execution_payload: ExecutionPayload,
+}
+
+impl ExecutionPayloadEnvelope {
+    /// Returns the payload memory size.
+    pub fn mem_size(&self) -> u64 {
+        let mut out = PAYLOAD_MEM_FIXED_COST;
+        for tx in &self.execution_payload.transactions {
+            out += tx.len() as u64 + PAYLOAD_TX_MEM_OVERHEAD;
+        }
+        out
+    }
 }
 
 /// The execution payload.
@@ -61,4 +80,4 @@ pub struct ExecutionPayload {
 /// Withdrawal Type
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Withdrawals {}
+pub struct Withdrawals {}
