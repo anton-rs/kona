@@ -126,8 +126,9 @@ impl<F: ChainProvider + Send, T: TelemetryProvider + Send> ResettableStage for L
 pub(crate) mod tests {
     use super::*;
     use crate::{
+        params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
         traits::test_utils::{TestChainProvider, TestTelemetry},
-        types::{Receipt, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
+        types::Receipt,
     };
     use alloc::vec;
     use alloy_primitives::{address, b256, hex, Address, Bytes, Log, LogData, B256};
