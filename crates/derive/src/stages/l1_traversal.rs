@@ -1,10 +1,12 @@
 //! Contains the [L1Traversal] stage of the derivation pipeline.
 
 use crate::{
+    stages::L1RetrievalProvider,
     traits::{ChainProvider, LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
+use alloy_primitives::Address;
 use async_trait::async_trait;
 
 /// The [L1Traversal] stage of the derivation pipeline.
@@ -30,6 +32,21 @@ pub struct L1Traversal<Provider: ChainProvider, Telemetry: TelemetryProvider> {
     pub rollup_config: Arc<RollupConfig>,
 }
 
+impl<F: ChainProvider, T: TelemetryProvider> L1RetrievalProvider for L1Traversal<F, T> {
+    fn batcher_addr(&self) -> Address {
+        self.system_config.batcher_addr
+    }
+
+    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
+        if !self.done {
+            self.done = true;
+            Ok(self.block)
+        } else {
+            Err(StageError::Eof)
+        }
+    }
+}
+
 impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
     /// Creates a new [L1Traversal] instance.
     pub fn new(data_source: F, cfg: Arc<RollupConfig>, telemetry: T) -> Self {
@@ -46,19 +63,6 @@ impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
     /// Retrieves a reference to the inner data source of the [L1Traversal] stage.
     pub fn data_source(&self) -> &F {
         &self.data_source
-    }
-
-    /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
-    /// This function can only be called once while the stage is in progress, and will return
-    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
-    /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
-    pub fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
-        if !self.done {
-            self.done = true;
-            Ok(self.block)
-        } else {
-            Err(StageError::Eof)
-        }
     }
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
@@ -132,7 +136,7 @@ pub(crate) mod tests {
         types::Receipt,
     };
     use alloc::vec;
-    use alloy_primitives::{address, b256, hex, Address, Bytes, Log, LogData, B256};
+    use alloy_primitives::{address, b256, hex, Bytes, Log, LogData, B256};
 
     const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");
 

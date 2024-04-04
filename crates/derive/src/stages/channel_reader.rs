@@ -1,47 +1,76 @@
 //! This module contains the `ChannelReader` struct.
 
-use super::channel_bank::ChannelBank;
 use crate::{
-    traits::{
-        ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, TelemetryProvider,
-    },
+    stages::BatchQueueProvider,
+    traits::{LogLevel, OriginProvider, TelemetryProvider},
     types::{Batch, BlockInfo, StageError, StageResult},
 };
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
+use alloy_primitives::Bytes;
 use anyhow::anyhow;
+use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 
+/// The [ChannelReader] provider trait.
+#[async_trait]
+pub trait ChannelReaderProvider {
+    /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out
+    /// of the channel bank prior to loading data in (unlike most other stages). This is to
+    /// ensure maintain consistency around channel bank pruning which depends upon the order
+    /// of operations.
+    async fn next_data(&mut self) -> StageResult<Option<Bytes>>;
+}
+
 /// [ChannelReader] is a stateful stage that does the following:
 #[derive(Debug)]
-pub struct ChannelReader<DAP, CP, T>
+pub struct ChannelReader<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelReaderProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     /// The previous stage of the derivation pipeline.
-    prev: ChannelBank<DAP, CP, T>,
+    prev: P,
     /// Telemetry
     telemetry: T,
     /// The batch reader.
     next_batch: Option<BatchReader>,
 }
 
-impl<DAP, CP, T> ChannelReader<DAP, CP, T>
+impl<P, T> ChannelReader<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelReaderProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: ChannelBank<DAP, CP, T>, telemetry: T) -> Self {
+    pub fn new(prev: P, telemetry: T) -> Self {
         Self { prev, telemetry, next_batch: None }
     }
 
-    /// Pulls out the next Batch from the available channel.
-    pub async fn next_batch(&mut self) -> StageResult<Batch> {
+    /// Creates the batch reader from available channel data.
+    async fn set_batch_reader(&mut self) -> StageResult<()> {
+        if self.next_batch.is_none() {
+            let channel = self.prev.next_data().await?.ok_or(anyhow!("no channel"))?;
+            self.next_batch = Some(BatchReader::from(&channel[..]));
+        }
+        Ok(())
+    }
+
+    /// Forces the read to continue with the next channel, resetting any
+    /// decoding / decompression state to a fresh start.
+    pub fn next_channel(&mut self) {
+        self.next_batch = None;
+    }
+}
+
+#[async_trait]
+impl<P, T> BatchQueueProvider for ChannelReader<P, T>
+where
+    P: ChannelReaderProvider + OriginProvider + Send + Debug,
+    T: TelemetryProvider + Send + Debug,
+{
+    async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
             self.telemetry
                 .write(alloc::format!("Failed to set batch reader: {:?}", e), LogLevel::Error);
@@ -62,27 +91,11 @@ where
             }
         }
     }
-
-    /// Creates the batch reader from available channel data.
-    async fn set_batch_reader(&mut self) -> StageResult<()> {
-        if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(anyhow!("no channel"))?;
-            self.next_batch = Some(BatchReader::from(&channel[..]));
-        }
-        Ok(())
-    }
-
-    /// Forces the read to continue with the next channel, resetting any
-    /// decoding / decompression state to a fresh start.
-    pub fn next_channel(&mut self) {
-        self.next_batch = None;
-    }
 }
 
-impl<DAP, CP, T> OriginProvider for ChannelReader<DAP, CP, T>
+impl<P, T> OriginProvider for ChannelReader<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelReaderProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {

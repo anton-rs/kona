@@ -1,25 +1,29 @@
 //! Contains the [L1Retrieval] stage of the derivation pipeline.
 
-use super::L1Traversal;
 use crate::{
+    stages::FrameQueueProvider,
     traits::{
-        AsyncIterator, ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider,
-        ResettableStage, TelemetryProvider,
+        AsyncIterator, DataAvailabilityProvider, OriginProvider, ResettableStage, TelemetryProvider,
     },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
+use alloy_primitives::Address;
 use anyhow::anyhow;
 use async_trait::async_trait;
 
 /// Provides L1 blocks for the [L1Retrieval] stage.
 /// This is the previous stage in the pipeline.
-#[async_trait]
 pub trait L1RetrievalProvider {
-    /// Returns the next L1 block to retrieve data for.
-    async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
-}
+    /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
+    /// This function can only be called once while the stage is in progress, and will return
+    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
+    /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
+    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
 
+    /// Returns the batcher [Address] from the [crate::types::SystemConfig].
+    fn batcher_addr(&self) -> Address;
+}
 
 /// The [L1Retrieval] stage of the derivation pipeline.
 /// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
@@ -51,25 +55,27 @@ where
 {
     /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
     /// stage and given [DataAvailabilityProvider].
-    pub fn new(prev: L1Traversal<CP, T>, provider: DAP, telemetry: T) -> Self {
+    pub fn new(prev: P, provider: DAP, telemetry: T) -> Self {
         Self { prev, telemetry, provider, data: None }
     }
+}
 
-    /// Retrieves the next data item from the L1 retrieval stage.
-    /// If there is data, it pushes it into the next stage.
-    /// If there is no data, it returns an error.
-    pub async fn next_data(&mut self) -> StageResult<DAP::Item> {
+#[async_trait]
+impl<DAP, P, T> FrameQueueProvider for L1Retrieval<DAP, P, T>
+where
+    DAP: DataAvailabilityProvider + Send,
+    P: L1RetrievalProvider + OriginProvider + Send,
+    T: TelemetryProvider + Send,
+{
+    type Item = DAP::Item;
+
+    async fn next_data(&mut self) -> StageResult<Self::Item> {
         if self.data.is_none() {
-            self.telemetry.write(
-                alloc::format!("Retrieving data for block: {:?}", self.prev.block),
-                LogLevel::Debug,
-            );
             let next = self
                 .prev
                 .next_l1_block()?
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
-            self.data =
-                Some(self.provider.open_data(&next, self.prev.system_config.batcher_addr).await?);
+            self.data = Some(self.provider.open_data(&next, self.prev.batcher_addr()).await?);
         }
 
         let data = self.data.as_mut().expect("Cannot be None").next().await.ok_or(StageError::Eof);
@@ -116,7 +122,7 @@ mod tests {
         traits::test_utils::{TestDAP, TestIter, TestTelemetry},
     };
     use alloc::vec;
-    use alloy_primitives::{Address, Bytes};
+    use alloy_primitives::Bytes;
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
