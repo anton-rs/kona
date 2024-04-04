@@ -37,6 +37,9 @@ impl PartialEq<StageError> for StageError {
         if let (StageError::ReorgDetected(a, b), StageError::ReorgDetected(c, d)) = (self, other) {
             return a == c && b == d;
         }
+        if let (StageError::Reset(a), StageError::Reset(b)) = (self, other) {
+            return a == b;
+        }
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
