@@ -7,5 +7,8 @@ pub use data_sources::{ChainProvider, DataAvailabilityProvider, DataIter, SafeBl
 mod stages;
 pub use stages::ResettableStage;
 
+mod telemetry;
+pub use telemetry::{LogLevel, TelemetryProvider};
+
 #[cfg(test)]
 pub mod test_utils;
