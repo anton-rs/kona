@@ -4,7 +4,8 @@ use super::frame_queue::FrameQueue;
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     traits::{
-        ChainProvider, DataAvailabilityProvider, LogLevel, ResettableStage, TelemetryProvider,
+        ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, ResettableStage,
+        TelemetryProvider,
     },
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
@@ -54,11 +55,6 @@ where
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: FrameQueue<DAP, CP, T>, telemetry: Arc<T>) -> Self {
         Self { cfg, telemetry, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
-    }
-
-    /// Returns the L1 origin [BlockInfo].
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
     }
 
     /// Returns the size of the channel bank by accumulating over all channels.
@@ -199,6 +195,17 @@ where
         self.channel_queue.remove(index);
 
         frame_data.map_err(StageError::Custom)
+    }
+}
+
+impl<DAP, CP, T> OriginProvider for ChannelBank<DAP, CP, T>
+where
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
     }
 }
 

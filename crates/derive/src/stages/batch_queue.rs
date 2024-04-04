@@ -3,7 +3,7 @@
 use crate::{
     stages::channel_reader::ChannelReader,
     traits::{
-        ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher,
+        ChainProvider, DataAvailabilityProvider, OriginProvider, ResettableStage, SafeBlockFetcher,
         TelemetryProvider,
     },
     types::{
@@ -81,11 +81,6 @@ where
             next_spans: Vec::new(),
             fetcher,
         }
-    }
-
-    /// Returns the L1 origin [BlockInfo].
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
     }
 
     /// Returns if the previous batch was the last in the span.
@@ -350,6 +345,18 @@ where
         }
         self.batches.push(data);
         Ok(())
+    }
+}
+
+impl<DAP, CP, BF, T> OriginProvider for BatchQueue<DAP, CP, BF, T>
+where
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
+    BF: SafeBlockFetcher + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
     }
 }
 

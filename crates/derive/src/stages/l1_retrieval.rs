@@ -3,8 +3,8 @@
 use super::L1Traversal;
 use crate::{
     traits::{
-        ChainProvider, DataAvailabilityProvider, DataIter, LogLevel, ResettableStage,
-        TelemetryProvider,
+        ChainProvider, DataAvailabilityProvider, DataIter, LogLevel, OriginProvider,
+        ResettableStage, TelemetryProvider,
     },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
@@ -47,12 +47,6 @@ where
         Self { prev, telemetry, provider, data: None }
     }
 
-    /// Returns the current L1 [BlockInfo] origin from the previous
-    /// [L1Traversal] stage.
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
-    }
-
     /// Retrieves the next data item from the [L1Retrieval] stage.
     /// Returns an error if there is no data.
     pub async fn next_data(&mut self) -> StageResult<Bytes> {
@@ -78,6 +72,17 @@ where
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+impl<DAP, CP, T> OriginProvider for L1Retrieval<DAP, CP, T>
+where
+    DAP: DataAvailabilityProvider,
+    CP: ChainProvider,
+    T: TelemetryProvider,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
     }
 }
 

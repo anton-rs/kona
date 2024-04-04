@@ -2,7 +2,9 @@
 
 use super::channel_bank::ChannelBank;
 use crate::{
-    traits::{ChainProvider, DataAvailabilityProvider, LogLevel, TelemetryProvider},
+    traits::{
+        ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, TelemetryProvider,
+    },
     types::{Batch, BlockInfo, StageError, StageResult},
 };
 
@@ -70,15 +72,21 @@ where
         Ok(())
     }
 
-    /// Returns the L1 origin [BlockInfo].
-    pub fn origin(&self) -> Option<&BlockInfo> {
-        self.prev.origin()
-    }
-
     /// Forces the read to continue with the next channel, resetting any
     /// decoding / decompression state to a fresh start.
     pub fn next_channel(&mut self) {
         self.next_batch = None;
+    }
+}
+
+impl<DAP, CP, T> OriginProvider for ChannelReader<DAP, CP, T>
+where
+    DAP: DataAvailabilityProvider + Debug,
+    CP: ChainProvider + Debug,
+    T: TelemetryProvider + Debug,
+{
+    fn origin(&self) -> Option<&BlockInfo> {
+        self.prev.origin()
     }
 }
 
