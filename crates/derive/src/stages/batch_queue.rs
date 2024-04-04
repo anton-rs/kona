@@ -354,7 +354,7 @@ where
     DAP: DataAvailabilityProvider + Send + Debug,
     CP: ChainProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Debug + Sync,
 {
     async fn reset(&mut self, base: BlockInfo, _: SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.

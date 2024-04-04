@@ -36,7 +36,7 @@ where
     /// The rollup configuration.
     cfg: Arc<RollupConfig>,
     /// Telemetry
-    telemetry: T,
+    telemetry: Arc<T>,
     /// Map of channels by ID.
     channels: HashMap<ChannelID, Channel>,
     /// Channels in FIFO order.
@@ -52,7 +52,7 @@ where
     T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: FrameQueue<DAP, CP, T>, telemetry: T) -> Self {
+    pub fn new(cfg: Arc<RollupConfig>, prev: FrameQueue<DAP, CP, T>, telemetry: Arc<T>) -> Self {
         Self { cfg, telemetry, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
@@ -207,7 +207,7 @@ impl<DAP, CP, T> ResettableStage for ChannelBank<DAP, CP, T>
 where
     DAP: DataAvailabilityProvider + Send + Debug,
     CP: ChainProvider + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Sync + Debug,
 {
     async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
         self.channels.clear();
@@ -234,8 +234,12 @@ mod tests {
         let dap = TestDAP::default();
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-        let mut channel_bank =
-            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut channel_bank = ChannelBank::new(
+            Arc::new(RollupConfig::default()),
+            frame_queue,
+            Arc::clone(&telemetry),
+        );
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
         assert_eq!(err, StageError::MissingOrigin);
@@ -247,11 +251,13 @@ mod tests {
         let dap = TestDAP::default();
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
+        let telem = Arc::new(TestTelemetry::new());
         let mut channel_bank =
-            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
+            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, Arc::clone(&telem));
         let frame = Frame { id: [0xFF; 16], ..Default::default() };
         assert_eq!(channel_bank.size(), 0);
         assert!(channel_bank.channels.is_empty());
+        assert_eq!(telem.count_calls(LogLevel::Warning), 0);
         assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
         assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
@@ -259,6 +265,7 @@ mod tests {
         assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
         assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
+        assert_eq!(telem.count_calls(LogLevel::Warning), 1);
     }
 
     #[test]
@@ -268,8 +275,12 @@ mod tests {
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-        let mut channel_bank =
-            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut channel_bank = ChannelBank::new(
+            Arc::new(RollupConfig::default()),
+            frame_queue,
+            Arc::clone(&telemetry),
+        );
         let mut frames = new_test_frames(100000);
         // Ingest frames until the channel bank is full and it stops increasing in size
         let mut current_size = 0;
@@ -297,8 +308,12 @@ mod tests {
         let dap = TestDAP { results };
         let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
         let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
-        let mut channel_bank =
-            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, TestTelemetry::new());
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut channel_bank = ChannelBank::new(
+            Arc::new(RollupConfig::default()),
+            frame_queue,
+            Arc::clone(&telemetry),
+        );
         let err = channel_bank.read().unwrap_err();
         assert_eq!(err, StageError::Eof);
         let err = channel_bank.next_data().await.unwrap_err();
