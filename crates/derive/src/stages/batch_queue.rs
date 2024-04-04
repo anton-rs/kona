@@ -112,9 +112,7 @@ where
     pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockInfo) -> StageResult<Batch> {
         // Cannot derive a batch if no origin was prepared.
         if self.l1_blocks.is_empty() {
-            return Err(StageError::Custom(anyhow!(
-                "failed to derive batch: no origin was prepared"
-            )));
+            return Err(StageError::MissingOrigin);
         }
 
         // Get the epoch
@@ -417,6 +415,19 @@ mod tests {
         typed_data.extend_from_slice(raw_data.as_slice());
         let compressed = compress_to_vec_zlib(typed_data.as_slice(), 5);
         BatchReader::from(compressed)
+    }
+
+    #[test]
+    fn test_derive_next_batch_missing_origin() {
+        let telemetry = TestTelemetry::new();
+        let data = vec![Ok(Batch::Single(SingleBatch::default()))];
+        let cfg = RollupConfig::default();
+        let mock = MockBatchQueueProvider::new(data);
+        let fetcher = MockBlockFetcher::default();
+        let mut bq = BatchQueue::new(cfg, mock, telemetry, fetcher);
+        let parent = L2BlockInfo::default();
+        let result = bq.derive_next_batch(false, parent).unwrap_err();
+        assert_eq!(result, StageError::MissingOrigin);
     }
 
     #[tokio::test]
