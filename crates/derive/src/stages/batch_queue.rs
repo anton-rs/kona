@@ -2,7 +2,10 @@
 
 use crate::{
     stages::channel_reader::ChannelReader,
-    traits::{ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher},
+    traits::{
+        ChainProvider, DataAvailabilityProvider, ResettableStage, SafeBlockFetcher,
+        TelemetryProvider,
+    },
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -28,16 +31,17 @@ use core::fmt::Debug;
 /// It is internally responsible for making sure that batches with L1 inclusions block outside it's
 /// working range are not considered or pruned.
 #[derive(Debug)]
-pub struct BatchQueue<DAP, CP, BF>
+pub struct BatchQueue<DAP, CP, BF, T>
 where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
     BF: SafeBlockFetcher + Debug,
+    T: TelemetryProvider + Debug,
 {
     /// The rollup config.
     cfg: RollupConfig,
     /// The previous stage of the derivation pipeline.
-    prev: ChannelReader<DAP, CP>,
+    prev: ChannelReader<DAP, CP, T>,
     /// The l1 block ref
     origin: Option<BlockInfo>,
 
@@ -59,14 +63,15 @@ where
     fetcher: BF,
 }
 
-impl<DAP, CP, BF> BatchQueue<DAP, CP, BF>
+impl<DAP, CP, BF, T> BatchQueue<DAP, CP, BF, T>
 where
     DAP: DataAvailabilityProvider + Debug,
     CP: ChainProvider + Debug,
     BF: SafeBlockFetcher + Debug,
+    T: TelemetryProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
-    pub fn new(cfg: RollupConfig, prev: ChannelReader<DAP, CP>, fetcher: BF) -> Self {
+    pub fn new(cfg: RollupConfig, prev: ChannelReader<DAP, CP, T>, fetcher: BF) -> Self {
         Self {
             cfg,
             prev,
@@ -344,11 +349,12 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP, BF> ResettableStage for BatchQueue<DAP, CP, BF>
+impl<DAP, CP, BF, T> ResettableStage for BatchQueue<DAP, CP, BF, T>
 where
     DAP: DataAvailabilityProvider + Send + Debug,
     CP: ChainProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
+    T: TelemetryProvider + Send + Debug,
 {
     async fn reset(&mut self, base: BlockInfo, _: SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.
