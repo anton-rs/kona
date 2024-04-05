@@ -117,8 +117,10 @@ where
 
         // Get the epoch
         let epoch = self.l1_blocks[0];
-        // TODO: log that the next batch is being derived.
-        // TODO: metrice the time it takes to derive the next batch.
+        self.telemetry.write(
+            Bytes::from(alloc::format!("Deriving next batch for epoch: {}", epoch.number)),
+            LogLevel::Info,
+        );
 
         // Note: epoch origin can now be one block ahead of the L2 Safe Head
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
@@ -149,9 +151,14 @@ where
                     remaining.push(batch.clone());
                 }
                 BatchValidity::Drop => {
-                    // TODO: Log the drop reason with WARN level.
-                    // batch.log_context(self.log).warn("Dropping batch", "parent", parent.id(),
-                    // "parent_time", parent.info.time);
+                    self.telemetry.write(
+                        Bytes::from(alloc::format!(
+                            "Dropping batch: {:?}, parent: {}",
+                            batch.batch,
+                            parent.block_info
+                        )),
+                        LogLevel::Warning,
+                    );
                     continue;
                 }
                 BatchValidity::Accept => {
@@ -171,7 +178,10 @@ where
         self.batches = remaining;
 
         if let Some(nb) = next_batch {
-            // TODO: log that the next batch is found.
+            self.telemetry.write(
+                Bytes::from(alloc::format!("Next batch found: {:?}", nb.batch)),
+                LogLevel::Info,
+            );
             return Ok(nb.batch);
         }
 
@@ -182,14 +192,21 @@ where
             expiry_epoch < parent.l1_origin.number;
         let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
 
-        // TODO: Log the empty batch generation.
-
         // If the sequencer window did not expire,
         // there is still room to receive batches for the current epoch.
         // No need to force-create empty batch(es) towards the next epoch yet.
         if !force_empty_batches {
             return Err(StageError::Eof);
         }
+
+        self.telemetry.write(
+            Bytes::from(alloc::format!(
+                "Generating empty batches. Epoch: {}, Parent: {}",
+                epoch.number,
+                parent.l1_origin.number
+            )),
+            LogLevel::Info,
+        );
 
         // The next L1 block is needed to proceed towards the next epoch.
         if self.l1_blocks.len() < 2 {
@@ -202,7 +219,10 @@ where
         // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
         // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
-            // TODO: log next batch generation.
+            self.telemetry.write(
+                Bytes::from(alloc::format!("Generating empty batch for epoch: {}", epoch.number)),
+                LogLevel::Info,
+            );
             return Ok(Batch::Single(SingleBatch {
                 parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
@@ -214,9 +234,15 @@ where
 
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
-        // TODO: log that the epoch is advanced.
-        // bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp,
-        // "next_epoch_time", nextEpoch.Time)
+        self.telemetry.write(
+            Bytes::from(alloc::format!(
+                "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
+                next_epoch.number,
+                next_timestamp,
+                next_epoch.timestamp
+            )),
+            LogLevel::Info,
+        );
         self.l1_blocks.remove(0);
         Err(StageError::Eof)
     }
@@ -224,7 +250,8 @@ where
     /// Adds a batch to the queue.
     pub fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
-            // TODO: log that the batch cannot be added without an origin
+            self.telemetry
+                .write(Bytes::from("Cannot add batch without an origin"), LogLevel::Error);
             panic!("Cannot add batch without an origin");
         }
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
@@ -453,6 +480,7 @@ mod tests {
 
     // TODO(refcell): The batch reader here loops forever.
     //                Maybe the cursor isn't being used?
+    //                UPDATE: the batch data is not valid
     // #[tokio::test]
     // async fn test_next_batch_succeeds() {
     //     let mut reader = new_batch_reader();
