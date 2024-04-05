@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 //! Module containing a [Transaction] builder for the Ecotone network updgrade transactions.
 
+use alloc::vec::Vec;
 use alloy_primitives::{address, bytes, Address, Bytes};
 use lazy_static::lazy_static;
 
@@ -46,7 +47,7 @@ pub struct EcotoneTransactionBuilder;
 
 impl EcotoneTransactionBuilder {
     /// Constructs the Ecotone network upgrade transactions.
-    pub fn build_txs() -> anyhow::Result<Bytes> {
+    pub fn build_txs() -> anyhow::Result<Vec<Bytes>> {
         // let mut txs = vec![];
 
         // TODO: Deposit tx type needs to be in upstream alloy consensus.
@@ -117,7 +118,7 @@ impl EcotoneTransactionBuilder {
         // }).encode()?;
         // txs.push(deploy_eip4788);
 
-        Ok(Bytes::new())
+        Ok(Vec::new())
     }
 }
 

@@ -79,9 +79,9 @@ where
         l2_parent: L2BlockInfo,
         epoch: BlockID,
     ) -> Result<PayloadAttributes, BuilderError> {
-        let mut l1_info = BlockInfo::default();
-        let deposit_transactions: Vec<RawTransaction> = vec![];
-        // let sequence_number = 0u64;
+        let l1_info;
+        let mut deposit_transactions: Vec<RawTransaction> = vec![];
+        // let mut sequence_number = 0u64;
         let mut sys_config =
             self.config_fetcher.system_config_by_l2_hash(l2_parent.block_info.hash)?;
 
@@ -110,9 +110,9 @@ where
                 return Err(BuilderError::BlockMismatch(epoch, l2_parent.l1_origin));
             }
 
-            // let info = self.receipts_fetcher.info_by_hash(epoch.hash)?;
-            // l1_info = info;
-            // deposit_transactions = vec![];
+            let info = self.receipts_fetcher.info_by_hash(epoch.hash)?;
+            l1_info = info;
+            deposit_transactions = vec![];
             // sequence_number = l2_parent.seq_num + 1;
         }
 
@@ -128,10 +128,10 @@ where
             ));
         }
 
-        let upgrade_transactions: Vec<RawTransaction> = vec![];
-        if self.rollup_cfg.is_ecotone_active(next_l2_time) {
-            // upgrade_transactions = ecotone_network_upgrade_transactions()?;
-        }
+        // let mut upgrade_transactions: Vec<Bytes> = vec![];
+        // if self.rollup_cfg.is_ecotone_active(next_l2_time) {
+        //     upgrade_transactions =
+        // EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?; }
 
         // let l1_info_tx = l1_info_deposit_bytes(self.rollup_cfg, sys_config, sequence_number,
         // l1_info, next_l2_time)?;
@@ -139,7 +139,7 @@ where
         let mut txs = vec![];
         // txs.push(l1_info_tx);
         txs.extend(deposit_transactions);
-        txs.extend(upgrade_transactions);
+        // txs.extend(upgrade_transactions);
 
         let withdrawals = None;
         if self.rollup_cfg.is_canyon_active(next_l2_time) {
