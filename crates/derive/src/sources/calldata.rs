@@ -10,6 +10,7 @@ use async_trait::async_trait;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CalldataSource<CP>
 where
     CP: ChainProvider + Send,
@@ -48,29 +49,30 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 
     /// Loads the calldata into the source if it is not open.
     async fn load_calldata(&mut self) -> anyhow::Result<()> {
-        if self.open {
-            return Ok(());
-        }
-
-        let (_, txs) =
-            self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
-
-        self.calldata = txs
-            .iter()
-            .filter_map(|tx| {
-                if tx.to() != Some(self.batcher_address) {
-                    return None;
-                }
-                if tx.from() != Some(self.signer) {
-                    return None;
-                }
-                Some(tx.data())
-            })
-            .collect::<VecDeque<_>>();
-
-        self.open = true;
-
-        Ok(())
+        // if self.open {
+        //     return Ok(());
+        // }
+        //
+        // let (_, txs) =
+        // self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
+        //
+        // self.calldata = txs
+        //     .iter()
+        //     .filter_map(|_| {
+        //         if tx.to() != Some(self.batcher_address) {
+        //             return None;
+        //         }
+        //         if tx.from() != Some(self.signer) {
+        //             return None;
+        //         }
+        //         Some(tx.data())
+        //     })
+        //     .collect::<VecDeque<_>>();
+        //
+        // self.open = true;
+        //
+        // Ok(())
+        todo!("Need ecrecover abstraction")
     }
 }
 

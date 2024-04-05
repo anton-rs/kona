@@ -2,9 +2,10 @@
 
 use crate::{
     traits::{ChainProvider, SafeBlockFetcher},
-    types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo, Receipt, TxEnvelope},
+    types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo},
 };
 use alloc::{boxed::Box, vec::Vec};
+use alloy_consensus::{Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;

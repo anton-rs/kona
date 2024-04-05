@@ -2,7 +2,7 @@
 //! transaction within a span batch.
 
 use super::{convert_v_to_y_parity, SpanBatchError, SpanDecodingError};
-use crate::types::TxType;
+use alloy_consensus::TxType;
 use alloy_primitives::{Signature, U256};
 
 /// The ECDSA signature of a transaction within a span batch.

@@ -13,9 +13,11 @@ homepage.workspace = true
 anyhow.workspace = true
 
 # External
-alloy-primitives = { version = "0.6.3", default-features = false, features = ["rlp"] }
+alloy-primitives = { version = "0.7.0", default-features = false, features = ["rlp"] }
 alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
-alloy-sol-types = { version = "0.6.3", default-features = false }
+alloy-sol-types = { version = "0.7.0", default-features = false }
+alloy-consensus = { git = "https://github.com/clabby/alloy", branch = "cl/alloy-consensus-no-std", default-features = false }
+alloy-eips = { git = "https://github.com/clabby/alloy", branch = "cl/alloy-consensus-no-std", default-features = false }
 async-trait = "0.1.77"
 hashbrown = "0.14.3"
 unsigned-varint = "0.8.0"

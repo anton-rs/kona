@@ -2,15 +2,17 @@
 
 use crate::{
     traits::{AsyncIterator, BlobProvider, ChainProvider},
-    types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult, TxEnvelope, TxType},
+    types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult},
 };
 use alloc::{boxed::Box, vec::Vec};
+use alloy_consensus::TxEnvelope;
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct BlobSource<F, B>
 where
     F: ChainProvider + Send,
@@ -56,42 +58,43 @@ where
         }
     }
 
-    fn extract_blob_data(&self, txs: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<IndexedBlobHash>) {
-        let mut index = 0;
-        let mut data = Vec::new();
-        let mut hashes = Vec::new();
-        for tx in txs {
-            if tx.to() != Some(self.batcher_address) {
-                index += tx.blob_hashes().map_or(0, |h| h.len());
-                continue;
-            }
-            if tx.from() != Some(self.signer) {
-                index += tx.blob_hashes().map_or(0, |h| h.len());
-                continue;
-            }
-            if tx.tx_type() != TxType::Eip4844 {
-                let calldata = tx.data().clone();
-                let blob_data = BlobData { data: None, calldata: Some(calldata) };
-                data.push(blob_data);
-                continue;
-            }
-            if !tx.data().is_empty() {
-                // TODO(refcell): Add a warning log here if the blob data is not empty
-                // https://github.com/ethereum-optimism/optimism/blob/develop/op-node/rollup/derive/blob_data_source.go#L136
-            }
-            let blob_hashes = if let Some(b) = tx.blob_hashes() {
-                b
-            } else {
-                continue;
-            };
-            for blob in blob_hashes {
-                let indexed = IndexedBlobHash { hash: blob, index };
-                hashes.push(indexed);
-                data.push(BlobData::default());
-                index += 1;
-            }
-        }
-        (data, hashes)
+    fn extract_blob_data(&self, _: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<IndexedBlobHash>) {
+        // let mut index = 0;
+        // let mut data = Vec::new();
+        // let mut hashes = Vec::new();
+        // for tx in txs {
+        //     if tx.to() != Some(self.batcher_address) {
+        //         index += tx.blob_hashes().map_or(0, |h| h.len());
+        //         continue;
+        //     }
+        //     if tx.from() != Some(self.signer) {
+        //         index += tx.blob_hashes().map_or(0, |h| h.len());
+        //         continue;
+        //     }
+        //     if tx.tx_type() != TxType::Eip4844 {
+        //         let calldata = tx.data().clone();
+        //         let blob_data = BlobData { data: None, calldata: Some(calldata) };
+        //         data.push(blob_data);
+        //         continue;
+        //     }
+        //     if !tx.data().is_empty() {
+        //         // TODO(refcell): Add a warning log here if the blob data is not empty
+        //         // https://github.com/ethereum-optimism/optimism/blob/develop/op-node/rollup/derive/blob_data_source.go#L136
+        //     }
+        //     let blob_hashes = if let Some(b) = tx.blob_hashes() {
+        //         b
+        //     } else {
+        //         continue;
+        //     };
+        //     for blob in blob_hashes {
+        //         let indexed = IndexedBlobHash { hash: blob, index };
+        //         hashes.push(indexed);
+        //         data.push(BlobData::default());
+        //         index += 1;
+        //     }
+        // }
+        // (data, hashes)
+        todo!("Need ecrecover abstraction")
     }
 
     /// Loads blob data into the source if it is not open.
