@@ -163,7 +163,7 @@ where
     T: TelemetryProvider + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         self.telemetry.write(Bytes::from("resetting attributes queue"), LogLevel::Info);
         // TODO: metrice the reset using telemetry
         // telemetry can provide a method of logging and metricing

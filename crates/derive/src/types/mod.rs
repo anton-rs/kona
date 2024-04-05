@@ -19,10 +19,10 @@ pub use rollup_config::RollupConfig;
 pub mod batch;
 pub use batch::{
     Batch, BatchType, BatchValidity, BatchWithInclusionBlock, RawSpanBatch, SingleBatch, SpanBatch,
-    SpanBatchBits, SpanBatchBuilder, SpanBatchEip1559TransactionData,
-    SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
-    SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchTransactionData,
-    SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
+    SpanBatchBits, SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
+    SpanBatchElement, SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload,
+    SpanBatchPrefix, SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError,
+    MAX_SPAN_BATCH_SIZE,
 };
 
 mod payload;

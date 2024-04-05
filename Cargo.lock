@@ -38,7 +38,7 @@ checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 [[package]]
 name = "alloy-consensus"
 version = "0.1.0"
-source = "git+https://github.com/clabby/alloy?branch=cl/alloy-consensus-no-std#349762ad9d5b754a0696823a2ea1c7795cc036af"
+source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -49,7 +49,7 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.1.0"
-source = "git+https://github.com/clabby/alloy?branch=cl/alloy-consensus-no-std#349762ad9d5b754a0696823a2ea1c7795cc036af"
+source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -99,7 +99,7 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.1.0"
-source = "git+https://github.com/clabby/alloy?branch=cl/alloy-consensus-no-std#349762ad9d5b754a0696823a2ea1c7795cc036af"
+source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
 dependencies = [
  "alloy-primitives",
  "serde",

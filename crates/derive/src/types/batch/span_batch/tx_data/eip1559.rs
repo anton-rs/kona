@@ -44,7 +44,7 @@ impl SpanBatchEip1559TransactionData {
                     |_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData),
                 )?,
             ),
-            gas_limit: gas,
+            gas_limit: gas as u128,
             to: if let Some(to) = to { TxKind::Call(to) } else { TxKind::Create },
             value: self.value,
             input: self.data.clone().into(),

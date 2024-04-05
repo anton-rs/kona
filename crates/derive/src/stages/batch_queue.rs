@@ -382,7 +382,7 @@ where
     BF: SafeBlockFetcher + Send + Debug,
     T: TelemetryProvider + Send + Debug + Sync,
 {
-    async fn reset(&mut self, base: BlockInfo, _: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.
         // It is set in the engine queue (two stages away)
         // such that the L2 Safe Head origin is the progress.

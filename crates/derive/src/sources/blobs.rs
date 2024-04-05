@@ -76,6 +76,7 @@ where
                         (tx.to(), tx.input.clone(), Some(tx.blob_versioned_hashes.clone()))
                     }
                 },
+                _ => continue,
             };
             let TxKind::Call(to) = tx_kind else { continue };
 

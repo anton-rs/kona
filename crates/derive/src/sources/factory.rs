@@ -35,7 +35,7 @@ where
     B: BlobProvider + Clone + Debug,
 {
     /// Creates a new factory.
-    pub fn new(provider: C, blobs: B, cfg: RollupConfig) -> Self {
+    pub fn new(provider: C, blobs: B, cfg: &RollupConfig) -> Self {
         Self {
             chain_provider: provider,
             blob_provider: blobs,

@@ -35,6 +35,7 @@ impl SignedRecoverable for TxEnvelope {
             TxEnvelope::Eip4844(signed_tx) => {
                 recover_public_key(*signed_tx.signature(), &signed_tx.signature_hash())
             }
+            _ => unreachable!("Impossible case"),
         }
     }
 }
