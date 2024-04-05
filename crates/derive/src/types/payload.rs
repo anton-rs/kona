@@ -20,10 +20,10 @@ use serde::{Deserialize, Serialize};
 pub struct ExecutionPayloadEnvelope {
     /// Parent beacon block root.
     #[cfg_attr(feature = "serde", serde(rename = "parentBeaconBlockRoot"))]
-    parent_beacon_block_root: Option<B256>,
+    pub parent_beacon_block_root: Option<B256>,
     /// The inner execution payload.
     #[cfg_attr(feature = "serde", serde(rename = "executionPayload"))]
-    execution_payload: ExecutionPayload,
+    pub execution_payload: ExecutionPayload,
 }
 
 impl ExecutionPayloadEnvelope {
@@ -41,40 +41,57 @@ impl ExecutionPayloadEnvelope {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExecutionPayload {
+    /// The parent hash.
     #[cfg_attr(feature = "serde", serde(rename = "parentHash"))]
-    parent_hash: B256,
+    pub parent_hash: B256,
+    /// The coinbase address.
     #[cfg_attr(feature = "serde", serde(rename = "feeRecipient"))]
-    fee_recipient: Address,
+    pub fee_recipient: Address,
+    /// The state root.
     #[cfg_attr(feature = "serde", serde(rename = "stateRoot"))]
-    state_root: B256,
+    pub state_root: B256,
+    /// The transactions root.
     #[cfg_attr(feature = "serde", serde(rename = "receiptsRoot"))]
-    receipts_root: B256,
+    pub receipts_root: B256,
+    /// The logs bloom.
     #[cfg_attr(feature = "serde", serde(rename = "logsBloom"))]
-    logs_bloom: B256,
+    pub logs_bloom: B256,
+    /// The mix hash.
     #[cfg_attr(feature = "serde", serde(rename = "prevRandao"))]
-    prev_randao: B256,
+    pub prev_randao: B256,
+    /// The difficulty.
     #[cfg_attr(feature = "serde", serde(rename = "blockNumber"))]
-    block_number: u64,
+    pub block_number: u64,
+    /// The gas limit.
     #[cfg_attr(feature = "serde", serde(rename = "gasLimit"))]
-    gas_limit: u64,
+    pub gas_limit: u64,
+    /// The gas used.
     #[cfg_attr(feature = "serde", serde(rename = "gasUsed"))]
-    gas_used: u64,
+    pub gas_used: u64,
+    /// The timestamp.
     #[cfg_attr(feature = "serde", serde(rename = "timestamp"))]
-    timestamp: u64,
+    pub timestamp: u64,
+    /// The extra data.
     #[cfg_attr(feature = "serde", serde(rename = "extraData"))]
-    extra_data: B256,
+    pub extra_data: B256,
+    /// Base fee per gas.
     #[cfg_attr(feature = "serde", serde(rename = "baseFeePerGas"))]
-    base_fee_per_gas: U256,
+    pub base_fee_per_gas: U256,
+    /// Block hash.
     #[cfg_attr(feature = "serde", serde(rename = "blockHash"))]
-    block_hash: B256,
+    pub block_hash: B256,
+    /// The transactions.
     #[cfg_attr(feature = "serde", serde(rename = "transactions"))]
-    transactions: Vec<Bytes>,
+    pub transactions: Vec<Bytes>,
+    /// The withdrawals.
     #[cfg_attr(feature = "serde", serde(rename = "withdrawals"))]
-    withdrawals: Option<Withdrawals>,
+    pub withdrawals: Option<Withdrawals>,
+    /// The  blob gas used.
     #[cfg_attr(feature = "serde", serde(rename = "blobGasUsed"))]
-    blob_gas_used: Option<u64>,
+    pub blob_gas_used: Option<u64>,
+    /// The excess blob gas.
     #[cfg_attr(feature = "serde", serde(rename = "excessBlobGas"))]
-    excess_blob_gas: Option<u64>,
+    pub excess_blob_gas: Option<u64>,
 }
 
 /// Withdrawal Type

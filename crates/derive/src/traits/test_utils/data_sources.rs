@@ -1,13 +1,48 @@
 //! Data Sources Test Utilities
 
 use crate::{
-    traits::ChainProvider,
-    types::{BlockInfo, Receipt, TxEnvelope},
+    traits::{ChainProvider, SafeBlockFetcher},
+    types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo, Receipt, TxEnvelope},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
+
+/// A mock block fetcher.
+#[derive(Debug, Default)]
+pub struct MockBlockFetcher {
+    /// Blocks
+    pub blocks: Vec<L2BlockInfo>,
+    /// Payloads
+    pub payloads: Vec<ExecutionPayloadEnvelope>,
+}
+
+impl MockBlockFetcher {
+    /// Creates a new [MockBlockFetcher] with the given origin and batches.
+    pub fn new(blocks: Vec<L2BlockInfo>, payloads: Vec<ExecutionPayloadEnvelope>) -> Self {
+        Self { blocks, payloads }
+    }
+}
+
+#[async_trait]
+impl SafeBlockFetcher for MockBlockFetcher {
+    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo> {
+        self.blocks
+            .iter()
+            .find(|b| b.block_info.number == number)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Block not found"))
+    }
+
+    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope> {
+        self.payloads
+            .iter()
+            .find(|p| p.execution_payload.block_number == number)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Payload not found"))
+    }
+}
 
 /// A mock chain provider for testing.
 #[derive(Debug, Clone, Default)]

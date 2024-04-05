@@ -23,6 +23,8 @@ pub enum StageError {
     Empty,
     /// No channels are available in the channel bank.
     NoChannelsAvailable,
+    /// No channel returned by the [crate::stages::ChannelReader] stage.
+    NoChannel,
     /// Failed to find channel.
     ChannelNotFound,
     /// Missing L1 origin.
@@ -59,6 +61,7 @@ impl PartialEq<StageError> for StageError {
             (StageError::Eof, StageError::Eof) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
                 (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
+                (StageError::NoChannel, StageError::NoChannel) |
                 (StageError::ChannelNotFound, StageError::ChannelNotFound) |
                 (StageError::MissingOrigin, StageError::MissingOrigin) |
                 (StageError::AttributesBuild(_), StageError::AttributesBuild(_)) |
@@ -94,6 +97,7 @@ impl Display for StageError {
             }
             StageError::Empty => write!(f, "Empty"),
             StageError::NoChannelsAvailable => write!(f, "No channels available"),
+            StageError::NoChannel => write!(f, "No channel"),
             StageError::ChannelNotFound => write!(f, "Channel not found"),
             StageError::MissingOrigin => write!(f, "Missing L1 origin"),
             StageError::AttributesBuild(e) => write!(f, "Attributes build error: {}", e),
