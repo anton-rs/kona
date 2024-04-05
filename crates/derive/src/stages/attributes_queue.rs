@@ -3,8 +3,8 @@
 use crate::{
     traits::{LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{
-        AttributesWithParent, BlockID, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError,
-        RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
+        AttributesWithParent, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError, RollupConfig,
+        SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
 use alloc::boxed::Box;
@@ -12,14 +12,8 @@ use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
 
-pub trait AttributesBuilder {
-    /// Prepare the payload attributes.
-    fn prepare_payload_attributes(
-        &mut self,
-        l2_parent: L2BlockInfo,
-        epoch: BlockID,
-    ) -> anyhow::Result<PayloadAttributes>;
-}
+mod builder;
+pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
 
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
 #[async_trait]
@@ -184,7 +178,7 @@ mod tests {
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
         traits::test_utils::TestTelemetry,
-        types::RawTransaction,
+        types::{BuilderError, RawTransaction},
     };
     use alloc::{vec, vec::Vec};
     use alloy_primitives::b256;
@@ -276,7 +270,9 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageError::AttributesBuild(anyhow::anyhow!("missing payload attribute"))
+            StageError::AttributesBuild(BuilderError::Custom(anyhow::anyhow!(
+                "missing payload attribute"
+            )))
         );
     }
 

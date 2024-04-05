@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
+pub use alloy_consensus::Receipt;
 use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 

@@ -1,6 +1,10 @@
 //! This module contains the parameters and identifying types for the derivation pipeline.
 
-use alloy_primitives::{b256, B256};
+use alloy_primitives::{address, b256, Address, B256};
+
+/// The sequencer fee vault address.
+pub const SEQUENCER_FEE_VAULT_ADDRESS: Address =
+    address!("8888888888888888888888888888888888888888");
 
 /// Count the tagging info as 200 in terms of buffer size.
 pub const FRAME_OVERHEAD: usize = 200;

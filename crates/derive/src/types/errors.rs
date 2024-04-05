@@ -1,7 +1,7 @@
 //! This module contains derivation errors thrown within the pipeline.
 
 use super::SpanBatchError;
-use crate::types::Frame;
+use crate::types::{BlockID, Frame};
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
@@ -30,7 +30,7 @@ pub enum StageError {
     /// Missing L1 origin.
     MissingOrigin,
     /// Failed to build the [super::PayloadAttributes] for the next batch.
-    AttributesBuild(anyhow::Error),
+    AttributesBuild(BuilderError),
     /// Reset the pipeline.
     Reset(ResetError),
     /// The stage detected a block reorg.
@@ -186,6 +186,74 @@ impl Display for DecodeError {
             DecodeError::EmptyBuffer => write!(f, "Empty buffer"),
             DecodeError::AlloyRlpError(e) => write!(f, "Alloy RLP Decoding Error: {}", e),
             DecodeError::SpanBatchError(e) => write!(f, "Span Batch Decoding Error: {:?}", e),
+        }
+    }
+}
+
+/// An [AttributeBuilder] Error.
+#[derive(Debug)]
+pub enum BuilderError {
+    /// Mismatched blocks.
+    BlockMismatch(BlockID, BlockID),
+    /// Mismatched blocks for the start of an Epoch.
+    BlockMismatchEpochReset(BlockID, BlockID, B256),
+    /// [SystemConfig] update failed.
+    SystemConfigUpdate,
+    /// Broken time invariant between L2 and L1.
+    BrokenTimeInvariant(BlockID, u64, BlockID, u64),
+    /// A custom error wrapping [anyhow::Error].
+    Custom(anyhow::Error),
+}
+
+impl PartialEq<BuilderError> for BuilderError {
+    fn eq(&self, other: &BuilderError) -> bool {
+        match (self, other) {
+            (BuilderError::BlockMismatch(b1, e1), BuilderError::BlockMismatch(b2, e2)) => {
+                b1 == b2 && e1 == e2
+            }
+            (
+                BuilderError::BlockMismatchEpochReset(b1, e1, e2),
+                BuilderError::BlockMismatchEpochReset(b2, e3, e4),
+            ) => e1 == e3 && e2 == e4 && b1 == b2,
+            (
+                BuilderError::BrokenTimeInvariant(b1, t1, b2, t2),
+                BuilderError::BrokenTimeInvariant(b3, t3, b4, t4),
+            ) => b1 == b3 && t1 == t3 && b2 == b4 && t2 == t4,
+            (BuilderError::SystemConfigUpdate, BuilderError::SystemConfigUpdate) |
+            (BuilderError::Custom(_), BuilderError::Custom(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl From<anyhow::Error> for BuilderError {
+    fn from(e: anyhow::Error) -> Self {
+        BuilderError::Custom(e)
+    }
+}
+
+impl Display for BuilderError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            BuilderError::BlockMismatch(block_id, parent) => {
+                write!(f, "Block mismatch with L1 origin {} (parent {})", block_id, parent)
+            }
+            BuilderError::BlockMismatchEpochReset(block_id, parent, origin) => {
+                write!(
+                    f,
+                    "Block mismatch with L1 origin {} (parent {}) on top of L1 origin {}",
+                    block_id, parent, origin
+                )
+            }
+            BuilderError::SystemConfigUpdate => write!(f, "System config update failed"),
+            BuilderError::BrokenTimeInvariant(block_id, l2_time, parent, l1_time) => {
+                write!(
+                    f,
+                    "Cannot build L2 block on top {} (time {}) before L1 origin {} (time {})",
+                    block_id, l2_time, parent, l1_time
+                )
+            }
+            BuilderError::Custom(e) => write!(f, "Custom error: {}", e),
         }
     }
 }

@@ -4,7 +4,8 @@ use crate::{
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
     traits::OriginProvider,
     types::{
-        BlockID, BlockInfo, L2BlockInfo, PayloadAttributes, SingleBatch, StageError, StageResult,
+        BlockID, BlockInfo, BuilderError, L2BlockInfo, PayloadAttributes, SingleBatch, StageError,
+        StageResult,
     },
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -23,8 +24,12 @@ impl AttributesBuilder for MockAttributesBuilder {
         &mut self,
         _l2_parent: L2BlockInfo,
         _epoch: BlockID,
-    ) -> anyhow::Result<PayloadAttributes> {
-        self.attributes.pop().ok_or(anyhow::anyhow!("missing payload attribute"))?
+    ) -> Result<PayloadAttributes, BuilderError> {
+        match self.attributes.pop() {
+            Some(Ok(attrs)) => Ok(attrs),
+            Some(Err(err)) => Err(BuilderError::Custom(err)),
+            None => Err(BuilderError::Custom(anyhow::anyhow!("no attributes available"))),
+        }
     }
 }
 
