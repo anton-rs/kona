@@ -22,6 +22,7 @@ async-trait = "0.1.77"
 hashbrown = "0.14.3"
 unsigned-varint = "0.8.0"
 miniz_oxide = { version = "0.7.2" }
+lazy_static = "1.4.0"
 
 # Optional
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }

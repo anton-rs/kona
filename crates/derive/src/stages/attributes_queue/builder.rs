@@ -79,16 +79,17 @@ where
         l2_parent: L2BlockInfo,
         epoch: BlockID,
     ) -> Result<PayloadAttributes, BuilderError> {
-        let l1_info = BlockInfo::default();
+        let mut l1_info = BlockInfo::default();
         let deposit_transactions: Vec<RawTransaction> = vec![];
         // let sequence_number = 0u64;
-        let sys_config = self.config_fetcher.system_config_by_l2_hash(l2_parent.block_info.hash)?;
+        let mut sys_config =
+            self.config_fetcher.system_config_by_l2_hash(l2_parent.block_info.hash)?;
 
         // If the L1 origin changed in this block, then we are in the first block of the epoch.
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
         if l2_parent.l1_origin.number != epoch.number {
-            let (info, _receipts) = self.receipts_fetcher.fetch_receipts(epoch.hash)?;
+            let (info, receipts) = self.receipts_fetcher.fetch_receipts(epoch.hash)?;
             if l2_parent.l1_origin.hash != info.parent_hash {
                 return Err(BuilderError::BlockMismatchEpochReset(
                     epoch,
@@ -98,11 +99,9 @@ where
             }
 
             // let deposits = derive_deposits(receipts, sys_config.deposit_contract_address)?;
-            // if let Err(e) = update_system_config_with_l1_receipts(&mut sys_config, receipts,
-            // info.time()) {     return Err(anyhow::anyhow!("failed to apply derived L1
-            // sysCfg updates: {}", e)); }
+            sys_config.update_with_receipts(&receipts, &self.rollup_cfg, info.timestamp)?;
 
-            // l1_info = info;
+            l1_info = info;
             // deposit_transactions = deposits;
             // sequence_number = 0;
         } else {

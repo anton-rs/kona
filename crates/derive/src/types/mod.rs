@@ -26,6 +26,9 @@ pub use batch::{
     MAX_SPAN_BATCH_SIZE,
 };
 
+mod ecotone;
+pub use ecotone::*;
+
 mod payload;
 pub use payload::{
     ExecutionPayload, ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,

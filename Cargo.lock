@@ -563,6 +563,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "hashbrown",
+ "lazy_static",
  "miniz_oxide",
  "proptest",
  "serde",
