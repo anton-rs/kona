@@ -1,11 +1,12 @@
 //! CallData Source
 
 use crate::{
-    traits::{AsyncIterator, ChainProvider},
+    traits::{AsyncIterator, ChainProvider, SignedRecoverable},
     types::{BlockInfo, StageError, StageResult},
 };
 use alloc::{boxed::Box, collections::VecDeque};
-use alloy_primitives::{Address, Bytes};
+use alloy_consensus::{Transaction, TxEnvelope};
+use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
 
 /// A data iterator that reads from calldata.
@@ -49,30 +50,37 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 
     /// Loads the calldata into the source if it is not open.
     async fn load_calldata(&mut self) -> anyhow::Result<()> {
-        // if self.open {
-        //     return Ok(());
-        // }
-        //
-        // let (_, txs) =
-        // self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
-        //
-        // self.calldata = txs
-        //     .iter()
-        //     .filter_map(|_| {
-        //         if tx.to() != Some(self.batcher_address) {
-        //             return None;
-        //         }
-        //         if tx.from() != Some(self.signer) {
-        //             return None;
-        //         }
-        //         Some(tx.data())
-        //     })
-        //     .collect::<VecDeque<_>>();
-        //
-        // self.open = true;
-        //
-        // Ok(())
-        todo!("Need ecrecover abstraction")
+        if self.open {
+            return Ok(());
+        }
+
+        let (_, txs) =
+            self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
+
+        self.calldata = txs
+            .iter()
+            .filter_map(|tx| {
+                let (tx_kind, data) = match tx {
+                    TxEnvelope::Legacy(tx) => (tx.tx().to(), tx.tx().input()),
+                    TxEnvelope::Eip2930(tx) => (tx.tx().to(), tx.tx().input()),
+                    TxEnvelope::Eip1559(tx) => (tx.tx().to(), tx.tx().input()),
+                    _ => return None,
+                };
+                let TxKind::Call(to) = tx_kind else { return None };
+
+                if to != self.batcher_address {
+                    return None;
+                }
+                if tx.recover_public_key().ok()? != self.signer {
+                    return None;
+                }
+                Some(data.to_vec().into())
+            })
+            .collect::<VecDeque<_>>();
+
+        self.open = true;
+
+        Ok(())
     }
 }
 

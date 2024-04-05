@@ -32,4 +32,6 @@ proptest = "1.4.0"
 spin = { version = "0.9.8", features = ["mutex"] } # Spin is used for testing synchronization primitives
 
 [features]
+default = ["serde", "k256"]
 serde = ["dep:serde", "alloy-primitives/serde"]
+k256 = ["alloy-primitives/k256", "alloy-consensus/k256"]
