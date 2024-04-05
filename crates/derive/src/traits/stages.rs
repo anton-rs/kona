@@ -8,5 +8,5 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait ResettableStage {
     /// Resets the derivation stage to its initial state.
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()>;
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()>;
 }

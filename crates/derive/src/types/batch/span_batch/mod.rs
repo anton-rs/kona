@@ -38,9 +38,6 @@ pub use raw::RawSpanBatch;
 mod element;
 pub use element::SpanBatchElement;
 
-mod builder;
-pub use builder::SpanBatchBuilder;
-
 mod signature;
 pub(crate) use signature::SpanBatchSignature;
 

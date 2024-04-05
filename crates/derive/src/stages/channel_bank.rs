@@ -219,7 +219,7 @@ where
     P: ChannelBankProvider + OriginProvider + Send + Debug,
     T: TelemetryProvider + Send + Sync + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         Err(StageError::Eof)

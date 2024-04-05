@@ -1,16 +1,15 @@
 //! This module contains the [FrameQueue] stage of the derivation pipeline.
 
-use core::fmt::Debug;
-
 use crate::{
     stages::ChannelBankProvider,
     traits::{LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{into_frames, BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
-use alloc::{boxed::Box, collections::VecDeque};
+use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use core::fmt::Debug;
 
 /// Provides data frames for the [FrameQueue] stage.
 #[async_trait]
@@ -35,7 +34,7 @@ where
     /// The previous stage in the pipeline.
     pub prev: P,
     /// Telemetry
-    pub telemetry: T,
+    pub telemetry: Arc<T>,
     /// The current frame queue.
     queue: VecDeque<Frame>,
 }
@@ -46,7 +45,7 @@ where
     T: TelemetryProvider + Debug,
 {
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
-    pub fn new(prev: P, telemetry: T) -> Self {
+    pub fn new(prev: P, telemetry: Arc<T>) -> Self {
         Self { prev, telemetry, queue: VecDeque::new() }
     }
 }
@@ -55,7 +54,7 @@ where
 impl<P, T> ChannelBankProvider for FrameQueue<P, T>
 where
     P: FrameQueueProvider + OriginProvider + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Debug + Sync,
 {
     async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
@@ -107,9 +106,9 @@ where
 impl<P, T> ResettableStage for FrameQueue<P, T>
 where
     P: FrameQueueProvider + OriginProvider + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
+    T: TelemetryProvider + Send + Debug + Sync,
 {
-    async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         self.queue = VecDeque::default();
         Err(StageError::Eof)
     }
@@ -147,7 +146,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_empty_bytes() {
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let data = vec![Ok(Bytes::from(vec![0x00]))];
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock, telemetry);
@@ -157,7 +156,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_no_frames_decoded() {
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let data = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock, telemetry);
@@ -167,7 +166,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_wrong_derivation_version() {
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let data = vec![Ok(Bytes::from(vec![0x01]))];
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock, telemetry);
@@ -177,7 +176,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_frame_too_short() {
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let data = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock, telemetry);
@@ -188,7 +187,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_single_frame() {
         let data = new_encoded_test_frames(1);
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let mock = MockFrameQueueProvider { data: vec![Ok(data)] };
         let mut frame_queue = FrameQueue::new(mock, telemetry);
         let frame_decoded = frame_queue.next_frame().await.unwrap();
@@ -200,7 +199,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_multiple_frames() {
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let data = new_encoded_test_frames(3);
         let mock = MockFrameQueueProvider { data: vec![Ok(data)] };
         let mut frame_queue = FrameQueue::new(mock, telemetry);

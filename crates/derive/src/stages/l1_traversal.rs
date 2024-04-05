@@ -23,7 +23,7 @@ pub struct L1Traversal<Provider: ChainProvider, Telemetry: TelemetryProvider> {
     /// The data source for the traversal stage.
     data_source: Provider,
     /// The telemetry provider for the traversal stage.
-    telemetry: Telemetry,
+    telemetry: Arc<Telemetry>,
     /// Signals whether or not the traversal stage is complete.
     done: bool,
     /// The system config.
@@ -49,7 +49,7 @@ impl<F: ChainProvider, T: TelemetryProvider> L1RetrievalProvider for L1Traversal
 
 impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
     /// Creates a new [L1Traversal] instance.
-    pub fn new(data_source: F, cfg: Arc<RollupConfig>, telemetry: T) -> Self {
+    pub fn new(data_source: F, cfg: Arc<RollupConfig>, telemetry: Arc<T>) -> Self {
         Self {
             block: Some(BlockInfo::default()),
             data_source,
@@ -118,11 +118,13 @@ impl<F: ChainProvider, T: TelemetryProvider> OriginProvider for L1Traversal<F, T
 }
 
 #[async_trait]
-impl<F: ChainProvider + Send, T: TelemetryProvider + Send> ResettableStage for L1Traversal<F, T> {
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
+impl<F: ChainProvider + Send, T: TelemetryProvider + Send + Sync> ResettableStage
+    for L1Traversal<F, T>
+{
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.block = Some(base);
         self.done = false;
-        self.system_config = cfg;
+        self.system_config = *cfg;
         Err(StageError::Eof)
     }
 }
@@ -173,7 +175,7 @@ pub(crate) mod tests {
         receipts: alloc::vec::Vec<Receipt>,
     ) -> L1Traversal<TestChainProvider, TestTelemetry> {
         let mut provider = TestChainProvider::default();
-        let telemetry = TestTelemetry::default();
+        let telemetry = Arc::new(TestTelemetry::default());
         let rollup_config = RollupConfig {
             l1_system_config_address: L1_SYS_CONFIG_ADDR,
             ..RollupConfig::default()
