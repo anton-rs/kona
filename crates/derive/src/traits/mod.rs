@@ -7,6 +7,9 @@ pub use data_sources::*;
 mod stages;
 pub use stages::ResettableStage;
 
+mod ecrecover;
+pub use ecrecover::SignedRecoverable;
+
 mod telemetry;
 pub use telemetry::{LogLevel, TelemetryProvider};
 

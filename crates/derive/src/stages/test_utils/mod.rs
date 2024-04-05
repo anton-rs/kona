@@ -5,7 +5,18 @@ mod channel_reader;
 pub use channel_reader::MockChannelReader;
 
 mod batch_queue;
-pub use batch_queue::{new_mock_batch_queue, MockBatchQueue};
+pub use batch_queue::MockBatchQueueProvider;
 
 mod attributes_queue;
-pub use attributes_queue::MockAttributesBuilder;
+pub use attributes_queue::{
+    new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
+};
+
+mod frame_queue;
+pub use frame_queue::MockFrameQueueProvider;
+
+mod channel_bank;
+pub use channel_bank::MockChannelBankProvider;
+
+mod channel_reader;
+pub use channel_reader::MockChannelReaderProvider;

@@ -84,6 +84,11 @@ impl RollupConfig {
         self.regolith_time.map_or(false, |t| timestamp >= t)
     }
 
+    /// Returns the L1 Signer Address.
+    pub fn l1_signer_address(&self) -> Address {
+        self.genesis.system_config.unsafe_block_signer
+    }
+
     /// Returns true if Canyon is active at the given timestamp.
     pub fn is_canyon_active(&self, timestamp: u64) -> bool {
         self.canyon_time.map_or(false, |t| timestamp >= t)
@@ -107,6 +112,12 @@ impl RollupConfig {
     /// Returns true if Interop is active at the given timestamp.
     pub fn is_interop_active(&self, timestamp: u64) -> bool {
         self.interop_time.map_or(false, |t| timestamp >= t)
+    }
+
+    /// Returns true if a DA Challenge proxy Address is provided in the rollup config and the
+    /// address is not zero.
+    pub fn is_plasma_enabled(&self) -> bool {
+        self.da_challenge_address.map_or(false, |addr| !addr.is_zero())
     }
 
     /// Checks the scalar value in Ecotone.

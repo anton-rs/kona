@@ -1,10 +1,12 @@
 //! Contains the [L1Traversal] stage of the derivation pipeline.
 
 use crate::{
+    stages::L1RetrievalProvider,
     traits::{ChainProvider, LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
+use alloy_primitives::Address;
 use async_trait::async_trait;
 
 /// The [L1Traversal] stage of the derivation pipeline.
@@ -21,7 +23,7 @@ pub struct L1Traversal<Provider: ChainProvider, Telemetry: TelemetryProvider> {
     /// The data source for the traversal stage.
     data_source: Provider,
     /// The telemetry provider for the traversal stage.
-    telemetry: Telemetry,
+    telemetry: Arc<Telemetry>,
     /// Signals whether or not the traversal stage is complete.
     done: bool,
     /// The system config.
@@ -30,9 +32,24 @@ pub struct L1Traversal<Provider: ChainProvider, Telemetry: TelemetryProvider> {
     pub rollup_config: Arc<RollupConfig>,
 }
 
+impl<F: ChainProvider, T: TelemetryProvider> L1RetrievalProvider for L1Traversal<F, T> {
+    fn batcher_addr(&self) -> Address {
+        self.system_config.batcher_addr
+    }
+
+    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
+        if !self.done {
+            self.done = true;
+            Ok(self.block)
+        } else {
+            Err(StageError::Eof)
+        }
+    }
+}
+
 impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
     /// Creates a new [L1Traversal] instance.
-    pub fn new(data_source: F, cfg: Arc<RollupConfig>, telemetry: T) -> Self {
+    pub fn new(data_source: F, cfg: Arc<RollupConfig>, telemetry: Arc<T>) -> Self {
         Self {
             block: Some(BlockInfo::default()),
             data_source,
@@ -46,19 +63,6 @@ impl<F: ChainProvider, T: TelemetryProvider> L1Traversal<F, T> {
     /// Retrieves a reference to the inner data source of the [L1Traversal] stage.
     pub fn data_source(&self) -> &F {
         &self.data_source
-    }
-
-    /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
-    /// This function can only be called once while the stage is in progress, and will return
-    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
-    /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
-    pub fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
-        if !self.done {
-            self.done = true;
-            Ok(self.block)
-        } else {
-            Err(StageError::Eof)
-        }
     }
 
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
@@ -114,11 +118,13 @@ impl<F: ChainProvider, T: TelemetryProvider> OriginProvider for L1Traversal<F, T
 }
 
 #[async_trait]
-impl<F: ChainProvider + Send, T: TelemetryProvider + Send> ResettableStage for L1Traversal<F, T> {
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
+impl<F: ChainProvider + Send, T: TelemetryProvider + Send + Sync> ResettableStage
+    for L1Traversal<F, T>
+{
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.block = Some(base);
         self.done = false;
-        self.system_config = cfg;
+        self.system_config = *cfg;
         Err(StageError::Eof)
     }
 }
@@ -129,10 +135,10 @@ pub(crate) mod tests {
     use crate::{
         params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
         traits::test_utils::{TestChainProvider, TestTelemetry},
-        types::Receipt,
     };
     use alloc::vec;
-    use alloy_primitives::{address, b256, hex, Address, Bytes, Log, LogData, B256};
+    use alloy_consensus::Receipt;
+    use alloy_primitives::{address, b256, hex, Bytes, Log, LogData, B256};
 
     const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");
 
@@ -153,7 +159,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn new_receipts() -> alloc::vec::Vec<Receipt> {
-        let mut receipt = Receipt { success: true, ..Receipt::default() };
+        let mut receipt = Receipt { status: true, ..Receipt::default() };
         let bad = Log::new(
             Address::from([2; 20]),
             vec![CONFIG_UPDATE_TOPIC, B256::default()],
@@ -169,7 +175,7 @@ pub(crate) mod tests {
         receipts: alloc::vec::Vec<Receipt>,
     ) -> L1Traversal<TestChainProvider, TestTelemetry> {
         let mut provider = TestChainProvider::default();
-        let telemetry = TestTelemetry::default();
+        let telemetry = Arc::new(TestTelemetry::default());
         let rollup_config = RollupConfig {
             l1_system_config_address: L1_SYS_CONFIG_ADDR,
             ..RollupConfig::default()

@@ -1,47 +1,75 @@
 //! This module contains the `ChannelReader` struct.
 
-use super::channel_bank::ChannelBank;
 use crate::{
-    traits::{
-        ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, TelemetryProvider,
-    },
+    stages::BatchQueueProvider,
+    traits::{LogLevel, OriginProvider, TelemetryProvider},
     types::{Batch, BlockInfo, StageError, StageResult},
 };
 
-use alloc::vec::Vec;
-use anyhow::anyhow;
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloy_primitives::Bytes;
+use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 
+/// The [ChannelReader] provider trait.
+#[async_trait]
+pub trait ChannelReaderProvider {
+    /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out
+    /// of the channel bank prior to loading data in (unlike most other stages). This is to
+    /// ensure maintain consistency around channel bank pruning which depends upon the order
+    /// of operations.
+    async fn next_data(&mut self) -> StageResult<Option<Bytes>>;
+}
+
 /// [ChannelReader] is a stateful stage that does the following:
 #[derive(Debug)]
-pub struct ChannelReader<DAP, CP, T>
+pub struct ChannelReader<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelReaderProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     /// The previous stage of the derivation pipeline.
-    prev: ChannelBank<DAP, CP, T>,
+    prev: P,
     /// Telemetry
-    telemetry: T,
+    telemetry: Arc<T>,
     /// The batch reader.
     next_batch: Option<BatchReader>,
 }
 
-impl<DAP, CP, T> ChannelReader<DAP, CP, T>
+impl<P, T> ChannelReader<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelReaderProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: ChannelBank<DAP, CP, T>, telemetry: T) -> Self {
+    pub fn new(prev: P, telemetry: Arc<T>) -> Self {
         Self { prev, telemetry, next_batch: None }
     }
 
-    /// Pulls out the next Batch from the available channel.
-    pub async fn next_batch(&mut self) -> StageResult<Batch> {
+    /// Creates the batch reader from available channel data.
+    async fn set_batch_reader(&mut self) -> StageResult<()> {
+        if self.next_batch.is_none() {
+            let channel = self.prev.next_data().await?.ok_or(StageError::NoChannel)?;
+            self.next_batch = Some(BatchReader::from(&channel[..]));
+        }
+        Ok(())
+    }
+
+    /// Forces the read to continue with the next channel, resetting any
+    /// decoding / decompression state to a fresh start.
+    pub fn next_channel(&mut self) {
+        self.next_batch = None;
+    }
+}
+
+#[async_trait]
+impl<P, T> BatchQueueProvider for ChannelReader<P, T>
+where
+    P: ChannelReaderProvider + OriginProvider + Send + Debug,
+    T: TelemetryProvider + Send + Sync + Debug,
+{
+    async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
             self.telemetry
                 .write(alloc::format!("Failed to set batch reader: {:?}", e), LogLevel::Error);
@@ -62,27 +90,11 @@ where
             }
         }
     }
-
-    /// Creates the batch reader from available channel data.
-    async fn set_batch_reader(&mut self) -> StageResult<()> {
-        if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(anyhow!("no channel"))?;
-            self.next_batch = Some(BatchReader::from(&channel[..]));
-        }
-        Ok(())
-    }
-
-    /// Forces the read to continue with the next channel, resetting any
-    /// decoding / decompression state to a fresh start.
-    pub fn next_channel(&mut self) {
-        self.next_batch = None;
-    }
 }
 
-impl<DAP, CP, T> OriginProvider for ChannelReader<DAP, CP, T>
+impl<P, T> OriginProvider for ChannelReader<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelReaderProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -138,11 +150,58 @@ impl From<Vec<u8>> for BatchReader {
 
 #[cfg(test)]
 mod test {
-    use crate::{stages::channel_reader::BatchReader, types::BatchType};
+    use super::*;
+    use crate::{
+        stages::test_utils::MockChannelReaderProvider, traits::test_utils::TestTelemetry,
+        types::BatchType,
+    };
     use alloc::vec;
     use miniz_oxide::deflate::compress_to_vec_zlib;
 
-    // TODO(clabby): More tests here for multiple batches, integration w/ channel bank, etc.
+    fn new_compressed_batch_data() -> Bytes {
+        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
+        let mut typed_data = vec![BatchType::Span as u8];
+        typed_data.extend_from_slice(raw_data.as_slice());
+        compress_to_vec_zlib(typed_data.as_slice(), 5).into()
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_batch_reader_set_fails() {
+        let mock = MockChannelReaderProvider::new(vec![Err(StageError::Eof)]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        assert_eq!(reader.next_batch().await, Err(StageError::Eof));
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_batch_reader_no_data() {
+        let mock = MockChannelReaderProvider::new(vec![Ok(None)]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        assert_eq!(reader.next_batch().await, Err(StageError::NoChannel));
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_not_enough_data() {
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(Bytes::default()))]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        assert_eq!(reader.next_batch().await, Err(StageError::NotEnoughData));
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_succeeds() {
+        let raw = new_compressed_batch_data();
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(raw))]);
+        let telemetry = Arc::new(TestTelemetry::new());
+        let mut reader = ChannelReader::new(mock, telemetry);
+        let res = reader.next_batch().await.unwrap();
+        matches!(res, Batch::Span(_));
+        assert!(reader.next_batch.is_some());
+    }
 
     #[test]
     fn test_batch_reader() {

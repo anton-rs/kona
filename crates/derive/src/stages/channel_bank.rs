@@ -1,12 +1,9 @@
 //! This module contains the `ChannelBank` struct.
 
-use super::frame_queue::FrameQueue;
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
-    traits::{
-        ChainProvider, DataAvailabilityProvider, LogLevel, OriginProvider, ResettableStage,
-        TelemetryProvider,
-    },
+    stages::ChannelReaderProvider,
+    traits::{LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -15,6 +12,13 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
+
+/// Provides frames for the [ChannelBank] stage.
+#[async_trait]
+pub trait ChannelBankProvider {
+    /// Retrieves the next [Frame] from the [FrameQueue] stage.
+    async fn next_frame(&mut self) -> StageResult<Frame>;
+}
 
 /// [ChannelBank] is a stateful stage that does the following:
 /// 1. Unmarshalls frames from L1 transaction data
@@ -28,10 +32,9 @@ use hashbrown::HashMap;
 /// to `IngestData`. This means that we can do an ingest and then do a read while becoming too
 /// large. [ChannelBank] buffers channel frames, and emits full channel data
 #[derive(Debug)]
-pub struct ChannelBank<DAP, CP, T>
+pub struct ChannelBank<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelBankProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     /// The rollup configuration.
@@ -43,17 +46,16 @@ where
     /// Channels in FIFO order.
     channel_queue: VecDeque<ChannelID>,
     /// The previous stage of the derivation pipeline.
-    prev: FrameQueue<DAP, CP, T>,
+    prev: P,
 }
 
-impl<DAP, CP, T> ChannelBank<DAP, CP, T>
+impl<P, T> ChannelBank<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelBankProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: FrameQueue<DAP, CP, T>, telemetry: Arc<T>) -> Self {
+    pub fn new(cfg: Arc<RollupConfig>, prev: P, telemetry: Arc<T>) -> Self {
         Self { cfg, telemetry, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
@@ -156,27 +158,6 @@ where
         }
     }
 
-    /// Pulls the next piece of data from the channel bank. Note that it attempts to pull data out
-    /// of the channel bank prior to loading data in (unlike most other stages). This is to
-    /// ensure maintain consistency around channel bank pruning which depends upon the order
-    /// of operations.
-    pub async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
-        match self.read() {
-            Err(StageError::Eof) => {
-                // continue - we will attempt to load data into the channel bank
-            }
-            Err(e) => {
-                return Err(anyhow!("Error fetching next data from channel bank: {:?}", e).into());
-            }
-            data => return data,
-        };
-
-        // Load the data into the channel bank
-        let frame = self.prev.next_frame().await?;
-        self.ingest_frame(frame)?;
-        Err(StageError::NotEnoughData)
-    }
-
     /// Attempts to read the channel at the specified index. If the channel is not ready or timed
     /// out, it will return an error.
     /// If the channel read was successful, it will remove the channel from the channel queue.
@@ -198,10 +179,33 @@ where
     }
 }
 
-impl<DAP, CP, T> OriginProvider for ChannelBank<DAP, CP, T>
+#[async_trait]
+impl<P, T> ChannelReaderProvider for ChannelBank<P, T>
 where
-    DAP: DataAvailabilityProvider + Debug,
-    CP: ChainProvider + Debug,
+    P: ChannelBankProvider + OriginProvider + Send + Debug,
+    T: TelemetryProvider + Send + Sync + Debug,
+{
+    async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
+        match self.read() {
+            Err(StageError::Eof) => {
+                // continue - we will attempt to load data into the channel bank
+            }
+            Err(e) => {
+                return Err(anyhow!("Error fetching next data from channel bank: {:?}", e).into());
+            }
+            data => return data,
+        };
+
+        // Load the data into the channel bank
+        let frame = self.prev.next_frame().await?;
+        self.ingest_frame(frame)?;
+        Err(StageError::NotEnoughData)
+    }
+}
+
+impl<P, T> OriginProvider for ChannelBank<P, T>
+where
+    P: ChannelBankProvider + OriginProvider + Debug,
     T: TelemetryProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -210,13 +214,12 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP, T> ResettableStage for ChannelBank<DAP, CP, T>
+impl<P, T> ResettableStage for ChannelBank<P, T>
 where
-    DAP: DataAvailabilityProvider + Send + Debug,
-    CP: ChainProvider + Send + Debug,
+    P: ChannelBankProvider + OriginProvider + Send + Debug,
     T: TelemetryProvider + Send + Sync + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         Err(StageError::Eof)
@@ -227,26 +230,18 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::{
-            frame_queue::tests::new_test_frames, l1_retrieval::L1Retrieval, l1_traversal::tests::*,
-        },
-        traits::test_utils::{TestDAP, TestTelemetry},
+        stages::{frame_queue::tests::new_test_frames, test_utils::MockChannelBankProvider},
+        traits::test_utils::TestTelemetry,
     };
     use alloc::vec;
 
     #[test]
     fn test_ingest_empty_origin() {
-        let mut traversal = new_test_traversal(vec![], vec![]);
-        traversal.block = None;
-        let dap = TestDAP::default();
-        let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-        let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
+        let mut mock = MockChannelBankProvider::new(vec![]);
+        mock.block_info = None;
         let telemetry = Arc::new(TestTelemetry::new());
-        let mut channel_bank = ChannelBank::new(
-            Arc::new(RollupConfig::default()),
-            frame_queue,
-            Arc::clone(&telemetry),
-        );
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
         assert_eq!(err, StageError::MissingOrigin);
@@ -254,13 +249,10 @@ mod tests {
 
     #[test]
     fn test_ingest_invalid_frame() {
-        let traversal = new_test_traversal(vec![], vec![]);
-        let dap = TestDAP::default();
-        let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-        let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
+        let mock = MockChannelBankProvider::new(vec![]);
         let telem = Arc::new(TestTelemetry::new());
         let mut channel_bank =
-            ChannelBank::new(Arc::new(RollupConfig::default()), frame_queue, Arc::clone(&telem));
+            ChannelBank::new(Arc::new(RollupConfig::default()), mock, Arc::clone(&telem));
         let frame = Frame { id: [0xFF; 16], ..Default::default() };
         assert_eq!(channel_bank.size(), 0);
         assert!(channel_bank.channels.is_empty());
@@ -277,18 +269,13 @@ mod tests {
 
     #[test]
     fn test_ingest_and_prune_channel_bank() {
-        let traversal = new_populated_test_traversal();
-        let results = vec![Ok(Bytes::from(vec![0x00]))];
-        let dap = TestDAP { results };
-        let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-        let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
+        use alloc::vec::Vec;
+        let mut frames: Vec<Frame> = new_test_frames(100000);
+        // let data = frames.iter().map(|f| Ok(f)).collect::<Vec<StageResult<Frame>>>();
+        let mock = MockChannelBankProvider::new(vec![]);
         let telemetry = Arc::new(TestTelemetry::new());
-        let mut channel_bank = ChannelBank::new(
-            Arc::new(RollupConfig::default()),
-            frame_queue,
-            Arc::clone(&telemetry),
-        );
-        let mut frames = new_test_frames(100000);
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
         // Ingest frames until the channel bank is full and it stops increasing in size
         let mut current_size = 0;
         let next_frame = frames.pop().unwrap();
@@ -310,17 +297,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_empty_channel_bank() {
-        let traversal = new_populated_test_traversal();
-        let results = vec![Ok(Bytes::from(vec![0x00]))];
-        let dap = TestDAP { results };
-        let retrieval = L1Retrieval::new(traversal, dap, TestTelemetry::new());
-        let frame_queue = FrameQueue::new(retrieval, TestTelemetry::new());
+        let frames = new_test_frames(1);
+        let mock = MockChannelBankProvider::new(vec![Ok(frames[0].clone())]);
         let telemetry = Arc::new(TestTelemetry::new());
-        let mut channel_bank = ChannelBank::new(
-            Arc::new(RollupConfig::default()),
-            frame_queue,
-            Arc::clone(&telemetry),
-        );
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
         let err = channel_bank.read().unwrap_err();
         assert_eq!(err, StageError::Eof);
         let err = channel_bank.next_data().await.unwrap_err();

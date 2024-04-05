@@ -19,18 +19,10 @@ pub use rollup_config::RollupConfig;
 pub mod batch;
 pub use batch::{
     Batch, BatchType, BatchValidity, BatchWithInclusionBlock, RawSpanBatch, SingleBatch, SpanBatch,
-    SpanBatchBits, SpanBatchBuilder, SpanBatchEip1559TransactionData,
-    SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
-    SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchTransactionData,
-    SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
-};
-
-mod alloy;
-pub use alloy::{
-    calc_blob_gasprice, calc_excess_blob_gas, calc_next_block_base_fee, eip1559, eip2718, eip2930,
-    eip4788, eip4844, Header, NetworkReceipt, Receipt, ReceiptWithBloom, Sealable, Sealed, Signed,
-    Transaction, TxDeposit, TxEip1559, TxEip2930, TxEip4844, TxEnvelope, TxKind, TxLegacy, TxType,
-    EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH,
+    SpanBatchBits, SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
+    SpanBatchElement, SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload,
+    SpanBatchPrefix, SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError,
+    MAX_SPAN_BATCH_SIZE,
 };
 
 mod payload;
@@ -40,6 +32,9 @@ pub use payload::{
 
 mod block;
 pub use block::{BlockID, BlockInfo, BlockKind, L2BlockInfo};
+
+mod blob;
+pub use blob::{Blob, BlobData, IndexedBlobHash};
 
 mod genesis;
 pub use genesis::Genesis;

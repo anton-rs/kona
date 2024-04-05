@@ -1,17 +1,29 @@
 //! Contains the [L1Retrieval] stage of the derivation pipeline.
 
-use super::L1Traversal;
 use crate::{
+    stages::FrameQueueProvider,
     traits::{
-        ChainProvider, DataAvailabilityProvider, DataIter, LogLevel, OriginProvider,
-        ResettableStage, TelemetryProvider,
+        AsyncIterator, DataAvailabilityProvider, OriginProvider, ResettableStage, TelemetryProvider,
     },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
-use alloc::boxed::Box;
-use alloy_primitives::Bytes;
+use alloc::{boxed::Box, sync::Arc};
+use alloy_primitives::Address;
 use anyhow::anyhow;
 use async_trait::async_trait;
+
+/// Provides L1 blocks for the [L1Retrieval] stage.
+/// This is the previous stage in the pipeline.
+pub trait L1RetrievalProvider {
+    /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
+    /// This function can only be called once while the stage is in progress, and will return
+    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
+    /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
+    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
+
+    /// Returns the batcher [Address] from the [crate::types::SystemConfig].
+    fn batcher_addr(&self) -> Address;
+}
 
 /// The [L1Retrieval] stage of the derivation pipeline.
 /// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
@@ -19,66 +31,69 @@ use async_trait::async_trait;
 /// [DataAvailabilityProvider]. This data is returned as a generic
 /// [DataIter] that can be iterated over.
 #[derive(Debug)]
-pub struct L1Retrieval<DAP, CP, T>
+pub struct L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    P: L1RetrievalProvider + OriginProvider,
     T: TelemetryProvider,
 {
     /// The previous stage in the pipeline.
-    pub prev: L1Traversal<CP, T>,
+    pub prev: P,
     /// Telemetry provider for the L1 retrieval stage.
-    pub telemetry: T,
+    pub telemetry: Arc<T>,
     /// The data availability provider to use for the L1 retrieval stage.
     pub provider: DAP,
     /// The current data iterator.
     pub(crate) data: Option<DAP::DataIter>,
 }
 
-impl<DAP, CP, T> L1Retrieval<DAP, CP, T>
+impl<DAP, P, T> L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    P: L1RetrievalProvider + OriginProvider,
     T: TelemetryProvider,
 {
     /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
     /// stage and given [DataAvailabilityProvider].
-    pub fn new(prev: L1Traversal<CP, T>, provider: DAP, telemetry: T) -> Self {
+    pub fn new(prev: P, provider: DAP, telemetry: Arc<T>) -> Self {
         Self { prev, telemetry, provider, data: None }
     }
+}
 
-    /// Retrieves the next data item from the [L1Retrieval] stage.
-    /// Returns an error if there is no data.
-    pub async fn next_data(&mut self) -> StageResult<Bytes> {
+#[async_trait]
+impl<DAP, P, T> FrameQueueProvider for L1Retrieval<DAP, P, T>
+where
+    DAP: DataAvailabilityProvider + Send,
+    P: L1RetrievalProvider + OriginProvider + Send,
+    T: TelemetryProvider + Send + Sync,
+{
+    type Item = DAP::Item;
+
+    async fn next_data(&mut self) -> StageResult<Self::Item> {
         if self.data.is_none() {
-            self.telemetry.write(
-                alloc::format!("Retrieving data for block: {:?}", self.prev.block),
-                LogLevel::Debug,
-            );
             let next = self
                 .prev
                 .next_l1_block()?
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
-            self.data =
-                Some(self.provider.open_data(&next, self.prev.system_config.batcher_addr).await?);
+            self.data = Some(self.provider.open_data(&next, self.prev.batcher_addr()).await?);
         }
 
-        let data = self.data.as_mut().expect("Cannot be None").next();
+        let data = self.data.as_mut().expect("Cannot be None").next().await.ok_or(StageError::Eof);
         match data {
-            Ok(data) => Ok(data),
-            Err(StageError::Eof) => {
+            Ok(Ok(data)) => Ok(data),
+            Err(StageError::Eof) | Ok(Err(StageError::Eof)) => {
                 self.data = None;
                 Err(StageError::Eof)
             }
-            Err(e) => Err(e),
+            Ok(Err(e)) | Err(e) => Err(e),
         }
     }
 }
 
-impl<DAP, CP, T> OriginProvider for L1Retrieval<DAP, CP, T>
+impl<DAP, P, T> OriginProvider for L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider,
-    CP: ChainProvider,
+    P: L1RetrievalProvider + OriginProvider,
     T: TelemetryProvider,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -87,13 +102,13 @@ where
 }
 
 #[async_trait]
-impl<DAP, CP, T> ResettableStage for L1Retrieval<DAP, CP, T>
+impl<DAP, P, T> ResettableStage for L1Retrieval<DAP, P, T>
 where
     DAP: DataAvailabilityProvider + Send,
-    CP: ChainProvider + Send,
-    T: TelemetryProvider + Send,
+    P: L1RetrievalProvider + OriginProvider + Send,
+    T: TelemetryProvider + Send + Sync,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.data = Some(self.provider.open_data(&base, cfg.batcher_addr).await?);
         Ok(())
     }
@@ -107,14 +122,14 @@ mod tests {
         traits::test_utils::{TestDAP, TestIter, TestTelemetry},
     };
     use alloc::vec;
-    use alloy_primitives::Address;
+    use alloy_primitives::Bytes;
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
         let telemetry = TestTelemetry::new();
-        let retrieval = L1Retrieval::new(traversal, dap, telemetry);
+        let retrieval = L1Retrieval::new(traversal, dap, Arc::new(telemetry));
         let expected = BlockInfo::default();
         assert_eq!(retrieval.origin(), Some(&expected));
     }
@@ -125,7 +140,7 @@ mod tests {
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
         let dap = TestDAP { results };
         let telemetry = TestTelemetry::new();
-        let mut retrieval = L1Retrieval::new(traversal, dap, telemetry);
+        let mut retrieval = L1Retrieval::new(traversal, dap, Arc::new(telemetry));
         assert_eq!(retrieval.data, None);
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
@@ -149,7 +164,7 @@ mod tests {
         // Create a new traversal with no blocks or receipts.
         // This would bubble up an error if the prev stage
         // (traversal) is called in the retrieval stage.
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let traversal = new_test_traversal(vec![], vec![]);
         let dap = TestDAP { results: vec![] };
         let mut retrieval =
@@ -167,7 +182,7 @@ mod tests {
             open_data_calls: vec![(BlockInfo::default(), Address::default())],
             results: vec![Err(StageError::Eof)],
         };
-        let telemetry = TestTelemetry::new();
+        let telemetry = Arc::new(TestTelemetry::new());
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![] };
         let mut retrieval =

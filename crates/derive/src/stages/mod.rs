@@ -17,22 +17,22 @@ mod l1_traversal;
 pub use l1_traversal::L1Traversal;
 
 mod l1_retrieval;
-pub use l1_retrieval::L1Retrieval;
+pub use l1_retrieval::{L1Retrieval, L1RetrievalProvider};
 
 mod frame_queue;
-pub use frame_queue::FrameQueue;
+pub use frame_queue::{FrameQueue, FrameQueueProvider};
 
 mod channel_bank;
-pub use channel_bank::ChannelBank;
+pub use channel_bank::{ChannelBank, ChannelBankProvider};
 
 mod channel_reader;
-pub use channel_reader::ChannelReader;
+pub use channel_reader::{ChannelReader, ChannelReaderProvider};
 
 mod batch_queue;
 pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
 mod attributes_queue;
-pub use attributes_queue::AttributesQueue;
+pub use attributes_queue::{AttributesProvider, AttributesQueue};
 
 #[cfg(test)]
 pub mod test_utils;

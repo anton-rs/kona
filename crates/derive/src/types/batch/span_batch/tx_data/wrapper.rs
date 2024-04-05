@@ -4,7 +4,8 @@ use super::{
     SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
     SpanBatchLegacyTransactionData,
 };
-use crate::types::{SpanBatchError, SpanDecodingError, Transaction, TxEnvelope, TxType};
+use crate::types::{SpanBatchError, SpanDecodingError};
+use alloy_consensus::{Transaction, TxEnvelope, TxType};
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, Decodable, Encodable};
 
@@ -54,6 +55,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
     fn try_from(tx_envelope: &TxEnvelope) -> Result<Self, Self::Error> {
         match tx_envelope {
             TxEnvelope::Legacy(s) => {
+                let s = s.tx();
                 Ok(SpanBatchTransactionData::Legacy(SpanBatchLegacyTransactionData {
                     value: s.value,
                     gas_price: U256::from(s.gas_price),
@@ -61,6 +63,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
                 }))
             }
             TxEnvelope::Eip2930(s) => {
+                let s = s.tx();
                 Ok(SpanBatchTransactionData::Eip2930(SpanBatchEip2930TransactionData {
                     value: s.value,
                     gas_price: U256::from(s.gas_price),
@@ -69,6 +72,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
                 }))
             }
             TxEnvelope::Eip1559(s) => {
+                let s = s.tx();
                 Ok(SpanBatchTransactionData::Eip1559(SpanBatchEip1559TransactionData {
                     value: s.value,
                     max_fee_per_gas: U256::from(s.max_fee_per_gas),
