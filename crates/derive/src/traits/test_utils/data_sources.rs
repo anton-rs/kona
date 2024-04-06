@@ -1,7 +1,7 @@
 //! Data Sources Test Utilities
 
 use crate::{
-    traits::{ChainProvider, SafeBlockFetcher},
+    traits::{ChainProvider, L2SafeBlockFetcher},
     types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -27,7 +27,7 @@ impl MockBlockFetcher {
 }
 
 #[async_trait]
-impl SafeBlockFetcher for MockBlockFetcher {
+impl L2SafeBlockFetcher for MockBlockFetcher {
     async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo> {
         self.blocks
             .iter()

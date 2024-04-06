@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{OriginProvider, ResettableStage, SafeBlockFetcher},
+    traits::{L2SafeBlockFetcher, LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,

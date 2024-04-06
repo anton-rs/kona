@@ -4,10 +4,11 @@
 //! for signed types that can supply the original message hash for public key recovery. By default,
 //! it is implemented for [alloy_consensus::TxEnvelope] if the `k256` feature is enabled.
 
-use alloy_consensus::TxEnvelope;
 use alloy_primitives::Address;
 use anyhow::Result;
 
+#[cfg(feature = "k256")]
+use alloy_consensus::TxEnvelope;
 #[cfg(feature = "k256")]
 use alloy_primitives::{Signature, B256};
 #[cfg(feature = "k256")]

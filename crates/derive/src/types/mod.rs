@@ -31,7 +31,7 @@ pub use payload::{
 };
 
 mod block;
-pub use block::{BlockID, BlockInfo, BlockKind, L2BlockInfo};
+pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, Withdrawal};
 
 mod blob;
 pub use blob::{Blob, BlobData, IndexedBlobHash};

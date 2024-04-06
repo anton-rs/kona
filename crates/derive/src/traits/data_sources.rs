@@ -10,6 +10,36 @@ use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
 
+/// Describes the functionality of a data source that can provide information from the blockchain.
+#[async_trait]
+pub trait ChainProvider {
+    /// Returns the block at the given number, or an error if the block does not exist in the data
+    /// source.
+    async fn block_info_by_number(&self, number: u64) -> Result<BlockInfo>;
+
+    /// Returns all receipts in the block with the given hash, or an error if the block does not
+    /// exist in the data source.
+    async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>>;
+
+    /// Returns the [BlockInfo] and list of [TxEnvelope]s from the given block hash.
+    async fn block_info_and_transactions_by_hash(
+        &self,
+        hash: B256,
+    ) -> Result<(BlockInfo, Vec<TxEnvelope>)>;
+}
+
+/// Describes the functionality of a data source that fetches safe blocks.
+#[async_trait]
+pub trait L2SafeBlockFetcher {
+    /// Returns the L2 block info given a block number.
+    /// Errors if the block does not exist.
+    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo>;
+
+    /// Returns an execution payload for a given number.
+    /// Errors if the execution payload does not exist.
+    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope>;
+}
+
 /// The BlobProvider trait specifies the functionality of a data source that can provide blobs.
 #[async_trait]
 pub trait BlobProvider {
@@ -30,54 +60,6 @@ pub(crate) trait PlasmaProvider {
     async fn get_input(&self, commitment: &[u8], block_number: u64) -> Result<Bytes>;
 }
 
-/// Provides a method for accessing the pipeline origin.
-pub trait OriginProvider {
-    /// Returns the optional L1 [BlockInfo] origin.
-    fn origin(&self) -> Option<&BlockInfo>;
-}
-
-/// Describes the functionality of a data source that can provide information from the blockchain.
-#[async_trait]
-pub trait ChainProvider {
-    /// Returns the block at the given number, or an error if the block does not exist in the data
-    /// source.
-    async fn block_info_by_number(&self, number: u64) -> Result<BlockInfo>;
-
-    /// Returns all receipts in the block with the given hash, or an error if the block does not
-    /// exist in the data source.
-    async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>>;
-
-    /// Returns the [BlockInfo] and list of [TxEnvelope]s from the given block hash.
-    async fn block_info_and_transactions_by_hash(
-        &self,
-        hash: B256,
-    ) -> Result<(BlockInfo, Vec<TxEnvelope>)>;
-}
-
-/// A simple asynchronous iterator trait.
-/// This should be replaced with the `async-iterator` crate
-#[async_trait]
-pub trait AsyncIterator {
-    /// The item type of the iterator.
-    type Item: Send + Sync + Debug + Into<Bytes>;
-
-    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is
-    /// exhausted.
-    async fn next(&mut self) -> Option<StageResult<Self::Item>>;
-}
-
-/// Describes the functionality of a data source that fetches safe blocks.
-#[async_trait]
-pub trait SafeBlockFetcher {
-    /// Returns the L2 block info given a block number.
-    /// Errors if the block does not exist.
-    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo>;
-
-    /// Returns an execution payload for a given number.
-    /// Errors if the execution payload does not exist.
-    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope>;
-}
-
 /// Describes the functionality of a data source that can provide data availability information.
 #[async_trait]
 pub trait DataAvailabilityProvider {
@@ -93,4 +75,16 @@ pub trait DataAvailabilityProvider {
         block_ref: &BlockInfo,
         batcher_address: Address,
     ) -> Result<Self::DataIter>;
+}
+
+/// A simple asynchronous iterator trait.
+/// This should be replaced with the `async-iterator` crate
+#[async_trait]
+pub trait AsyncIterator {
+    /// The item type of the iterator.
+    type Item: Send + Sync + Debug + Into<Bytes>;
+
+    /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is
+    /// exhausted.
+    async fn next(&mut self) -> Option<StageResult<Self::Item>>;
 }

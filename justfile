@@ -30,7 +30,7 @@ lint-cannon:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std -- -D warnings 
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std --exclude kona-derive -- -D warnings 
 
 # Lint the workspace (risc-v arch)
 lint-asterisc:
@@ -39,7 +39,7 @@ lint-asterisc:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy --workspace --all --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings 
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy --workspace --all --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std --exclude kona-derive -- -D warnings
 
 # Lint the Rust documentation
 lint-docs:

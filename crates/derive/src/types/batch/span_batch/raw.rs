@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 
 use crate::{
-    traits::SafeBlockFetcher,
+    traits::L2SafeBlockFetcher,
     types::{
         BatchType, BatchValidity, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig,
         SingleBatch, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix, SpanDecodingError,
@@ -33,7 +33,7 @@ impl RawSpanBatch {
     }
 
     /// Checks if the span batch is valid.
-    pub fn check_batch<BF: SafeBlockFetcher>(
+    pub fn check_batch<BF: L2SafeBlockFetcher>(
         &self,
         _cfg: &RollupConfig,
         _l1_blocks: &[BlockInfo],

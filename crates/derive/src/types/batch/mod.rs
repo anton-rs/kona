@@ -3,7 +3,7 @@
 
 use super::DecodeError;
 use crate::{
-    traits::SafeBlockFetcher,
+    traits::L2SafeBlockFetcher,
     types::{BlockInfo, L2BlockInfo, RollupConfig},
 };
 use alloc::vec::Vec;
@@ -41,7 +41,7 @@ impl BatchWithInclusionBlock {
     /// One or more consecutive l1_blocks should be provided.
     /// In case of only a single L1 block, the decision whether a batch is valid may have to stay
     /// undecided.
-    pub fn check_batch<BF: SafeBlockFetcher>(
+    pub fn check_batch<BF: L2SafeBlockFetcher>(
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
