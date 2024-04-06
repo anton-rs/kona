@@ -15,15 +15,15 @@ use async_trait::async_trait;
 pub trait ChainProvider {
     /// Returns the block at the given number, or an error if the block does not exist in the data
     /// source.
-    async fn block_info_by_number(&self, number: u64) -> Result<BlockInfo>;
+    async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo>;
 
     /// Returns all receipts in the block with the given hash, or an error if the block does not
     /// exist in the data source.
-    async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>>;
+    async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>>;
 
     /// Returns the [BlockInfo] and list of [TxEnvelope]s from the given block hash.
     async fn block_info_and_transactions_by_hash(
-        &self,
+        &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)>;
 }
@@ -33,11 +33,11 @@ pub trait ChainProvider {
 pub trait L2SafeBlockFetcher {
     /// Returns the L2 block info given a block number.
     /// Errors if the block does not exist.
-    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo>;
+    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo>;
 
     /// Returns an execution payload for a given number.
     /// Errors if the execution payload does not exist.
-    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope>;
+    async fn payload_by_number(&mut self, number: u64) -> Result<ExecutionPayloadEnvelope>;
 }
 
 /// The BlobProvider trait specifies the functionality of a data source that can provide blobs.

@@ -130,15 +130,9 @@ impl BatchReader {
     }
 }
 
-impl From<&[u8]> for BatchReader {
-    fn from(data: &[u8]) -> Self {
-        Self { data: Some(data.to_vec()), decompressed: Vec::new(), cursor: 0 }
-    }
-}
-
-impl From<Vec<u8>> for BatchReader {
-    fn from(data: Vec<u8>) -> Self {
-        Self { data: Some(data), decompressed: Vec::new(), cursor: 0 }
+impl<T: Into<Vec<u8>>> From<T> for BatchReader {
+    fn from(data: T) -> Self {
+        Self { data: Some(data.into()), decompressed: Vec::new(), cursor: 0 }
     }
 }
 
