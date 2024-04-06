@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use alloy_consensus::{Header, TxEnvelope};
-use alloy_primitives::{BlockHash, BlockNumber, B256};
+use alloy_primitives::{Address, BlockHash, BlockNumber, B256};
 
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 #[cfg(feature = "serde")]
@@ -117,6 +117,7 @@ pub struct Block {
 /// Withdrawal represents a validator withdrawal from the consensus layer.
 ///
 /// Taken from [reth-primitives](https://github.com/paradigmxyz/reth)
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Default, Hash, RlpEncodable, RlpDecodable)]
 pub struct Withdrawal {
     /// Monotonically increasing identifier issued by consensus layer.
@@ -124,7 +125,7 @@ pub struct Withdrawal {
     /// Index of validator associated with withdrawal.
     pub validator_index: u64,
     /// Target address for withdrawn ether.
-    pub address: alloy_primitives::Address,
+    pub address: Address,
     /// Value of the withdrawal in gwei.
     pub amount: u64,
 }

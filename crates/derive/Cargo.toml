@@ -39,7 +39,7 @@ spin = { version = "0.9.8", features = ["mutex"] } # Spin is used for testing sy
 tracing-subscriber = "0.3.18"
 
 [features]
-default = ["serde", "k256"]
+default = ["serde", "k256", "alloy-providers"]
 serde = ["dep:serde", "alloy-primitives/serde"]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256"]
 alloy-providers = [

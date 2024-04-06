@@ -2,10 +2,10 @@
 //! provider on the backend.
 
 use crate::{
-    traits::ChainProvider,
-    types::{Block, BlockInfo},
+    traits::{ChainProvider, L2SafeBlockFetcher},
+    types::{Block, BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo, RollupConfig},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{Bytes, B256, U64};
 use alloy_provider::Provider;
@@ -34,8 +34,6 @@ impl<T: Provider<Http<reqwest::Client>>> AlloyChainProvider<T> {
 
 #[async_trait]
 impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T> {
-    /// Returns the block at the given number, or an error if the block does not exist in the data
-    /// source.
     async fn block_info_by_number(&self, number: u64) -> Result<BlockInfo> {
         let raw_header: Bytes = self
             .inner
@@ -53,8 +51,6 @@ impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T>
         })
     }
 
-    /// Returns all receipts in the block with the given hash, or an error if the block does not
-    /// exist in the data source.
     async fn receipts_by_hash(&self, hash: B256) -> Result<Vec<Receipt>> {
         let raw_receipts: Vec<Bytes> = self
             .inner
@@ -78,7 +74,6 @@ impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T>
             .collect::<Result<Vec<_>>>()
     }
 
-    /// Returns the [BlockInfo] and list of [TxEnvelope]s from the given block hash.
     async fn block_info_and_transactions_by_hash(
         &self,
         hash: B256,
@@ -98,5 +93,43 @@ impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T>
             timestamp: block.header.timestamp,
         };
         Ok((block_info, block.body))
+    }
+}
+
+/// The [AlloyL2SafeHeadProvider] is a concrete implementation of the [L2SafeBlockFetcher] trait,
+/// providing data over Ethereum JSON-RPC using an alloy provider as the backend.
+///
+/// **Note**:
+/// This provider fetches data using the `debug_getRawBlock` method. The RPC must support this
+/// namespace.
+#[derive(Debug)]
+pub struct AlloyL2SafeHeadProvider<T: Provider<Http<reqwest::Client>>> {
+    inner: T,
+    rollup_config: Arc<RollupConfig>,
+}
+
+impl<T: Provider<Http<reqwest::Client>>> AlloyL2SafeHeadProvider<T> {
+    /// Creates a new [AlloyL2SafeHeadProvider] with the given alloy provider and [RollupConfig].
+    pub fn new(inner: T, rollup_config: Arc<RollupConfig>) -> Self {
+        Self { inner, rollup_config }
+    }
+}
+
+#[async_trait]
+impl<T: Provider<Http<reqwest::Client>>> L2SafeBlockFetcher for AlloyL2SafeHeadProvider<T> {
+    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo> {
+        let payload = self.payload_by_number(number).await?;
+        payload.to_l2_block_ref(self.rollup_config.as_ref())
+    }
+
+    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope> {
+        let raw_block: Bytes = self
+            .inner
+            .client()
+            .request("debug_getRawBlock", [U64::from(number)])
+            .await
+            .map_err(|e| anyhow!(e))?;
+        let block = Block::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
+        Ok(block.into())
     }
 }
