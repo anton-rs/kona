@@ -10,13 +10,13 @@ mod key;
 pub use key::{PreimageKey, PreimageKeyType};
 
 mod oracle;
-pub use oracle::OracleReader;
+pub use oracle::{OracleReader, OracleServer};
 
 mod hint;
-pub use hint::HintWriter;
+pub use hint::{HintReader, HintWriter};
 
 mod pipe;
 pub use pipe::PipeHandle;
 
 mod traits;
-pub use traits::{HintWriterClient, PreimageOracleClient};
+pub use traits::{HintReaderServer, HintWriterClient, PreimageOracleClient, PreimageOracleServer};

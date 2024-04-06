@@ -2,7 +2,7 @@
 //! the preimage oracle.
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
 pub enum PreimageKeyType {
     /// Local key types are local to a given instance of a fault-proof and context dependent.
@@ -23,6 +23,21 @@ pub enum PreimageKeyType {
     Blob = 5,
 }
 
+impl TryFrom<u8> for PreimageKeyType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            1 => PreimageKeyType::Local,
+            2 => PreimageKeyType::Keccak256,
+            3 => PreimageKeyType::GlobalGeneric,
+            4 => PreimageKeyType::Sha256,
+            5 => PreimageKeyType::Blob,
+            _ => anyhow::bail!("Invalid preimage key type"),
+        })
+    }
+}
+
 /// A preimage key is a 32-byte value that identifies a preimage that may be fetched from the
 /// oracle.
 ///
@@ -31,7 +46,7 @@ pub enum PreimageKeyType {
 /// |---------|-------------|
 /// | [0, 1)  | Type byte   |
 /// | [1, 32) | Data        |
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct PreimageKey {
     data: [u8; 31],
     key_type: PreimageKeyType,
@@ -66,6 +81,15 @@ impl From<PreimageKey> for [u8; 32] {
         rendered_key[0] = key.key_type as u8;
         rendered_key[1..].copy_from_slice(&key.data);
         rendered_key
+    }
+}
+
+impl TryFrom<[u8; 32]> for PreimageKey {
+    type Error = anyhow::Error;
+
+    fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
+        let key_type = PreimageKeyType::try_from(value[0])?;
+        Ok(Self::new(value, key_type))
     }
 }
 
