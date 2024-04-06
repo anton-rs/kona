@@ -1,7 +1,7 @@
 //! Defines the [BasicKernelInterface] trait, which describes the functionality of several system
 //! calls inside of the FPVM kernel.
 
-use crate::{FileDescriptor, RegisterSize};
+use crate::FileDescriptor;
 use anyhow::Result;
 
 /// The [BasicKernelInterface] trait describes the functionality of several core system calls inside
@@ -13,12 +13,12 @@ use anyhow::Result;
 /// trait should be created that extends this trait.
 pub trait BasicKernelInterface {
     /// Write the given buffer to the given file descriptor.
-    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize>;
+    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize>;
 
     /// Read from the given file descriptor into the passed buffer.
-    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize>;
+    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize>;
 
     /// Exit the process with the given exit code. The implementation of this function
     /// should always panic after invoking the `EXIT` syscall.
-    fn exit(code: RegisterSize) -> !;
+    fn exit(code: usize) -> !;
 }
