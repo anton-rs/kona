@@ -1,6 +1,7 @@
 use crate::{PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer};
 use alloc::vec::Vec;
 use anyhow::{bail, Result};
+use tracing::debug;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
 #[derive(Debug, Clone, Copy)]
@@ -33,11 +34,17 @@ impl PreimageOracleClient for OracleReader {
     /// Get the data corresponding to the currently set key from the host. Return the data in a new
     /// heap allocated `Vec<u8>`
     fn get(&self, key: PreimageKey) -> Result<Vec<u8>> {
+        debug!(target: "oracle_client", "Requesting data from preimage oracle. Key {key}");
+
         let length = self.write_key(key)?;
         let mut data_buffer = alloc::vec![0; length];
 
+        debug!(target: "oracle_client", "Reading data from preimage oracle. Key {key}");
+
         // Grab a read lock on the preimage pipe to read the data.
         self.pipe_handle.read_exact(&mut data_buffer)?;
+
+        debug!(target: "oracle_client", "Successfully read data from preimage oracle. Key: {key}");
 
         Ok(data_buffer)
     }
@@ -45,8 +52,12 @@ impl PreimageOracleClient for OracleReader {
     /// Get the data corresponding to the currently set key from the host. Write the data into the
     /// provided buffer
     fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
+        debug!(target: "oracle_client", "Requesting data from preimage oracle. Key {key}");
+
         // Write the key to the host and read the length of the preimage.
         let length = self.write_key(key)?;
+
+        debug!(target: "oracle_client", "Reading data from preimage oracle. Key {key}");
 
         // Ensure the buffer is the correct size.
         if buf.len() != length {
@@ -54,6 +65,8 @@ impl PreimageOracleClient for OracleReader {
         }
 
         self.pipe_handle.read_exact(buf)?;
+
+        debug!(target: "oracle_client", "Successfully read data from preimage oracle. Key: {key}");
 
         Ok(())
     }
@@ -82,6 +95,8 @@ impl PreimageOracleServer for OracleServer {
         self.pipe_handle.read_exact(&mut buf)?;
         let preimage_key = PreimageKey::try_from(buf)?;
 
+        debug!(target: "oracle_server", "Fetching preimage for key {preimage_key}");
+
         // Fetch the preimage value from the preimage getter.
         let value = get_preimage(preimage_key)?;
 
@@ -92,6 +107,8 @@ impl PreimageOracleServer for OracleServer {
             .copied()
             .collect::<Vec<_>>();
         self.pipe_handle.write(data.as_slice())?;
+
+        debug!(target: "oracle_server", "Successfully wrote preimage data for key {preimage_key}");
 
         Ok(())
     }

@@ -1,6 +1,7 @@
 use crate::{traits::HintWriterClient, HintReaderServer, PipeHandle};
 use alloc::{string::String, vec};
 use anyhow::Result;
+use tracing::{debug, error};
 
 /// A [HintWriter] is a high-level interface to the hint pipe. It provides a way to write hints to
 /// the host.
@@ -26,12 +27,18 @@ impl HintWriterClient for HintWriter {
         hint_bytes[0..4].copy_from_slice(u32::to_be_bytes(hint.len() as u32).as_ref());
         hint_bytes[4..].copy_from_slice(hint.as_bytes());
 
+        debug!(target: "hint_writer", "Writing hint \"{hint}\"");
+
         // Write the hint to the host.
         self.pipe_handle.write(&hint_bytes)?;
+
+        debug!(target: "hint_writer", "Successfully wrote hint");
 
         // Read the hint acknowledgement from the host.
         let mut hint_ack = [0u8; 1];
         self.pipe_handle.read_exact(&mut hint_ack)?;
+
+        debug!(target: "hint_writer", "Received hint acknowledgement");
 
         Ok(())
     }
@@ -59,21 +66,26 @@ impl HintReaderServer for HintReader {
         let len = u32::from_be_bytes(len_buf);
 
         // Read the raw hint payload.
-        let mut payload = vec![0u8; len as usize];
-        self.pipe_handle.read_exact(payload.as_mut_slice())?;
+        let mut raw_payload = vec![0u8; len as usize];
+        self.pipe_handle.read_exact(raw_payload.as_mut_slice())?;
+        let payload = String::from_utf8(raw_payload)
+            .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?;
+
+        debug!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
 
         // Route the hint
-        if let Err(e) = route_hint(
-            String::from_utf8(payload)
-                .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?,
-        ) {
+        if let Err(e) = route_hint(payload) {
             // Write back on error to prevent blocking the client.
             self.pipe_handle.write(&[0x00])?;
-            anyhow::bail!("Failed to handle hint: {e}");
+
+            error!("Failed to route hint: {e}");
+            anyhow::bail!("Failed to rout hint: {e}");
         }
 
         // Write back an acknowledgement to the client to unblock their process.
         self.pipe_handle.write(&[0x00])?;
+
+        debug!(target: "hint_reader", "Successfully routed and acknowledged hint");
 
         Ok(())
     }

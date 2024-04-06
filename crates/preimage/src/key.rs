@@ -1,6 +1,8 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
 //! the preimage oracle.
 
+use alloy_primitives::B256;
+
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
@@ -90,6 +92,13 @@ impl TryFrom<[u8; 32]> for PreimageKey {
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
         let key_type = PreimageKeyType::try_from(value[0])?;
         Ok(Self::new(value, key_type))
+    }
+}
+
+impl core::fmt::Display for PreimageKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let raw: [u8; 32] = (*self).into();
+        write!(f, "{}", B256::from(raw))
     }
 }
 

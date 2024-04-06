@@ -13,7 +13,7 @@ exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
 anyhow = { version = "1.0.79", default-features = false }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", default-features = false }
 cfg-if = "1.0.0"
 
 [profile.dev]

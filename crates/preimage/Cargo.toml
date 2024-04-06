@@ -12,11 +12,14 @@ homepage.workspace = true
 # workspace
 anyhow.workspace = true
 cfg-if.workspace = true
+tracing.workspace = true
 
 # local
 kona-common = { path = "../common", version = "0.0.1" }
 
+# External
+alloy-primitives = { version = "0.7.0", default-features = false }
+
 [dev-dependencies]
 tokio = { version = "1.36.0", features = ["full"] }
 tempfile = "3.10.0"
-alloy-primitives = "0.7.0"
