@@ -10,8 +10,5 @@ pub use stages::ResettableStage;
 mod ecrecover;
 pub use ecrecover::SignedRecoverable;
 
-mod telemetry;
-pub use telemetry::{LogLevel, TelemetryProvider};
-
 #[cfg(test)]
 pub mod test_utils;
