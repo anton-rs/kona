@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{L2SafeBlockFetcher, LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
+    traits::{L2ChainProvider, OriginProvider, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -42,7 +42,7 @@ pub trait BatchQueueProvider {
 pub struct BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
-    BF: SafeBlockFetcher + Debug,
+    BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
     cfg: RollupConfig,
@@ -72,7 +72,7 @@ where
 impl<P, BF> BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
-    BF: SafeBlockFetcher + Debug,
+    BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
     pub fn new(cfg: RollupConfig, prev: P, fetcher: BF) -> Self {
@@ -237,7 +237,7 @@ where
 impl<P, BF> AttributesProvider for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Send + Debug,
-    BF: SafeBlockFetcher + Send + Debug,
+    BF: L2ChainProvider + Send + Debug,
 {
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
@@ -362,7 +362,7 @@ where
 impl<P, BF> OriginProvider for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
-    BF: SafeBlockFetcher + Debug,
+    BF: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
@@ -373,7 +373,7 @@ where
 impl<P, BF> ResettableStage for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Send + Debug,
-    BF: SafeBlockFetcher + Send + Debug,
+    BF: L2ChainProvider + Send + Debug,
 {
     async fn reset(&mut self, base: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.

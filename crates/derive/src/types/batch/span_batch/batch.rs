@@ -4,7 +4,7 @@
 
 use super::{SpanBatchError, SpanBatchTransactions};
 use crate::{
-    traits::L2SafeBlockFetcher,
+    traits::L2ChainProvider,
     types::{
         BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
         SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
@@ -41,7 +41,7 @@ impl SpanBatch {
     }
 
     /// Checks if the span batch is valid.
-    pub fn check_batch<BF: L2SafeBlockFetcher>(
+    pub fn check_batch<BF: L2ChainProvider>(
         &self,
         _cfg: &RollupConfig,
         _l1_blocks: &[BlockInfo],

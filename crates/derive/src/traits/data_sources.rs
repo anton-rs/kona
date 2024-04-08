@@ -30,7 +30,7 @@ pub trait ChainProvider {
 
 /// Describes the functionality of a data source that fetches safe blocks.
 #[async_trait]
-pub trait L2SafeBlockFetcher {
+pub trait L2ChainProvider {
     /// Returns the L2 block info given a block number.
     /// Errors if the block does not exist.
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo>;

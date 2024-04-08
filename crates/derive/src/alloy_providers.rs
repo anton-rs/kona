@@ -2,7 +2,7 @@
 //! provider on the backend.
 
 use crate::{
-    traits::{ChainProvider, L2SafeBlockFetcher},
+    traits::{ChainProvider, L2ChainProvider},
     types::{Block, BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo, RollupConfig},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -132,7 +132,7 @@ impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T>
     }
 }
 
-/// The [AlloyL2SafeHeadProvider] is a concrete implementation of the [L2SafeBlockFetcher] trait,
+/// The [AlloyL2SafeHeadProvider] is a concrete implementation of the [L2ChainProvider] trait,
 /// providing data over Ethereum JSON-RPC using an alloy provider as the backend.
 ///
 /// **Note**:
@@ -163,7 +163,7 @@ impl<T: Provider<Http<reqwest::Client>>> AlloyL2SafeHeadProvider<T> {
 }
 
 #[async_trait]
-impl<T: Provider<Http<reqwest::Client>>> L2SafeBlockFetcher for AlloyL2SafeHeadProvider<T> {
+impl<T: Provider<Http<reqwest::Client>>> L2ChainProvider for AlloyL2SafeHeadProvider<T> {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         if let Some(l2_block_info) = self.l2_block_info_by_number_cache.get(&number) {
             return Ok(*l2_block_info);
