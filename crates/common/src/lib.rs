@@ -15,7 +15,7 @@ mod traits;
 pub use traits::BasicKernelInterface;
 
 mod types;
-pub use types::{FileDescriptor, RegisterSize};
+pub use types::FileDescriptor;
 
 mod executor;
 pub use executor::block_on;

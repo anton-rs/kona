@@ -1,4 +1,4 @@
-use crate::{asterisc::syscall, BasicKernelInterface, FileDescriptor, RegisterSize};
+use crate::{asterisc::syscall, BasicKernelInterface, FileDescriptor};
 use anyhow::Result;
 
 /// Concrete implementation of the [`KernelIO`] trait for the `riscv64` target architecture.
@@ -13,7 +13,7 @@ pub struct AsteriscIO;
 /// only the ones necessary for the [BasicKernelInterface] trait implementation. If an extension
 /// trait for the [BasicKernelInterface] trait is created for the `asterisc` kernel, this list
 /// should be extended accordingly.
-#[repr(u32)]
+#[repr(usize)]
 pub(crate) enum SyscallNumber {
     /// Sets the Exited and ExitCode states to true and $a0 respectively.
     Exit = 93,
@@ -24,31 +24,31 @@ pub(crate) enum SyscallNumber {
 }
 
 impl BasicKernelInterface for AsteriscIO {
-    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
+    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
         unsafe {
             Ok(syscall::syscall3(
-                SyscallNumber::Write as u64,
+                SyscallNumber::Write as usize,
                 fd.into(),
-                buf.as_ptr() as u64,
-                buf.len() as u64,
-            ) as RegisterSize)
+                buf.as_ptr() as usize,
+                buf.len(),
+            ))
         }
     }
 
-    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
+    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
         unsafe {
             Ok(syscall::syscall3(
-                SyscallNumber::Read as u64,
+                SyscallNumber::Read as usize,
                 fd.into(),
-                buf.as_ptr() as u64,
-                buf.len() as u64,
-            ) as RegisterSize)
+                buf.as_ptr() as usize,
+                buf.len(),
+            ))
         }
     }
 
-    fn exit(code: RegisterSize) -> ! {
+    fn exit(code: usize) -> ! {
         unsafe {
-            syscall::syscall1(SyscallNumber::Exit as u64, code);
+            syscall::syscall1(SyscallNumber::Exit as usize, code);
             panic!()
         }
     }

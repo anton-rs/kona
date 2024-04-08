@@ -1,7 +1,7 @@
 //! This module contains the [ClientIO] struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
-use crate::{BasicKernelInterface, FileDescriptor, RegisterSize};
+use crate::{BasicKernelInterface, FileDescriptor};
 use anyhow::Result;
 use cfg_if::cfg_if;
 
@@ -38,19 +38,19 @@ pub fn print_err(s: &str) {
 
 /// Write the passed buffer to the given [FileDescriptor].
 #[inline]
-pub fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
+pub fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
     ClientIO::write(fd, buf)
 }
 
 /// Write the passed buffer to the given [FileDescriptor].
 #[inline]
-pub fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
+pub fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
     ClientIO::read(fd, buf)
 }
 
 /// Exit the process with the given exit code.
 #[inline]
-pub fn exit(code: RegisterSize) -> ! {
+pub fn exit(code: usize) -> ! {
     ClientIO::exit(code)
 }
 
@@ -58,7 +58,7 @@ pub fn exit(code: RegisterSize) -> ! {
 mod native_io {
     extern crate std;
 
-    use crate::{io::FileDescriptor, traits::BasicKernelInterface, types::RegisterSize};
+    use crate::{io::FileDescriptor, traits::BasicKernelInterface};
     use anyhow::{anyhow, Result};
     use std::{
         fs::File,
@@ -71,8 +71,8 @@ mod native_io {
     pub struct NativeIO;
 
     impl BasicKernelInterface for NativeIO {
-        fn write(fd: FileDescriptor, buf: &[u8]) -> Result<RegisterSize> {
-            let raw_fd: RegisterSize = fd.into();
+        fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
+            let raw_fd: usize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
             let n = file
                 .write(buf)
@@ -85,11 +85,11 @@ mod native_io {
             // forget the file descriptor so that the `Drop` impl doesn't close it.
             std::mem::forget(file);
 
-            n.try_into().map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
+            Ok(n)
         }
 
-        fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<RegisterSize> {
-            let raw_fd: RegisterSize = fd.into();
+        fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
+            let raw_fd: usize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
             let n =
                 file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
@@ -97,10 +97,10 @@ mod native_io {
             // forget the file descriptor so that the `Drop` impl doesn't close it.
             std::mem::forget(file);
 
-            n.try_into().map_err(|_| anyhow!("Failed to convert usize to RegisterSize"))
+            Ok(n)
         }
 
-        fn exit(code: RegisterSize) -> ! {
+        fn exit(code: usize) -> ! {
             std::process::exit(code as i32)
         }
     }
