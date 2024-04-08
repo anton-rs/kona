@@ -1,7 +1,10 @@
 //! This module contains the various Block types.
 
-use alloy_primitives::{BlockHash, BlockNumber, B256};
+use alloc::vec::Vec;
+use alloy_consensus::{Header, TxEnvelope};
+use alloy_primitives::{Address, BlockHash, BlockNumber, B256};
 
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -91,4 +94,38 @@ pub enum BlockKind {
     Latest,
     /// The latest finalized block.
     Finalized,
+}
+
+/// Ethereum full block.
+///
+/// Withdrawals can be optionally included at the end of the RLP encoded message.
+///
+/// Taken from [reth-primitives](https://github.com/paradigmxyz/reth)
+#[derive(Debug, Clone, PartialEq, Eq, Default, RlpEncodable, RlpDecodable)]
+#[rlp(trailing)]
+pub struct Block {
+    /// Block header.
+    pub header: Header,
+    /// Transactions in this block.
+    pub body: Vec<TxEnvelope>,
+    /// Ommers/uncles header.
+    pub ommers: Vec<Header>,
+    /// Block withdrawals.
+    pub withdrawals: Option<Vec<Withdrawal>>,
+}
+
+/// Withdrawal represents a validator withdrawal from the consensus layer.
+///
+/// Taken from [reth-primitives](https://github.com/paradigmxyz/reth)
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Hash, RlpEncodable, RlpDecodable)]
+pub struct Withdrawal {
+    /// Monotonically increasing identifier issued by consensus layer.
+    pub index: u64,
+    /// Index of validator associated with withdrawal.
+    pub validator_index: u64,
+    /// Target address for withdrawn ether.
+    pub address: Address,
+    /// Value of the withdrawal in gwei.
+    pub amount: u64,
 }

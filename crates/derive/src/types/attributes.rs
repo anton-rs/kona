@@ -3,7 +3,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{block::L2BlockInfo, payload::Withdrawals, RawTransaction};
+use super::{block::L2BlockInfo, RawTransaction, Withdrawal};
 use alloc::vec::Vec;
 use alloy_primitives::{Address, B256};
 
@@ -23,7 +23,7 @@ pub struct PayloadAttributes {
     /// Withdrawals to include into the block -- should be nil or empty depending on Shanghai
     /// enablement.
     #[cfg_attr(feature = "serde", serde(rename = "withdrawals"))]
-    pub withdrawals: Option<Withdrawals>,
+    pub withdrawals: Option<Vec<Withdrawal>>,
     /// Parent beacon block root optional extension in Dencun.
     #[cfg_attr(feature = "serde", serde(rename = "parentBeaconBlockRoot"))]
     pub parent_beacon_block_root: Option<B256>,

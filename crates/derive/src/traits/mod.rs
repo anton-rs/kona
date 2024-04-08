@@ -5,7 +5,7 @@ mod data_sources;
 pub use data_sources::*;
 
 mod stages;
-pub use stages::ResettableStage;
+pub use stages::{OriginProvider, ResettableStage};
 
 mod ecrecover;
 pub use ecrecover::SignedRecoverable;
