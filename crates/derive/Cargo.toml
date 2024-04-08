@@ -28,7 +28,7 @@ lru = "0.12.3"
 # `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
 
-# `alloy-providers` feature dependencies
+# `online` feature dependencies
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true} 
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true } 
 reqwest = { version = "0.12", default-features = false, optional = true }
@@ -43,7 +43,7 @@ tracing-subscriber = "0.3.18"
 default = ["serde", "k256"]
 serde = ["dep:serde", "alloy-primitives/serde"]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256"]
-alloy-providers = [
+online = [
   "dep:alloy-provider",
   "dep:alloy-transport-http",
   "dep:reqwest",

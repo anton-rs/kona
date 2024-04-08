@@ -23,7 +23,7 @@ pub mod stages;
 pub mod traits;
 pub mod types;
 
-#[cfg(feature = "alloy-providers")]
+#[cfg(feature = "online")]
 pub mod alloy_providers;
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
