@@ -11,6 +11,7 @@ homepage.workspace = true
 [dependencies]
 # Workspace
 anyhow.workspace = true
+tracing.workspace = true
 
 # External
 alloy-primitives = { version = "0.7.0", default-features = false, features = ["rlp"] }
@@ -30,6 +31,7 @@ serde = { version = "1.0.197", default-features = false, features = ["derive"], 
 tokio = { version = "1.36", features = ["full"] }
 proptest = "1.4.0"
 spin = { version = "0.9.8", features = ["mutex"] } # Spin is used for testing synchronization primitives
+tracing-subscriber = "0.3.18"
 
 [features]
 default = ["serde", "k256"]

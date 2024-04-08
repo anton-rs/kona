@@ -8,7 +8,7 @@ extern crate alloc;
 
 use alloc::sync::Arc;
 use core::fmt::Debug;
-use traits::{ChainProvider, TelemetryProvider};
+use traits::ChainProvider;
 use types::RollupConfig;
 
 mod params;
@@ -29,14 +29,9 @@ pub struct DerivationPipeline;
 
 impl DerivationPipeline {
     /// Creates a new instance of the [DerivationPipeline].
-    pub fn new<P, T>(
-        _rollup_config: Arc<RollupConfig>,
-        _chain_provider: P,
-        _telemetry: Arc<T>,
-    ) -> Self
+    pub fn new<P>(_rollup_config: Arc<RollupConfig>, _chain_provider: P) -> Self
     where
         P: ChainProvider + Clone + Debug + Send,
-        T: TelemetryProvider + Clone + Debug + Send + Sync,
     {
         // let l1_traversal = L1Traversal::new(chain_provider, rollup_config.clone(),
         // telemetry.clone()); let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source,

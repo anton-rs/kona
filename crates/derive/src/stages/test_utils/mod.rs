@@ -17,3 +17,6 @@ pub use channel_bank::MockChannelBankProvider;
 
 mod channel_reader;
 pub use channel_reader::MockChannelReaderProvider;
+
+mod tracing;
+pub use tracing::{CollectingLayer, TraceStorage};

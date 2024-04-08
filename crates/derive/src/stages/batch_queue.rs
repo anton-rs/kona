@@ -2,17 +2,17 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{LogLevel, OriginProvider, ResettableStage, SafeBlockFetcher, TelemetryProvider},
+    traits::{OriginProvider, ResettableStage, SafeBlockFetcher},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
 use alloc::{boxed::Box, vec::Vec};
-use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
+use tracing::{error, info, warn};
 
 /// Provides [Batch]es for the [BatchQueue] stage.
 #[async_trait]
@@ -39,11 +39,10 @@ pub trait BatchQueueProvider {
 /// It is internally responsible for making sure that batches with L1 inclusions block outside it's
 /// working range are not considered or pruned.
 #[derive(Debug)]
-pub struct BatchQueue<P, BF, T>
+pub struct BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
     BF: SafeBlockFetcher + Debug,
-    T: TelemetryProvider + Debug,
 {
     /// The rollup config.
     cfg: RollupConfig,
@@ -51,9 +50,6 @@ where
     prev: P,
     /// The l1 block ref
     origin: Option<BlockInfo>,
-
-    /// Telemetry
-    telemetry: T,
 
     /// A consecutive, time-centric window of L1 Blocks.
     /// Every L1 origin of unsafe L2 Blocks must be included in this list.
@@ -73,19 +69,17 @@ where
     fetcher: BF,
 }
 
-impl<P, BF, T> BatchQueue<P, BF, T>
+impl<P, BF> BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
     BF: SafeBlockFetcher + Debug,
-    T: TelemetryProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
-    pub fn new(cfg: RollupConfig, prev: P, telemetry: T, fetcher: BF) -> Self {
+    pub fn new(cfg: RollupConfig, prev: P, fetcher: BF) -> Self {
         Self {
             cfg,
             prev,
             origin: None,
-            telemetry,
             l1_blocks: Vec::new(),
             batches: Vec::new(),
             next_spans: Vec::new(),
@@ -117,10 +111,7 @@ where
 
         // Get the epoch
         let epoch = self.l1_blocks[0];
-        self.telemetry.write(
-            Bytes::from(alloc::format!("Deriving next batch for epoch: {}", epoch.number)),
-            LogLevel::Info,
-        );
+        info!("Deriving next batch for epoch: {}", epoch.number);
 
         // Note: epoch origin can now be one block ahead of the L2 Safe Head
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
@@ -151,14 +142,7 @@ where
                     remaining.push(batch.clone());
                 }
                 BatchValidity::Drop => {
-                    self.telemetry.write(
-                        Bytes::from(alloc::format!(
-                            "Dropping batch: {:?}, parent: {}",
-                            batch.batch,
-                            parent.block_info
-                        )),
-                        LogLevel::Warning,
-                    );
+                    warn!("Dropping batch: {:?}, parent: {}", batch.batch, parent.block_info);
                     continue;
                 }
                 BatchValidity::Accept => {
@@ -178,10 +162,7 @@ where
         self.batches = remaining;
 
         if let Some(nb) = next_batch {
-            self.telemetry.write(
-                Bytes::from(alloc::format!("Next batch found: {:?}", nb.batch)),
-                LogLevel::Info,
-            );
+            info!("Next batch found: {:?}", nb.batch);
             return Ok(nb.batch);
         }
 
@@ -199,13 +180,9 @@ where
             return Err(StageError::Eof);
         }
 
-        self.telemetry.write(
-            Bytes::from(alloc::format!(
-                "Generating empty batches. Epoch: {}, Parent: {}",
-                epoch.number,
-                parent.l1_origin.number
-            )),
-            LogLevel::Info,
+        info!(
+            "Generating empty batches for epoch: {} | parent: {}",
+            epoch.number, parent.l1_origin.number
         );
 
         // The next L1 block is needed to proceed towards the next epoch.
@@ -219,10 +196,7 @@ where
         // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
         // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
-            self.telemetry.write(
-                Bytes::from(alloc::format!("Generating empty batch for epoch: {}", epoch.number)),
-                LogLevel::Info,
-            );
+            info!("Generating empty batch for epoch: {}", epoch.number);
             return Ok(Batch::Single(SingleBatch {
                 parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
@@ -234,14 +208,9 @@ where
 
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
-        self.telemetry.write(
-            Bytes::from(alloc::format!(
-                "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
-                next_epoch.number,
-                next_timestamp,
-                next_epoch.timestamp
-            )),
-            LogLevel::Info,
+        info!(
+            "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
+            next_epoch.number, next_timestamp, next_epoch.timestamp
         );
         self.l1_blocks.remove(0);
         Err(StageError::Eof)
@@ -250,8 +219,7 @@ where
     /// Adds a batch to the queue.
     pub fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
-            self.telemetry
-                .write(Bytes::from("Cannot add batch without an origin"), LogLevel::Error);
+            error!("Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
         }
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
@@ -266,11 +234,10 @@ where
 }
 
 #[async_trait]
-impl<P, BF, T> AttributesProvider for BatchQueue<P, BF, T>
+impl<P, BF> AttributesProvider for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
 {
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
@@ -286,12 +253,9 @@ where
             // Parent block does not match the next batch.
             // Means the previously returned batch is invalid.
             // Drop cached batches and find another batch.
-            self.telemetry.write(
-                Bytes::from(alloc::format!(
-                    "Parent block does not match the next batch. Dropping {} cached batches.",
-                    self.next_spans.len()
-                )),
-                LogLevel::Warning,
+            warn!(
+                "Parent block does not match the next batch. Dropping {} cached batches.",
+                self.next_spans.len()
             );
             self.next_spans.clear();
         }
@@ -305,7 +269,7 @@ where
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
                     self.l1_blocks.drain(0..i);
-                    self.telemetry.write(Bytes::from("Adancing epoch"), LogLevel::Info);
+                    info!("Advancing epoch");
                     break;
                 }
             }
@@ -334,10 +298,7 @@ where
                 // reset is called, the origin behind is false.
                 self.l1_blocks.clear();
             }
-            self.telemetry.write(
-                Bytes::from(alloc::format!("Batch queue advanced origin: {:?}", self.origin)),
-                LogLevel::Info,
-            );
+            info!("Advancing batch queue origin: {:?}", self.origin);
         }
 
         // Load more data into the batch queue.
@@ -347,8 +308,7 @@ where
                 if !origin_behind {
                     self.add_batch(b, parent).ok();
                 } else {
-                    self.telemetry
-                        .write(Bytes::from("[Batch Dropped]: Origin is behind"), LogLevel::Warning);
+                    warn!("Dropping batch: Origin is behind");
                 }
             }
             Err(StageError::Eof) => out_of_data = true,
@@ -399,11 +359,10 @@ where
     }
 }
 
-impl<P, BF, T> OriginProvider for BatchQueue<P, BF, T>
+impl<P, BF> OriginProvider for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Debug,
     BF: SafeBlockFetcher + Debug,
-    T: TelemetryProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
@@ -411,11 +370,10 @@ where
 }
 
 #[async_trait]
-impl<P, BF, T> ResettableStage for BatchQueue<P, BF, T>
+impl<P, BF> ResettableStage for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginProvider + Send + Debug,
     BF: SafeBlockFetcher + Send + Debug,
-    T: TelemetryProvider + Send + Debug + Sync,
 {
     async fn reset(&mut self, base: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         // Copy over the Origin from the next stage.
@@ -438,7 +396,7 @@ mod tests {
     use super::*;
     use crate::{
         stages::{channel_reader::BatchReader, test_utils::MockBatchQueueProvider},
-        traits::test_utils::{MockBlockFetcher, TestTelemetry},
+        traits::test_utils::MockBlockFetcher,
         types::BatchType,
     };
     use alloc::vec;
@@ -454,12 +412,11 @@ mod tests {
 
     #[test]
     fn test_derive_next_batch_missing_origin() {
-        let telemetry = TestTelemetry::new();
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = RollupConfig::default();
         let mock = MockBatchQueueProvider::new(data);
         let fetcher = MockBlockFetcher::default();
-        let mut bq = BatchQueue::new(cfg, mock, telemetry, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let result = bq.derive_next_batch(false, parent).unwrap_err();
         assert_eq!(result, StageError::MissingOrigin);
@@ -470,9 +427,8 @@ mod tests {
         let mut reader = new_batch_reader();
         let batch = reader.next_batch().unwrap();
         let mock = MockBatchQueueProvider::new(vec![Ok(batch)]);
-        let telemetry = TestTelemetry::new();
         let fetcher = MockBlockFetcher::default();
-        let mut bq = BatchQueue::new(RollupConfig::default(), mock, telemetry, fetcher);
+        let mut bq = BatchQueue::new(RollupConfig::default(), mock, fetcher);
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
         assert_eq!(res, StageError::NotEnoughData);
         assert!(bq.is_last_in_span());
@@ -499,12 +455,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_batch_queue_empty_bytes() {
-        let telemetry = TestTelemetry::new();
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = RollupConfig::default();
         let mock = MockBatchQueueProvider::new(data);
         let fetcher = MockBlockFetcher::default();
-        let mut bq = BatchQueue::new(cfg, mock, telemetry, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let result = bq.next_batch(parent).await;
         assert!(result.is_err());
