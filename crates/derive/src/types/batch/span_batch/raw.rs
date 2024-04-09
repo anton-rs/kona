@@ -2,12 +2,9 @@
 
 use alloc::vec::Vec;
 
-use crate::{
-    traits::L2ChainProvider,
-    types::{
-        BatchType, BatchValidity, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig,
-        SingleBatch, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix, SpanDecodingError,
-    },
+use crate::types::{
+    BatchType, RawTransaction, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+    SpanDecodingError,
 };
 
 use super::{SpanBatch, SpanBatchError};
@@ -30,27 +27,6 @@ impl RawSpanBatch {
     /// Returns the timestamp for the span batch.
     pub fn timestamp(&self) -> u64 {
         self.prefix.rel_timestamp
-    }
-
-    /// Checks if the span batch is valid.
-    pub fn check_batch<BF: L2ChainProvider>(
-        &self,
-        _cfg: &RollupConfig,
-        _l1_blocks: &[BlockInfo],
-        _l2_safe_head: L2BlockInfo,
-        _inclusion_block: &BlockInfo,
-        _fetcher: &BF,
-    ) -> BatchValidity {
-        unimplemented!()
-    }
-
-    /// Derives [SingleBatch]s from the span batch.
-    pub fn get_singular_batches(
-        &self,
-        _l1_blocks: &[BlockInfo],
-        _parent: L2BlockInfo,
-    ) -> Vec<SingleBatch> {
-        unimplemented!()
     }
 
     /// Encodes the [RawSpanBatch] into a writer.

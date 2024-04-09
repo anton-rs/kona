@@ -8,7 +8,7 @@ use crate::{
         SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -45,7 +45,7 @@ where
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
-    cfg: RollupConfig,
+    cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
     prev: P,
     /// The l1 block ref
@@ -75,7 +75,7 @@ where
     BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
-    pub fn new(cfg: RollupConfig, prev: P, fetcher: BF) -> Self {
+    pub fn new(cfg: Arc<RollupConfig>, prev: P, fetcher: BF) -> Self {
         Self {
             cfg,
             prev,
@@ -343,7 +343,11 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = sb.get_singular_batches(&self.l1_blocks, parent);
+                let batches = sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
+                    StageError::Custom(anyhow!(
+                        "Could not get singular batches from span batch: {e}"
+                    ))
+                })?;
                 self.next_spans = batches;
                 let nb = self
                     .pop_next_batch(parent)
@@ -413,7 +417,7 @@ mod tests {
     #[test]
     fn test_derive_next_batch_missing_origin() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
-        let cfg = RollupConfig::default();
+        let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
         let fetcher = MockBlockFetcher::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -425,10 +429,11 @@ mod tests {
     #[tokio::test]
     async fn test_next_batch_not_enough_data() {
         let mut reader = new_batch_reader();
-        let batch = reader.next_batch().unwrap();
+        let cfg = Arc::new(RollupConfig::default());
+        let batch = reader.next_batch(cfg.as_ref()).unwrap();
         let mock = MockBatchQueueProvider::new(vec![Ok(batch)]);
         let fetcher = MockBlockFetcher::default();
-        let mut bq = BatchQueue::new(RollupConfig::default(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
         assert_eq!(res, StageError::NotEnoughData);
         assert!(bq.is_last_in_span());
@@ -456,7 +461,7 @@ mod tests {
     #[tokio::test]
     async fn test_batch_queue_empty_bytes() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
-        let cfg = RollupConfig::default();
+        let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
         let fetcher = MockBlockFetcher::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);

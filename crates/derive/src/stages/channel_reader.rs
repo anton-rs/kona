@@ -3,10 +3,10 @@
 use crate::{
     stages::BatchQueueProvider,
     traits::OriginProvider,
-    types::{Batch, BlockInfo, StageError, StageResult},
+    types::{Batch, BlockInfo, RollupConfig, StageError, StageResult},
 };
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -33,6 +33,8 @@ where
     prev: P,
     /// The batch reader.
     next_batch: Option<BatchReader>,
+    /// The rollup coonfiguration.
+    cfg: Arc<RollupConfig>,
 }
 
 impl<P> ChannelReader<P>
@@ -40,8 +42,8 @@ where
     P: ChannelReaderProvider + OriginProvider + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: P) -> Self {
-        Self { prev, next_batch: None }
+    pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
+        Self { prev, next_batch: None, cfg: cfg.clone() }
     }
 
     /// Creates the batch reader from available channel data.
@@ -75,7 +77,7 @@ where
             .next_batch
             .as_mut()
             .expect("Cannot be None")
-            .next_batch()
+            .next_batch(self.cfg.as_ref())
             .ok_or(StageError::NotEnoughData)
         {
             Ok(batch) => Ok(batch),
@@ -112,7 +114,7 @@ pub(crate) struct BatchReader {
 
 impl BatchReader {
     /// Pulls out the next batch from the reader.
-    pub(crate) fn next_batch(&mut self) -> Option<Batch> {
+    pub(crate) fn next_batch(&mut self, cfg: &RollupConfig) -> Option<Batch> {
         // If the data is not already decompressed, decompress it.
         if let Some(data) = self.data.take() {
             let decompressed_data = decompress_to_vec_zlib(&data).ok()?;
@@ -121,7 +123,7 @@ impl BatchReader {
 
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
         let mut decompressed_reader = self.decompressed.as_slice();
-        let batch = Batch::decode(&mut decompressed_reader).ok()?;
+        let batch = Batch::decode(&mut decompressed_reader, cfg).ok()?;
 
         // Advance the cursor on the reader.
         self.cursor += self.decompressed.len() - decompressed_reader.len();
@@ -153,7 +155,7 @@ mod test {
     #[tokio::test]
     async fn test_next_batch_batch_reader_set_fails() {
         let mock = MockChannelReaderProvider::new(vec![Err(StageError::Eof)]);
-        let mut reader = ChannelReader::new(mock);
+        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         assert_eq!(reader.next_batch().await, Err(StageError::Eof));
         assert!(reader.next_batch.is_none());
     }
@@ -161,7 +163,7 @@ mod test {
     #[tokio::test]
     async fn test_next_batch_batch_reader_no_data() {
         let mock = MockChannelReaderProvider::new(vec![Ok(None)]);
-        let mut reader = ChannelReader::new(mock);
+        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         assert_eq!(reader.next_batch().await, Err(StageError::NoChannel));
         assert!(reader.next_batch.is_none());
     }
@@ -169,7 +171,7 @@ mod test {
     #[tokio::test]
     async fn test_next_batch_not_enough_data() {
         let mock = MockChannelReaderProvider::new(vec![Ok(Some(Bytes::default()))]);
-        let mut reader = ChannelReader::new(mock);
+        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         assert_eq!(reader.next_batch().await, Err(StageError::NotEnoughData));
         assert!(reader.next_batch.is_none());
     }
@@ -178,7 +180,7 @@ mod test {
     async fn test_next_batch_succeeds() {
         let raw = new_compressed_batch_data();
         let mock = MockChannelReaderProvider::new(vec![Ok(Some(raw))]);
-        let mut reader = ChannelReader::new(mock);
+        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         let res = reader.next_batch().await.unwrap();
         matches!(res, Batch::Span(_));
         assert!(reader.next_batch.is_some());
@@ -192,7 +194,7 @@ mod test {
 
         let compressed_raw_data = compress_to_vec_zlib(typed_data.as_slice(), 5);
         let mut reader = BatchReader::from(compressed_raw_data);
-        reader.next_batch().unwrap();
+        reader.next_batch(&RollupConfig::default()).unwrap();
 
         assert_eq!(reader.cursor, typed_data.len());
     }
