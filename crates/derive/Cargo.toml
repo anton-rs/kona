@@ -11,6 +11,7 @@ homepage.workspace = true
 [dependencies]
 # Workspace
 anyhow.workspace = true
+tracing.workspace = true
 
 # External
 alloy-primitives = { version = "0.7.0", default-features = false, features = ["rlp"] }
@@ -23,16 +24,29 @@ hashbrown = "0.14.3"
 unsigned-varint = "0.8.0"
 miniz_oxide = { version = "0.7.2" }
 lazy_static = "1.4.0"
+lru = "0.12.3"
 
-# Optional
+# `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
+
+# `online` feature dependencies
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true} 
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true } 
+reqwest = { version = "0.12", default-features = false, optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["full"] }
 proptest = "1.4.0"
 spin = { version = "0.9.8", features = ["mutex"] } # Spin is used for testing synchronization primitives
+tracing-subscriber = "0.3.18"
 
 [features]
 default = ["serde", "k256"]
 serde = ["dep:serde", "alloy-primitives/serde"]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256"]
+online = [
+  "dep:alloy-provider",
+  "dep:alloy-transport-http",
+  "dep:reqwest",
+  "alloy-consensus/serde"
+]

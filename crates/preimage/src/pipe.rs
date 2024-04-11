@@ -2,7 +2,7 @@
 //! for reading and writing from the file descriptors.
 
 use anyhow::{bail, Result};
-use kona_common::{io, FileDescriptor, RegisterSize};
+use kona_common::{io, FileDescriptor};
 
 /// [PipeHandle] is a handle for one end of a bidirectional pipe.
 #[derive(Debug, Clone, Copy)]
@@ -20,33 +20,33 @@ impl PipeHandle {
     }
 
     /// Read from the pipe into the given buffer.
-    pub fn read(&self, buf: &mut [u8]) -> Result<RegisterSize> {
+    pub fn read(&self, buf: &mut [u8]) -> Result<usize> {
         io::read(self.read_handle, buf)
     }
 
     /// Reads exactly `buf.len()` bytes into `buf`, blocking until all bytes are read.
-    pub fn read_exact(&self, buf: &mut [u8]) -> Result<RegisterSize> {
+    pub fn read_exact(&self, buf: &mut [u8]) -> Result<usize> {
         let mut read = 0;
         while read < buf.len() {
             let chunk_read = self.read(&mut buf[read..])?;
-            read += chunk_read as usize;
+            read += chunk_read;
         }
-        Ok(read as RegisterSize)
+        Ok(read)
     }
 
     /// Write the given buffer to the pipe.
-    pub fn write(&self, buf: &[u8]) -> Result<RegisterSize> {
+    pub fn write(&self, buf: &[u8]) -> Result<usize> {
         let mut written = 0;
         loop {
             match io::write(self.write_handle, &buf[written..]) {
                 Ok(0) => break,
                 Ok(n) => {
-                    written += n as usize;
+                    written += n;
                     continue;
                 }
                 Err(e) => bail!("Failed to write preimage key: {}", e),
             }
         }
-        Ok(written as RegisterSize)
+        Ok(written)
     }
 }

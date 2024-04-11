@@ -1,16 +1,16 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    traits::{LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
+    traits::{OriginProvider, ResettableStage},
     types::{
         AttributesWithParent, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
 use alloc::boxed::Box;
-use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
+use tracing::info;
 
 mod builder;
 pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
@@ -36,18 +36,15 @@ pub trait AttributesProvider {
 /// This stage can be reset by clearing its batch buffer.
 /// This stage does not need to retain any references to L1 blocks.
 #[derive(Debug)]
-pub struct AttributesQueue<P, T, AB>
+pub struct AttributesQueue<P, AB>
 where
     P: AttributesProvider + OriginProvider + Debug,
-    T: TelemetryProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// The rollup config.
     cfg: RollupConfig,
     /// The previous stage of the derivation pipeline.
     prev: P,
-    /// Telemetry provider.
-    telemetry: T,
     /// Whether the current batch is the last in its span.
     is_last_in_span: bool,
     /// The current batch being processed.
@@ -56,15 +53,14 @@ where
     builder: AB,
 }
 
-impl<P, T, AB> AttributesQueue<P, T, AB>
+impl<P, AB> AttributesQueue<P, AB>
 where
     P: AttributesProvider + OriginProvider + Debug,
-    T: TelemetryProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
-    pub fn new(cfg: RollupConfig, prev: P, telemetry: T, builder: AB) -> Self {
-        Self { cfg, prev, telemetry, is_last_in_span: false, batch: None, builder }
+    pub fn new(cfg: RollupConfig, prev: P, builder: AB) -> Self {
+        Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 
     /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
@@ -126,23 +122,18 @@ where
         attributes.no_tx_pool = true;
         attributes.transactions.extend(batch.transactions);
 
-        self.telemetry.write(
-            Bytes::from(alloc::format!(
-                "generated attributes in payload queue: txs={}, timestamp={}",
-                tx_count,
-                batch.timestamp,
-            )),
-            LogLevel::Info,
+        info!(
+            "generated attributes in payload queue: txs={}, timestamp={}",
+            tx_count, batch.timestamp
         );
 
         Ok(attributes)
     }
 }
 
-impl<P, T, AB> OriginProvider for AttributesQueue<P, T, AB>
+impl<P, AB> OriginProvider for AttributesQueue<P, AB>
 where
     P: AttributesProvider + OriginProvider + Debug,
-    T: TelemetryProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -151,14 +142,13 @@ where
 }
 
 #[async_trait]
-impl<P, T, AB> ResettableStage for AttributesQueue<P, T, AB>
+impl<P, AB> ResettableStage for AttributesQueue<P, AB>
 where
     P: AttributesProvider + OriginProvider + Send + Debug,
-    T: TelemetryProvider + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
     async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
-        self.telemetry.write(Bytes::from("resetting attributes queue"), LogLevel::Info);
+        info!("resetting attributes queue");
         // TODO: metrice the reset using telemetry
         // telemetry can provide a method of logging and metricing
         self.batch = None;
@@ -177,7 +167,6 @@ mod tests {
         stages::test_utils::{
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
-        traits::test_utils::TestTelemetry,
         types::{BuilderError, RawTransaction},
     };
     use alloc::{vec, vec::Vec};
@@ -187,12 +176,11 @@ mod tests {
         cfg: Option<RollupConfig>,
         origin: Option<BlockInfo>,
         batches: Vec<StageResult<SingleBatch>>,
-    ) -> AttributesQueue<MockAttributesProvider, TestTelemetry, MockAttributesBuilder> {
+    ) -> AttributesQueue<MockAttributesProvider, MockAttributesBuilder> {
         let cfg = cfg.unwrap_or_default();
-        let telemetry = TestTelemetry::new();
         let mock_batch_queue = new_attributes_provider(origin, batches);
         let mock_attributes_builder = MockAttributesBuilder::default();
-        AttributesQueue::new(cfg, mock_batch_queue, telemetry, mock_attributes_builder)
+        AttributesQueue::new(cfg, mock_batch_queue, mock_attributes_builder)
     }
 
     #[tokio::test]
@@ -279,12 +267,11 @@ mod tests {
     #[tokio::test]
     async fn test_create_next_attributes_success() {
         let cfg = RollupConfig::default();
-        let telemetry = TestTelemetry::new();
         let mock = new_attributes_provider(None, vec![]);
         let mut payload_attributes = PayloadAttributes::default();
         let mock_builder =
             MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
-        let mut aq = AttributesQueue::new(cfg, mock, telemetry, mock_builder);
+        let mut aq = AttributesQueue::new(cfg, mock, mock_builder);
         let parent = L2BlockInfo::default();
         let txs = vec![RawTransaction::default(), RawTransaction::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
@@ -306,11 +293,10 @@ mod tests {
     #[tokio::test]
     async fn test_next_attributes_load_batch_last_in_span() {
         let cfg = RollupConfig::default();
-        let telemetry = TestTelemetry::new();
         let mock = new_attributes_provider(None, vec![Ok(Default::default())]);
         let mut pa = PayloadAttributes::default();
         let mock_builder = MockAttributesBuilder { attributes: vec![Ok(pa.clone())] };
-        let mut aq = AttributesQueue::new(cfg, mock, telemetry, mock_builder);
+        let mut aq = AttributesQueue::new(cfg, mock, mock_builder);
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
         let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();

@@ -1,20 +1,5 @@
 //! This module contains the local types for the `kona-common` crate.
 
-use cfg_if::cfg_if;
-
-cfg_if! {
-    if #[cfg(target_arch = "mips")] {
-        /// The size of the `mips32` target architecture's registers.
-        pub type RegisterSize = u32;
-    } else if #[cfg(target_arch = "riscv64")] {
-        /// The size of the `riscv64` target architecture's registers.
-        pub type RegisterSize = u64;
-    } else {
-        /// The size of the native target architecture's registers.
-        pub type RegisterSize = u64;
-    }
-}
-
 /// File descriptors available to the `client` within the FPVM kernel.
 #[derive(Debug, Clone, Copy)]
 pub enum FileDescriptor {
@@ -33,10 +18,10 @@ pub enum FileDescriptor {
     /// Write-only. Used to request pre-images.
     PreimageWrite,
     /// Other file descriptor, usually used for testing purposes.
-    Wildcard(RegisterSize),
+    Wildcard(usize),
 }
 
-impl From<FileDescriptor> for RegisterSize {
+impl From<FileDescriptor> for usize {
     fn from(fd: FileDescriptor) -> Self {
         match fd {
             FileDescriptor::StdIn => 0,

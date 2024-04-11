@@ -1,6 +1,7 @@
-use crate::{traits::HintWriterClient, PipeHandle};
-use alloc::vec;
+use crate::{traits::HintWriterClient, HintReaderServer, PipeHandle};
+use alloc::{string::String, vec};
 use anyhow::Result;
+use tracing::{debug, error};
 
 /// A [HintWriter] is a high-level interface to the hint pipe. It provides a way to write hints to
 /// the host.
@@ -26,13 +27,128 @@ impl HintWriterClient for HintWriter {
         hint_bytes[0..4].copy_from_slice(u32::to_be_bytes(hint.len() as u32).as_ref());
         hint_bytes[4..].copy_from_slice(hint.as_bytes());
 
+        debug!(target: "hint_writer", "Writing hint \"{hint}\"");
+
         // Write the hint to the host.
         self.pipe_handle.write(&hint_bytes)?;
+
+        debug!(target: "hint_writer", "Successfully wrote hint");
 
         // Read the hint acknowledgement from the host.
         let mut hint_ack = [0u8; 1];
         self.pipe_handle.read_exact(&mut hint_ack)?;
 
+        debug!(target: "hint_writer", "Received hint acknowledgement");
+
         Ok(())
+    }
+}
+
+/// A [HintReader] is a router for hints sent by the [HintWriter] from the client program. It
+/// provides a way for the host to prepare preimages for reading.
+#[derive(Debug, Clone, Copy)]
+pub struct HintReader {
+    pipe_handle: PipeHandle,
+}
+
+impl HintReader {
+    /// Create a new [HintReader] from a [PipeHandle].
+    pub fn new(pipe_handle: PipeHandle) -> Self {
+        Self { pipe_handle }
+    }
+}
+
+impl HintReaderServer for HintReader {
+    fn next_hint(&self, mut route_hint: impl FnMut(String) -> Result<()>) -> Result<()> {
+        // Read the length of the raw hint payload.
+        let mut len_buf = [0u8; 4];
+        self.pipe_handle.read_exact(&mut len_buf)?;
+        let len = u32::from_be_bytes(len_buf);
+
+        // Read the raw hint payload.
+        let mut raw_payload = vec![0u8; len as usize];
+        self.pipe_handle.read_exact(raw_payload.as_mut_slice())?;
+        let payload = String::from_utf8(raw_payload)
+            .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?;
+
+        debug!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
+
+        // Route the hint
+        if let Err(e) = route_hint(payload) {
+            // Write back on error to prevent blocking the client.
+            self.pipe_handle.write(&[0x00])?;
+
+            error!("Failed to route hint: {e}");
+            anyhow::bail!("Failed to rout hint: {e}");
+        }
+
+        // Write back an acknowledgement to the client to unblock their process.
+        self.pipe_handle.write(&[0x00])?;
+
+        debug!(target: "hint_reader", "Successfully routed and acknowledged hint");
+
+        Ok(())
+    }
+}
+#[cfg(test)]
+mod test {
+    extern crate std;
+
+    use super::*;
+    use alloc::vec::Vec;
+    use kona_common::FileDescriptor;
+    use std::{fs::File, os::fd::AsRawFd};
+    use tempfile::tempfile;
+
+    /// Test struct containing the [HintReader] and [HintWriter]. The [File]s are stored in this
+    /// struct so that they are not dropped until the end of the test.
+    #[derive(Debug)]
+    struct ClientAndHost {
+        hint_writer: HintWriter,
+        hint_reader: HintReader,
+        _read_file: File,
+        _write_file: File,
+    }
+
+    /// Helper for creating a new [HintReader] and [HintWriter] for testing. The file channel is
+    /// over two temporary files.
+    fn client_and_host() -> ClientAndHost {
+        let (read_file, write_file) = (tempfile().unwrap(), tempfile().unwrap());
+        let (read_fd, write_fd) = (
+            FileDescriptor::Wildcard(read_file.as_raw_fd().try_into().unwrap()),
+            FileDescriptor::Wildcard(write_file.as_raw_fd().try_into().unwrap()),
+        );
+        let client_handle = PipeHandle::new(read_fd, write_fd);
+        let host_handle = PipeHandle::new(write_fd, read_fd);
+
+        let hint_writer = HintWriter::new(client_handle);
+        let hint_reader = HintReader::new(host_handle);
+
+        ClientAndHost { hint_writer, hint_reader, _read_file: read_file, _write_file: write_file }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_hint_client_and_host() {
+        const MOCK_DATA: &str = "test-hint 0xfacade";
+
+        let sys = client_and_host();
+        let (hint_writer, hint_reader) = (sys.hint_writer, sys.hint_reader);
+
+        let client = tokio::task::spawn(async move { hint_writer.write(MOCK_DATA) });
+        let host = tokio::task::spawn(async move {
+            let mut v = Vec::new();
+            let route_hint = |hint: String| {
+                v.push(hint.clone());
+                Ok(())
+            };
+            hint_reader.next_hint(route_hint).unwrap();
+
+            assert_eq!(v.len(), 1);
+
+            v.remove(0)
+        });
+
+        let (_, h) = tokio::join!(client, host);
+        assert_eq!(h.unwrap(), MOCK_DATA);
     }
 }

@@ -15,13 +15,12 @@
 //! | %a5             | arg6               |
 //! | %a7             | syscall number     |
 
-use crate::RegisterSize;
 use core::arch::asm;
 
 /// Issues a raw system call with 1 argument. (e.g. exit)
 #[inline]
-pub(crate) unsafe fn syscall1(syscall_number: RegisterSize, arg1: RegisterSize) -> RegisterSize {
-    let mut ret: RegisterSize;
+pub(crate) unsafe fn syscall1(syscall_number: usize, arg1: usize) -> usize {
+    let mut ret: usize;
     asm!(
         "ecall",
         in("a7") syscall_number,
@@ -34,12 +33,12 @@ pub(crate) unsafe fn syscall1(syscall_number: RegisterSize, arg1: RegisterSize) 
 /// Issues a raw system call with 3 arguments. (e.g. read, write)
 #[inline]
 pub(crate) unsafe fn syscall3(
-    syscall_number: RegisterSize,
-    arg1: RegisterSize,
-    arg2: RegisterSize,
-    arg3: RegisterSize,
-) -> RegisterSize {
-    let mut ret: RegisterSize;
+    syscall_number: usize,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+) -> usize {
+    let mut ret: usize;
     asm!(
         "ecall",
         in("a7") syscall_number,

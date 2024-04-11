@@ -3,7 +3,7 @@
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     stages::ChannelReaderProvider,
-    traits::{LogLevel, OriginProvider, ResettableStage, TelemetryProvider},
+    traits::{OriginProvider, ResettableStage},
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -12,6 +12,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
+use tracing::{debug, warn};
 
 /// Provides frames for the [ChannelBank] stage.
 #[async_trait]
@@ -32,15 +33,12 @@ pub trait ChannelBankProvider {
 /// to `IngestData`. This means that we can do an ingest and then do a read while becoming too
 /// large. [ChannelBank] buffers channel frames, and emits full channel data
 #[derive(Debug)]
-pub struct ChannelBank<P, T>
+pub struct ChannelBank<P>
 where
     P: ChannelBankProvider + OriginProvider + Debug,
-    T: TelemetryProvider + Debug,
 {
     /// The rollup configuration.
     cfg: Arc<RollupConfig>,
-    /// Telemetry
-    telemetry: Arc<T>,
     /// Map of channels by ID.
     channels: HashMap<ChannelID, Channel>,
     /// Channels in FIFO order.
@@ -49,14 +47,13 @@ where
     prev: P,
 }
 
-impl<P, T> ChannelBank<P, T>
+impl<P> ChannelBank<P>
 where
     P: ChannelBankProvider + OriginProvider + Debug,
-    T: TelemetryProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: P, telemetry: Arc<T>) -> Self {
-        Self { cfg, telemetry, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
+    pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
+        Self { cfg, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
     /// Returns the size of the channel bank by accumulating over all channels.
@@ -89,23 +86,14 @@ where
 
         // Check if the channel is not timed out. If it has, ignore the frame.
         if current_channel.open_block_number() + self.cfg.channel_timeout < origin.number {
-            self.telemetry.write(
-                alloy_primitives::Bytes::from(alloc::format!("Channel {:?} timed out", frame.id)),
-                LogLevel::Warning,
-            );
+            warn!("Channel {:?} timed out", frame.id);
             return Ok(());
         }
 
         // Ingest the frame. If it fails, ignore the frame.
         let frame_id = frame.id;
         if current_channel.add_frame(frame, origin).is_err() {
-            self.telemetry.write(
-                alloy_primitives::Bytes::from(alloc::format!(
-                    "Failed to add frame to channel: {:?}",
-                    frame_id
-                )),
-                LogLevel::Warning,
-            );
+            warn!("Failed to add frame to channel: {:?}", frame_id);
             return Ok(());
         }
 
@@ -118,8 +106,7 @@ where
     pub fn read(&mut self) -> StageResult<Option<Bytes>> {
         // Bail if there are no channels to read from.
         if self.channel_queue.is_empty() {
-            self.telemetry
-                .write(alloy_primitives::Bytes::from("No channels to read from"), LogLevel::Debug);
+            debug!("No channels to read from");
             return Err(StageError::Eof);
         }
 
@@ -131,10 +118,7 @@ where
 
         // Remove all timed out channels from the front of the `channel_queue`.
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
-            self.telemetry.write(
-                alloy_primitives::Bytes::from(alloc::format!("Channel {:?} timed out", first)),
-                LogLevel::Warning,
-            );
+            warn!("Channel {:?} timed out", first);
             self.channels.remove(&first);
             self.channel_queue.pop_front();
             return Ok(None);
@@ -180,10 +164,9 @@ where
 }
 
 #[async_trait]
-impl<P, T> ChannelReaderProvider for ChannelBank<P, T>
+impl<P> ChannelReaderProvider for ChannelBank<P>
 where
     P: ChannelBankProvider + OriginProvider + Send + Debug,
-    T: TelemetryProvider + Send + Sync + Debug,
 {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         match self.read() {
@@ -203,10 +186,9 @@ where
     }
 }
 
-impl<P, T> OriginProvider for ChannelBank<P, T>
+impl<P> OriginProvider for ChannelBank<P>
 where
     P: ChannelBankProvider + OriginProvider + Debug,
-    T: TelemetryProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
@@ -214,10 +196,9 @@ where
 }
 
 #[async_trait]
-impl<P, T> ResettableStage for ChannelBank<P, T>
+impl<P> ResettableStage for ChannelBank<P>
 where
     P: ChannelBankProvider + OriginProvider + Send + Debug,
-    T: TelemetryProvider + Send + Sync + Debug,
 {
     async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         self.channels.clear();
@@ -229,19 +210,20 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        stages::{frame_queue::tests::new_test_frames, test_utils::MockChannelBankProvider},
-        traits::test_utils::TestTelemetry,
+    use crate::stages::{
+        frame_queue::tests::new_test_frames,
+        test_utils::{CollectingLayer, MockChannelBankProvider, TraceStorage},
     };
     use alloc::vec;
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[test]
     fn test_ingest_empty_origin() {
         let mut mock = MockChannelBankProvider::new(vec![]);
         mock.block_info = None;
-        let telemetry = Arc::new(TestTelemetry::new());
         let cfg = Arc::new(RollupConfig::default());
-        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
+        let mut channel_bank = ChannelBank::new(cfg, mock);
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
         assert_eq!(err, StageError::MissingOrigin);
@@ -249,14 +231,16 @@ mod tests {
 
     #[test]
     fn test_ingest_invalid_frame() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
         let mock = MockChannelBankProvider::new(vec![]);
-        let telem = Arc::new(TestTelemetry::new());
-        let mut channel_bank =
-            ChannelBank::new(Arc::new(RollupConfig::default()), mock, Arc::clone(&telem));
+        let mut channel_bank = ChannelBank::new(Arc::new(RollupConfig::default()), mock);
         let frame = Frame { id: [0xFF; 16], ..Default::default() };
         assert_eq!(channel_bank.size(), 0);
         assert!(channel_bank.channels.is_empty());
-        assert_eq!(telem.count_calls(LogLevel::Warning), 0);
+        assert_eq!(trace_store.lock().iter().filter(|(l, _)| matches!(l, &Level::WARN)).count(), 0);
         assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
         assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
@@ -264,7 +248,7 @@ mod tests {
         assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
         assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
-        assert_eq!(telem.count_calls(LogLevel::Warning), 1);
+        assert_eq!(trace_store.lock().iter().filter(|(l, _)| matches!(l, &Level::WARN)).count(), 1);
     }
 
     #[test]
@@ -273,9 +257,8 @@ mod tests {
         let mut frames: Vec<Frame> = new_test_frames(100000);
         // let data = frames.iter().map(|f| Ok(f)).collect::<Vec<StageResult<Frame>>>();
         let mock = MockChannelBankProvider::new(vec![]);
-        let telemetry = Arc::new(TestTelemetry::new());
         let cfg = Arc::new(RollupConfig::default());
-        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
+        let mut channel_bank = ChannelBank::new(cfg, mock);
         // Ingest frames until the channel bank is full and it stops increasing in size
         let mut current_size = 0;
         let next_frame = frames.pop().unwrap();
@@ -299,9 +282,8 @@ mod tests {
     async fn test_read_empty_channel_bank() {
         let frames = new_test_frames(1);
         let mock = MockChannelBankProvider::new(vec![Ok(frames[0].clone())]);
-        let telemetry = Arc::new(TestTelemetry::new());
         let cfg = Arc::new(RollupConfig::default());
-        let mut channel_bank = ChannelBank::new(cfg, mock, Arc::clone(&telemetry));
+        let mut channel_bank = ChannelBank::new(cfg, mock);
         let err = channel_bank.read().unwrap_err();
         assert_eq!(err, StageError::Eof);
         let err = channel_bank.next_data().await.unwrap_err();

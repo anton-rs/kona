@@ -1,7 +1,7 @@
 //! Data Sources Test Utilities
 
 use crate::{
-    traits::{ChainProvider, SafeBlockFetcher},
+    traits::{ChainProvider, L2ChainProvider},
     types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -27,8 +27,8 @@ impl MockBlockFetcher {
 }
 
 #[async_trait]
-impl SafeBlockFetcher for MockBlockFetcher {
-    async fn l2_block_info_by_number(&self, number: u64) -> Result<L2BlockInfo> {
+impl L2ChainProvider for MockBlockFetcher {
+    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         self.blocks
             .iter()
             .find(|b| b.block_info.number == number)
@@ -36,7 +36,7 @@ impl SafeBlockFetcher for MockBlockFetcher {
             .ok_or_else(|| anyhow::anyhow!("Block not found"))
     }
 
-    async fn payload_by_number(&self, number: u64) -> Result<ExecutionPayloadEnvelope> {
+    async fn payload_by_number(&mut self, number: u64) -> Result<ExecutionPayloadEnvelope> {
         self.payloads
             .iter()
             .find(|p| p.execution_payload.block_number == number)
@@ -84,7 +84,7 @@ impl TestChainProvider {
 
 #[async_trait]
 impl ChainProvider for TestChainProvider {
-    async fn block_info_by_number(&self, _number: u64) -> Result<BlockInfo> {
+    async fn block_info_by_number(&mut self, _number: u64) -> Result<BlockInfo> {
         if let Some((_, block)) = self.blocks.iter().find(|(n, _)| *n == _number) {
             Ok(*block)
         } else {
@@ -92,7 +92,7 @@ impl ChainProvider for TestChainProvider {
         }
     }
 
-    async fn receipts_by_hash(&self, _hash: B256) -> Result<Vec<Receipt>> {
+    async fn receipts_by_hash(&mut self, _hash: B256) -> Result<Vec<Receipt>> {
         if let Some((_, receipts)) = self.receipts.iter().find(|(h, _)| *h == _hash) {
             Ok(receipts.clone())
         } else {
@@ -101,7 +101,7 @@ impl ChainProvider for TestChainProvider {
     }
 
     async fn block_info_and_transactions_by_hash(
-        &self,
+        &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
         let block = self
