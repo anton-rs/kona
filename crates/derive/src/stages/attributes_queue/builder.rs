@@ -2,16 +2,19 @@
 
 use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
+    traits::ChainProvider,
     types::{
-        BlockID, BlockInfo, BuilderError, L2BlockInfo, PayloadAttributes, RawTransaction, Receipt,
-        RollupConfig, SystemConfig,
+        BlockID, BuilderError, L2BlockInfo, PayloadAttributes, RawTransaction, RollupConfig,
+        SystemConfig,
     },
 };
-use alloc::{fmt::Debug, sync::Arc, vec, vec::Vec};
+use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_primitives::B256;
+use async_trait::async_trait;
 
 /// The [AttributesBuilder] is responsible for preparing [PayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.
+#[async_trait]
 pub trait AttributesBuilder {
     /// Prepares a template [PayloadAttributes] that is ready to be used to build an L2 block.
     /// The block will contain deposits only, on top of the given L2 parent, with the L1 origin
@@ -20,21 +23,11 @@ pub trait AttributesBuilder {
     /// and no sequencer transactions. The caller has to modify the template to add transactions.
     /// This can be done by either setting the `no_tx_pool` to false as sequencer, or by appending
     /// batch transactions as the verifier.
-    fn prepare_payload_attributes(
+    async fn prepare_payload_attributes(
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockID,
     ) -> Result<PayloadAttributes, BuilderError>;
-}
-
-/// The [L1ReceiptsFetcher] fetches L1 Header Info and [Receipt]s for
-/// the payload attributes derivation (the info tx and deposits).
-pub trait L1ReceiptsFetcher {
-    /// Fetch the L1 Header Info by hash.
-    fn info_by_hash(&self, hash: B256) -> anyhow::Result<BlockInfo>;
-
-    /// Fetch the [Receipt]s by block hash.
-    fn fetch_receipts(&self, block_hash: B256) -> anyhow::Result<(BlockInfo, Vec<Receipt>)>;
 }
 
 /// The [SystemConfigL2Fetcher] fetches the system config by L2 hash.
@@ -48,7 +41,7 @@ pub trait SystemConfigL2Fetcher {
 pub struct StatefulAttributesBuilder<S, R>
 where
     S: SystemConfigL2Fetcher + Debug,
-    R: L1ReceiptsFetcher + Debug,
+    R: ChainProvider + Debug,
 {
     /// The rollup config.
     rollup_cfg: Arc<RollupConfig>,
@@ -61,7 +54,7 @@ where
 impl<S, R> StatefulAttributesBuilder<S, R>
 where
     S: SystemConfigL2Fetcher + Debug,
-    R: L1ReceiptsFetcher + Debug,
+    R: ChainProvider + Debug,
 {
     /// Create a new [StatefulAttributesBuilder] with the given epoch.
     pub fn new(rcfg: Arc<RollupConfig>, cfg: S, receipts: R) -> Self {
@@ -69,12 +62,13 @@ where
     }
 }
 
+#[async_trait]
 impl<S, R> AttributesBuilder for StatefulAttributesBuilder<S, R>
 where
-    S: SystemConfigL2Fetcher + Debug,
-    R: L1ReceiptsFetcher + Debug,
+    S: SystemConfigL2Fetcher + Send + Debug,
+    R: ChainProvider + Send + Debug,
 {
-    fn prepare_payload_attributes(
+    async fn prepare_payload_attributes(
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockID,
@@ -89,7 +83,7 @@ where
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
         if l2_parent.l1_origin.number != epoch.number {
-            let (info, receipts) = self.receipts_fetcher.fetch_receipts(epoch.hash)?;
+            let info = self.receipts_fetcher.info_by_hash(epoch.hash).await?;
             if l2_parent.l1_origin.hash != info.parent_hash {
                 return Err(BuilderError::BlockMismatchEpochReset(
                     epoch,
@@ -97,6 +91,7 @@ where
                     info.parent_hash,
                 ));
             }
+            let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
 
             // let deposits = derive_deposits(receipts, sys_config.deposit_contract_address)?;
             sys_config.update_with_receipts(&receipts, &self.rollup_cfg, info.timestamp)?;
@@ -110,7 +105,7 @@ where
                 return Err(BuilderError::BlockMismatch(epoch, l2_parent.l1_origin));
             }
 
-            let info = self.receipts_fetcher.info_by_hash(epoch.hash)?;
+            let info = self.receipts_fetcher.info_by_hash(epoch.hash).await?;
             l1_info = info;
             deposit_transactions = vec![];
             // sequence_number = l2_parent.seq_num + 1;

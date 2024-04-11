@@ -13,6 +13,9 @@ use async_trait::async_trait;
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
 pub trait ChainProvider {
+    /// Fetch the L1 Header [BlockInfo] for the given [B256] hash.
+    async fn info_by_hash(&mut self, hash: B256) -> Result<BlockInfo>;
+
     /// Returns the block at the given number, or an error if the block does not exist in the data
     /// source.
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo>;

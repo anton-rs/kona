@@ -118,6 +118,7 @@ where
         let mut attributes = self
             .builder
             .prepare_payload_attributes(parent, batch.epoch())
+            .await
             .map_err(StageError::AttributesBuild)?;
         attributes.no_tx_pool = true;
         attributes.transactions.extend(batch.transactions);

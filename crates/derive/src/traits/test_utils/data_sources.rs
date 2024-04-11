@@ -84,6 +84,14 @@ impl TestChainProvider {
 
 #[async_trait]
 impl ChainProvider for TestChainProvider {
+    async fn info_by_hash(&mut self, hash: B256) -> Result<BlockInfo> {
+        if let Some((_, block)) = self.blocks.iter().find(|(_, b)| b.hash == hash) {
+            Ok(*block)
+        } else {
+            Err(anyhow::anyhow!("Block not found"))
+        }
+    }
+
     async fn block_info_by_number(&mut self, _number: u64) -> Result<BlockInfo> {
         if let Some((_, block)) = self.blocks.iter().find(|(n, _)| *n == _number) {
             Ok(*block)

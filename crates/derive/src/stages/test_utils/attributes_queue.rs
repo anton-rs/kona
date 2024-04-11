@@ -18,9 +18,10 @@ pub struct MockAttributesBuilder {
     pub attributes: Vec<anyhow::Result<PayloadAttributes>>,
 }
 
+#[async_trait]
 impl AttributesBuilder for MockAttributesBuilder {
     /// Prepares the [PayloadAttributes] for the next payload.
-    fn prepare_payload_attributes(
+    async fn prepare_payload_attributes(
         &mut self,
         _l2_parent: L2BlockInfo,
         _epoch: BlockID,
