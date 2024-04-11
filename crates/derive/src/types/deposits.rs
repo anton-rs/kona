@@ -46,11 +46,11 @@ impl UserDepositSource {
         let mut input = [0u8; 32 * 2];
         input[..32].copy_from_slice(&self.l1_block_hash[..]);
         input[32 * 2 - 8..].copy_from_slice(&self.log_index.to_be_bytes());
-        let deposit_id_hash = keccak256(&input);
+        let deposit_id_hash = keccak256(input);
         let mut domain_input = [0u8; 32 * 2];
         domain_input[32 - 8..32].copy_from_slice(&[DepositSourceDomainIdentifier::User as u8]);
         domain_input[32..].copy_from_slice(&deposit_id_hash[..]);
-        keccak256(&domain_input)
+        keccak256(domain_input)
     }
 }
 
@@ -74,11 +74,11 @@ impl L1InfoDepositSource {
         let mut input = [0u8; 32 * 2];
         input[..32].copy_from_slice(&self.l1_block_hash[..]);
         input[32 * 2 - 8..].copy_from_slice(&self.seq_number.to_be_bytes());
-        let deposit_id_hash = keccak256(&input);
+        let deposit_id_hash = keccak256(input);
         let mut domain_input = [0u8; 32 * 2];
-        domain_input[32 - 8..32].copy_from_slice(&[DepositSourceDomain::L1Info as u8]);
+        domain_input[32 - 8..32].copy_from_slice(&[DepositSourceDomainIdentifier::L1Info as u8]);
         domain_input[32..].copy_from_slice(&deposit_id_hash[..]);
-        keccak256(&domain_input)
+        keccak256(domain_input)
     }
 }
 
@@ -104,8 +104,8 @@ impl UpgradeDepositSource {
     pub fn source_hash(&self) -> B256 {
         let intent_hash = keccak256(self.intent.as_bytes());
         let mut domain_input = [0u8; 32 * 2];
-        domain_input[32 - 8..32].copy_from_slice(&[DepositSourceDomain::Upgrade as u8]);
+        domain_input[32 - 8..32].copy_from_slice(&[DepositSourceDomainIdentifier::Upgrade as u8]);
         domain_input[32..].copy_from_slice(&intent_hash[..]);
-        keccak256(&domain_input)
+        keccak256(domain_input)
     }
 }

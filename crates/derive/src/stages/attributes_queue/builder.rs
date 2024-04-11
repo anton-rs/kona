@@ -95,7 +95,7 @@ where
             let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
             sys_config.update_with_receipts(&receipts, &self.rollup_cfg, info.timestamp)?;
             let deposits =
-                derive_deposits(receipts, self.rollup_cfg.deposit_contract_address).await?;
+                derive_deposits(epoch.hash, receipts, self.rollup_cfg.deposit_contract_address).await?;
             l1_info = info;
             deposit_transactions = deposits;
             // sequence_number = 0;
