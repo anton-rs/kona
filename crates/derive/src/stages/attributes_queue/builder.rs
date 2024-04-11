@@ -1,5 +1,6 @@
 //! The [`AttributesBuilder`] and it's default implementation.
 
+use super::derive_deposits;
 use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::ChainProvider,
@@ -74,7 +75,7 @@ where
         epoch: BlockID,
     ) -> Result<PayloadAttributes, BuilderError> {
         let l1_info;
-        let mut deposit_transactions: Vec<RawTransaction> = vec![];
+        let deposit_transactions: Vec<RawTransaction>;
         // let mut sequence_number = 0u64;
         let mut sys_config =
             self.config_fetcher.system_config_by_l2_hash(l2_parent.block_info.hash)?;
@@ -92,12 +93,11 @@ where
                 ));
             }
             let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
-
-            // let deposits = derive_deposits(receipts, sys_config.deposit_contract_address)?;
             sys_config.update_with_receipts(&receipts, &self.rollup_cfg, info.timestamp)?;
-
+            let deposits =
+                derive_deposits(receipts, self.rollup_cfg.deposit_contract_address).await?;
             l1_info = info;
-            // deposit_transactions = deposits;
+            deposit_transactions = deposits;
             // sequence_number = 0;
         } else {
             #[allow(clippy::collapsible_else_if)]

@@ -12,6 +12,9 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use tracing::info;
 
+mod deposits;
+pub(crate) use deposits::derive_deposits;
+
 mod builder;
 pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
 

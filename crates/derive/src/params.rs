@@ -41,3 +41,16 @@ pub const CONFIG_UPDATE_EVENT_VERSION_0: B256 = B256::ZERO;
 /// Data transactions that carry frames are generally not larger than 128 KB due to L1 network
 /// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
 pub const MAX_FRAME_LEN: usize = 1000;
+
+/// Deposit log event abi signature.
+pub const DEPOSIT_EVENT_ABI: &str = "TransactionDeposited(address,address,uint256,bytes)";
+
+/// Deposit event abi hash.
+///
+/// This is the keccak256 hash of the deposit event ABI signature.
+/// `keccak256("TransactionDeposited(address,address,uint256,bytes)")`
+pub const DEPOSIT_EVENT_ABI_HASH: B256 =
+    b256!("b3813568d9991fc951961fcb4c784893574240a28925604d09fc577c55bb7c32");
+
+/// The initial version of the deposit event log.
+pub const DEPOSIT_EVENT_VERSION_0: B256 = B256::ZERO;
