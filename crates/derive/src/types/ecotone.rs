@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 //! Module containing a [Transaction] builder for the Ecotone network updgrade transactions.
 
-use crate::types::UpgradeDepositSource;
+use crate::types::{RawTransaction, UpgradeDepositSource};
 use alloc::{string::String, vec, vec::Vec};
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
 use alloy_rlp::Encodable;
@@ -82,7 +82,7 @@ pub struct EcotoneTransactionBuilder;
 
 impl EcotoneTransactionBuilder {
     /// Constructs the Ecotone network upgrade transactions.
-    pub fn build_txs() -> anyhow::Result<Vec<Bytes>> {
+    pub fn build_txs() -> anyhow::Result<Vec<RawTransaction>> {
         let mut txs = vec![];
 
         // Deploy the L1 Block Contract
@@ -98,7 +98,7 @@ impl EcotoneTransactionBuilder {
             input: L1_BLOCK_DEPLOYMENT_BYTECODE.clone(),
         })
         .encode(&mut buffer);
-        txs.push(buffer.into());
+        txs.push(RawTransaction::from(buffer));
 
         // Deploy the Gas Price Oracle
         buffer = Vec::new();
@@ -113,7 +113,7 @@ impl EcotoneTransactionBuilder {
             input: GAS_PRICE_ORACLE_DEPLOYMENT_BYTECODE.clone(),
         })
         .encode(&mut buffer);
-        txs.push(buffer.into());
+        txs.push(RawTransaction::from(buffer));
 
         // Update the l1 block proxy
         buffer = Vec::new();
@@ -128,7 +128,7 @@ impl EcotoneTransactionBuilder {
             input: upgrade_to_calldata(NEW_L1_BLOCK_ADDRESS),
         })
         .encode(&mut buffer);
-        txs.push(buffer.into());
+        txs.push(RawTransaction::from(buffer));
 
         // Update gas price oracle proxy
         buffer = Vec::new();
@@ -143,7 +143,7 @@ impl EcotoneTransactionBuilder {
             input: upgrade_to_calldata(GAS_PRICE_ORACLE_ADDRESS),
         })
         .encode(&mut buffer);
-        txs.push(buffer.into());
+        txs.push(RawTransaction::from(buffer));
 
         // Enable ecotone
         buffer = Vec::new();
@@ -158,7 +158,7 @@ impl EcotoneTransactionBuilder {
             input: ENABLE_ECOTONE_INPUT.into(),
         })
         .encode(&mut buffer);
-        txs.push(buffer.into());
+        txs.push(RawTransaction::from(buffer));
 
         // Deploy EIP4788
         buffer = Vec::new();
@@ -173,7 +173,7 @@ impl EcotoneTransactionBuilder {
             input: EIP4788_CREATION_DATA.clone(),
         })
         .encode(&mut buffer);
-        txs.push(buffer.into());
+        txs.push(RawTransaction::from(buffer));
 
         Ok(txs)
     }

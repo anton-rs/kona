@@ -5,8 +5,8 @@ use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::ChainProvider,
     types::{
-        BlockID, BuilderError, L2BlockInfo, PayloadAttributes, RawTransaction, RollupConfig,
-        SystemConfig,
+        BlockID, BuilderError, EcotoneTransactionBuilder, L2BlockInfo, PayloadAttributes,
+        RawTransaction, RollupConfig, SystemConfig,
     },
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
@@ -124,10 +124,11 @@ where
             ));
         }
 
-        // let mut upgrade_transactions: Vec<Bytes> = vec![];
-        // if self.rollup_cfg.is_ecotone_active(next_l2_time) {
-        //     upgrade_transactions =
-        // EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?; }
+        let mut upgrade_transactions: Vec<RawTransaction> = vec![];
+        if self.rollup_cfg.is_ecotone_active(next_l2_time) {
+            upgrade_transactions =
+                EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
+        }
 
         // let l1_info_tx = l1_info_deposit_bytes(self.rollup_cfg, sys_config, sequence_number,
         // l1_info, next_l2_time)?;
@@ -135,7 +136,7 @@ where
         let mut txs = vec![];
         // txs.push(l1_info_tx);
         txs.extend(deposit_transactions);
-        // txs.extend(upgrade_transactions);
+        txs.extend(upgrade_transactions);
 
         let withdrawals = None;
         if self.rollup_cfg.is_canyon_active(next_l2_time) {
