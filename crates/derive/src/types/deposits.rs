@@ -482,6 +482,21 @@ mod tests {
     }
 
     #[test]
+    fn test_unmarshal_deposit_version0_invalid_len() {
+        let data = vec![0u8; 72];
+        let mut tx = TxDeposit::default();
+        let to = address!("5555555555555555555555555555555555555555");
+        let err = unmarshal_deposit_version0(&mut tx, to, &data).unwrap_err();
+        assert_eq!(err, DepositError::UnexpectedOpaqueDataLen(72));
+
+        // Data must have at least length 73
+        let data = vec![0u8; 73];
+        let mut tx = TxDeposit::default();
+        let to = address!("5555555555555555555555555555555555555555");
+        unmarshal_deposit_version0(&mut tx, to, &data).unwrap();
+    }
+
+    #[test]
     fn test_unmarshal_deposit_version0() {
         let mut data = vec![0u8; 192];
         let offset: [u8; 8] = U64::from(32).to_be_bytes();
