@@ -1,9 +1,12 @@
 #![allow(dead_code)]
 //! Module containing a [Transaction] builder for the Ecotone network updgrade transactions.
 
-use alloc::vec::Vec;
-use alloy_primitives::{address, bytes, Address, Bytes};
+use crate::types::UpgradeDepositSource;
+use alloc::{string::String, vec, vec::Vec};
+use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
+use alloy_rlp::Encodable;
 use lazy_static::lazy_static;
+use op_alloy_consensus::{TxDeposit, TxEnvelope};
 
 /// The UpdgradeTo Function Signature
 pub const UPDGRADE_TO_FUNC_SIGNATURE: &str = "upgradeTo(address)";
@@ -41,6 +44,38 @@ pub fn upgrade_to_calldata(addr: Address) -> Bytes {
     Bytes::from(v)
 }
 
+lazy_static! {
+    /// The deploy l1 block source
+    pub static ref DEPLOY_L1_BLOCK_SOURCE: UpgradeDepositSource = UpgradeDepositSource {
+        intent: String::from("Ecotone: L1 Block Deployment")
+    };
+
+    /// The deploy gas price oracle source
+    pub static ref DEPLOY_GAS_PRICE_ORACLE_SOURCE: UpgradeDepositSource = UpgradeDepositSource {
+        intent: String::from("Ecotone: Gas Price Oracle Deployment")
+    };
+
+    /// The update l1 block proxy source
+    pub static ref UPDATE_L1_BLOCK_PROXY_SOURCE: UpgradeDepositSource = UpgradeDepositSource {
+        intent: String::from("Ecotone: L1 Block Proxy Update")
+    };
+
+    /// The update gas price oracle source
+    pub static ref UPDATE_GAS_PRICE_ORACLE_SOURCE: UpgradeDepositSource = UpgradeDepositSource {
+        intent: String::from("Ecotone: Gas Price Oracle Proxy Update")
+    };
+
+    /// The enable ecotone source
+    pub static ref ENABLE_ECOTONE_SOURCE: UpgradeDepositSource = UpgradeDepositSource {
+        intent: String::from("Ecotone: Gas Price Oracle Set Ecotone")
+    };
+
+    /// The beacon roots source
+    pub static ref BEACON_ROOTS_SOURCE: UpgradeDepositSource = UpgradeDepositSource {
+        intent: String::from("Ecotone: beacon block roots contract deployment")
+    };
+}
+
 /// Builder wrapper for the Ecotone network updgrade.
 #[derive(Debug, Default)]
 pub struct EcotoneTransactionBuilder;
@@ -48,77 +83,99 @@ pub struct EcotoneTransactionBuilder;
 impl EcotoneTransactionBuilder {
     /// Constructs the Ecotone network upgrade transactions.
     pub fn build_txs() -> anyhow::Result<Vec<Bytes>> {
-        // let mut txs = vec![];
+        let mut txs = vec![];
 
-        // TODO: Deposit tx type needs to be in upstream alloy consensus.
+        // Deploy the L1 Block Contract
+        let mut buffer = Vec::new();
+        TxEnvelope::Deposit(TxDeposit {
+            source_hash: DEPLOY_L1_BLOCK_SOURCE.source_hash(),
+            from: L1_BLOCK_DEPLOYER_ADDRESS,
+            to: TxKind::Create,
+            mint: 0.into(),
+            value: U256::ZERO,
+            gas_limit: 375_000,
+            is_system_transaction: false,
+            input: L1_BLOCK_DEPLOYMENT_BYTECODE.clone(),
+        })
+        .encode(&mut buffer);
+        txs.push(buffer.into());
 
-        // let deploy_l1_block_transaction = TxEnvelope::Deposit(TxDeposit {
-        //     from: L1_BLOCK_DEPLOYER_ADDRESS,
-        //     to: None,
-        //     mint: 0.into(),
-        //     value: 0.into(),
-        //     gas: 375_000,
-        //     is_system_transaction: false,
-        //     data: L1_BLOCK_DEPLOYMENT_BYTECODE.clone(),
-        // }).encode()?;
-        // txs.push(deploy_l1_block_transaction);
+        // Deploy the Gas Price Oracle
+        buffer = Vec::new();
+        TxEnvelope::Deposit(TxDeposit {
+            source_hash: DEPLOY_GAS_PRICE_ORACLE_SOURCE.source_hash(),
+            from: GAS_PRICE_ORACLE_DEPLOYER_ADDRESS,
+            to: TxKind::Create,
+            mint: 0.into(),
+            value: U256::ZERO,
+            gas_limit: 1_000_000,
+            is_system_transaction: false,
+            input: GAS_PRICE_ORACLE_DEPLOYMENT_BYTECODE.clone(),
+        })
+        .encode(&mut buffer);
+        txs.push(buffer.into());
 
-        // let deploy_gas_price_oracle_transaction = TxEnvelope::Deposit(TxDeposit {
-        //     from: GAS_PRICE_ORACLE_DEPLOYER_ADDRESS,
-        //     to: None,
-        //     mint: 0.into(),
-        //     value: 0.into(),
-        //     gas: 1_000_000,
-        //     is_system_transaction: false,
-        //     data: GAS_PRICE_ORACLE_DEPLOYMENT_BYTECODE.clone(),
-        // }).encode()?;
-        // txs.push(deploy_gas_price_oracle_transaction);
+        // Update the l1 block proxy
+        buffer = Vec::new();
+        TxEnvelope::Deposit(TxDeposit {
+            source_hash: UPDATE_L1_BLOCK_PROXY_SOURCE.source_hash(),
+            from: Address::default(),
+            to: TxKind::Call(L1_BLOCK_DEPLOYER_ADDRESS),
+            mint: 0.into(),
+            value: U256::ZERO,
+            gas_limit: 50_000,
+            is_system_transaction: false,
+            input: upgrade_to_calldata(NEW_L1_BLOCK_ADDRESS),
+        })
+        .encode(&mut buffer);
+        txs.push(buffer.into());
 
-        // let update_l1_block_proxy = TxEnvelope::Deposit(TxDeposit {
-        //     from: Address::default(),
-        //     to: Some(L1_BLOCK_DEPLOYER_ADDRESS),
-        //     mint: 0.into(),
-        //     value: 0.into(),
-        //     gas: 50_000,
-        //     is_system_transaction: false,
-        //     data: upgrade_to_calldata(NEW_L1_BLOCK_ADDRESS),
-        // }).encode()?;
-        // txs.push(update_l1_block_proxy);
+        // Update gas price oracle proxy
+        buffer = Vec::new();
+        TxEnvelope::Deposit(TxDeposit {
+            source_hash: UPDATE_GAS_PRICE_ORACLE_SOURCE.source_hash(),
+            from: Address::default(),
+            to: TxKind::Call(GAS_PRICE_ORACLE_DEPLOYER_ADDRESS),
+            mint: 0.into(),
+            value: U256::ZERO,
+            gas_limit: 50_000,
+            is_system_transaction: false,
+            input: upgrade_to_calldata(GAS_PRICE_ORACLE_ADDRESS),
+        })
+        .encode(&mut buffer);
+        txs.push(buffer.into());
 
-        // let update_gas_price_oracle_proxy = TxEnvelope::Deposit(TxDeposit {
-        //     from: Address::default(),
-        //     to: Some(GAS_PRICE_ORACLE_DEPLOYER_ADDRESS),
-        //     mint: 0.into(),
-        //     value: 0.into(),
-        //     gas: 50_000,
-        //     is_system_transaction: false,
-        //     data: upgrade_to_calldata(GAS_PRICE_ORACLE_ADDRESS),
-        // }).encode()?;
-        // txs.push(update_gas_price_oracle_proxy);
+        // Enable ecotone
+        buffer = Vec::new();
+        TxEnvelope::Deposit(TxDeposit {
+            source_hash: ENABLE_ECOTONE_SOURCE.source_hash(),
+            from: L1_BLOCK_DEPLOYER_ADDRESS,
+            to: TxKind::Call(GAS_PRICE_ORACLE_ADDRESS),
+            mint: 0.into(),
+            value: U256::ZERO,
+            gas_limit: 80_000,
+            is_system_transaction: false,
+            input: ENABLE_ECOTONE_INPUT.into(),
+        })
+        .encode(&mut buffer);
+        txs.push(buffer.into());
 
-        // let enable_ecotone = TxEnvelope::Deposit(TxDeposit {
-        //     from: L1_BLOCK_DEPLOYER_ADDRESS,
-        //     to: Some(GAS_PRICE_ORACLE_ADDRESS),
-        //     mint: 0.into(),
-        //     value: 0.into(),
-        //     gas: 80_000,
-        //     is_system_transaction: false,
-        //     data: ENABLE_ECOTONE_INPUT.into(),
-        // }).encode()?;
-        // txs.push(enable_ecotone);
+        // Deploy EIP4788
+        buffer = Vec::new();
+        TxEnvelope::Deposit(TxDeposit {
+            source_hash: BEACON_ROOTS_SOURCE.source_hash(),
+            from: EIP4788_FROM,
+            to: TxKind::Create,
+            mint: 0.into(),
+            value: U256::ZERO,
+            gas_limit: 250_000,
+            is_system_transaction: false,
+            input: EIP4788_CREATION_DATA.clone(),
+        })
+        .encode(&mut buffer);
+        txs.push(buffer.into());
 
-        // let deploy_eip4788 = TxEnvelope::Deposit(TxDeposit {
-        //     from: EIP4788_FROM,
-        //     to: None,
-        //     mint: 0.into(),
-        //     value: 0.into(),
-        //     gas: 250_000,
-        //     is_system_transaction: false,
-        //     data: EIP_4788_CREATION_DATA.clone(),
-        // }).encode()?;
-        // txs.push(deploy_eip4788);
-
-        Ok(Vec::new())
+        Ok(txs)
     }
 }
 
