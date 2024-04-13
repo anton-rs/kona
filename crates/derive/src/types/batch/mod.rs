@@ -6,8 +6,7 @@ use crate::{
     traits::L2ChainProvider,
     types::{BlockInfo, L2BlockInfo, RollupConfig},
 };
-use alloc::vec::Vec;
-use alloy_rlp::{Buf, Decodable, Encodable};
+use alloy_rlp::{Buf, Decodable};
 
 mod batch_type;
 pub use batch_type::BatchType;
@@ -66,7 +65,7 @@ pub enum Batch {
     /// A single batch
     Single(SingleBatch),
     /// Span Batches
-    Span(RawSpanBatch),
+    Span(SpanBatch),
 }
 
 impl Batch {
@@ -78,19 +77,8 @@ impl Batch {
         }
     }
 
-    /// Attempts to encode a batch into a writer.
-    pub fn encode(&self, w: &mut Vec<u8>) -> Result<(), DecodeError> {
-        match self {
-            Self::Single(single_batch) => {
-                single_batch.encode(w);
-                Ok(())
-            }
-            Self::Span(span_batch) => span_batch.encode(w).map_err(DecodeError::SpanBatchError),
-        }
-    }
-
     /// Attempts to decode a batch from a reader.
-    pub fn decode(r: &mut &[u8]) -> Result<Self, DecodeError> {
+    pub fn decode(r: &mut &[u8], cfg: &RollupConfig) -> Result<Self, DecodeError> {
         if r.is_empty() {
             return Err(DecodeError::EmptyBuffer);
         }
@@ -105,7 +93,11 @@ impl Batch {
                 Ok(Batch::Single(single_batch))
             }
             BatchType::Span => {
-                let span_batch = RawSpanBatch::decode(r).map_err(DecodeError::SpanBatchError)?;
+                let mut raw_span_batch =
+                    RawSpanBatch::decode(r).map_err(DecodeError::SpanBatchError)?;
+                let span_batch = raw_span_batch
+                    .derive(cfg.block_time, cfg.genesis.timestamp, cfg.l2_chain_id)
+                    .map_err(DecodeError::SpanBatchError)?;
                 Ok(Batch::Span(span_batch))
             }
         }

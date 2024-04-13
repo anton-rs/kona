@@ -36,7 +36,7 @@ pub struct SpanBatch {
 
 impl SpanBatch {
     /// Returns the timestamp for the first batch in the span.
-    pub fn get_timestamp(&self) -> u64 {
+    pub fn timestamp(&self) -> u64 {
         self.batches[0].timestamp
     }
 
@@ -87,7 +87,7 @@ impl SpanBatch {
     /// stage.
     pub fn get_singular_batches(
         &self,
-        l1_origins: Vec<BlockInfo>,
+        l1_origins: &[BlockInfo],
         l2_safe_head: L2BlockInfo,
     ) -> Result<Vec<SingleBatch>, SpanBatchError> {
         let mut single_batches = Vec::new();
