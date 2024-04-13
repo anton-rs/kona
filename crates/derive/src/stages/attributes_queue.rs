@@ -80,14 +80,14 @@ where
     pub async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,
-    ) -> StageResult<AttributesWithParent> {
+    ) -> StageResult<L2AttributesWithParent> {
         // Load the batch.
         let batch = self.load_batch(parent).await?;
 
         // Construct the payload attributes from the loaded batch.
         let attributes = self.create_next_attributes(batch, parent).await?;
         let populated_attributes =
-            AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
+            L2AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
 
         // Clear out the local state once payload attributes are prepared.
         self.batch = None;
@@ -101,7 +101,7 @@ where
         &mut self,
         batch: SingleBatch,
         parent: L2BlockInfo,
-    ) -> StageResult<PayloadAttributes> {
+    ) -> StageResult<L2PayloadAttributes> {
         // Sanity check parent hash
         if batch.parent_hash != parent.block_info.hash {
             return Err(StageError::Reset(ResetError::BadParentHash(
@@ -164,7 +164,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        AttributesQueue, AttributesWithParent, BlockInfo, L2BlockInfo, PayloadAttributes,
+        AttributesQueue, BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes,
         RollupConfig, SingleBatch, StageError, StageResult,
     };
     use crate::{
@@ -272,7 +272,7 @@ mod tests {
     async fn test_create_next_attributes_success() {
         let cfg = RollupConfig::default();
         let mock = new_attributes_provider(None, vec![]);
-        let mut payload_attributes = PayloadAttributes::default();
+        let mut payload_attributes = L2PayloadAttributes::default();
         let mock_builder =
             MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
         let mut aq = AttributesQueue::new(cfg, mock, mock_builder);
@@ -298,7 +298,7 @@ mod tests {
     async fn test_next_attributes_load_batch_last_in_span() {
         let cfg = RollupConfig::default();
         let mock = new_attributes_provider(None, vec![Ok(Default::default())]);
-        let mut pa = PayloadAttributes::default();
+        let mut pa = L2PayloadAttributes::default();
         let mock_builder = MockAttributesBuilder { attributes: vec![Ok(pa.clone())] };
         let mut aq = AttributesQueue::new(cfg, mock, mock_builder);
         // If we load the batch, we should get the last in span.
@@ -310,7 +310,7 @@ mod tests {
         // It should also reset the last in span flag and clear the batch.
         let attributes = aq.next_attributes(L2BlockInfo::default()).await.unwrap();
         pa.no_tx_pool = true;
-        let populated_attributes = AttributesWithParent {
+        let populated_attributes = L2AttributesWithParent {
             attributes: pa,
             parent: L2BlockInfo::default(),
             is_last_in_span: true,

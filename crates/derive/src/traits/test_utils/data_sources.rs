@@ -2,7 +2,7 @@
 
 use crate::{
     traits::{ChainProvider, L2ChainProvider},
-    types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo},
+    types::{BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
@@ -16,12 +16,12 @@ pub struct MockBlockFetcher {
     /// Blocks
     pub blocks: Vec<L2BlockInfo>,
     /// Payloads
-    pub payloads: Vec<ExecutionPayloadEnvelope>,
+    pub payloads: Vec<L2ExecutionPayloadEnvelope>,
 }
 
 impl MockBlockFetcher {
     /// Creates a new [MockBlockFetcher] with the given origin and batches.
-    pub fn new(blocks: Vec<L2BlockInfo>, payloads: Vec<ExecutionPayloadEnvelope>) -> Self {
+    pub fn new(blocks: Vec<L2BlockInfo>, payloads: Vec<L2ExecutionPayloadEnvelope>) -> Self {
         Self { blocks, payloads }
     }
 }
@@ -36,7 +36,7 @@ impl L2ChainProvider for MockBlockFetcher {
             .ok_or_else(|| anyhow::anyhow!("Block not found"))
     }
 
-    async fn payload_by_number(&mut self, number: u64) -> Result<ExecutionPayloadEnvelope> {
+    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
         self.payloads
             .iter()
             .find(|p| p.execution_payload.block_number == number)

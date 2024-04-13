@@ -1,9 +1,9 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
-use alloy_consensus::TxEnvelope;
 use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
+use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -13,7 +13,7 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 /// 24 bytes per tx overhead (size of slice header in memory).
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
-use super::{Block, BlockInfo, L2BlockInfo, RollupConfig, Withdrawal};
+use super::{Block, BlockInfo, L2BlockInfo, OpBlock, RollupConfig, Withdrawal};
 use alloy_rlp::{Decodable, Encodable};
 
 #[cfg(feature = "serde")]
@@ -22,16 +22,16 @@ use serde::{Deserialize, Serialize};
 /// Envelope wrapping the [ExecutionPayload].
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExecutionPayloadEnvelope {
+pub struct L2ExecutionPayloadEnvelope {
     /// Parent beacon block root.
     #[cfg_attr(feature = "serde", serde(rename = "parentBeaconBlockRoot"))]
     pub parent_beacon_block_root: Option<B256>,
     /// The inner execution payload.
     #[cfg_attr(feature = "serde", serde(rename = "executionPayload"))]
-    pub execution_payload: ExecutionPayload,
+    pub execution_payload: L2ExecutionPayload,
 }
 
-impl ExecutionPayloadEnvelope {
+impl L2ExecutionPayloadEnvelope {
     /// Returns the payload memory size.
     pub fn mem_size(&self) -> u64 {
         let mut out = PAYLOAD_MEM_FIXED_COST;
@@ -45,7 +45,7 @@ impl ExecutionPayloadEnvelope {
 /// The execution payload.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExecutionPayload {
+pub struct L2ExecutionPayload {
     /// The parent hash.
     #[cfg_attr(feature = "serde", serde(rename = "parentHash"))]
     pub parent_hash: B256,
@@ -111,32 +111,35 @@ pub struct ExecutionPayload {
     pub excess_blob_gas: Option<u64>,
 }
 
-impl ExecutionPayloadEnvelope {
+impl L2ExecutionPayloadEnvelope {
     /// Converts the [ExecutionPayloadEnvelope] to an [L2BlockInfo], by checking against the L1
     /// information transaction or the genesis block.
     pub fn to_l2_block_ref(&self, rollup_config: &RollupConfig) -> Result<L2BlockInfo> {
-        let ExecutionPayloadEnvelope { execution_payload, .. } = self;
+        let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
 
-        let (l1_origin, sequence_number) =
-            if execution_payload.block_number == rollup_config.genesis.l2.number {
-                if execution_payload.block_hash != rollup_config.genesis.l2.hash {
-                    anyhow::bail!("Invalid genesis hash");
-                }
-                (&rollup_config.genesis.l1, 0)
-            } else {
-                if execution_payload.transactions.is_empty() {
-                    anyhow::bail!(
-                        "L2 block is missing L1 info deposit transaction, block hash: {}",
-                        execution_payload.block_hash
-                    );
-                }
-                let _ = TxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
-                    .map_err(|e| anyhow::anyhow!(e))?;
+        let (l1_origin, sequence_number) = if execution_payload.block_number ==
+            rollup_config.genesis.l2.number
+        {
+            if execution_payload.block_hash != rollup_config.genesis.l2.hash {
+                anyhow::bail!("Invalid genesis hash");
+            }
+            (&rollup_config.genesis.l1, 0)
+        } else {
+            if execution_payload.transactions.is_empty() {
+                anyhow::bail!(
+                    "L2 block is missing L1 info deposit transaction, block hash: {}",
+                    execution_payload.block_hash
+                );
+            }
+            let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
+                .map_err(|e| anyhow::anyhow!(e))?;
 
-                todo!(
-                "Need Deposit transaction variant - see 'PayloadToBlockRef' in 'payload_util.go'"
-            );
-            };
+            if !matches!(tx.tx_type(), OpTxType::Deposit) {
+                anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
+            }
+
+            todo!("Parse L1 block info from info transaction");
+        };
 
         Ok(L2BlockInfo {
             block_info: BlockInfo {
@@ -151,11 +154,46 @@ impl ExecutionPayloadEnvelope {
     }
 }
 
-impl From<Block> for ExecutionPayloadEnvelope {
+impl From<Block> for L2ExecutionPayloadEnvelope {
     fn from(block: Block) -> Self {
         let Block { header, body, withdrawals, .. } = block;
         Self {
-            execution_payload: ExecutionPayload {
+            execution_payload: L2ExecutionPayload {
+                parent_hash: header.parent_hash,
+                fee_recipient: header.beneficiary,
+                state_root: header.state_root,
+                receipts_root: header.receipts_root,
+                logs_bloom: header.logs_bloom,
+                prev_randao: header.difficulty.into(),
+                block_number: header.number,
+                gas_limit: header.gas_limit,
+                gas_used: header.gas_used,
+                timestamp: header.timestamp,
+                extra_data: header.extra_data.clone(),
+                base_fee_per_gas: header.base_fee_per_gas,
+                block_hash: header.hash_slow(),
+                transactions: body
+                    .into_iter()
+                    .map(|tx| {
+                        let mut buf = Vec::with_capacity(tx.length());
+                        tx.encode(&mut buf);
+                        buf.into()
+                    })
+                    .collect(),
+                withdrawals,
+                blob_gas_used: header.blob_gas_used,
+                excess_blob_gas: header.excess_blob_gas,
+            },
+            parent_beacon_block_root: header.parent_beacon_block_root,
+        }
+    }
+}
+
+impl From<OpBlock> for L2ExecutionPayloadEnvelope {
+    fn from(block: OpBlock) -> Self {
+        let OpBlock { header, body, withdrawals, .. } = block;
+        Self {
+            execution_payload: L2ExecutionPayload {
                 parent_hash: header.parent_hash,
                 fee_recipient: header.beneficiary,
                 state_root: header.state_root,

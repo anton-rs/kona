@@ -15,7 +15,7 @@ use async_trait::async_trait;
 #[derive(Debug, Default)]
 pub struct MockAttributesBuilder {
     /// The attributes to return.
-    pub attributes: Vec<anyhow::Result<PayloadAttributes>>,
+    pub attributes: Vec<anyhow::Result<L2PayloadAttributes>>,
 }
 
 #[async_trait]
