@@ -29,7 +29,9 @@ pub enum StageError {
     ChannelNotFound,
     /// Missing L1 origin.
     MissingOrigin,
-    /// Failed to build the [super::PayloadAttributes] for the next batch.
+    /// Failed to build the [L2PayloadAttributes] for the next batch.
+    ///
+    /// [L2PayloadAttributes]: super::L2PayloadAttributes
     AttributesBuild(BuilderError),
     /// Reset the pipeline.
     Reset(ResetError),

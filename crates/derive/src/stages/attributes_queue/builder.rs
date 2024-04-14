@@ -5,15 +5,16 @@ use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::ChainProvider,
     types::{
-        BlockID, BuilderError, EcotoneTransactionBuilder, L2BlockInfo, L2PayloadAttributes,
-        RawTransaction, RollupConfig, SystemConfig,
+        BlockID, BuilderError, EcotoneTransactionBuilder, L1BlockInfoTx, L2BlockInfo,
+        L2PayloadAttributes, RawTransaction, RollupConfig, SystemConfig,
     },
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_primitives::B256;
+use alloy_rlp::Encodable;
 use async_trait::async_trait;
 
-/// The [AttributesBuilder] is responsible for preparing [PayloadAttributes]
+/// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.
 #[async_trait]
 pub trait AttributesBuilder {
@@ -76,14 +77,13 @@ where
     ) -> Result<L2PayloadAttributes, BuilderError> {
         let l1_header;
         let deposit_transactions: Vec<RawTransaction>;
-        // let mut sequence_number = 0u64;
         let mut sys_config =
             self.config_fetcher.system_config_by_l2_hash(l2_parent.block_info.hash)?;
 
         // If the L1 origin changed in this block, then we are in the first block of the epoch.
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
-        if l2_parent.l1_origin.number != epoch.number {
+        let sequence_number = if l2_parent.l1_origin.number != epoch.number {
             let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
             if l2_parent.l1_origin.hash != header.parent_hash {
                 return Err(BuilderError::BlockMismatchEpochReset(
@@ -99,7 +99,7 @@ where
                     .await?;
             l1_header = header;
             deposit_transactions = deposits;
-            // sequence_number = 0;
+            0
         } else {
             #[allow(clippy::collapsible_else_if)]
             if l2_parent.l1_origin.hash != epoch.hash {
@@ -109,8 +109,8 @@ where
             let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
             l1_header = header;
             deposit_transactions = vec![];
-            // sequence_number = l2_parent.seq_num + 1;
-        }
+            l2_parent.seq_num + 1
+        };
 
         // Sanity check the L1 origin was correctly selected to maintain the time invariant
         // between L1 and L2.
@@ -130,13 +130,20 @@ where
                 EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
         }
 
-        // TODO(clabby): `L1BlockInfo` parsing from calldata.
-        // let l1_info_tx = l1_info_deposit_bytes(self.rollup_cfg, sys_config, sequence_number,
-        // l1_info, next_l2_time)?;
+        // Build and encode the L1 info transaction for the current payload.
+        let (_, l1_info_tx_envelope) = L1BlockInfoTx::try_new_with_deposit_tx(
+            &self.rollup_cfg,
+            &sys_config,
+            sequence_number,
+            &l1_header,
+            next_l2_time,
+        )?;
+        let mut encoded_l1_info_tx = Vec::with_capacity(l1_info_tx_envelope.length());
+        l1_info_tx_envelope.encode(&mut encoded_l1_info_tx);
 
         let mut txs =
             Vec::with_capacity(1 + deposit_transactions.len() + upgrade_transactions.len());
-        // txs.push(l1_info_tx);
+        txs.push(encoded_l1_info_tx.into());
         txs.extend(deposit_transactions);
         txs.extend(upgrade_transactions);
 

@@ -52,7 +52,7 @@ pub struct L2AttributesWithParent {
 }
 
 impl L2AttributesWithParent {
-    /// Create a new [AttributesWithParent] instance.
+    /// Create a new [L2AttributesWithParent] instance.
     pub fn new(
         attributes: L2PayloadAttributes,
         parent: L2BlockInfo,
