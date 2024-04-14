@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
-use op_alloy_consensus::{OpTxEnvelope, OpTxType};
+use op_alloy_consensus::OpTxEnvelope;
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -13,7 +13,7 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 /// 24 bytes per tx overhead (size of slice header in memory).
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
-use super::{Block, BlockInfo, L2BlockInfo, OpBlock, RollupConfig, Withdrawal};
+use super::{Block, BlockInfo, L1BlockInfoTx, L2BlockInfo, OpBlock, RollupConfig, Withdrawal};
 use alloy_rlp::{Decodable, Encodable};
 
 #[cfg(feature = "serde")]
@@ -123,7 +123,7 @@ impl L2ExecutionPayloadEnvelope {
             if execution_payload.block_hash != rollup_config.genesis.l2.hash {
                 anyhow::bail!("Invalid genesis hash");
             }
-            (&rollup_config.genesis.l1, 0)
+            (rollup_config.genesis.l1, 0)
         } else {
             if execution_payload.transactions.is_empty() {
                 anyhow::bail!(
@@ -134,11 +134,12 @@ impl L2ExecutionPayloadEnvelope {
             let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
                 .map_err(|e| anyhow::anyhow!(e))?;
 
-            if !matches!(tx.tx_type(), OpTxType::Deposit) {
+            let OpTxEnvelope::Deposit(tx) = tx else {
                 anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
-            }
+            };
 
-            todo!("Parse L1 block info from info transaction");
+            let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+            (l1_info.id(), l1_info.sequence_number())
         };
 
         Ok(L2BlockInfo {
@@ -148,7 +149,7 @@ impl L2ExecutionPayloadEnvelope {
                 parent_hash: execution_payload.parent_hash,
                 timestamp: execution_payload.timestamp,
             },
-            l1_origin: *l1_origin,
+            l1_origin,
             seq_num: sequence_number,
         })
     }
