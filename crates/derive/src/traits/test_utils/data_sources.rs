@@ -5,7 +5,7 @@ use crate::{
     types::{BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo},
 };
 use alloc::{boxed::Box, vec::Vec};
-use alloy_consensus::{Receipt, TxEnvelope};
+use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -50,6 +50,8 @@ impl L2ChainProvider for MockBlockFetcher {
 pub struct TestChainProvider {
     /// Maps block numbers to block information using a tuple list.
     pub blocks: Vec<(u64, BlockInfo)>,
+    /// Maps block hashes to header information using a tuple list.
+    pub headers: Vec<(B256, Header)>,
     /// Maps block hashes to receipts using a tuple list.
     pub receipts: Vec<(B256, Vec<Receipt>)>,
 }
@@ -84,9 +86,9 @@ impl TestChainProvider {
 
 #[async_trait]
 impl ChainProvider for TestChainProvider {
-    async fn info_by_hash(&mut self, hash: B256) -> Result<BlockInfo> {
-        if let Some((_, block)) = self.blocks.iter().find(|(_, b)| b.hash == hash) {
-            Ok(*block)
+    async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
+        if let Some((_, header)) = self.headers.iter().find(|(_, b)| b.hash_slow() == hash) {
+            Ok(header.clone())
         } else {
             Err(anyhow::anyhow!("Block not found"))
         }

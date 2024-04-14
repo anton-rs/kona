@@ -5,7 +5,7 @@ use crate::types::{
     Blob, BlockInfo, ExecutionPayloadEnvelope, IndexedBlobHash, L2BlockInfo, StageResult,
 };
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
-use alloy_consensus::{Receipt, TxEnvelope};
+use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -13,8 +13,8 @@ use async_trait::async_trait;
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
 pub trait ChainProvider {
-    /// Fetch the L1 Header [BlockInfo] for the given [B256] hash.
-    async fn info_by_hash(&mut self, hash: B256) -> Result<BlockInfo>;
+    /// Fetch the L1 [Header] for the given [B256] hash.
+    async fn header_by_hash(&mut self, hash: B256) -> Result<Header>;
 
     /// Returns the block at the given number, or an error if the block does not exist in the data
     /// source.

@@ -74,7 +74,7 @@ where
         l2_parent: L2BlockInfo,
         epoch: BlockID,
     ) -> Result<PayloadAttributes, BuilderError> {
-        let l1_info;
+        let l1_header;
         let deposit_transactions: Vec<RawTransaction>;
         // let mut sequence_number = 0u64;
         let mut sys_config =
@@ -84,20 +84,20 @@ where
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
         if l2_parent.l1_origin.number != epoch.number {
-            let info = self.receipts_fetcher.info_by_hash(epoch.hash).await?;
-            if l2_parent.l1_origin.hash != info.parent_hash {
+            let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
+            if l2_parent.l1_origin.hash != header.parent_hash {
                 return Err(BuilderError::BlockMismatchEpochReset(
                     epoch,
                     l2_parent.l1_origin,
-                    info.parent_hash,
+                    header.parent_hash,
                 ));
             }
             let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
-            sys_config.update_with_receipts(&receipts, &self.rollup_cfg, info.timestamp)?;
+            sys_config.update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)?;
             let deposits =
                 derive_deposits(epoch.hash, receipts, self.rollup_cfg.deposit_contract_address)
                     .await?;
-            l1_info = info;
+            l1_header = header;
             deposit_transactions = deposits;
             // sequence_number = 0;
         } else {
@@ -106,8 +106,8 @@ where
                 return Err(BuilderError::BlockMismatch(epoch, l2_parent.l1_origin));
             }
 
-            let info = self.receipts_fetcher.info_by_hash(epoch.hash).await?;
-            l1_info = info;
+            let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
+            l1_header = header;
             deposit_transactions = vec![];
             // sequence_number = l2_parent.seq_num + 1;
         }
@@ -115,12 +115,12 @@ where
         // Sanity check the L1 origin was correctly selected to maintain the time invariant
         // between L1 and L2.
         let next_l2_time = l2_parent.block_info.timestamp + self.rollup_cfg.block_time;
-        if next_l2_time < l1_info.timestamp {
+        if next_l2_time < l1_header.timestamp {
             return Err(BuilderError::BrokenTimeInvariant(
                 l2_parent.l1_origin,
                 next_l2_time,
-                l1_info.id(),
-                l1_info.timestamp,
+                BlockID { hash: l1_header.hash_slow(), number: l1_header.number },
+                l1_header.timestamp,
             ));
         }
 
@@ -130,30 +130,30 @@ where
                 EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
         }
 
+        // TODO(clabby): `L1BlockInfo` parsing from calldata.
         // let l1_info_tx = l1_info_deposit_bytes(self.rollup_cfg, sys_config, sequence_number,
         // l1_info, next_l2_time)?;
 
-        let mut txs = vec![];
+        let mut txs =
+            Vec::with_capacity(1 + deposit_transactions.len() + upgrade_transactions.len());
         // txs.push(l1_info_tx);
         txs.extend(deposit_transactions);
         txs.extend(upgrade_transactions);
 
-        let withdrawals = None;
+        let mut withdrawals = None;
         if self.rollup_cfg.is_canyon_active(next_l2_time) {
-            // withdrawals = Some(Withdrawals::default());
+            withdrawals = Some(Vec::default());
         }
 
-        let parent_beacon_root = None;
+        let mut parent_beacon_root = None;
         if self.rollup_cfg.is_ecotone_active(next_l2_time) {
-            // parent_beacon_root = Some(l1_info.parent_beacon_root().unwrap_or_default());
             // if the parent beacon root is not available, default to zero hash
+            parent_beacon_root = Some(l1_header.parent_beacon_block_root.unwrap_or_default());
         }
 
         Ok(PayloadAttributes {
             timestamp: next_l2_time,
-            // TODO: The mix digest is pulled from the l1 info, which is a **full** block.
-            //       Currently, the l1_info is only the minimal `BlockInfo` defined in our types.
-            prev_randao: B256::default(),
+            prev_randao: l1_header.mix_hash,
             fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
             transactions: txs,
             no_tx_pool: true,
