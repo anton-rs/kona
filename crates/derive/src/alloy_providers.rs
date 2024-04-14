@@ -3,7 +3,7 @@
 
 use crate::{
     traits::{ChainProvider, L2ChainProvider},
-    types::{Block, BlockInfo, ExecutionPayloadEnvelope, L2BlockInfo, RollupConfig},
+    types::{Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
@@ -149,26 +149,26 @@ impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T>
     }
 }
 
-/// The [AlloyL2SafeHeadProvider] is a concrete implementation of the [L2ChainProvider] trait,
+/// The [AlloyL2ChainProvider] is a concrete implementation of the [L2ChainProvider] trait,
 /// providing data over Ethereum JSON-RPC using an alloy provider as the backend.
 ///
 /// **Note**:
 /// This provider fetches data using the `debug_getRawBlock` method. The RPC must support this
 /// namespace.
 #[derive(Debug)]
-pub struct AlloyL2SafeHeadProvider<T: Provider<Http<reqwest::Client>>> {
+pub struct AlloyL2ChainProvider<T: Provider<Http<reqwest::Client>>> {
     /// The inner Ethereum JSON-RPC provider.
     inner: T,
     /// The rollup configuration.
     rollup_config: Arc<RollupConfig>,
     /// `payload_by_number` LRU cache.
-    payload_by_number_cache: LruCache<u64, ExecutionPayloadEnvelope>,
+    payload_by_number_cache: LruCache<u64, L2ExecutionPayloadEnvelope>,
     /// `l2_block_info_by_number` LRU cache.
     l2_block_info_by_number_cache: LruCache<u64, L2BlockInfo>,
 }
 
-impl<T: Provider<Http<reqwest::Client>>> AlloyL2SafeHeadProvider<T> {
-    /// Creates a new [AlloyL2SafeHeadProvider] with the given alloy provider and [RollupConfig].
+impl<T: Provider<Http<reqwest::Client>>> AlloyL2ChainProvider<T> {
+    /// Creates a new [AlloyL2ChainProvider] with the given alloy provider and [RollupConfig].
     pub fn new(inner: T, rollup_config: Arc<RollupConfig>) -> Self {
         Self {
             inner,
@@ -180,7 +180,7 @@ impl<T: Provider<Http<reqwest::Client>>> AlloyL2SafeHeadProvider<T> {
 }
 
 #[async_trait]
-impl<T: Provider<Http<reqwest::Client>>> L2ChainProvider for AlloyL2SafeHeadProvider<T> {
+impl<T: Provider<Http<reqwest::Client>>> L2ChainProvider for AlloyL2ChainProvider<T> {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         if let Some(l2_block_info) = self.l2_block_info_by_number_cache.get(&number) {
             return Ok(*l2_block_info);
@@ -192,7 +192,7 @@ impl<T: Provider<Http<reqwest::Client>>> L2ChainProvider for AlloyL2SafeHeadProv
         Ok(l2_block_info)
     }
 
-    async fn payload_by_number(&mut self, number: u64) -> Result<ExecutionPayloadEnvelope> {
+    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
         if let Some(payload) = self.payload_by_number_cache.get(&number) {
             return Ok(payload.clone());
         }
@@ -203,8 +203,8 @@ impl<T: Provider<Http<reqwest::Client>>> L2ChainProvider for AlloyL2SafeHeadProv
             .request("debug_getRawBlock", [U64::from(number)])
             .await
             .map_err(|e| anyhow!(e))?;
-        let block = Block::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
-        let payload_envelope: ExecutionPayloadEnvelope = block.into();
+        let block = OpBlock::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
+        let payload_envelope: L2ExecutionPayloadEnvelope = block.into();
 
         self.payload_by_number_cache.put(number, payload_envelope.clone());
         Ok(payload_envelope)

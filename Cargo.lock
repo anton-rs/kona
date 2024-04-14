@@ -43,6 +43,8 @@ dependencies = [
  "alloy-eips 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
  "alloy-primitives",
  "alloy-rlp",
+ "alloy-serde 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
+ "serde",
  "sha2",
 ]
 
@@ -68,6 +70,8 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-serde 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
+ "c-kzg",
+ "serde",
 ]
 
 [[package]]
@@ -1582,6 +1586,8 @@ dependencies = [
  "alloy-eips 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
  "alloy-primitives",
  "alloy-rlp",
+ "alloy-serde 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
+ "serde",
 ]
 
 [[package]]

@@ -5,6 +5,7 @@ use alloy_consensus::{Header, TxEnvelope};
 use alloy_primitives::{Address, BlockHash, BlockNumber, B256};
 
 use alloy_rlp::{RlpDecodable, RlpEncodable};
+use op_alloy_consensus::OpTxEnvelope;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -108,6 +109,24 @@ pub struct Block {
     pub header: Header,
     /// Transactions in this block.
     pub body: Vec<TxEnvelope>,
+    /// Ommers/uncles header.
+    pub ommers: Vec<Header>,
+    /// Block withdrawals.
+    pub withdrawals: Option<Vec<Withdrawal>>,
+}
+
+/// OP Stack full block.
+///
+/// Withdrawals can be optionally included at the end of the RLP encoded message.
+///
+/// Taken from [reth-primitives](https://github.com/paradigmxyz/reth)
+#[derive(Debug, Clone, PartialEq, Eq, Default, RlpEncodable, RlpDecodable)]
+#[rlp(trailing)]
+pub struct OpBlock {
+    /// Block header.
+    pub header: Header,
+    /// Transactions in this block.
+    pub body: Vec<OpTxEnvelope>,
     /// Ommers/uncles header.
     pub ommers: Vec<Header>,
     /// Block withdrawals.

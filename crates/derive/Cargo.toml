@@ -42,8 +42,8 @@ tracing-subscriber = "0.3.18"
 
 [features]
 default = ["serde", "k256"]
-serde = ["dep:serde", "alloy-primitives/serde"]
-k256 = ["alloy-primitives/k256", "alloy-consensus/k256"]
+serde = ["dep:serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde"]
+k256 = ["alloy-primitives/k256", "alloy-consensus/k256", "op-alloy-consensus/k256"]
 online = [
   "dep:alloy-provider",
   "dep:alloy-transport-http",

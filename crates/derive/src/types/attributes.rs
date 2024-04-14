@@ -10,7 +10,7 @@ use alloy_primitives::{Address, B256};
 /// Payload attributes.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct PayloadAttributes {
+pub struct L2PayloadAttributes {
     /// Value for the timestamp field of the new payload.
     #[cfg_attr(feature = "serde", serde(rename = "timestamp"))]
     pub timestamp: u64,
@@ -42,23 +42,27 @@ pub struct PayloadAttributes {
 
 /// Payload Attributes with parent block reference.
 #[derive(Debug, Clone, PartialEq)]
-pub struct AttributesWithParent {
+pub struct L2AttributesWithParent {
     /// The payload attributes.
-    pub attributes: PayloadAttributes,
+    pub attributes: L2PayloadAttributes,
     /// The parent block reference.
     pub parent: L2BlockInfo,
     /// Whether the current batch is the last in its span.
     pub is_last_in_span: bool,
 }
 
-impl AttributesWithParent {
+impl L2AttributesWithParent {
     /// Create a new [AttributesWithParent] instance.
-    pub fn new(attributes: PayloadAttributes, parent: L2BlockInfo, is_last_in_span: bool) -> Self {
+    pub fn new(
+        attributes: L2PayloadAttributes,
+        parent: L2BlockInfo,
+        is_last_in_span: bool,
+    ) -> Self {
         Self { attributes, parent, is_last_in_span }
     }
 
     /// Returns the payload attributes.
-    pub fn attributes(&self) -> &PayloadAttributes {
+    pub fn attributes(&self) -> &L2PayloadAttributes {
         &self.attributes
     }
 

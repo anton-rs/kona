@@ -1,6 +1,6 @@
 //! This module contains the [L1BlockInfoTx] type, and various encoding / decoding methods for it.
 
-use super::{DepositSourceDomain, L1InfoDepositSource, RollupConfig, SystemConfig};
+use super::{BlockID, DepositSourceDomain, L1InfoDepositSource, RollupConfig, SystemConfig};
 use alloc::vec::Vec;
 use alloy_consensus::Header;
 use alloy_primitives::{address, Address, Bytes, TxKind, B256, U256};
@@ -228,6 +228,26 @@ impl L1BlockInfoTx {
         match self {
             Self::Ecotone(ecotone_tx) => ecotone_tx.encode_calldata(),
             Self::Bedrock(bedrock_tx) => bedrock_tx.encode_calldata(),
+        }
+    }
+
+    /// Returns the L1 [BlockID] for the info transaction.
+    pub fn id(&self) -> BlockID {
+        match self {
+            Self::Ecotone(L1BlockInfoEcotone { number, block_hash, .. }) => {
+                BlockID { number: *number, hash: *block_hash }
+            }
+            Self::Bedrock(L1BlockInfoBedrock { number, block_hash, .. }) => {
+                BlockID { number: *number, hash: *block_hash }
+            }
+        }
+    }
+
+    /// Returns the sequence number for the info transaction
+    pub fn sequence_number(&self) -> u64 {
+        match self {
+            Self::Ecotone(L1BlockInfoEcotone { sequence_number, .. }) => *sequence_number,
+            Self::Bedrock(L1BlockInfoBedrock { sequence_number, .. }) => *sequence_number,
         }
     }
 }

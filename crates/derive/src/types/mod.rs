@@ -9,7 +9,7 @@ use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 
 mod attributes;
-pub use attributes::{AttributesWithParent, PayloadAttributes};
+pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
 
 mod system_config;
 pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
@@ -34,11 +34,11 @@ pub use ecotone::*;
 
 mod payload;
 pub use payload::{
-    ExecutionPayload, ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
+    L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
 };
 
 mod block;
-pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, Withdrawal};
+pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock, Withdrawal};
 
 mod l1_block_info;
 pub use l1_block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};

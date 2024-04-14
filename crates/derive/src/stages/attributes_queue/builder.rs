@@ -5,7 +5,7 @@ use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::ChainProvider,
     types::{
-        BlockID, BuilderError, EcotoneTransactionBuilder, L2BlockInfo, PayloadAttributes,
+        BlockID, BuilderError, EcotoneTransactionBuilder, L2BlockInfo, L2PayloadAttributes,
         RawTransaction, RollupConfig, SystemConfig,
     },
 };
@@ -17,10 +17,10 @@ use async_trait::async_trait;
 /// that can be used to construct an L2 Block containing only deposits.
 #[async_trait]
 pub trait AttributesBuilder {
-    /// Prepares a template [PayloadAttributes] that is ready to be used to build an L2 block.
+    /// Prepares a template [L2PayloadAttributes] that is ready to be used to build an L2 block.
     /// The block will contain deposits only, on top of the given L2 parent, with the L1 origin
     /// set to the given epoch.
-    /// By default, the [PayloadAttributes] template will have `no_tx_pool` set to true,
+    /// By default, the [L2PayloadAttributes] template will have `no_tx_pool` set to true,
     /// and no sequencer transactions. The caller has to modify the template to add transactions.
     /// This can be done by either setting the `no_tx_pool` to false as sequencer, or by appending
     /// batch transactions as the verifier.
@@ -28,7 +28,7 @@ pub trait AttributesBuilder {
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockID,
-    ) -> Result<PayloadAttributes, BuilderError>;
+    ) -> Result<L2PayloadAttributes, BuilderError>;
 }
 
 /// The [SystemConfigL2Fetcher] fetches the system config by L2 hash.
@@ -73,7 +73,7 @@ where
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockID,
-    ) -> Result<PayloadAttributes, BuilderError> {
+    ) -> Result<L2PayloadAttributes, BuilderError> {
         let l1_header;
         let deposit_transactions: Vec<RawTransaction>;
         // let mut sequence_number = 0u64;
@@ -151,7 +151,7 @@ where
             parent_beacon_root = Some(l1_header.parent_beacon_block_root.unwrap_or_default());
         }
 
-        Ok(PayloadAttributes {
+        Ok(L2PayloadAttributes {
             timestamp: next_l2_time,
             prev_randao: l1_header.mix_hash,
             fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
