@@ -38,6 +38,17 @@ checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 [[package]]
 name = "alloy-consensus"
 version = "0.1.0"
+source = "git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding#842bf916e8242a163cb4375cce56f3ee59a340e9"
+dependencies = [
+ "alloy-eips 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
+ "alloy-primitives",
+ "alloy-rlp",
+ "sha2",
+]
+
+[[package]]
+name = "alloy-consensus"
+version = "0.1.0"
 source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
 dependencies = [
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
@@ -52,11 +63,11 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.1.0"
-source = "git+https://github.com/alloy-rs/alloy?branch=main#269c0606c0ca7a196f5a92b20c651a4d13ecf5d8"
+source = "git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding#842bf916e8242a163cb4375cce56f3ee59a340e9"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
- "alloy-serde 0.1.0 (git+https://github.com/alloy-rs/alloy?branch=main)",
+ "alloy-serde 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
 ]
 
 [[package]]
@@ -98,7 +109,7 @@ name = "alloy-network"
 version = "0.1.0"
 source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
 dependencies = [
- "alloy-consensus",
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-json-rpc",
  "alloy-primitives",
@@ -120,7 +131,6 @@ dependencies = [
  "cfg-if",
  "const-hex",
  "derive_more",
- "getrandom",
  "hex-literal",
  "itoa",
  "k256",
@@ -205,7 +215,7 @@ name = "alloy-rpc-types"
 version = "0.1.0"
 source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
 dependencies = [
- "alloy-consensus",
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-genesis",
  "alloy-primitives",
@@ -233,7 +243,7 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.1.0"
-source = "git+https://github.com/alloy-rs/alloy?branch=main#269c0606c0ca7a196f5a92b20c651a4d13ecf5d8"
+source = "git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding#842bf916e8242a163cb4375cce56f3ee59a340e9"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -1354,7 +1364,7 @@ dependencies = [
 name = "kona-derive"
 version = "0.0.1"
 dependencies = [
- "alloy-consensus",
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-primitives",
  "alloy-provider",
@@ -1567,12 +1577,12 @@ checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 [[package]]
 name = "op-alloy-consensus"
 version = "0.1.0"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=refcell/consensus-port#1eb8cff2b43612bf645db6396e5c2cffa82c3290"
+source = "git+https://github.com/clabby/op-alloy?branch=refcell/consensus-port#2d72c8ee077360ae0358e9c61f1bb37ac27be3b0"
 dependencies = [
- "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?branch=main)",
+ "alloy-consensus 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
+ "alloy-eips 0.1.0 (git+https://github.com/clabby/alloy?branch=cl/consensus-expose-encoding)",
  "alloy-primitives",
  "alloy-rlp",
- "sha2",
 ]
 
 [[package]]

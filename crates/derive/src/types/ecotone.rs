@@ -6,7 +6,7 @@ use alloc::{string::String, vec, vec::Vec};
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
 use alloy_rlp::Encodable;
 use lazy_static::lazy_static;
-use op_alloy_consensus::{TxDeposit, TxEnvelope};
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 /// The UpdgradeTo Function Signature
 pub const UPDGRADE_TO_FUNC_SIGNATURE: &str = "upgradeTo(address)";
@@ -87,7 +87,7 @@ impl EcotoneTransactionBuilder {
 
         // Deploy the L1 Block Contract
         let mut buffer = Vec::new();
-        TxEnvelope::Deposit(TxDeposit {
+        OpTxEnvelope::Deposit(TxDeposit {
             source_hash: DEPLOY_L1_BLOCK_SOURCE.source_hash(),
             from: L1_BLOCK_DEPLOYER_ADDRESS,
             to: TxKind::Create,
@@ -102,7 +102,7 @@ impl EcotoneTransactionBuilder {
 
         // Deploy the Gas Price Oracle
         buffer = Vec::new();
-        TxEnvelope::Deposit(TxDeposit {
+        OpTxEnvelope::Deposit(TxDeposit {
             source_hash: DEPLOY_GAS_PRICE_ORACLE_SOURCE.source_hash(),
             from: GAS_PRICE_ORACLE_DEPLOYER_ADDRESS,
             to: TxKind::Create,
@@ -117,7 +117,7 @@ impl EcotoneTransactionBuilder {
 
         // Update the l1 block proxy
         buffer = Vec::new();
-        TxEnvelope::Deposit(TxDeposit {
+        OpTxEnvelope::Deposit(TxDeposit {
             source_hash: UPDATE_L1_BLOCK_PROXY_SOURCE.source_hash(),
             from: Address::default(),
             to: TxKind::Call(L1_BLOCK_DEPLOYER_ADDRESS),
@@ -132,7 +132,7 @@ impl EcotoneTransactionBuilder {
 
         // Update gas price oracle proxy
         buffer = Vec::new();
-        TxEnvelope::Deposit(TxDeposit {
+        OpTxEnvelope::Deposit(TxDeposit {
             source_hash: UPDATE_GAS_PRICE_ORACLE_SOURCE.source_hash(),
             from: Address::default(),
             to: TxKind::Call(GAS_PRICE_ORACLE_DEPLOYER_ADDRESS),
@@ -147,7 +147,7 @@ impl EcotoneTransactionBuilder {
 
         // Enable ecotone
         buffer = Vec::new();
-        TxEnvelope::Deposit(TxDeposit {
+        OpTxEnvelope::Deposit(TxDeposit {
             source_hash: ENABLE_ECOTONE_SOURCE.source_hash(),
             from: L1_BLOCK_DEPLOYER_ADDRESS,
             to: TxKind::Call(GAS_PRICE_ORACLE_ADDRESS),
@@ -162,7 +162,7 @@ impl EcotoneTransactionBuilder {
 
         // Deploy EIP4788
         buffer = Vec::new();
-        TxEnvelope::Deposit(TxDeposit {
+        OpTxEnvelope::Deposit(TxDeposit {
             source_hash: BEACON_ROOTS_SOURCE.source_hash(),
             from: EIP4788_FROM,
             to: TxKind::Create,
