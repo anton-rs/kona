@@ -1,3 +1,9 @@
+set fallback := true
+
+# default recipe to display help information
+default:
+  @just --list
+
 # Test all FPVM targets
 test: build-cannon-examples build-asterisc-examples test-cannon test-asterisc
 

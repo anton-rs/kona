@@ -1,5 +1,9 @@
 set fallback := true
 
+# default recipe to display help information
+default:
+  @just --list
+
 all: cannon asterisc
 
 # Build the `cannon` program builder image
