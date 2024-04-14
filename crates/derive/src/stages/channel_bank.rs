@@ -18,6 +18,8 @@ use tracing::{debug, warn};
 #[async_trait]
 pub trait ChannelBankProvider {
     /// Retrieves the next [Frame] from the [FrameQueue] stage.
+    ///
+    /// [FrameQueue]: crate::stages::FrameQueue
     async fn next_frame(&mut self) -> StageResult<Frame>;
 }
 

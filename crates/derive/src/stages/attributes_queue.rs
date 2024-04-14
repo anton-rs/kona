@@ -19,6 +19,8 @@ mod builder;
 pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
 
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
+///
+/// [BatchQueue]: crate::stages::BatchQueue
 #[async_trait]
 pub trait AttributesProvider {
     /// Returns the next valid batch upon the given safe head.
@@ -38,6 +40,8 @@ pub trait AttributesProvider {
 ///
 /// This stage can be reset by clearing its batch buffer.
 /// This stage does not need to retain any references to L1 blocks.
+///
+/// [BatchQueue]: crate::stages::BatchQueue
 #[derive(Debug)]
 pub struct AttributesQueue<P, AB>
 where

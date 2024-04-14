@@ -21,6 +21,8 @@ pub trait BatchQueueProvider {
     /// This function can only be called once while the stage is in progress, and will return
     /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
     /// complete and the batch has been consumed, an [StageError::Eof] error is returned.
+    ///
+    /// [ChannelReader]: crate::stages::ChannelReader
     async fn next_batch(&mut self) -> StageResult<Batch>;
 }
 
@@ -62,7 +64,9 @@ where
     /// A set of batches in order from when we've seen them.
     batches: Vec<BatchWithInclusionBlock>,
 
-    /// A set of cached [SingleBatche]s derived from [SpanBatch]s.
+    /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
+    ///
+    /// [SpanBatch]: crate::types::SpanBatch
     next_spans: Vec<SingleBatch>,
 
     /// Used to validate the batches.

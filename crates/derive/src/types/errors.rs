@@ -190,7 +190,9 @@ impl Display for DecodeError {
     }
 }
 
-/// An [AttributeBuilder] Error.
+/// An [AttributesBuilder] Error.
+///
+/// [AttributesBuilder]: crate::stages::AttributesBuilder
 #[derive(Debug)]
 pub enum BuilderError {
     /// Mismatched blocks.
@@ -198,6 +200,8 @@ pub enum BuilderError {
     /// Mismatched blocks for the start of an Epoch.
     BlockMismatchEpochReset(BlockID, BlockID, B256),
     /// [SystemConfig] update failed.
+    ///
+    /// [SystemConfig]: crate::types::SystemConfig
     SystemConfigUpdate,
     /// Broken time invariant between L2 and L1.
     BrokenTimeInvariant(BlockID, u64, BlockID, u64),
