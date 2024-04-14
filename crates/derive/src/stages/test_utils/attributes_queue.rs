@@ -4,8 +4,8 @@ use crate::{
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
     traits::OriginProvider,
     types::{
-        BlockID, BlockInfo, BuilderError, L2BlockInfo, PayloadAttributes, SingleBatch, StageError,
-        StageResult,
+        BlockID, BlockInfo, BuilderError, L2BlockInfo, L2PayloadAttributes, SingleBatch,
+        StageError, StageResult,
     },
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -25,7 +25,7 @@ impl AttributesBuilder for MockAttributesBuilder {
         &mut self,
         _l2_parent: L2BlockInfo,
         _epoch: BlockID,
-    ) -> Result<PayloadAttributes, BuilderError> {
+    ) -> Result<L2PayloadAttributes, BuilderError> {
         match self.attributes.pop() {
             Some(Ok(attrs)) => Ok(attrs),
             Some(Err(err)) => Err(BuilderError::Custom(err)),

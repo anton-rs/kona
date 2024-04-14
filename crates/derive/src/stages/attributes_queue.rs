@@ -3,8 +3,8 @@
 use crate::{
     traits::{OriginProvider, ResettableStage},
     types::{
-        AttributesWithParent, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError, RollupConfig,
-        SingleBatch, StageError, StageResult, SystemConfig,
+        BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, ResetError,
+        RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
 use alloc::boxed::Box;
@@ -29,7 +29,7 @@ pub trait AttributesProvider {
 }
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
-/// and transforms them into [PayloadAttributes]. The outputted payload
+/// and transforms them into [L2PayloadAttributes]. The outputted payload
 /// attributes cannot be buffered because each batch->attributes transformation
 /// pulls in data about the current L2 safe head.
 ///
@@ -95,7 +95,7 @@ where
         Ok(populated_attributes)
     }
 
-    /// Creates the next attributes, transforming a [SingleBatch] into [PayloadAttributes].
+    /// Creates the next attributes, transforming a [SingleBatch] into [L2PayloadAttributes].
     /// This sets `no_tx_pool` and appends the batched txs to the attributes tx list.
     pub async fn create_next_attributes(
         &mut self,

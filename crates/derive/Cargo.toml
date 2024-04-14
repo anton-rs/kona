@@ -19,7 +19,6 @@ alloy-primitives = { version = "0.7.0", default-features = false, features = ["r
 alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
 alloy-sol-types = { version = "0.7.0", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
-op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
 alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
 async-trait = "0.1.77"
 hashbrown = "0.14.3"
