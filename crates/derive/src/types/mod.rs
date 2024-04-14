@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
+pub use alloy_consensus::Receipt;
 use alloy_primitives::Bytes;
 use alloy_rlp::{Decodable, Encodable};
 
@@ -12,6 +13,9 @@ pub use attributes::{AttributesWithParent, PayloadAttributes};
 
 mod system_config;
 pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
+
+mod deposits;
+pub use deposits::*;
 
 mod rollup_config;
 pub use rollup_config::RollupConfig;
@@ -24,6 +28,9 @@ pub use batch::{
     SpanBatchPrefix, SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError,
     MAX_SPAN_BATCH_SIZE,
 };
+
+mod ecotone;
+pub use ecotone::*;
 
 mod payload;
 pub use payload::{
@@ -62,6 +69,12 @@ impl RawTransaction {
     /// Returns if the transaction is a deposit
     pub fn is_deposit(&self) -> bool {
         !self.0.is_empty() && self.0[0] == 0x7E
+    }
+}
+
+impl<T: Into<Bytes>> From<T> for RawTransaction {
+    fn from(bytes: T) -> Self {
+        Self(bytes.into())
     }
 }
 

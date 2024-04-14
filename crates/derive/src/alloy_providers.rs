@@ -28,6 +28,8 @@ const CACHE_SIZE: usize = 16;
 pub struct AlloyChainProvider<T: Provider<Http<reqwest::Client>>> {
     /// The inner Ethereum JSON-RPC provider.
     inner: T,
+    /// `header_by_hash` LRU cache.
+    header_by_hash_cache: LruCache<B256, Header>,
     /// `block_info_by_number` LRU cache.
     block_info_by_number_cache: LruCache<u64, BlockInfo>,
     /// `block_info_by_number` LRU cache.
@@ -41,6 +43,7 @@ impl<T: Provider<Http<reqwest::Client>>> AlloyChainProvider<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner,
+            header_by_hash_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
             block_info_by_number_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
             receipts_by_hash_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
             block_info_and_transactions_by_hash_cache: LruCache::new(
@@ -52,6 +55,20 @@ impl<T: Provider<Http<reqwest::Client>>> AlloyChainProvider<T> {
 
 #[async_trait]
 impl<T: Provider<Http<reqwest::Client>>> ChainProvider for AlloyChainProvider<T> {
+    async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
+        if let Some(header) = self.header_by_hash_cache.get(&hash) {
+            return Ok(header.clone());
+        }
+
+        let raw_header: Bytes = self
+            .inner
+            .client()
+            .request("debug_getRawHeader", [hash])
+            .await
+            .map_err(|e| anyhow!(e))?;
+        Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e))
+    }
+
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo> {
         if let Some(block_info) = self.block_info_by_number_cache.get(&number) {
             return Ok(*block_info);

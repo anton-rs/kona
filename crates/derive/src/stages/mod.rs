@@ -32,7 +32,9 @@ mod batch_queue;
 pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
 mod attributes_queue;
-pub use attributes_queue::{AttributesProvider, AttributesQueue};
+pub use attributes_queue::{
+    AttributesBuilder, AttributesProvider, AttributesQueue, StatefulAttributesBuilder,
+};
 
 #[cfg(test)]
 pub mod test_utils;

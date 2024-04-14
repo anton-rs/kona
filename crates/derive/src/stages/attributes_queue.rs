@@ -3,8 +3,8 @@
 use crate::{
     traits::{OriginProvider, ResettableStage},
     types::{
-        AttributesWithParent, BlockID, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError,
-        RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
+        AttributesWithParent, BlockInfo, L2BlockInfo, PayloadAttributes, ResetError, RollupConfig,
+        SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
 use alloc::boxed::Box;
@@ -12,14 +12,11 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use tracing::info;
 
-pub trait AttributesBuilder {
-    /// Prepare the payload attributes.
-    fn prepare_payload_attributes(
-        &mut self,
-        l2_parent: L2BlockInfo,
-        epoch: BlockID,
-    ) -> anyhow::Result<PayloadAttributes>;
-}
+mod deposits;
+pub(crate) use deposits::derive_deposits;
+
+mod builder;
+pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
 
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
 #[async_trait]
@@ -124,6 +121,7 @@ where
         let mut attributes = self
             .builder
             .prepare_payload_attributes(parent, batch.epoch())
+            .await
             .map_err(StageError::AttributesBuild)?;
         attributes.no_tx_pool = true;
         attributes.transactions.extend(batch.transactions);
@@ -173,7 +171,7 @@ mod tests {
         stages::test_utils::{
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
-        types::RawTransaction,
+        types::{BuilderError, RawTransaction},
     };
     use alloc::{vec, vec::Vec};
     use alloy_primitives::b256;
@@ -264,7 +262,9 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageError::AttributesBuild(anyhow::anyhow!("missing payload attribute"))
+            StageError::AttributesBuild(BuilderError::Custom(anyhow::anyhow!(
+                "missing payload attribute"
+            )))
         );
     }
 
