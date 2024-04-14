@@ -40,6 +40,9 @@ pub use payload::{
 mod block;
 pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, Withdrawal};
 
+mod l1_block_info;
+pub use l1_block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
+
 mod blob;
 pub use blob::{Blob, BlobData, IndexedBlobHash};
 

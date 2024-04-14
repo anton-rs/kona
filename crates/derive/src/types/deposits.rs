@@ -33,6 +33,17 @@ pub enum DepositSourceDomain {
     Upgrade(UpgradeDepositSource),
 }
 
+impl DepositSourceDomain {
+    /// Returns the source hash.
+    pub fn source_hash(&self) -> B256 {
+        match self {
+            Self::User(ds) => ds.source_hash(),
+            Self::L1Info(ds) => ds.source_hash(),
+            Self::Upgrade(ds) => ds.source_hash(),
+        }
+    }
+}
+
 /// A deposit transaction source.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UserDepositSource {
