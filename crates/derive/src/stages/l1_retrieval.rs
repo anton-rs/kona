@@ -17,6 +17,8 @@ pub trait L1RetrievalProvider {
     /// This function can only be called once while the stage is in progress, and will return
     /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
     /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
+    ///
+    /// [L1Traversal]: crate::stages::L1Traversal
     fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
 
     /// Returns the batcher [Address] from the [crate::types::SystemConfig].
@@ -24,10 +26,12 @@ pub trait L1RetrievalProvider {
 }
 
 /// The [L1Retrieval] stage of the derivation pipeline.
-/// For each L1 [BlockInfo] pulled from the [L1Traversal] stage,
-/// [L1Retrieval] fetches the associated data from a specified
-/// [DataAvailabilityProvider]. This data is returned as a generic
+/// For each L1 [BlockInfo] pulled from the [L1Traversal] stage, [L1Retrieval] fetches the
+/// associated data from a specified [DataAvailabilityProvider]. This data is returned as a generic
 /// [DataIter] that can be iterated over.
+///
+/// [L1Traversal]: crate::stages::L1Traversal
+/// [DataIter]: crate::traits::DataAvailabilityProvider::DataIter
 #[derive(Debug)]
 pub struct L1Retrieval<DAP, P>
 where
@@ -47,8 +51,10 @@ where
     DAP: DataAvailabilityProvider,
     P: L1RetrievalProvider + OriginProvider,
 {
-    /// Creates a new [L1Retrieval] stage with the previous [L1Traversal]
-    /// stage and given [DataAvailabilityProvider].
+    /// Creates a new [L1Retrieval] stage with the previous [L1Traversal] stage and given
+    /// [DataAvailabilityProvider].
+    ///
+    /// [L1Traversal]: crate::stages::L1Traversal
     pub fn new(prev: P, provider: DAP) -> Self {
         Self { prev, provider, data: None }
     }

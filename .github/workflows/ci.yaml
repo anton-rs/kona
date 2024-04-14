@@ -79,7 +79,6 @@ jobs:
   cargo-doc:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -90,7 +89,6 @@ jobs:
         with:
           cache-on-failure: true
       - name: doclint
-        continue-on-error: true
         run: just lint-docs
       - name: doctest
         run: just test-docs

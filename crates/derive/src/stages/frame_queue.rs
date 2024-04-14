@@ -26,6 +26,8 @@ pub trait FrameQueueProvider {
 
 /// The [FrameQueue] stage of the derivation pipeline.
 /// This stage takes the output of the [L1Retrieval] stage and parses it into frames.
+///
+/// [L1Retrieval]: crate::stages::L1Retrieval
 #[derive(Debug)]
 pub struct FrameQueue<P>
 where
@@ -42,6 +44,8 @@ where
     P: FrameQueueProvider + OriginProvider + Debug,
 {
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
+    ///
+    /// [L1Retrieval]: crate::stages::L1Retrieval
     pub fn new(prev: P) -> Self {
         Self { prev, queue: VecDeque::new() }
     }

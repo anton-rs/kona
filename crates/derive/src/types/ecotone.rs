@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 //! Module containing a [Transaction] builder for the Ecotone network updgrade transactions.
+//!
+//! [Transaction]: alloy_consensus::Transaction
 
 use crate::types::{RawTransaction, UpgradeDepositSource};
 use alloc::{string::String, vec, vec::Vec};
