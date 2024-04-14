@@ -80,7 +80,7 @@ where
         self.batch.as_ref().cloned().ok_or(StageError::Eof)
     }
 
-    /// Returns the next [AttributesWithParent] from the current batch.
+    /// Returns the next [L2AttributesWithParent] from the current batch.
     pub async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,

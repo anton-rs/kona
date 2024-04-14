@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use alloy_consensus::Header;
 use alloy_primitives::{address, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
-use op_alloy_consensus::TxDeposit;
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 /// The system transaction gas limit post-Regolith
 const REGOLITH_SYSTEM_TX_GAS: u128 = 1_000_000;
@@ -117,7 +117,7 @@ impl L1BlockInfoTx {
         rollup_config: &RollupConfig,
         system_config: &SystemConfig,
         sequence_number: u64,
-        l1_header: Header,
+        l1_header: &Header,
         l2_block_time: u64,
     ) -> Result<Self> {
         // In the first block of Ecotone, the L1Block contract has not been upgraded yet due to the
@@ -173,9 +173,9 @@ impl L1BlockInfoTx {
         rollup_config: &RollupConfig,
         system_config: &SystemConfig,
         sequence_number: u64,
-        l1_header: Header,
+        l1_header: &Header,
         l2_block_time: u64,
-    ) -> Result<(L1BlockInfoTx, TxDeposit)> {
+    ) -> Result<(L1BlockInfoTx, OpTxEnvelope)> {
         let l1_info =
             Self::try_new(rollup_config, system_config, sequence_number, l1_header, l2_block_time)?;
         let l1_block_hash = match l1_info {
@@ -206,7 +206,7 @@ impl L1BlockInfoTx {
             deposit_tx.gas_limit = REGOLITH_SYSTEM_TX_GAS;
         }
 
-        Ok((l1_info, deposit_tx))
+        Ok((l1_info, OpTxEnvelope::Deposit(deposit_tx)))
     }
 
     /// Decodes the [L1BlockInfoEcotone] object from ethereum transaction calldata.
@@ -442,7 +442,7 @@ mod test {
             &rollup_config,
             &system_config,
             sequence_number,
-            l1_header.clone(),
+            &l1_header,
             l2_block_time,
         )
         .unwrap();
@@ -473,7 +473,7 @@ mod test {
             &rollup_config,
             &system_config,
             sequence_number,
-            l1_header.clone(),
+            &l1_header,
             l2_block_time,
         )
         .unwrap();

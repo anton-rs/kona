@@ -19,7 +19,7 @@ use alloy_rlp::{Decodable, Encodable};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Envelope wrapping the [ExecutionPayload].
+/// Envelope wrapping the [L2ExecutionPayload].
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct L2ExecutionPayloadEnvelope {
@@ -112,7 +112,7 @@ pub struct L2ExecutionPayload {
 }
 
 impl L2ExecutionPayloadEnvelope {
-    /// Converts the [ExecutionPayloadEnvelope] to an [L2BlockInfo], by checking against the L1
+    /// Converts the [L2ExecutionPayloadEnvelope] to an [L2BlockInfo], by checking against the L1
     /// information transaction or the genesis block.
     pub fn to_l2_block_ref(&self, rollup_config: &RollupConfig) -> Result<L2BlockInfo> {
         let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
