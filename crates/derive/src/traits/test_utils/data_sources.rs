@@ -67,6 +67,16 @@ impl TestChainProvider {
         self.receipts.push((hash, receipts));
     }
 
+    /// Insert a header into the mock chain provider.
+    pub fn insert_header(&mut self, hash: B256, header: Header) {
+        self.headers.push((hash, header));
+    }
+
+    /// Clears headers from the mock chain provider.
+    pub fn clear_headers(&mut self) {
+        self.headers.clear();
+    }
+
     /// Clears blocks from the mock chain provider.
     pub fn clear_blocks(&mut self) {
         self.blocks.clear();
@@ -81,6 +91,7 @@ impl TestChainProvider {
     pub fn clear(&mut self) {
         self.clear_blocks();
         self.clear_receipts();
+        self.clear_headers();
     }
 }
 
@@ -90,7 +101,7 @@ impl ChainProvider for TestChainProvider {
         if let Some((_, header)) = self.headers.iter().find(|(_, b)| b.hash_slow() == hash) {
             Ok(header.clone())
         } else {
-            Err(anyhow::anyhow!("Block not found"))
+            Err(anyhow::anyhow!("Header not found"))
         }
     }
 
