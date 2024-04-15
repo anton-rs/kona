@@ -157,8 +157,6 @@ where
 {
     async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
         info!("resetting attributes queue");
-        // TODO: metrice the reset using telemetry
-        // telemetry can provide a method of logging and metricing
         self.batch = None;
         self.is_last_in_span = false;
         Err(StageError::Eof)

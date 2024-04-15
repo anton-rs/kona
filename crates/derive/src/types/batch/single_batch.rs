@@ -5,6 +5,7 @@ use crate::types::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
 use alloy_rlp::{Decodable, Encodable};
+use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -43,39 +44,39 @@ impl SingleBatch {
     ) -> BatchValidity {
         // Sanity check input consistency
         if l1_blocks.is_empty() {
-            // TODO: log a warning: "missing L1 block input, cannot proceed with batch checking"
+            warn!("missing L1 block input, cannot proceed with batch checking");
             return BatchValidity::Undecided;
         }
 
         let epoch = l1_blocks[0];
         let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
         if self.timestamp > next_timestamp {
-            // TODO: trace log: "received out-of-order batch for future processing after next batch"
+            info!("received out-of-order batch for future processing after next batch");
             return BatchValidity::Future;
         }
         if self.timestamp < next_timestamp {
-            // TODO: warn log: "dropping batch with old timestamp", "min_timestamp", next_timestamp
+            warn!("dropping batch with old timestamp, min_timestamp: {next_timestamp}");
             return BatchValidity::Drop;
         }
 
         // Dependent on the above timestamp check.
         // If the timestamp is correct, then it must build on top of the safe head.
         if self.parent_hash != l2_safe_head.block_info.hash {
-            // TODO: warn log: "ignoring batch with mismatching parent hash", "current_safe_head",
-            // l2_safe_head.info.hash
+            let h = l2_safe_head.block_info.hash;
+            warn!("ignoring batch with mismatching parent hash, current_safe_head: {h}");
             return BatchValidity::Drop;
         }
 
         // Filter out batches that were included too late.
         if self.epoch_num + cfg.seq_window_size < inclusion_block.number {
-            // TODO: warn log: "batch was included too late, sequence window expired"
+            warn!("batch was included too late, sequence window expired");
             return BatchValidity::Drop;
         }
 
         // Check the L1 origin of the batch
         let mut batch_origin = epoch;
         if self.epoch_num < epoch.number {
-            // TODO: warn log: "dropped batch, epoch is too old", "minimum", epoch.id()
+            warn!("dropped batch, epoch is too old, minimum: {}", epoch.id());
             return BatchValidity::Drop;
         } else if self.epoch_num == epoch.number {
             // Batch is sticking to the current epoch, continue.
@@ -86,27 +87,23 @@ impl SingleBatch {
             // more information otherwise the eager algorithm may diverge from a non-eager
             // algorithm.
             if l1_blocks.len() < 2 {
-                // TODO: info log: "eager batch wants to advance epoch, but could not without more
-                // L1 blocks", "current_epoch", epoch.id()
+                info!("eager batch wants to advance epoch, but could not without more L1 blocks at epoch: {}", epoch.id());
                 return BatchValidity::Undecided;
             }
             batch_origin = l1_blocks[1];
         } else {
-            // TODO: warn log: "batch is for future epoch too far ahead, while it has the next
-            // timestamp, so it must be invalid", "current_epoch", epoch.id()
+            warn!("dropped batch, epoch is too far ahead, maximum: {}", epoch.id());
             return BatchValidity::Drop;
         }
 
         // Validate the batch epoch hash
         if self.epoch_hash != batch_origin.hash {
-            // TODO: warn log: "batch is for different L1 chain, epoch hash does not match",
-            // "expected", batch_origin.id()
+            warn!("dropped batch, epoch hash does not match, expected: {}", batch_origin.id());
             return BatchValidity::Drop;
         }
 
         if self.timestamp < batch_origin.timestamp {
-            // TODO: warn log: "batch timestamp is less than L1 origin timestamp", "l2_timestamp",
-            // self.timestamp, "l1_timestamp", batch_origin.timestamp, "origin", batch_origin.id()
+            warn!("dropped batch, batch timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {}", self.timestamp, batch_origin.timestamp, batch_origin.id());
             return BatchValidity::Drop;
         }
 
@@ -114,7 +111,7 @@ impl SingleBatch {
         let max = if let Some(max) = batch_origin.timestamp.checked_add(cfg.max_sequencer_drift) {
             max
         } else {
-            // TODO: log that the batch exceeds time drift.
+            warn!("dropped batch, timestamp exceeds configured max sequencer drift, origin timestamp: {}, max drift: {}", batch_origin.timestamp, cfg.max_sequencer_drift);
             return BatchValidity::Drop;
         };
 
@@ -122,9 +119,8 @@ impl SingleBatch {
         if self.timestamp > max && !no_txs {
             // If the sequencer is ignoring the time drift rule, then drop the batch and force an
             // empty batch instead, as the sequencer is not allowed to include anything
-            // past this point without moving to the next epoch. TODO: warn log: "batch
-            // exceeded sequencer time drift, sequencer must adopt new L1 origin to include
-            // transactions again", "max_time", max
+            // past this point without moving to the next epoch.
+            warn!("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again, max time: {max}");
             return BatchValidity::Drop;
         }
         if self.timestamp > max && no_txs {
@@ -134,35 +130,28 @@ impl SingleBatch {
             // epoch advancement regardless of time drift is allowed.
             if epoch.number == batch_origin.number {
                 if l1_blocks.len() < 2 {
-                    // TODO: info log: "without the next L1 origin we cannot determine yet if this
-                    // empty batch that exceeds the time drift is still valid"
+                    info!("without the next L1 origin we cannot determine yet if this empty batch that exceeds the time drift is still valid");
                     return BatchValidity::Undecided;
                 }
                 let next_origin = l1_blocks[1];
                 // Check if the next L1 Origin could have been adopted
                 if self.timestamp >= next_origin.timestamp {
-                    // TODO: log that the batch exceeded the time drift without adopting the next
-                    // origin.
+                    info!("empty batch that exceeds the time drift without adopting next L1 origin, dropping");
                     return BatchValidity::Drop;
                 } else {
-                    // TODO: log that we are continuing with an empty batch before the late L1 block
-                    // to preserve the L2 time invariant. TODO: metrice empty
-                    // batch continuation
+                    info!("empty batch continuation, preserving L2 time invariant");
                 }
             }
         }
 
-        // We can do this check earlier, but it's a more intensive one, so we do this last.
-        // TODO: metrice & allow configurability to measure the time it takes to check the batch.
-        for tx in self.transactions.iter() {
+        // We can do this check earlier, but it's intensive so we do it last for the sad-path.
+        for (i, tx) in self.transactions.iter().enumerate() {
             if tx.is_empty() {
-                // TODO: warn log: "transaction data must not be empty, but found empty tx",
-                // "tx_index", i
+                warn!("transaction data must not be empty, but found empty tx at index {i}");
                 return BatchValidity::Drop;
             }
             if tx.is_deposit() {
-                // TODO: warn log: "sequencers may not embed any deposits into batch data, but found
-                // tx that has one", "tx_index", i
+                warn!("sequencers may not embed any deposits into batch data, but found tx that has one at index: {i}");
                 return BatchValidity::Drop;
             }
         }

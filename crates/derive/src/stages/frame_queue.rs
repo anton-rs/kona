@@ -10,7 +10,7 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use tracing::debug;
+use tracing::{debug, error};
 
 /// Provides data frames for the [FrameQueue] stage.
 #[async_trait]
@@ -63,16 +63,14 @@ where
                     if let Ok(frames) = into_frames(Ok(data)) {
                         self.queue.extend(frames);
                     } else {
-                        // TODO: log parsing frame error
-                        // Failed to parse frames, but there may be more frames in the queue for
-                        //
-                        // the pipeline to advance, so don't return an error here.
+                        // There may be more frames in the queue for the
+                        // pipeline to advance, so don't return an error here.
+                        error!("Failed to parse frames from data.");
                     }
                 }
                 Err(e) => {
-                    // TODO: log retrieval error
-                    // The error must be bubbled up without a wrapper in case it's an EOF error.
-                    return Err(e);
+                    error!("Failed to retrieve data: {:?}", e);
+                    return Err(e); // Bubble up potential EOF error without wrapping.
                 }
             }
         }

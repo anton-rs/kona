@@ -9,6 +9,7 @@ use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::Result;
 use async_trait::async_trait;
+use tracing::warn;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
@@ -94,8 +95,14 @@ where
                 continue;
             }
             if !calldata.is_empty() {
-                // TODO(refcell): Add a warning log here if the blob data is not empty
-                // https://github.com/ethereum-optimism/optimism/blob/develop/op-node/rollup/derive/blob_data_source.go#L136
+                let hash = match &tx {
+                    TxEnvelope::Legacy(tx) => Some(tx.hash()),
+                    TxEnvelope::Eip2930(tx) => Some(tx.hash()),
+                    TxEnvelope::Eip1559(tx) => Some(tx.hash()),
+                    TxEnvelope::Eip4844(blob_tx_wrapper) => Some(blob_tx_wrapper.hash()),
+                    _ => None,
+                };
+                warn!("Blob tx has calldata, which will be ignored: {hash:?}");
             }
             let blob_hashes = if let Some(b) = blob_hashes {
                 b
@@ -186,7 +193,7 @@ where
         match next_data.decode() {
             Ok(d) => Some(Ok(d)),
             Err(_) => {
-                // TODO(refcell): Add a warning log here if decoding fails
+                warn!("Failed to decode blob data, skipping");
                 self.next().await
             }
         }

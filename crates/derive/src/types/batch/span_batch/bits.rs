@@ -37,7 +37,6 @@ impl SpanBatchBits {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
 
-        // TODO(refcell): This can definitely be optimized.
         let bits = if b.len() < buffer_len {
             let mut bits = vec![0; buffer_len];
             bits[..b.len()].copy_from_slice(b);
@@ -77,7 +76,6 @@ impl SpanBatchBits {
         if buf_len > MAX_SPAN_BATCH_SIZE {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
-        // TODO(refcell): This can definitely be optimized.
         let mut buf = vec![0; buf_len];
         buf[buf_len - bits.0.len()..].copy_from_slice(bits.as_ref());
         w.extend_from_slice(&buf);
