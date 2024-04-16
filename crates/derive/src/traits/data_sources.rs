@@ -48,7 +48,7 @@ pub trait L2ChainProvider {
 pub trait BlobProvider {
     /// Fetches blobs for a given block ref and the blob hashes.
     async fn get_blobs(
-        &self,
+        &mut self,
         block_ref: &BlockInfo,
         blob_hashes: Vec<IndexedBlobHash>,
     ) -> Result<Vec<Blob>>;

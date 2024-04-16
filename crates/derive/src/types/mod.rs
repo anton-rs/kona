@@ -47,7 +47,11 @@ mod blob;
 pub use blob::{Blob, BlobData, BlobDecodingError, IndexedBlobHash};
 
 mod sidecar;
-pub use sidecar::{KZG_PROOF_SIZE, KZG_COMMITMENT_SIZE, BlobSidecar, APIBlobSidecar, SignedBeaconBlockHeader, BeaconBlockHeader};
+pub use sidecar::{
+    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
+    APIVersionResponse, BeaconBlockHeader, BlobSidecar, SignedBeaconBlockHeader,
+    VersionInformation, KZG_COMMITMENT_SIZE, KZG_PROOF_SIZE,
+};
 
 mod genesis;
 pub use genesis::Genesis;

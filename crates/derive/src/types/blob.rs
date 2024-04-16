@@ -24,11 +24,18 @@ pub type Blob = FixedBytes<BLOB_BYTES_SIZE>;
 
 /// A Blob hash
 #[derive(Default, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct IndexedBlobHash {
     /// The index of the blob
     pub index: usize,
     /// The hash of the blob
     pub hash: B256,
+}
+
+impl PartialEq for IndexedBlobHash {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.hash == other.hash
+    }
 }
 
 /// Blob Decuding Error
