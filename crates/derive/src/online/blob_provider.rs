@@ -8,28 +8,33 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use alloy_provider::Provider;
 use alloy_transport_http::Http;
-use anyhow::Result;
 use async_trait::async_trait;
 use reqwest::Client;
 use tracing::debug;
+use core::fmt::Display;
 
-const (
-	versionMethod        = "eth/v1/node/version"
-	specMethod           = "eth/v1/config/spec"
-	genesisMethod        = "eth/v1/beacon/genesis"
-	sidecarsMethodPrefix = "eth/v1/beacon/blob_sidecars/"
-)
+/// The node version engine api method.
+pub const VERSION_METHOD: &str = "eth/v1/node/version";
+
+/// The config spec engine api method.
+pub const SPEC_METHOD: &str = "eth/v1/config/spec";
+
+/// The beacon genesis engine api method.
+pub const GENESIS_METHOD: &str = "eth/v1/beacon/genesis";
+
+/// The blob sidecars engine api method prefix.
+pub const SIDECARS_METHOD_PREFIX: &str = "eth/v1/beacon/blob_sidecars/";
 
 /// The [BeaconClient] is a thin wrapper around the Beacon API.
 pub trait BeaconClient {
     /// Returns the node version.
-    fn node_version(&self) -> Result<String>;
+    fn node_version(&self) -> anyhow::Result<String>;
 
     /// Returns the config spec.
-    fn config_spec(&self) -> Result<APIConfigResponse>;
+    fn config_spec(&self) -> anyhow::Result<APIConfigResponse>;
 
     /// Returns the beacon genesis.
-    fn beacon_genesis(&self) -> Result<APIGenesisResponse>;
+    fn beacon_genesis(&self) -> anyhow::Result<APIGenesisResponse>;
 
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. Order of the returned sidecars is guaranteed to be that of the hashes. Blob data is
@@ -39,13 +44,47 @@ pub trait BeaconClient {
         fetch_all_sidecars: bool,
         slot: u64,
         hashes: Vec<IndexedBlobHash>,
-    ) -> Result<APIGetBlobSidecarsResponse>;
+    ) -> anyhow::Result<APIGetBlobSidecarsResponse>;
 }
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
     /// Converts a timestamp to a slot number.
     fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64>;
+}
+
+/// An error returned by the [OnlineBlobProvider].
+#[derive(Debug)]
+pub enum OnlineBlobProviderError {
+    /// The number of specified blob hashes did not match the number of returned sidecars.
+    SidecarLengthMismatch(usize, usize),
+    /// A custom [anyhow::Error] occurred.
+    Custom(anyhow::Error),
+}
+
+impl PartialEq for OnlineBlobProviderError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::SidecarLengthMismatch(a, b), Self::SidecarLengthMismatch(c, d)) => a == c && b == d,
+            (Self::Custom(_), Self::Custom(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Display for OnlineBlobProviderError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::SidecarLengthMismatch(a, b) => write!(f, "expected {} sidecars but got {}", a, b),
+            Self::Custom(err) => write!(f, "{}", err),
+        }
+    }
+}
+
+impl From<anyhow::Error> for OnlineBlobProviderError {
+    fn from(err: anyhow::Error) -> Self {
+        Self::Custom(err)
+    }
 }
 
 /// An online implementation of the [BlobProvider] trait.
@@ -73,7 +112,7 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
     }
 
     /// Loads the beacon genesis and config spec 
-    pub fn load_configs(&mut self) -> Result<()> {
+    pub fn load_configs(&mut self) -> Result<(), OnlineBlobProviderError> {
         if self.genesis.is_none() {
             debug!("Loading missing BeaconGenesis");
             self.genesis = Some(self.beacon_client.beacon_genesis()?);
@@ -86,7 +125,7 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
     }
 
     /// Fetches blob sidecars for the given slot and blob hashes.
-    pub async fn fetch_sidecars(&self, slot: u64, hashes: Vec<IndexedBlobHash>) -> Result<BlobSidecar> {
+    pub async fn fetch_sidecars(&self, slot: u64, hashes: Vec<IndexedBlobHash>) -> Result<APIBlobSidecar, OnlineBlobProviderError> {
         unimplemented!("fetching blob sidecars is not implemented");
     }
 
@@ -98,7 +137,7 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
         &mut self,
         block_ref: &BlockInfo,
         blob_hashes: Vec<IndexedBlobHash>,
-    ) -> Result<Vec<Blob>> {
+    ) -> Result<Vec<BlobSidecar>, OnlineBlobProviderError> {
         if blob_hashes.is_empty() {
             return Ok(Vec::new());
         }
@@ -116,26 +155,59 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
         // Fetch blob sidecars for the slot using the given blob hashes.
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
 
+        // Filter blob sidecars that match the indicies in the specified list.
         let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
         let filtered = sidecars.iter().filter(|s| blob_hashes.contains(s.index)).collect::<Vec<_>>();
 
-        if filtered.len() != blob_hashes.len() {
-            
+        // Validate the correct number of blob sidecars were retrieved.
+        if blob_hashes.len() != filtered.len() {
+            return Err(OnlineBlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        // TODO: implement
-        Ok(Vec::new())
+        Ok(filtered.iter().map(|s| s.blob_sidecar()).collect::<Vec<BlobSidecar>>())
     }
+}
+
+/// Constructs a list of [Blob]s from [BlobSidecar]s and the specified [IndexedBlobHash]es.
+pub fn blobs_from_sidecars(sidecars: &[BlobSidecar], hashes: &[IndexedBlobHash]) -> anyhow::Result<Vec<Bob>> {
+    if sidecars.len() != hashes.len() {
+        return Err(anyhow::anyhow!("blob sidecars and hashes length mismatch, {} != {}", sidecars.len(), hashes.len()));
+    }
+
+    let mut blobs = Vec::with_capacity(sidecars.len());
+    for (i, sidecar) in sidecars.iter().enumerate() {
+        let hash =  hashes.get(i).ok_or(anyhow::anyhow!("failed to get blob hash"))?;
+        if sidecar.index != hash.index {
+            return Err(anyhow::anyhow!("invalid sidecar ordering, blob hash index {} does not match sidecar index {}", hash.index, sidecar.index));
+        }
+
+        // Ensure the blob's kzg commitment hashes to the expected value.
+
+		// hash := eth.KZGToVersionedHash(kzg4844.Commitment(sidecar.KZGCommitment))
+		// if hash != ih.Hash {
+		// 	return nil, fmt.Errorf("expected hash %s for blob at index %d but got %s", ih.Hash, ih.Index, hash)
+		// }
+
+        // Confirm blob data is valid by verifying its proof against the commitment
+
+		// if err := eth.VerifyBlobProof(&sidecar.Blob, kzg4844.Commitment(sidecar.KZGCommitment), kzg4844.Proof(sidecar.KZGProof)); err != nil {
+		// 	return nil, fmt.Errorf("blob at index %d failed verification: %w", i, err)
+		// }
+
+        blobs.push(sidecar.blob);
+    }
+    Ok(blobs)
 }
 
 #[async_trait]
 impl<T: Provider<Http<Client>>> BlobProvider for OnlineBlobProvider<T> {
     async fn get_blobs(
-        &self,
-        _block_ref: &BlockInfo,
-        _blob_hashes: Vec<IndexedBlobHash>,
+        &mut self,
+        block_ref: &BlockInfo,
+        blob_hashes: Vec<IndexedBlobHash>,
     ) -> Result<Vec<Blob>> {
-        unimplemented!("TODO: Implement OnlineBlobProvider::get_blobs")
+        let sidecars = self.get_blob_sidecars(block_ref, blob_hashes).await.map_err(|e| anyhow::anyhow!(e))?;
+        blobs_from_sidecars(sidecars, blob_hashes)
     }
 }
 
@@ -154,83 +226,3 @@ mod tests {
         assert!(result.unwrap().is_empty());
     }
 }
-
-// GetTimeToSlotFn returns a function that converts a timestamp to a slot number.
-func (cl *L1BeaconClient) GetTimeToSlotFn(ctx context.Context) (TimeToSlotFn, error) {
-	cl.initLock.Lock()
-	defer cl.initLock.Unlock()
-	if cl.timeToSlotFn != nil {
-		return cl.timeToSlotFn, nil
-	}
-
-	genesis, err := cl.cl.BeaconGenesis(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := cl.cl.ConfigSpec(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	genesisTime := uint64(genesis.Data.GenesisTime)
-	secondsPerSlot := uint64(config.Data.SecondsPerSlot)
-	if secondsPerSlot == 0 {
-		return nil, fmt.Errorf("got bad value for seconds per slot: %v", config.Data.SecondsPerSlot)
-	}
-	cl.timeToSlotFn = func(timestamp uint64) (uint64, error) {
-		if timestamp < genesisTime {
-			return 0, fmt.Errorf("provided timestamp (%v) precedes genesis time (%v)", timestamp, genesisTime)
-		}
-		return (timestamp - genesisTime) / secondsPerSlot, nil
-	}
-	return cl.timeToSlotFn, nil
-}
-
-
-// GetBlobSidecars fetches blob sidecars that were confirmed in the specified
-// L1 block with the given indexed hashes.
-// Order of the returned sidecars is guaranteed to be that of the hashes.
-// Blob data is not checked for validity.
-
-// func (cl *L1BeaconClient) GetBlobSidecars(ctx context.Context, ref eth.L1BlockRef, hashes
-// []eth.IndexedBlobHash) ([]*eth.BlobSidecar, error) { 	if len(hashes) == 0 {
-// 		return []*eth.BlobSidecar{}, nil
-// 	}
-
-// 	slotFn, err := cl.GetTimeToSlotFn(ctx)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to get time to slot function: %w", err)
-// 	}
-// 	slot, err := slotFn(ref.Time)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("error in converting ref.Time to slot: %w", err)
-// 	}
-//
-// 	resp, err := cl.fetchSidecars(ctx, slot, hashes)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to fetch blob sidecars for slot %v block %v: %w", slot, ref, err)
-// 	}
-//
-// 	apiscs := make([]*eth.APIBlobSidecar, 0, len(hashes))
-// 	// filter and order by hashes
-// 	for _, h := range hashes {
-// 		for _, apisc := range resp.Data {
-// 			if h.Index == uint64(apisc.Index) {
-// 				apiscs = append(apiscs, apisc)
-// 				break
-// 			}
-// 		}
-// 	}
-//
-// 	if len(hashes) != len(apiscs) {
-// 		return nil, fmt.Errorf("expected %v sidecars but got %v", len(hashes), len(apiscs))
-// 	}
-//
-// 	bscs := make([]*eth.BlobSidecar, 0, len(hashes))
-// 	for _, apisc := range apiscs {
-// 		bscs = append(bscs, apisc.BlobSidecar())
-// 	}
-//
-// 	return bscs, nil
-// }

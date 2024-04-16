@@ -46,6 +46,9 @@ pub use l1_block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
 mod blob;
 pub use blob::{Blob, BlobData, BlobDecodingError, IndexedBlobHash};
 
+mod sidecar;
+pub use sidecar::{KZG_PROOF_SIZE, KZG_COMMITMENT_SIZE, BlobSidecar, APIBlobSidecar, SignedBeaconBlockHeader, BeaconBlockHeader};
+
 mod genesis;
 pub use genesis::Genesis;
 
