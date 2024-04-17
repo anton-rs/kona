@@ -12,6 +12,12 @@ use sha2::{Digest, Sha256};
 #[cfg(feature = "online")]
 use tracing::warn;
 
+#[cfg(feature = "serde")]
+use serde::de::Deserialize;
+
+#[cfg(feature = "serde")]
+use core::str::FromStr;
+
 /// KZG Proof Size
 pub const KZG_PROOF_SIZE: usize = 48;
 
@@ -22,6 +28,15 @@ pub const KZG_COMMITMENT_SIZE: usize = 48;
 #[cfg(feature = "online")]
 pub(crate) const VERSIONED_HASH_VERSION_KZG: u8 = 0x01;
 
+#[cfg(feature = "serde")]
+fn parse_u64_string<'de, T, D>(de: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: FromStr,
+    <T as FromStr>::Err: core::fmt::Display,
+{
+    String::deserialize(de)?.parse().map_err(serde::de::Error::custom)
+}
 /// A blob sidecar.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -29,6 +44,7 @@ pub struct BlobSidecar {
     /// The blob.
     pub blob: Blob,
     /// The index.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "parse_u64_string"))]
     pub index: u64,
     /// The KZG commitment.
     #[cfg_attr(feature = "serde", serde(rename = "kzg_commitment"))]
@@ -94,8 +110,10 @@ pub struct SignedBeaconBlockHeader {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BeaconBlockHeader {
     /// The slot.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "parse_u64_string"))]
     pub slot: u64,
     /// The proposer index.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "parse_u64_string"))]
     pub proposer_index: u64,
     /// The parent root.
     #[cfg_attr(feature = "serde", serde(rename = "parent_root"))]
@@ -132,6 +150,7 @@ impl Clone for APIGetBlobSidecarsResponse {
 pub struct ReducedGenesisData {
     /// The genesis time.
     #[cfg_attr(feature = "serde", serde(rename = "genesis_time"))]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "parse_u64_string"))]
     pub genesis_time: u64,
 }
 
@@ -156,6 +175,7 @@ impl APIGenesisResponse {
 pub struct ReducedConfigData {
     /// The seconds per slot.
     #[cfg_attr(feature = "serde", serde(rename = "SECONDS_PER_SLOT"))]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "parse_u64_string"))]
     pub seconds_per_slot: u64,
 }
 

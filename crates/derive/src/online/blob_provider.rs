@@ -212,6 +212,47 @@ mod tests {
         types::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse},
     };
     use alloc::vec;
+    use alloy_primitives::b256;
+
+    #[tokio::test]
+    async fn test_get_blobs() {
+        let (provider, _anvil) = spawn_anvil();
+        let json_bytes = include_bytes!("testdata/eth_v1_beacon_sidecars_goerli.json");
+        let sidecars: APIGetBlobSidecarsResponse = serde_json::from_slice(json_bytes).unwrap();
+        let blob_hashes = vec![
+            IndexedBlobHash {
+                index: 0,
+                hash: b256!("011075cbb20f3235b3179a5dff22689c410cd091692180f4b6a12be77ea0f586"),
+            },
+            IndexedBlobHash {
+                index: 1,
+                hash: b256!("010a9e10aab79bab62e10a5b83c164a91451b6ef56d31ac95a9514ffe6d6b4e6"),
+            },
+            IndexedBlobHash {
+                index: 2,
+                hash: b256!("016122c8e41c69917b688240707d107aa6d2a480343e4e323e564241769a6b4a"),
+            },
+            IndexedBlobHash {
+                index: 3,
+                hash: b256!("01df1f9ae707f5847513c9c430b683182079edf2b1f94ee12e4daae7f3c8c309"),
+            },
+            IndexedBlobHash {
+                index: 4,
+                hash: b256!("01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"),
+            },
+        ];
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(10)),
+            config_spec: Some(APIConfigResponse::new(12)),
+            blob_sidecars: Some(sidecars),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let blobs = blob_provider.get_blobs(&block_ref, blob_hashes).await.unwrap();
+        assert_eq!(blobs.len(), 5);
+    }
 
     #[tokio::test]
     async fn test_get_blob_sidecars_empty_hashes() {

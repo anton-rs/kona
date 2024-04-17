@@ -1425,6 +1425,7 @@ dependencies = [
  "reqwest",
  "revm-primitives",
  "serde",
+ "serde_json",
  "sha2",
  "spin",
  "tokio",
