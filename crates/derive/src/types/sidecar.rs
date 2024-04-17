@@ -1,12 +1,12 @@
 //! Contains sidecar types for blobs.
 
 use crate::types::Blob;
-#[cfg(feature = "online")]
-use crate::types::{G1_POINTS, G2_POINTS};
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::FixedBytes;
 #[cfg(feature = "online")]
 use c_kzg::{Bytes48, KzgProof, KzgSettings};
+#[cfg(feature = "online")]
+use revm_primitives::kzg::{G1_POINTS, G2_POINTS};
 #[cfg(feature = "online")]
 use sha2::{Digest, Sha256};
 #[cfg(feature = "online")]

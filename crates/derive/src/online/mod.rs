@@ -20,3 +20,6 @@ pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider};
 
 mod blob_provider;
 pub use blob_provider::{OnlineBlobProvider, SimpleSlotDerivation};
+
+mod utils;
+pub(crate) use utils::blobs_from_sidecars;
