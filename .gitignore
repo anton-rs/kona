@@ -3,3 +3,5 @@ target
 
 # Example targets
 examples/**/target
+
+.DS_Store
