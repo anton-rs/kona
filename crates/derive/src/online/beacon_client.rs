@@ -3,7 +3,7 @@
 use crate::types::{
     APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse, IndexedBlobHash,
 };
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, string::String};
 use alloy_provider::Provider;
 use alloy_transport_http::Http;
 use async_trait::async_trait;
@@ -40,7 +40,7 @@ pub trait BeaconClient {
         &self,
         fetch_all_sidecars: bool,
         slot: u64,
-        hashes: Vec<IndexedBlobHash>,
+        hashes: &[IndexedBlobHash],
     ) -> anyhow::Result<APIGetBlobSidecarsResponse>;
 }
 
@@ -76,7 +76,7 @@ impl<T: Provider<Http<Client>> + Send> BeaconClient for OnlineBeaconClient<T> {
         &self,
         fetch_all_sidecars: bool,
         slot: u64,
-        hashes: Vec<IndexedBlobHash>,
+        hashes: &[IndexedBlobHash],
     ) -> anyhow::Result<APIGetBlobSidecarsResponse> {
         let method = alloc::format!("{}{}", SIDECARS_METHOD_PREFIX, slot);
         self.inner

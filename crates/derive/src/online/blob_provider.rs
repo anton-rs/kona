@@ -60,6 +60,8 @@ impl From<anyhow::Error> for OnlineBlobProviderError {
 pub struct OnlineBlobProvider<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> {
     /// The inner Ethereum JSON-RPC provider.
     _inner: T,
+    /// Whether to fetch all sidecars.
+    fetch_all_sidecars: bool,
     /// The Beacon API client.
     beacon_client: B,
     /// Beacon Genesis time used for the time to slot conversion.
@@ -78,11 +80,19 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
     /// provided.
     pub fn new(
         _inner: T,
+        fetch_all_sidecars: bool,
         beacon_client: B,
         genesis_time: Option<u64>,
         slot_interval: Option<u64>,
     ) -> Self {
-        Self { _inner, beacon_client, genesis_time, slot_interval, _slot_derivation: PhantomData }
+        Self {
+            _inner,
+            fetch_all_sidecars,
+            beacon_client,
+            genesis_time,
+            slot_interval,
+            _slot_derivation: PhantomData,
+        }
     }
 
     /// Loads the beacon genesis and config spec
@@ -102,10 +112,14 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
     /// Fetches blob sidecars for the given slot and blob hashes.
     pub async fn fetch_sidecars(
         &self,
-        _slot: u64,
-        _hashes: &[IndexedBlobHash],
+        slot: u64,
+        hashes: &[IndexedBlobHash],
     ) -> Result<Vec<APIBlobSidecar>, OnlineBlobProviderError> {
-        unimplemented!("fetching blob sidecars is not implemented");
+        self.beacon_client
+            .beacon_blob_side_cars(self.fetch_all_sidecars, slot, hashes)
+            .await
+            .map(|r| r.data)
+            .map_err(|e| e.into())
     }
 
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
@@ -250,7 +264,7 @@ mod tests {
         let (provider, _anvil) = spawn_anvil();
         let beacon_client = MockBeaconClient::default();
         let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(provider, beacon_client, None, None);
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
         let block_ref = BlockInfo::default();
         let blob_hashes = Vec::new();
         let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;

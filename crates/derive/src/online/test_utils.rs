@@ -4,7 +4,7 @@ use super::BeaconClient;
 use crate::types::{
     APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse, IndexedBlobHash,
 };
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, string::String};
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
 use alloy_rpc_client::RpcClient;
@@ -58,7 +58,7 @@ impl BeaconClient for MockBeaconClient {
         &self,
         _fetch_all_sidecars: bool,
         _slot: u64,
-        _hashes: Vec<IndexedBlobHash>,
+        _hashes: &[IndexedBlobHash],
     ) -> anyhow::Result<APIGetBlobSidecarsResponse> {
         self.blob_sidecars.clone().ok_or_else(|| anyhow::anyhow!("blob_sidecars not set"))
     }

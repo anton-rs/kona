@@ -1,10 +1,15 @@
 //! Contains sidecar types for blobs.
 
-use crate::types::{Blob, G1_POINTS, G2_POINTS};
+use crate::types::Blob;
+#[cfg(feature = "online")]
+use crate::types::{G1_POINTS, G2_POINTS};
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::FixedBytes;
+#[cfg(feature = "online")]
 use c_kzg::{Bytes48, KzgProof, KzgSettings};
+#[cfg(feature = "online")]
 use sha2::{Digest, Sha256};
+#[cfg(feature = "online")]
 use tracing::warn;
 
 /// KZG Proof Size
@@ -14,6 +19,7 @@ pub const KZG_PROOF_SIZE: usize = 48;
 pub const KZG_COMMITMENT_SIZE: usize = 48;
 
 /// The versioned hash version for KZG.
+#[cfg(feature = "online")]
 pub(crate) const VERSIONED_HASH_VERSION_KZG: u8 = 0x01;
 
 /// A blob sidecar.
@@ -34,6 +40,7 @@ pub struct BlobSidecar {
 
 impl BlobSidecar {
     /// Verifies the blob kzg proof.
+    #[cfg(feature = "online")]
     pub fn verify_blob_kzg_proof(&self) -> anyhow::Result<bool> {
         let how = |e: c_kzg::Error| anyhow::anyhow!(e);
         let blob = c_kzg::Blob::from_bytes(self.blob.as_slice()).map_err(how)?;
@@ -50,6 +57,7 @@ impl BlobSidecar {
     }
 
     /// `VERSIONED_HASH_VERSION_KZG ++ sha256(commitment)[1..]`
+    #[cfg(feature = "online")]
     pub fn to_kzg_versioned_hash(&self) -> [u8; 32] {
         let commitment = self.kzg_commitment.as_slice();
         let mut hash: [u8; 32] = Sha256::digest(commitment).into();
