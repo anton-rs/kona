@@ -26,6 +26,8 @@ unsigned-varint = "0.8.0"
 miniz_oxide = { version = "0.7.2" }
 lru = "0.12.3"
 spin = { version = "0.9.8", features = ["mutex"] }
+c-kzg = { version = "1.0.0", default-features = false, optional = true }
+sha2 = { version = "0.10", default-features = false }
 
 # `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
@@ -44,7 +46,7 @@ alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07",
 
 [features]
 default = ["serde", "k256"]
-serde = ["dep:serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde"]
+serde = ["dep:serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde", "c-kzg/serde"]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256", "op-alloy-consensus/k256"]
 online = [
   "dep:alloy-provider",

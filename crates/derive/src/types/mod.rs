@@ -37,6 +37,9 @@ pub use payload::{
     L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
 };
 
+mod kzg;
+pub use kzg::{G1Points, G2Points, G1_POINTS, G2_POINTS};
+
 mod block;
 pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock, Withdrawal};
 

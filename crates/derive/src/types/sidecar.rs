@@ -1,14 +1,20 @@
 //! Contains sidecar types for blobs.
 
-use crate::types::Blob;
+use crate::types::{Blob, G1_POINTS, G2_POINTS};
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::FixedBytes;
+use c_kzg::{Bytes48, KzgProof, KzgSettings};
+use sha2::{Digest, Sha256};
+use tracing::warn;
 
 /// KZG Proof Size
 pub const KZG_PROOF_SIZE: usize = 48;
 
 /// KZG Commitment Size
 pub const KZG_COMMITMENT_SIZE: usize = 48;
+
+/// The versioned hash version for KZG.
+pub(crate) const VERSIONED_HASH_VERSION_KZG: u8 = 0x01;
 
 /// A blob sidecar.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -24,6 +30,32 @@ pub struct BlobSidecar {
     /// The KZG proof.
     #[cfg_attr(feature = "serde", serde(rename = "kzg_proof"))]
     pub kzg_proof: FixedBytes<KZG_PROOF_SIZE>,
+}
+
+impl BlobSidecar {
+    /// Verifies the blob kzg proof.
+    pub fn verify_blob_kzg_proof(&self) -> anyhow::Result<bool> {
+        let how = |e: c_kzg::Error| anyhow::anyhow!(e);
+        let blob = c_kzg::Blob::from_bytes(self.blob.as_slice()).map_err(how)?;
+        let commitment = Bytes48::from_bytes(self.kzg_commitment.as_slice()).map_err(how)?;
+        let kzg_proof = Bytes48::from_bytes(self.kzg_proof.as_slice()).map_err(how)?;
+        let settings = KzgSettings::load_trusted_setup(&G1_POINTS.0, &G2_POINTS.0).map_err(how)?;
+        match KzgProof::verify_blob_kzg_proof(&blob, &commitment, &kzg_proof, &settings) {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                warn!("Failed to verify blob KZG proof: {:?}", e);
+                Ok(false)
+            }
+        }
+    }
+
+    /// `VERSIONED_HASH_VERSION_KZG ++ sha256(commitment)[1..]`
+    pub fn to_kzg_versioned_hash(&self) -> [u8; 32] {
+        let commitment = self.kzg_commitment.as_slice();
+        let mut hash: [u8; 32] = Sha256::digest(commitment).into();
+        hash[0] = VERSIONED_HASH_VERSION_KZG;
+        hash
+    }
 }
 
 /// An API blob sidecar.

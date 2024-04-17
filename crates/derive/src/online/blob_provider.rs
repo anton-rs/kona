@@ -177,18 +177,26 @@ pub(crate) fn blobs_from_sidecars(
             ));
         }
 
-        // TODO(refcell): pull in this kzg verification
         // Ensure the blob's kzg commitment hashes to the expected value.
-        // hash := eth.KZGToVersionedHash(kzg4844.Commitment(sidecar.KZGCommitment))
-        // if hash != ih.Hash {
-        // 	return nil, fmt.Errorf("expected hash %s for blob at index %d but got %s", ih.Hash,
-        // ih.Index, hash) }
+        if sidecar.to_kzg_versioned_hash() != hash.hash {
+            return Err(anyhow::anyhow!(
+                "expected hash {} for blob at index {} but got {:#?}",
+                hash.hash,
+                hash.index,
+                sidecar.to_kzg_versioned_hash()
+            ));
+        }
 
-        // TODO(refcell): pull in this blob proof verification
         // Confirm blob data is valid by verifying its proof against the commitment
-        // if err := eth.VerifyBlobProof(&sidecar.Blob, kzg4844.Commitment(sidecar.KZGCommitment),
-        // kzg4844.Proof(sidecar.KZGProof)); err != nil { 	return nil, fmt.Errorf("blob at
-        // index %d failed verification: %w", i, err) }
+        match sidecar.verify_blob_kzg_proof() {
+            Ok(true) => (),
+            Ok(false) => {
+                return Err(anyhow::anyhow!("blob at index {} failed verification", i));
+            }
+            Err(e) => {
+                return Err(anyhow::anyhow!("blob at index {} failed verification: {}", i, e));
+            }
+        }
 
         blobs.push(sidecar.blob);
     }
