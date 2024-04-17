@@ -143,6 +143,13 @@ pub struct APIGenesisResponse {
     pub data: ReducedGenesisData,
 }
 
+impl APIGenesisResponse {
+    /// Creates a new API genesis response.
+    pub fn new(genesis_time: u64) -> Self {
+        Self { data: ReducedGenesisData { genesis_time } }
+    }
+}
+
 /// A reduced config data.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -158,6 +165,13 @@ pub struct ReducedConfigData {
 pub struct APIConfigResponse {
     /// The data.
     pub data: ReducedConfigData,
+}
+
+impl APIConfigResponse {
+    /// Creates a new API config response.
+    pub fn new(seconds_per_slot: u64) -> Self {
+        Self { data: ReducedConfigData { seconds_per_slot } }
+    }
 }
 
 /// An API version response.

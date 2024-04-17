@@ -65,9 +65,9 @@ pub struct OnlineBlobProvider<T: Provider<Http<Client>>, B: BeaconClient, S: Slo
     /// The Beacon API client.
     beacon_client: B,
     /// Beacon Genesis time used for the time to slot conversion.
-    genesis_time: Option<u64>,
+    pub genesis_time: Option<u64>,
     /// Slot interval used for the time to slot conversion.
-    slot_interval: Option<u64>,
+    pub slot_interval: Option<u64>,
     /// Phantom data for slot derivation.
     _slot_derivation: PhantomData<S>,
 }
@@ -257,7 +257,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::online::test_utils::{spawn_anvil, MockBeaconClient};
+    use crate::{
+        online::test_utils::{spawn_anvil, MockBeaconClient},
+        types::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse},
+    };
+    use alloc::vec;
 
     #[tokio::test]
     async fn test_get_blob_sidecars_empty_hashes() {
@@ -269,5 +273,134 @@ mod tests {
         let blob_hashes = Vec::new();
         let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
         assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_blob_sidecars_beacon_genesis_fetch_fails() {
+        let (provider, _anvil) = spawn_anvil();
+        let beacon_client = MockBeaconClient::default();
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo::default();
+        let blob_hashes = vec![IndexedBlobHash::default()];
+        let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
+        assert_eq!(
+            result.unwrap_err(),
+            OnlineBlobProviderError::Custom(anyhow::anyhow!("failed to get beacon genesis"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_blob_sidecars_config_spec_fetch_fails() {
+        let (provider, _anvil) = spawn_anvil();
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::default()),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo::default();
+        let blob_hashes = vec![IndexedBlobHash::default()];
+        let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
+        assert_eq!(
+            result.unwrap_err(),
+            OnlineBlobProviderError::Custom(anyhow::anyhow!("failed to get config spec"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_load_config_succeeds() {
+        let (provider, _anvil) = spawn_anvil();
+        let genesis_time = 10;
+        let seconds_per_slot = 12;
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(genesis_time)),
+            config_spec: Some(APIConfigResponse::new(seconds_per_slot)),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let result = blob_provider.load_configs().await;
+        assert!(result.is_ok());
+        assert_eq!(blob_provider.genesis_time, Some(genesis_time));
+        assert_eq!(blob_provider.slot_interval, Some(seconds_per_slot));
+    }
+
+    #[tokio::test]
+    async fn test_get_blob_sidecars_before_genesis_fails() {
+        let (provider, _anvil) = spawn_anvil();
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(10)),
+            config_spec: Some(APIConfigResponse::new(12)),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo { timestamp: 5, ..Default::default() };
+        let blob_hashes = vec![IndexedBlobHash::default()];
+        let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
+        assert_eq!(
+            result.unwrap_err(),
+            OnlineBlobProviderError::Custom(anyhow::anyhow!(
+                "provided timestamp (5) precedes genesis time (10)"
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_blob_sidecars_fetch_fails() {
+        let (provider, _anvil) = spawn_anvil();
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(10)),
+            config_spec: Some(APIConfigResponse::new(12)),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let blob_hashes = vec![IndexedBlobHash::default()];
+        let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
+        assert_eq!(
+            result.unwrap_err(),
+            OnlineBlobProviderError::Custom(anyhow::anyhow!("blob_sidecars not set"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_blob_sidecars_length_mismatch() {
+        let (provider, _anvil) = spawn_anvil();
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(10)),
+            config_spec: Some(APIConfigResponse::new(12)),
+            blob_sidecars: Some(APIGetBlobSidecarsResponse {
+                data: vec![APIBlobSidecar::default()],
+            }),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let blob_hashes = vec![IndexedBlobHash { index: 1, ..Default::default() }];
+        let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
+        assert_eq!(result.unwrap_err(), OnlineBlobProviderError::SidecarLengthMismatch(1, 0));
+    }
+
+    #[tokio::test]
+    async fn test_get_blob_sidecars_succeeds() {
+        let (provider, _anvil) = spawn_anvil();
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(10)),
+            config_spec: Some(APIConfigResponse::new(12)),
+            blob_sidecars: Some(APIGetBlobSidecarsResponse {
+                data: vec![APIBlobSidecar::default()],
+            }),
+            ..Default::default()
+        };
+        let mut blob_provider: OnlineBlobProvider<_, _, SimpleSlotDerivation> =
+            OnlineBlobProvider::new(provider, true, beacon_client, None, None);
+        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let blob_hashes = vec![IndexedBlobHash::default()];
+        let result = blob_provider.get_blob_sidecars(&block_ref, &blob_hashes).await;
+        assert!(result.is_ok());
     }
 }
