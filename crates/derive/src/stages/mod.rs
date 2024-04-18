@@ -34,6 +34,7 @@ pub use batch_queue::{BatchQueue, BatchQueueProvider};
 mod attributes_queue;
 pub use attributes_queue::{
     AttributesBuilder, AttributesProvider, AttributesQueue, StatefulAttributesBuilder,
+    SystemConfigL2Fetcher,
 };
 
 #[cfg(test)]

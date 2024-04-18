@@ -20,3 +20,6 @@ pub use channel_reader::MockChannelReaderProvider;
 
 mod tracing;
 pub use tracing::{CollectingLayer, TraceStorage};
+
+mod sys_config_fetcher;
+pub use sys_config_fetcher::MockSystemConfigL2Fetcher;

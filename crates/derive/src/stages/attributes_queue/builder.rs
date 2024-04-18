@@ -172,3 +172,210 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        stages::test_utils::MockSystemConfigL2Fetcher, traits::test_utils::TestChainProvider,
+        types::BlockInfo,
+    };
+    use alloy_consensus::Header;
+    use alloy_primitives::b256;
+
+    #[tokio::test]
+    async fn test_prepare_payload_block_mismatch_epoch_reset() {
+        let cfg = Arc::new(RollupConfig::default());
+        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_hash, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header::default();
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: 1 };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo { hash: l2_hash, number: 1, ..Default::default() },
+            l1_origin: BlockID { hash: l2_hash, number: 2 },
+            seq_num: 0,
+        };
+        // This should error because the l2 parent's l1_origin.hash should equal the epoch header
+        // hash. Here we use the default header whose hash will not equal the custom `l2_hash`.
+        let expected =
+            BuilderError::BlockMismatchEpochReset(epoch, l2_parent.l1_origin, B256::default());
+        let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
+        assert_eq!(err, expected);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_payload_block_mismatch() {
+        let cfg = Arc::new(RollupConfig::default());
+        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_hash, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header::default();
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: 1 };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo { hash: l2_hash, number: 1, ..Default::default() },
+            l1_origin: BlockID { hash: l2_hash, number: 1 },
+            seq_num: 0,
+        };
+        // This should error because the l2 parent's l1_origin.hash should equal the epoch hash
+        // Here the default header is used whose hash will not equal the custom `l2_hash` above.
+        let expected = BuilderError::BlockMismatch(epoch, l2_parent.l1_origin);
+        let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
+        assert_eq!(err, expected);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_payload_broken_time_invariant() {
+        let block_time = 10;
+        let timestamp = 100;
+        let cfg = Arc::new(RollupConfig { block_time, ..Default::default() });
+        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_hash, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header { timestamp, ..Default::default() };
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: 1 };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo { hash: l2_hash, number: 1, ..Default::default() },
+            l1_origin: BlockID { hash, number: 1 },
+            seq_num: 0,
+        };
+        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let block_id = BlockID { hash, number: 0 };
+        let expected = BuilderError::BrokenTimeInvariant(
+            l2_parent.l1_origin,
+            next_l2_time,
+            block_id,
+            timestamp,
+        );
+        let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
+        assert_eq!(err, expected);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_payload_without_forks() {
+        let block_time = 10;
+        let timestamp = 100;
+        let cfg = Arc::new(RollupConfig { block_time, ..Default::default() });
+        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_hash, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header { timestamp, ..Default::default() };
+        let prev_randao = header.mix_hash;
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: 1 };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo { hash: l2_hash, number: 1, timestamp, parent_hash: hash },
+            l1_origin: BlockID { hash, number: 1 },
+            seq_num: 0,
+        };
+        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
+        let expected = L2PayloadAttributes {
+            timestamp: next_l2_time,
+            prev_randao,
+            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+            transactions: payload.transactions.clone(),
+            no_tx_pool: true,
+            gas_limit: Some(u64::from_be_bytes(
+                alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
+            )),
+            withdrawals: None,
+            parent_beacon_block_root: None,
+        };
+        assert_eq!(payload, expected);
+        assert_eq!(payload.transactions.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_payload_with_canyon() {
+        let block_time = 10;
+        let timestamp = 100;
+        let cfg = Arc::new(RollupConfig { block_time, canyon_time: Some(0), ..Default::default() });
+        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_hash, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header { timestamp, ..Default::default() };
+        let prev_randao = header.mix_hash;
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: 1 };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo { hash: l2_hash, number: 1, timestamp, parent_hash: hash },
+            l1_origin: BlockID { hash, number: 1 },
+            seq_num: 0,
+        };
+        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
+        let expected = L2PayloadAttributes {
+            timestamp: next_l2_time,
+            prev_randao,
+            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+            transactions: payload.transactions.clone(),
+            no_tx_pool: true,
+            gas_limit: Some(u64::from_be_bytes(
+                alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
+            )),
+            withdrawals: Some(Vec::default()),
+            parent_beacon_block_root: None,
+        };
+        assert_eq!(payload, expected);
+        assert_eq!(payload.transactions.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_payload_with_ecotone() {
+        let block_time = 10;
+        let timestamp = 100;
+        let cfg =
+            Arc::new(RollupConfig { block_time, ecotone_time: Some(0), ..Default::default() });
+        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_hash, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header { timestamp, ..Default::default() };
+        let parent_beacon_block_root = Some(header.parent_beacon_block_root.unwrap_or_default());
+        let prev_randao = header.mix_hash;
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: 1 };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo { hash: l2_hash, number: 1, timestamp, parent_hash: hash },
+            l1_origin: BlockID { hash, number: 1 },
+            seq_num: 0,
+        };
+        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
+        let expected = L2PayloadAttributes {
+            timestamp: next_l2_time,
+            prev_randao,
+            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+            transactions: payload.transactions.clone(),
+            no_tx_pool: true,
+            gas_limit: Some(u64::from_be_bytes(
+                alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
+            )),
+            withdrawals: None,
+            parent_beacon_block_root,
+        };
+        assert_eq!(payload, expected);
+        assert_eq!(payload.transactions.len(), 7);
+    }
+}
