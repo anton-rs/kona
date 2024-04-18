@@ -435,9 +435,10 @@ mod tests {
     use crate::{
         stages::test_utils::{CollectingLayer, TraceStorage},
         traits::test_utils::MockBlockFetcher,
-        types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope},
+        types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction},
     };
-    use alloy_primitives::{b256, B256};
+    use alloy_primitives::{b256, Bytes, B256};
+    use op_alloy_consensus::OpTxType;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -1035,7 +1036,58 @@ mod tests {
         assert!(logs[0].contains("batch exceeded sequencer time drift without adopting next origin, and next L1 origin would have been valid"));
     }
 
-    // TODO: Test continuing with empty batch info log
+    #[tokio::test]
+    async fn test_continuing_with_empty_batch() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let cfg = RollupConfig {
+            seq_window_size: 100,
+            max_sequencer_drift: 0,
+            delta_time: Some(0),
+            block_time: 10,
+            ..Default::default()
+        };
+        let l1_block_hash =
+            b256!("3333333333333333333333333333333333333333000000000000000000000000");
+        let block =
+            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let second_block =
+            BlockInfo { number: 12, timestamp: 21, hash: l1_block_hash, ..Default::default() };
+        let l1_blocks = vec![block, second_block];
+        let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
+        let l2_safe_head = L2BlockInfo {
+            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
+            ..Default::default()
+        };
+        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let l2_block = L2BlockInfo {
+            block_info: BlockInfo { number: 40, ..Default::default() },
+            ..Default::default()
+        };
+        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], payloads: vec![] };
+        let first = SpanBatchElement { epoch_num: 10, timestamp: 20, transactions: vec![] };
+        let second = SpanBatchElement { epoch_num: 10, timestamp: 20, transactions: vec![] };
+        let third = SpanBatchElement { epoch_num: 11, timestamp: 20, transactions: vec![] };
+        let batch = SpanBatch {
+            batches: vec![first, second, third],
+            parent_check: FixedBytes::<20>::from_slice(&parent_hash[..20]),
+            l1_origin_check: FixedBytes::<20>::from_slice(&l1_block_hash[..20]),
+            txs: SpanBatchTransactions::default(),
+            ..Default::default()
+        };
+        assert_eq!(
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
+            BatchValidity::Accept
+        );
+        let infos = trace_store.get_by_level(Level::INFO);
+        assert_eq!(infos.len(), 1);
+        assert!(infos[0].contains(
+            "continuing with empty batch before late L1 block to preserve L2 time invariant"
+        ));
+    }
 
     #[tokio::test]
     async fn test_check_batch_exceeds_sequencer_time_drift() {
@@ -1100,9 +1152,125 @@ mod tests {
         assert!(logs[0].contains("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again, max_time: 10"));
     }
 
-    // TODO: Test empty transaction
+    #[tokio::test]
+    async fn test_check_batch_empty_txs() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
 
-    // TODO: Test deposit transaction embedded into batch data
+        let cfg = RollupConfig {
+            seq_window_size: 100,
+            max_sequencer_drift: 100,
+            delta_time: Some(0),
+            block_time: 10,
+            ..Default::default()
+        };
+        let l1_block_hash =
+            b256!("3333333333333333333333333333333333333333000000000000000000000000");
+        let block =
+            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let second_block =
+            BlockInfo { number: 12, timestamp: 21, hash: l1_block_hash, ..Default::default() };
+        let l1_blocks = vec![block, second_block];
+        let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
+        let l2_safe_head = L2BlockInfo {
+            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
+            ..Default::default()
+        };
+        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let l2_block = L2BlockInfo {
+            block_info: BlockInfo { number: 40, ..Default::default() },
+            ..Default::default()
+        };
+        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], payloads: vec![] };
+        let first = SpanBatchElement {
+            epoch_num: 10,
+            timestamp: 20,
+            transactions: vec![Default::default()],
+        };
+        let second = SpanBatchElement {
+            epoch_num: 10,
+            timestamp: 20,
+            transactions: vec![Default::default()],
+        };
+        let third = SpanBatchElement { epoch_num: 11, timestamp: 20, transactions: vec![] };
+        let batch = SpanBatch {
+            batches: vec![first, second, third],
+            parent_check: FixedBytes::<20>::from_slice(&parent_hash[..20]),
+            l1_origin_check: FixedBytes::<20>::from_slice(&l1_block_hash[..20]),
+            txs: SpanBatchTransactions::default(),
+            ..Default::default()
+        };
+        assert_eq!(
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
+            BatchValidity::Drop
+        );
+        let logs = trace_store.get_by_level(Level::WARN);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("transaction data must not be empty, but found empty tx"));
+    }
+
+    #[tokio::test]
+    async fn test_check_batch_with_deposit_tx() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let cfg = RollupConfig {
+            seq_window_size: 100,
+            max_sequencer_drift: 100,
+            delta_time: Some(0),
+            block_time: 10,
+            ..Default::default()
+        };
+        let l1_block_hash =
+            b256!("3333333333333333333333333333333333333333000000000000000000000000");
+        let block =
+            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let second_block =
+            BlockInfo { number: 12, timestamp: 21, hash: l1_block_hash, ..Default::default() };
+        let l1_blocks = vec![block, second_block];
+        let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
+        let l2_safe_head = L2BlockInfo {
+            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
+            ..Default::default()
+        };
+        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let l2_block = L2BlockInfo {
+            block_info: BlockInfo { number: 40, ..Default::default() },
+            ..Default::default()
+        };
+        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], payloads: vec![] };
+        let filler_bytes = RawTransaction(Bytes::copy_from_slice(&[OpTxType::Eip1559 as u8]));
+        let first = SpanBatchElement {
+            epoch_num: 10,
+            timestamp: 20,
+            transactions: vec![filler_bytes.clone()],
+        };
+        let second = SpanBatchElement {
+            epoch_num: 10,
+            timestamp: 20,
+            transactions: vec![RawTransaction(Bytes::copy_from_slice(&[OpTxType::Deposit as u8]))],
+        };
+        let third =
+            SpanBatchElement { epoch_num: 11, timestamp: 20, transactions: vec![filler_bytes] };
+        let batch = SpanBatch {
+            batches: vec![first, second, third],
+            parent_check: FixedBytes::<20>::from_slice(&parent_hash[..20]),
+            l1_origin_check: FixedBytes::<20>::from_slice(&l1_block_hash[..20]),
+            txs: SpanBatchTransactions::default(),
+            ..Default::default()
+        };
+        assert_eq!(
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
+            BatchValidity::Drop
+        );
+        let logs = trace_store.get_by_level(Level::WARN);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("sequencers may not embed any deposits into batch data, but found tx that has one, tx_index: 0"));
+    }
 
     #[tokio::test]
     async fn test_check_batch_failed_to_fetch_payload() {
