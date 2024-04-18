@@ -44,7 +44,7 @@ impl L2ExecutionPayloadEnvelope {
 
 /// The execution payload.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct L2ExecutionPayload {
     /// The parent hash.
     #[cfg_attr(feature = "serde", serde(rename = "parentHash"))]

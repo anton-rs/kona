@@ -7,7 +7,24 @@ use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{layer::Context, Layer};
 
 /// The storage for the collected traces.
-pub type TraceStorage = Arc<Mutex<Vec<(Level, String)>>>;
+#[derive(Debug, Default, Clone)]
+pub struct TraceStorage(pub Arc<Mutex<Vec<(Level, String)>>>);
+
+impl TraceStorage {
+    /// Returns the items in the storage that match the specified level.
+    pub fn get_by_level(&self, level: Level) -> Vec<String> {
+        self.0
+            .lock()
+            .iter()
+            .filter_map(|(l, message)| if *l == level { Some(message.clone()) } else { None })
+            .collect()
+    }
+
+    /// Locks the storage and returns the items.
+    pub fn lock(&self) -> spin::MutexGuard<'_, Vec<(Level, String)>> {
+        self.0.lock()
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct CollectingLayer {
@@ -26,7 +43,7 @@ impl<S: Subscriber> Layer<S> for CollectingLayer {
         let level = *metadata.level();
         let message = format!("{:?}", event);
 
-        let mut storage = self.storage.lock();
+        let mut storage = self.storage.0.lock();
         storage.push((level, message));
     }
 }
