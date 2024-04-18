@@ -40,19 +40,21 @@ impl BatchWithInclusionBlock {
     /// One or more consecutive l1_blocks should be provided.
     /// In case of only a single L1 block, the decision whether a batch is valid may have to stay
     /// undecided.
-    pub fn check_batch<BF: L2ChainProvider>(
+    pub async fn check_batch<BF: L2ChainProvider>(
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
         l2_safe_head: L2BlockInfo,
-        fetcher: &BF,
+        fetcher: &mut BF,
     ) -> BatchValidity {
         match &self.batch {
             Batch::Single(single_batch) => {
                 single_batch.check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block)
             }
             Batch::Span(span_batch) => {
-                span_batch.check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block, fetcher)
+                span_batch
+                    .check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block, fetcher)
+                    .await
             }
         }
     }
