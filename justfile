@@ -4,9 +4,16 @@ set positional-arguments
 default:
   @just --list
 
+# Run all tests
+tests: test test-online test-docs
+
 # Test for the native target
 test *args='':
   cargo nextest run --workspace --all $@
+
+# Run online tests
+test-online:
+  cargo nextest run --workspace --all --features online
 
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc lint-docs

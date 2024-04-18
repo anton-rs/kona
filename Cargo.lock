@@ -125,6 +125,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloy-node-bindings"
+version = "0.1.0"
+source = "git+https://github.com/alloy-rs/alloy?rev=e3f2f07#e3f2f075a9e7ad9753a255dbe71dbad6a91ba96d"
+dependencies = [
+ "alloy-genesis",
+ "alloy-primitives",
+ "k256",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "alloy-primitives"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -597,6 +612,9 @@ name = "bitflags"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bitvec"
@@ -606,6 +624,7 @@ checksum = "1bc2832c24239b0141d5674bb9174f9d68a8b5b3f2753311927c172ca46f7e9c"
 dependencies = [
  "funty",
  "radium",
+ "serde",
  "tap",
  "wyz",
 ]
@@ -837,6 +856,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56ce8c6da7551ec6c462cbaf3bfbc75131ebbfa1c944aeaa9dab51ca1c5f0c3b"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d6ef0072f8a535281e4876be788938b528e9a1d43900b82c2569af7da799125"
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -873,6 +898,17 @@ dependencies = [
  "sec1",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "enumn"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fd000fd6988e73bbe993ea3db9b1aa64906ab88766d654973924340c8cddb42"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
 ]
 
 [[package]]
@@ -1114,6 +1150,7 @@ checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
  "ahash",
  "allocator-api2",
+ "serde",
 ]
 
 [[package]]
@@ -1370,20 +1407,26 @@ version = "0.0.1"
 dependencies = [
  "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
+ "alloy-node-bindings",
  "alloy-primitives",
  "alloy-provider",
  "alloy-rlp",
+ "alloy-rpc-client",
  "alloy-sol-types",
  "alloy-transport-http",
  "anyhow",
  "async-trait",
+ "c-kzg",
  "hashbrown",
  "lru",
  "miniz_oxide",
  "op-alloy-consensus",
  "proptest",
  "reqwest",
+ "revm-primitives",
  "serde",
+ "serde_json",
+ "sha2",
  "spin",
  "tokio",
  "tracing",
@@ -1952,6 +1995,27 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "winreg",
+]
+
+[[package]]
+name = "revm-primitives"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbbc9640790cebcb731289afb7a7d96d16ad94afeb64b5d0b66443bd151e79d6"
+dependencies = [
+ "alloy-primitives",
+ "auto_impl",
+ "bitflags 2.5.0",
+ "bitvec",
+ "c-kzg",
+ "cfg-if",
+ "derive_more",
+ "dyn-clone",
+ "enumn",
+ "hashbrown",
+ "hex",
+ "once_cell",
+ "serde",
 ]
 
 [[package]]
