@@ -1160,7 +1160,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_check_batch_valid_genesis_epoch() {
+    async fn test_check_batch_valid_with_genesis_epoch() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
