@@ -226,8 +226,8 @@ impl L1BlockInfoTx {
     /// Encodes the [L1BlockInfoTx] object into Ethereum transaction calldata.
     pub fn encode_calldata(&self) -> Bytes {
         match self {
-            Self::Ecotone(ecotone_tx) => ecotone_tx.encode_calldata(),
             Self::Bedrock(bedrock_tx) => bedrock_tx.encode_calldata(),
+            Self::Ecotone(ecotone_tx) => ecotone_tx.encode_calldata(),
         }
     }
 
@@ -243,11 +243,27 @@ impl L1BlockInfoTx {
         }
     }
 
+    /// Returns the L1 fee overhead for the info transaction. After ecotone, this value is ignored.
+    pub fn l1_fee_overhead(&self) -> U256 {
+        match self {
+            Self::Bedrock(L1BlockInfoBedrock { l1_fee_overhead, .. }) => *l1_fee_overhead,
+            Self::Ecotone(_) => U256::ZERO,
+        }
+    }
+
+    /// Returns the batcher address for the info transaction
+    pub fn batcher_address(&self) -> Address {
+        match self {
+            Self::Bedrock(L1BlockInfoBedrock { batcher_address, .. }) => *batcher_address,
+            Self::Ecotone(L1BlockInfoEcotone { batcher_address, .. }) => *batcher_address,
+        }
+    }
+
     /// Returns the sequence number for the info transaction
     pub fn sequence_number(&self) -> u64 {
         match self {
-            Self::Ecotone(L1BlockInfoEcotone { sequence_number, .. }) => *sequence_number,
             Self::Bedrock(L1BlockInfoBedrock { sequence_number, .. }) => *sequence_number,
+            Self::Ecotone(L1BlockInfoEcotone { sequence_number, .. }) => *sequence_number,
         }
     }
 }

@@ -3,14 +3,13 @@
 use super::derive_deposits;
 use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
-    traits::ChainProvider,
+    traits::{ChainProvider, L2ChainProvider},
     types::{
         BlockID, BuilderError, EcotoneTransactionBuilder, L1BlockInfoTx, L2BlockInfo,
-        L2PayloadAttributes, RawTransaction, RollupConfig, SystemConfig,
+        L2PayloadAttributes, RawTransaction, RollupConfig,
     },
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
-use alloy_primitives::B256;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 
@@ -32,43 +31,37 @@ pub trait AttributesBuilder {
     ) -> Result<L2PayloadAttributes, BuilderError>;
 }
 
-/// The [SystemConfigL2Fetcher] fetches the system config by L2 hash.
-pub trait SystemConfigL2Fetcher {
-    /// Fetch the system config by L2 hash.
-    fn system_config_by_l2_hash(&self, hash: B256) -> anyhow::Result<SystemConfig>;
-}
-
 /// A stateful implementation of the [AttributesBuilder].
 #[derive(Debug, Default)]
-pub struct StatefulAttributesBuilder<S, R>
+pub struct StatefulAttributesBuilder<L1P, L2P>
 where
-    S: SystemConfigL2Fetcher + Debug,
-    R: ChainProvider + Debug,
+    L1P: ChainProvider + Debug,
+    L2P: L2ChainProvider + Debug,
 {
     /// The rollup config.
     rollup_cfg: Arc<RollupConfig>,
     /// The system config fetcher.
-    config_fetcher: S,
+    config_fetcher: L2P,
     /// The L1 receipts fetcher.
-    receipts_fetcher: R,
+    receipts_fetcher: L1P,
 }
 
-impl<S, R> StatefulAttributesBuilder<S, R>
+impl<L1P, L2P> StatefulAttributesBuilder<L1P, L2P>
 where
-    S: SystemConfigL2Fetcher + Debug,
-    R: ChainProvider + Debug,
+    L1P: ChainProvider + Debug,
+    L2P: L2ChainProvider + Debug,
 {
     /// Create a new [StatefulAttributesBuilder] with the given epoch.
-    pub fn new(rcfg: Arc<RollupConfig>, cfg: S, receipts: R) -> Self {
-        Self { rollup_cfg: rcfg, config_fetcher: cfg, receipts_fetcher: receipts }
+    pub fn new(rcfg: Arc<RollupConfig>, sys_cfg_fetcher: L2P, receipts: L1P) -> Self {
+        Self { rollup_cfg: rcfg, config_fetcher: sys_cfg_fetcher, receipts_fetcher: receipts }
     }
 }
 
 #[async_trait]
-impl<S, R> AttributesBuilder for StatefulAttributesBuilder<S, R>
+impl<L1P, L2P> AttributesBuilder for StatefulAttributesBuilder<L1P, L2P>
 where
-    S: SystemConfigL2Fetcher + Send + Debug,
-    R: ChainProvider + Send + Debug,
+    L1P: ChainProvider + Debug + Send,
+    L2P: L2ChainProvider + Debug + Send,
 {
     async fn prepare_payload_attributes(
         &mut self,
@@ -77,8 +70,10 @@ where
     ) -> Result<L2PayloadAttributes, BuilderError> {
         let l1_header;
         let deposit_transactions: Vec<RawTransaction>;
-        let mut sys_config =
-            self.config_fetcher.system_config_by_l2_hash(l2_parent.block_info.hash)?;
+        let mut sys_config = self
+            .config_fetcher
+            .system_config_by_number(l2_parent.block_info.number, self.rollup_cfg.clone())
+            .await?;
 
         // If the L1 origin changed in this block, then we are in the first block of the epoch.
         // In this case we need to fetch all transaction receipts from the L1 origin block so
@@ -177,27 +172,28 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::test_utils::MockSystemConfigL2Fetcher, traits::test_utils::TestChainProvider,
-        types::BlockInfo,
+        stages::test_utils::MockSystemConfigL2Fetcher,
+        traits::test_utils::TestChainProvider,
+        types::{BlockInfo, SystemConfig},
     };
     use alloy_consensus::Header;
-    use alloy_primitives::b256;
+    use alloy_primitives::B256;
 
     #[tokio::test]
     async fn test_prepare_payload_block_mismatch_epoch_reset() {
         let cfg = Arc::new(RollupConfig::default());
-        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
-        fetcher.insert(l2_hash, SystemConfig::default());
+        fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header::default();
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: 1 };
+        let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: l2_hash, number: 1, ..Default::default() },
-            l1_origin: BlockID { hash: l2_hash, number: 2 },
+            block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
+            l1_origin: BlockID { hash: B256::left_padding_from(&[0xFF]), number: 2 },
             seq_num: 0,
         };
         // This should error because the l2 parent's l1_origin.hash should equal the epoch header
@@ -211,18 +207,18 @@ mod tests {
     #[tokio::test]
     async fn test_prepare_payload_block_mismatch() {
         let cfg = Arc::new(RollupConfig::default());
-        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
-        fetcher.insert(l2_hash, SystemConfig::default());
+        fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header::default();
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: 1 };
+        let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: l2_hash, number: 1, ..Default::default() },
-            l1_origin: BlockID { hash: l2_hash, number: 1 },
+            block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
+            l1_origin: BlockID { hash: B256::ZERO, number: l2_number },
             seq_num: 0,
         };
         // This should error because the l2 parent's l1_origin.hash should equal the epoch hash
@@ -237,18 +233,18 @@ mod tests {
         let block_time = 10;
         let timestamp = 100;
         let cfg = Arc::new(RollupConfig { block_time, ..Default::default() });
-        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
-        fetcher.insert(l2_hash, SystemConfig::default());
+        fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: 1 };
+        let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: l2_hash, number: 1, ..Default::default() },
-            l1_origin: BlockID { hash, number: 1 },
+            block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
+            l1_origin: BlockID { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
@@ -268,19 +264,24 @@ mod tests {
         let block_time = 10;
         let timestamp = 100;
         let cfg = Arc::new(RollupConfig { block_time, ..Default::default() });
-        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
-        fetcher.insert(l2_hash, SystemConfig::default());
+        fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
         let prev_randao = header.mix_hash;
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: 1 };
+        let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: l2_hash, number: 1, timestamp, parent_hash: hash },
-            l1_origin: BlockID { hash, number: 1 },
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: l2_number,
+                timestamp,
+                parent_hash: hash,
+            },
+            l1_origin: BlockID { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
@@ -306,19 +307,24 @@ mod tests {
         let block_time = 10;
         let timestamp = 100;
         let cfg = Arc::new(RollupConfig { block_time, canyon_time: Some(0), ..Default::default() });
-        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
-        fetcher.insert(l2_hash, SystemConfig::default());
+        fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
         let prev_randao = header.mix_hash;
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: 1 };
+        let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: l2_hash, number: 1, timestamp, parent_hash: hash },
-            l1_origin: BlockID { hash, number: 1 },
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: l2_number,
+                timestamp,
+                parent_hash: hash,
+            },
+            l1_origin: BlockID { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
@@ -345,9 +351,9 @@ mod tests {
         let timestamp = 100;
         let cfg =
             Arc::new(RollupConfig { block_time, ecotone_time: Some(0), ..Default::default() });
-        let l2_hash = b256!("0000000000000000000000000000000000000000000000000000000000000002");
+        let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
-        fetcher.insert(l2_hash, SystemConfig::default());
+        fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
         let parent_beacon_block_root = Some(header.parent_beacon_block_root.unwrap_or_default());
@@ -355,10 +361,15 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: 1 };
+        let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: l2_hash, number: 1, timestamp, parent_hash: hash },
-            l1_origin: BlockID { hash, number: 1 },
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: l2_number,
+                timestamp,
+                parent_hash: hash,
+            },
+            l1_origin: BlockID { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;

@@ -1,7 +1,7 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
-use alloy_primitives::{Address, Bloom, Bytes, B256};
+use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use anyhow::Result;
 use op_alloy_consensus::OpTxEnvelope;
 
@@ -13,7 +13,11 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 /// 24 bytes per tx overhead (size of slice header in memory).
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
-use super::{Block, BlockInfo, L1BlockInfoTx, L2BlockInfo, OpBlock, RollupConfig, Withdrawal};
+use crate::types::{L1BlockInfoBedrock, L1BlockInfoEcotone};
+
+use super::{
+    Block, BlockInfo, L1BlockInfoTx, L2BlockInfo, OpBlock, RollupConfig, SystemConfig, Withdrawal,
+};
 use alloy_rlp::{Decodable, Encodable};
 
 #[cfg(feature = "serde")]
@@ -151,6 +155,57 @@ impl L2ExecutionPayloadEnvelope {
             },
             l1_origin,
             seq_num: sequence_number,
+        })
+    }
+
+    /// Converts the [L2ExecutionPayloadEnvelope] to a partial [SystemConfig].
+    pub fn to_system_config(&self, rollup_config: &RollupConfig) -> Result<SystemConfig> {
+        let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
+
+        if execution_payload.block_number == rollup_config.genesis.l2.number {
+            if execution_payload.block_hash != rollup_config.genesis.l2.hash {
+                anyhow::bail!("Invalid genesis hash");
+            }
+            return Ok(rollup_config.genesis.system_config);
+        }
+
+        if execution_payload.transactions.is_empty() {
+            anyhow::bail!(
+                "L2 block is missing L1 info deposit transaction, block hash: {}",
+                execution_payload.block_hash
+            );
+        }
+        let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
+            .map_err(|e| anyhow::anyhow!(e))?;
+
+        let OpTxEnvelope::Deposit(tx) = tx else {
+            anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
+        };
+
+        let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+        let l1_fee_scalar = match l1_info {
+            L1BlockInfoTx::Bedrock(L1BlockInfoBedrock { l1_fee_scalar, .. }) => l1_fee_scalar,
+            L1BlockInfoTx::Ecotone(L1BlockInfoEcotone {
+                blob_base_fee,
+                blob_base_fee_scalar,
+                ..
+            }) => {
+                // Translate Ecotone values back into encoded scalar if needed.
+                // We do not know if it was derived from a v0 or v1 scalar,
+                // but v1 is fine, a 0 blob base fee has the same effect.
+                let mut buf = B256::ZERO;
+                buf[0] = 0x01;
+                buf[24..28].copy_from_slice(blob_base_fee_scalar.to_be_bytes().as_ref());
+                buf[28..32].copy_from_slice(blob_base_fee.to_be_bytes().as_ref());
+                buf.into()
+            }
+        };
+
+        Ok(SystemConfig {
+            batcher_addr: l1_info.batcher_address(),
+            l1_fee_overhead: l1_info.l1_fee_overhead(),
+            l1_fee_scalar,
+            gas_limit: U256::from(execution_payload.gas_limit),
         })
     }
 }
