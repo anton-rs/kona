@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
-use op_alloy_consensus::OpTxEnvelope;
+use op_alloy_consensus::TxDeposit;
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -117,30 +117,30 @@ impl L2ExecutionPayloadEnvelope {
     pub fn to_l2_block_ref(&self, rollup_config: &RollupConfig) -> Result<L2BlockInfo> {
         let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
 
-        let (l1_origin, sequence_number) = if execution_payload.block_number ==
-            rollup_config.genesis.l2.number
-        {
-            if execution_payload.block_hash != rollup_config.genesis.l2.hash {
-                anyhow::bail!("Invalid genesis hash");
-            }
-            (rollup_config.genesis.l1, 0)
-        } else {
-            if execution_payload.transactions.is_empty() {
-                anyhow::bail!(
-                    "L2 block is missing L1 info deposit transaction, block hash: {}",
-                    execution_payload.block_hash
-                );
-            }
-            let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
-                .map_err(|e| anyhow::anyhow!(e))?;
+        let (l1_origin, sequence_number) =
+            if execution_payload.block_number == rollup_config.genesis.l2.number {
+                if execution_payload.block_hash != rollup_config.genesis.l2.hash {
+                    anyhow::bail!("Invalid genesis hash");
+                }
+                (rollup_config.genesis.l1, 0)
+            } else {
+                if execution_payload.transactions.is_empty() {
+                    anyhow::bail!(
+                        "L2 block is missing L1 info deposit transaction, block hash: {}",
+                        execution_payload.block_hash
+                    );
+                }
 
-            let OpTxEnvelope::Deposit(tx) = tx else {
-                anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
+                let tx = TxDeposit::decode(&mut execution_payload.transactions[0][1..].as_ref())
+                    .map_err(|e| anyhow::anyhow!(e))?;
+
+                // let OpTxEnvelope::Deposit(tx) = tx else {
+                //     anyhow::bail!("First payload transaction has unexpected type: {:?}",
+                // tx.tx_type()); };
+
+                let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+                (l1_info.id(), l1_info.sequence_number())
             };
-
-            let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
-            (l1_info.id(), l1_info.sequence_number())
-        };
 
         Ok(L2BlockInfo {
             block_info: BlockInfo {

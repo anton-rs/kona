@@ -72,7 +72,7 @@ where
         if self.data.is_none() {
             let next = self
                 .prev
-                .next_l1_block()?
+                .next_l1_block()? // SAFETY: This question mark bubbles up the Eof error.
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
             self.data = Some(self.provider.open_data(&next, self.prev.batcher_addr()).await?);
         }
