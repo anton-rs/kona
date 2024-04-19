@@ -2,9 +2,10 @@
 //! pipeline's stages.
 
 use crate::types::{
-    Blob, BlockInfo, IndexedBlobHash, L2BlockInfo, L2ExecutionPayloadEnvelope, StageResult,
+    Blob, BlockInfo, IndexedBlobHash, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig,
+    StageResult, SystemConfig,
 };
-use alloc::{boxed::Box, fmt::Debug, vec::Vec};
+use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
@@ -41,6 +42,13 @@ pub trait L2ChainProvider {
     /// Returns an execution payload for a given number.
     /// Errors if the execution payload does not exist.
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope>;
+
+    /// Returns the [SystemConfig] by L2 number.
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+        rollup_config: Arc<RollupConfig>,
+    ) -> Result<SystemConfig>;
 }
 
 /// The BlobProvider trait specifies the functionality of a data source that can provide blobs.

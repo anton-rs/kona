@@ -2,13 +2,14 @@
 
 use crate::{
     traits::{ChainProvider, L2ChainProvider},
-    types::{BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope},
+    types::{BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
+use hashbrown::HashMap;
 
 /// A mock block fetcher.
 #[derive(Debug, Default)]
@@ -17,12 +18,18 @@ pub struct MockBlockFetcher {
     pub blocks: Vec<L2BlockInfo>,
     /// Payloads
     pub payloads: Vec<L2ExecutionPayloadEnvelope>,
+    /// System configs
+    pub system_configs: HashMap<u64, SystemConfig>,
 }
 
 impl MockBlockFetcher {
     /// Creates a new [MockBlockFetcher] with the given origin and batches.
-    pub fn new(blocks: Vec<L2BlockInfo>, payloads: Vec<L2ExecutionPayloadEnvelope>) -> Self {
-        Self { blocks, payloads }
+    pub fn new(
+        blocks: Vec<L2BlockInfo>,
+        payloads: Vec<L2ExecutionPayloadEnvelope>,
+        system_configs: HashMap<u64, SystemConfig>,
+    ) -> Self {
+        Self { blocks, payloads, system_configs }
     }
 }
 
@@ -42,6 +49,17 @@ impl L2ChainProvider for MockBlockFetcher {
             .find(|p| p.execution_payload.block_number == number)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("Payload not found"))
+    }
+
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+        _: Arc<RollupConfig>,
+    ) -> Result<SystemConfig> {
+        self.system_configs
+            .get(&number)
+            .ok_or_else(|| anyhow::anyhow!("System config not found"))
+            .cloned()
     }
 }
 
