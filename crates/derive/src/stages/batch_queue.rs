@@ -107,7 +107,11 @@ where
     /// Follows the validity rules imposed on consecutive batches.
     /// Based on currently available buffered batch and L1 origin information.
     /// A [StageError::Eof] is returned if no batch can be derived yet.
-    pub fn derive_next_batch(&mut self, empty: bool, parent: L2BlockInfo) -> StageResult<Batch> {
+    pub async fn derive_next_batch(
+        &mut self,
+        empty: bool,
+        parent: L2BlockInfo,
+    ) -> StageResult<Batch> {
         // Cannot derive a batch if no origin was prepared.
         if self.l1_blocks.is_empty() {
             return Err(StageError::MissingOrigin);
@@ -140,7 +144,8 @@ where
         let mut remaining = Vec::new();
         for i in 0..self.batches.len() {
             let batch = &self.batches[i];
-            let validity = batch.check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher);
+            let validity =
+                batch.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await;
             match validity {
                 BatchValidity::Future => {
                     remaining.push(batch.clone());
@@ -221,7 +226,7 @@ where
     }
 
     /// Adds a batch to the queue.
-    pub fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
+    pub async fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
             error!("Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
@@ -229,7 +234,7 @@ where
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
         let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
-        if data.check_batch(&self.cfg, &self.l1_blocks, parent, &self.fetcher).is_drop() {
+        if data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await.is_drop() {
             return Ok(());
         }
         self.batches.push(data);
@@ -310,7 +315,7 @@ where
         match self.prev.next_batch().await {
             Ok(b) => {
                 if !origin_behind {
-                    self.add_batch(b, parent).ok();
+                    self.add_batch(b, parent).await.ok();
                 } else {
                     warn!("Dropping batch: Origin is behind");
                 }
@@ -329,7 +334,7 @@ where
         }
 
         // Attempt to derive more batches.
-        let batch = match self.derive_next_batch(out_of_data, parent) {
+        let batch = match self.derive_next_batch(out_of_data, parent).await {
             Ok(b) => b,
             Err(e) => match e {
                 StageError::Eof => {
@@ -418,15 +423,15 @@ mod tests {
         BatchReader::from(compressed)
     }
 
-    #[test]
-    fn test_derive_next_batch_missing_origin() {
+    #[tokio::test]
+    async fn test_derive_next_batch_missing_origin() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
         let fetcher = MockBlockFetcher::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
-        let result = bq.derive_next_batch(false, parent).unwrap_err();
+        let result = bq.derive_next_batch(false, parent).await.unwrap_err();
         assert_eq!(result, StageError::MissingOrigin);
     }
 
