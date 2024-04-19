@@ -41,7 +41,7 @@ where
             blob_provider: blobs,
             ecotone_timestamp: cfg.ecotone_time,
             plasma_enabled: cfg.is_plasma_enabled(),
-            signer: cfg.l1_signer_address(),
+            signer: cfg.genesis.system_config.batcher_addr,
         }
     }
 }

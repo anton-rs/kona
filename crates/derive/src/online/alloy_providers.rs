@@ -3,7 +3,10 @@
 
 use crate::{
     traits::{ChainProvider, L2ChainProvider},
-    types::{Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig},
+    types::{
+        Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig,
+        SystemConfig,
+    },
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
@@ -165,6 +168,8 @@ pub struct AlloyL2ChainProvider<T: Provider<Http<reqwest::Client>>> {
     payload_by_number_cache: LruCache<u64, L2ExecutionPayloadEnvelope>,
     /// `l2_block_info_by_number` LRU cache.
     l2_block_info_by_number_cache: LruCache<u64, L2BlockInfo>,
+    /// `system_config_by_l2_hash` LRU cache.
+    system_config_by_number_cache: LruCache<u64, SystemConfig>,
 }
 
 impl<T: Provider<Http<reqwest::Client>>> AlloyL2ChainProvider<T> {
@@ -175,6 +180,7 @@ impl<T: Provider<Http<reqwest::Client>>> AlloyL2ChainProvider<T> {
             rollup_config,
             payload_by_number_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
             l2_block_info_by_number_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
+            system_config_by_number_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
         }
     }
 }
@@ -208,5 +214,18 @@ impl<T: Provider<Http<reqwest::Client>>> L2ChainProvider for AlloyL2ChainProvide
 
         self.payload_by_number_cache.put(number, payload_envelope.clone());
         Ok(payload_envelope)
+    }
+
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+        rollup_config: Arc<RollupConfig>,
+    ) -> Result<SystemConfig> {
+        if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
+            return Ok(*system_config);
+        }
+
+        let envelope = self.payload_by_number(number).await?;
+        envelope.to_system_config(&rollup_config)
     }
 }

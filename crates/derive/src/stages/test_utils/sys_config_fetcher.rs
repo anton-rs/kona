@@ -1,20 +1,25 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use crate::{stages::attributes_queue::SystemConfigL2Fetcher, types::SystemConfig};
-use alloy_primitives::B256;
+use crate::{
+    traits::L2ChainProvider,
+    types::{L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig},
+};
+use alloc::{boxed::Box, sync::Arc};
+use anyhow::Result;
+use async_trait::async_trait;
 use hashbrown::HashMap;
 
 /// A mock implementation of the [`SystemConfigL2Fetcher`] for testing.
 #[derive(Debug, Default)]
 pub struct MockSystemConfigL2Fetcher {
-    /// A map from [B256] block hash to a [SystemConfig].
-    pub system_configs: HashMap<B256, SystemConfig>,
+    /// A map from [u64] block number to a [SystemConfig].
+    pub system_configs: HashMap<u64, SystemConfig>,
 }
 
 impl MockSystemConfigL2Fetcher {
-    /// Inserts a new system config into the mock fetcher with the given hash.
-    pub fn insert(&mut self, hash: B256, config: SystemConfig) {
-        self.system_configs.insert(hash, config);
+    /// Inserts a new system config into the mock fetcher with the given block number.
+    pub fn insert(&mut self, number: u64, config: SystemConfig) {
+        self.system_configs.insert(number, config);
     }
 
     /// Clears all system configs from the mock fetcher.
@@ -23,11 +28,24 @@ impl MockSystemConfigL2Fetcher {
     }
 }
 
-impl SystemConfigL2Fetcher for MockSystemConfigL2Fetcher {
-    fn system_config_by_l2_hash(&self, hash: B256) -> anyhow::Result<SystemConfig> {
+#[async_trait]
+impl L2ChainProvider for MockSystemConfigL2Fetcher {
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+        _: Arc<RollupConfig>,
+    ) -> Result<SystemConfig> {
         self.system_configs
-            .get(&hash)
+            .get(&number)
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("system config not found"))
+            .ok_or_else(|| anyhow::anyhow!("system config not found: {number}"))
+    }
+
+    async fn l2_block_info_by_number(&mut self, _: u64) -> Result<L2BlockInfo> {
+        unimplemented!()
+    }
+
+    async fn payload_by_number(&mut self, _: u64) -> Result<L2ExecutionPayloadEnvelope> {
+        unimplemented!()
     }
 }

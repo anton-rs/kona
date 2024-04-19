@@ -22,8 +22,6 @@ pub struct SystemConfig {
     /// Fee scalar
     #[cfg_attr(feature = "serde", serde(rename = "scalar"))]
     pub l1_fee_scalar: U256,
-    /// Sequencer's signer for unsafe blocks
-    pub unsafe_block_signer: Address,
 }
 
 /// Represents type of update to the system config.
