@@ -117,8 +117,6 @@ where
         let first = self.channel_queue[0];
         let channel = self.channels.get(&first).ok_or(StageError::ChannelNotFound)?;
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
-
-        // Remove all timed out channels from the front of the `channel_queue`.
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
             warn!("Channel {:?} timed out", first);
             self.channels.remove(&first);

@@ -12,9 +12,9 @@ use async_trait::async_trait;
 #[derive(Debug, Default)]
 pub struct MockBatchQueueProvider {
     /// The origin of the L1 block.
-    origin: Option<BlockInfo>,
+    pub origin: Option<BlockInfo>,
     /// A list of batches to return.
-    batches: Vec<StageResult<Batch>>,
+    pub batches: Vec<StageResult<Batch>>,
 }
 
 impl MockBatchQueueProvider {

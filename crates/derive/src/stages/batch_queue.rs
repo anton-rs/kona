@@ -290,7 +290,7 @@ where
         // We always update the origin of this stage if it's not the same so
         // after the update code runs, this is consistent.
         let origin_behind =
-            self.origin.map_or(true, |origin| origin.number < parent.l1_origin.number);
+            self.prev.origin().map_or(true, |origin| origin.number < parent.l1_origin.number);
 
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
@@ -334,6 +334,7 @@ where
         }
 
         // Attempt to derive more batches.
+        assert!(self.l1_blocks.is_empty());
         let batch = match self.derive_next_batch(out_of_data, parent).await {
             Ok(b) => b,
             Err(e) => match e {
@@ -408,12 +409,17 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::{channel_reader::BatchReader, test_utils::MockBatchQueueProvider},
+        stages::{
+            channel_reader::BatchReader,
+            test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
+        },
         traits::test_utils::MockBlockFetcher,
-        types::BatchType,
+        types::{BatchType, BlockID},
     };
     use alloc::vec;
     use miniz_oxide::deflate::compress_to_vec_zlib;
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     fn new_batch_reader() -> BatchReader {
         let raw_data = include_bytes!("../../testdata/raw_batch.hex");
@@ -448,24 +454,48 @@ mod tests {
         assert!(bq.is_last_in_span());
     }
 
-    // TODO(refcell): The batch reader here loops forever.
-    //                Maybe the cursor isn't being used?
-    //                UPDATE: the batch data is not valid
-    // #[tokio::test]
-    // async fn test_next_batch_succeeds() {
-    //     let mut reader = new_batch_reader();
-    //     let mut batch_vec: Vec<StageResult<Batch>> = vec![];
-    //     while let Some(batch) = reader.next_batch() {
-    //         batch_vec.push(Ok(batch));
-    //     }
-    //     let mock = MockBatchQueueProvider::new(batch_vec);
-    //     let telemetry = TestTelemetry::new();
-    //     let fetcher = MockBlockFetcher::default();
-    //     let mut bq = BatchQueue::new(RollupConfig::default(), mock, telemetry, fetcher);
-    //     let res = bq.next_batch(L2BlockInfo::default()).await.unwrap();
-    //     assert_eq!(res, SingleBatch::default());
-    //     assert!(bq.is_last_in_span());
-    // }
+    #[tokio::test]
+    async fn test_next_batch_origin_behind() {
+        let mut reader = new_batch_reader();
+        let cfg = Arc::new(RollupConfig::default());
+        let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+            batch_vec.push(Ok(batch));
+        }
+        let mut mock = MockBatchQueueProvider::new(batch_vec);
+        mock.origin = Some(BlockInfo::default());
+        let fetcher = MockBlockFetcher::default();
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let parent = L2BlockInfo {
+            l1_origin: BlockID { number: 10, ..Default::default() },
+            ..Default::default()
+        };
+        let res = bq.next_batch(parent).await.unwrap_err();
+        assert_eq!(res, StageError::NotEnoughData);
+    }
+
+    // TODO: fix
+    #[tokio::test]
+    async fn test_next_batch_succeeds() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let mut reader = new_batch_reader();
+        let cfg = Arc::new(RollupConfig::default());
+        let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+            batch_vec.push(Ok(batch));
+        }
+        let mut mock = MockBatchQueueProvider::new(batch_vec);
+        mock.origin = Some(BlockInfo::default());
+        let fetcher = MockBlockFetcher::default();
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
+        let logs = trace_store.get_by_level(Level::WARN);
+        let str = "Deriving next batch for epoch: 1";
+        assert_eq!(logs[0], str);
+    }
 
     #[tokio::test]
     async fn test_batch_queue_empty_bytes() {

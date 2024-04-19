@@ -30,6 +30,14 @@ pub trait AttributesProvider {
     fn is_last_in_span(&self) -> bool;
 }
 
+/// [NextAttributes] is a trait abstraction that generalizes the [AttributesQueue] stage.
+#[async_trait]
+pub trait NextAttributes {
+    /// Returns the next [L2AttributesWithParent] from the current batch.
+    async fn next_attributes(&mut self, parent: L2BlockInfo)
+        -> StageResult<L2AttributesWithParent>;
+}
+
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [L2PayloadAttributes]. The outputted payload
 /// attributes cannot be buffered because each batch->attributes transformation
@@ -136,6 +144,20 @@ where
         );
 
         Ok(attributes)
+    }
+}
+
+#[async_trait]
+impl<P, AB> NextAttributes for AttributesQueue<P, AB>
+where
+    P: AttributesProvider + OriginProvider + Debug + Send,
+    AB: AttributesBuilder + Debug + Send,
+{
+    async fn next_attributes(
+        &mut self,
+        parent: L2BlockInfo,
+    ) -> StageResult<L2AttributesWithParent> {
+        self.next_attributes(parent).await
     }
 }
 

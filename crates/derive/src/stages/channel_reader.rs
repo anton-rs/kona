@@ -122,11 +122,11 @@ impl BatchReader {
         }
 
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
-        let mut decompressed_reader = self.decompressed.as_slice();
+        let mut decompressed_reader = self.decompressed.as_slice()[self.cursor..].as_ref();
         let batch = Batch::decode(&mut decompressed_reader, cfg).ok()?;
 
         // Advance the cursor on the reader.
-        self.cursor += self.decompressed.len() - decompressed_reader.len();
+        self.cursor = self.decompressed.len() - decompressed_reader.len();
 
         Some(batch)
     }

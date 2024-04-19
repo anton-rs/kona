@@ -6,10 +6,14 @@
 
 extern crate alloc;
 
-use alloc::sync::Arc;
-use core::fmt::Debug;
-use traits::ChainProvider;
-use types::RollupConfig;
+/// Prelude exports common types and traits.
+pub mod prelude {
+    pub use super::{builder::DerivationPipeline, params::*};
+    // pub use super::traits::prelude::*;
+    // pub use super::types::prelude::*;
+    // pub use super::stages::prelude::*;
+    // pub use super::sources::prelude::*;
+}
 
 mod params;
 pub use params::{
@@ -19,6 +23,7 @@ pub use params::{
     MAX_SPAN_BATCH_BYTES, SEQUENCER_FEE_VAULT_ADDRESS,
 };
 
+pub mod builder;
 pub mod sources;
 pub mod stages;
 pub mod traits;
@@ -28,17 +33,3 @@ pub mod types;
 mod online;
 #[cfg(feature = "online")]
 pub use online::prelude::*;
-
-/// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
-#[derive(Debug, Clone, Copy)]
-pub struct DerivationPipeline;
-
-impl DerivationPipeline {
-    /// Creates a new instance of the [DerivationPipeline].
-    pub fn new<P>(_rollup_config: Arc<RollupConfig>, _chain_provider: P) -> Self
-    where
-        P: ChainProvider + Clone + Debug + Send,
-    {
-        unimplemented!("TODO: High-level pipeline composition helper.")
-    }
-}
