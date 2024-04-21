@@ -1,3 +1,3 @@
 # `kona-mpt`
 
-_TODO_
+Utilities for interacting with and iterating through a merkle patricia trie

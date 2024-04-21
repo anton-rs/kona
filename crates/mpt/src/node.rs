@@ -11,6 +11,18 @@ const BRANCH_LIST_LENGTH: usize = 17;
 /// The length of a leaf or extension node's RLP encoded list
 const LEAF_OR_EXTENSION_LIST_LENGTH: usize = 2;
 
+/// Prefix for even-nibbled extension node paths.
+const PREFIX_EXTENSION_EVEN: u8 = 0;
+
+/// Prefix for odd-nibbled extension node paths.
+const PREFIX_EXTENSION_ODD: u8 = 1;
+
+/// Prefix for even-nibbled leaf node paths.
+const PREFIX_LEAF_EVEN: u8 = 2;
+
+/// Prefix for odd-nibbled leaf node paths.
+const PREFIX_LEAF_ODD: u8 = 3;
+
 /// A [TrieNode] is a node within a standard Merkle Patricia Trie.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TrieNode {
@@ -37,8 +49,7 @@ pub enum TrieNode {
 }
 
 impl Decodable for TrieNode {
-    /// Attempts to recursively decode the [TrieNode], with the given [PreimageFetcher] to fetch
-    /// preimages of nodes.
+    /// Attempts to decode the [TrieNode].
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         let mut list: VecDeque<_> = Vec::<NodeElement>::decode(buf)?.into();
 
@@ -50,7 +61,7 @@ impl Decodable for TrieNode {
                 };
 
                 match path[0] >> 4 {
-                    0 | 1 => {
+                    PREFIX_EXTENSION_EVEN | PREFIX_EXTENSION_ODD => {
                         // extension node
                         let Some(NodeElement::String(node)) = list.pop_front() else {
                             return Err(alloy_rlp::Error::UnexpectedList);
@@ -58,7 +69,7 @@ impl Decodable for TrieNode {
 
                         Ok(Self::Extension { prefix: path, node })
                     }
-                    2 | 3 => {
+                    PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
                         // leaf node
                         let Some(NodeElement::String(value)) = list.pop_front() else {
                             return Err(alloy_rlp::Error::UnexpectedList);
@@ -90,7 +101,7 @@ pub enum NodeElement {
 }
 
 impl NodeElement {
-    /// Attempts to convert [self] into a [TrieNode::Leaf] or [TrieNode::Extension], if [self] is a
+    /// Attempts to convert `Self` into a [TrieNode::Leaf] or [TrieNode::Extension], if `Self` is a
     /// [NodeElement::List] variant.
     pub fn try_list_into_node(self) -> Result<TrieNode> {
         if let NodeElement::List(mut list) = self {
