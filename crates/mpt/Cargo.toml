@@ -1,0 +1,29 @@
+[package]
+name = "kona-mpt"
+description = "Utilities for interacting with and iterating through a merkle patricia trie"
+version = "0.0.1"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+# workspace
+anyhow.workspace = true
+tracing.workspace = true
+alloy-primitives.workspace = true
+
+# External
+alloy-trie = { version = "0.3.1", default-features = false }
+alloy-rlp = { version = "0.3.4", default-features = false }
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
+
+[dev-dependencies]
+tokio = { version = "1.36.0", features = ["full"] }
+reqwest = "0.12"
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
+tracing-subscriber = "0.3.18"
