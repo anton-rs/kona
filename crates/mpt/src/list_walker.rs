@@ -132,18 +132,19 @@ impl<PreimageFetcher> Iterator for OrderedListWalker<PreimageFetcher> {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use super::*;
-    use crate::test_util::{get_live_derivable_receipts_list, ordered_trie_with_encoder};
+    use crate::test_util::{
+        get_live_derivable_receipts_list, get_live_derivable_transactions_list,
+        ordered_trie_with_encoder,
+    };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
-    use alloy_consensus::ReceiptEnvelope;
+    use alloy_consensus::{ReceiptEnvelope, TxEnvelope};
     use alloy_primitives::keccak256;
     use alloy_provider::network::eip2718::Decodable2718;
     use alloy_rlp::Encodable;
 
     #[tokio::test]
-    async fn test_list_walker_online() {
+    async fn test_list_walker_online_receipts() {
         let (root, preimages, envelopes) = get_live_derivable_receipts_list().await.unwrap();
         let list =
             OrderedListWalker::try_new_hydrated(root, |f| Ok(preimages.get(&f).unwrap().clone()))
@@ -152,6 +153,21 @@ mod test {
         assert_eq!(
             list.into_iter()
                 .map(|rlp| ReceiptEnvelope::decode_2718(&mut rlp.as_ref()).unwrap())
+                .collect::<Vec<_>>(),
+            envelopes
+        );
+    }
+
+    #[tokio::test]
+    async fn test_list_walker_online_transactions() {
+        let (root, preimages, envelopes) = get_live_derivable_transactions_list().await.unwrap();
+        let list =
+            OrderedListWalker::try_new_hydrated(root, |f| Ok(preimages.get(&f).unwrap().clone()))
+                .unwrap();
+
+        assert_eq!(
+            list.into_iter()
+                .map(|rlp| TxEnvelope::decode(&mut rlp.as_ref()).unwrap())
                 .collect::<Vec<_>>(),
             envelopes
         );

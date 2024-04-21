@@ -48,6 +48,26 @@ pub enum TrieNode {
     },
 }
 
+impl TrieNode {
+    /// Attempts to convert a `path` and `value` into a [TrieNode], if they correspond to a
+    /// [TrieNode::Leaf] or [TrieNode::Extension].
+    pub fn try_from_path_and_value(path: Bytes, value: Bytes) -> Result<Self> {
+        match path[0] >> 4 {
+            PREFIX_EXTENSION_EVEN | PREFIX_EXTENSION_ODD => {
+                // extension node
+                Ok(TrieNode::Extension { prefix: path, node: value })
+            }
+            PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
+                // leaf node
+                Ok(TrieNode::Leaf { key: path, value })
+            }
+            _ => {
+                anyhow::bail!("Unexpected path identifier in high-order nibble")
+            }
+        }
+    }
+}
+
 impl Decodable for TrieNode {
     /// Attempts to decode the [TrieNode].
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
@@ -59,28 +79,12 @@ impl Decodable for TrieNode {
                 let Some(NodeElement::String(path)) = list.pop_front() else {
                     return Err(alloy_rlp::Error::UnexpectedList);
                 };
+                let Some(NodeElement::String(value)) = list.pop_front() else {
+                    return Err(alloy_rlp::Error::UnexpectedList);
+                };
 
-                match path[0] >> 4 {
-                    PREFIX_EXTENSION_EVEN | PREFIX_EXTENSION_ODD => {
-                        // extension node
-                        let Some(NodeElement::String(node)) = list.pop_front() else {
-                            return Err(alloy_rlp::Error::UnexpectedList);
-                        };
-
-                        Ok(Self::Extension { prefix: path, node })
-                    }
-                    PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
-                        // leaf node
-                        let Some(NodeElement::String(value)) = list.pop_front() else {
-                            return Err(alloy_rlp::Error::UnexpectedList);
-                        };
-
-                        Ok(Self::Leaf { key: path, value })
-                    }
-                    _ => Err(alloy_rlp::Error::Custom(
-                        "Unexpected path identifier in high-order nibble",
-                    )),
-                }
+                Self::try_from_path_and_value(path, value)
+                    .map_err(|_| alloy_rlp::Error::UnexpectedList)
             }
             _ => Err(alloy_rlp::Error::UnexpectedLength),
         }
@@ -110,22 +114,8 @@ impl NodeElement {
             }
 
             let path = list.pop_front().ok_or(anyhow!("List is empty; Impossible case"))?;
-            match path[0] >> 4 {
-                0 | 1 => {
-                    // extension node
-                    let node = list.pop_front().ok_or(anyhow!("List is empty; Impossible case"))?;
-                    Ok(TrieNode::Extension { prefix: path, node })
-                }
-                2 | 3 => {
-                    // leaf node
-                    let value =
-                        list.pop_front().ok_or(anyhow!("List is empty; Impossible case"))?;
-                    Ok(TrieNode::Leaf { key: path, value })
-                }
-                _ => {
-                    anyhow::bail!("Unexpected path identifier in high-order nibble")
-                }
-            }
+            let value = list.pop_front().ok_or(anyhow!("List is empty; Impossible case"))?;
+            TrieNode::try_from_path_and_value(path, value)
         } else {
             anyhow::bail!("Self is not a list")
         }
