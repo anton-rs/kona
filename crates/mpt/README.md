@@ -1,3 +1,3 @@
 # `kona-mpt`
 
-Utilities for interacting with and iterating through a merkle patricia trie
+Utilities for interacting with a merkle patricia trie in the client program.
