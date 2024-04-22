@@ -16,3 +16,12 @@ pub trait OriginProvider {
     /// Returns the optional L1 [BlockInfo] origin.
     fn origin(&self) -> Option<&BlockInfo>;
 }
+
+/// Provides a method for accessing a previous stage.
+pub trait PreviousStage {
+    /// The previous stage.
+    type Previous: ResettableStage + PreviousStage;
+
+    /// Returns the previous stage.
+    fn previous(&self) -> Option<&Self::Previous>;
+}

@@ -1,7 +1,7 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    traits::{OriginProvider, ResettableStage},
+    traits::{OriginProvider, PreviousStage, ResettableStage},
     types::{
         BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, ResetError,
         RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
@@ -53,7 +53,7 @@ pub trait NextAttributes {
 #[derive(Debug)]
 pub struct AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug,
+    P: AttributesProvider + ResettableStage + PreviousStage + OriginProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// The rollup config.
@@ -70,7 +70,7 @@ where
 
 impl<P, AB> AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug,
+    P: AttributesProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
@@ -147,10 +147,22 @@ where
     }
 }
 
+impl<P, AB> PreviousStage for AttributesQueue<P, AB>
+where
+    P: AttributesProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    AB: AttributesBuilder + Debug,
+{
+    type Previous = P;
+
+    fn previous(&self) -> Option<&P> {
+        Some(&self.prev)
+    }
+}
+
 #[async_trait]
 impl<P, AB> NextAttributes for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug + Send,
+    P: AttributesProvider + PreviousStage + ResettableStage + OriginProvider + Debug + Send,
     AB: AttributesBuilder + Debug + Send,
 {
     async fn next_attributes(
@@ -163,7 +175,7 @@ where
 
 impl<P, AB> OriginProvider for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug,
+    P: AttributesProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
     AB: AttributesBuilder + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -174,10 +186,15 @@ where
 #[async_trait]
 impl<P, AB> ResettableStage for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Send + Debug,
+    P: AttributesProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
+    async fn reset(
+        &mut self,
+        block_info: BlockInfo,
+        system_config: &SystemConfig,
+    ) -> StageResult<()> {
+        self.prev.reset(block_info, system_config).await?;
         info!("resetting attributes queue");
         self.batch = None;
         self.is_last_in_span = false;

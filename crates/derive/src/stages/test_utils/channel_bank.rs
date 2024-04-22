@@ -2,14 +2,14 @@
 
 use crate::{
     stages::ChannelBankProvider,
-    traits::OriginProvider,
-    types::{BlockInfo, Frame, StageError, StageResult},
+    traits::{OriginProvider, PreviousStage, ResettableStage},
+    types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
 
 /// A mock [ChannelBankProvider] for testing the [ChannelBank] stage.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MockChannelBankProvider {
     /// The data to return.
     pub data: Vec<StageResult<Frame>>,
@@ -34,5 +34,20 @@ impl OriginProvider for MockChannelBankProvider {
 impl ChannelBankProvider for MockChannelBankProvider {
     async fn next_frame(&mut self) -> StageResult<Frame> {
         self.data.pop().unwrap_or(Err(StageError::Eof))
+    }
+}
+
+#[async_trait]
+impl ResettableStage for MockChannelBankProvider {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+impl PreviousStage for MockChannelBankProvider {
+    type Previous = MockChannelBankProvider;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        Some(self)
     }
 }

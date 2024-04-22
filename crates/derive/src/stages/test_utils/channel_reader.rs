@@ -2,15 +2,15 @@
 
 use crate::{
     stages::ChannelReaderProvider,
-    traits::OriginProvider,
-    types::{BlockInfo, StageError, StageResult},
+    traits::{OriginProvider, PreviousStage, ResettableStage},
+    types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 
 /// A mock [ChannelReaderProvider] for testing the [ChannelReader] stage.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MockChannelReaderProvider {
     /// The data to return.
     pub data: Vec<StageResult<Option<Bytes>>>,
@@ -35,5 +35,20 @@ impl OriginProvider for MockChannelReaderProvider {
 impl ChannelReaderProvider for MockChannelReaderProvider {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         self.data.pop().unwrap_or(Err(StageError::Eof))
+    }
+}
+
+#[async_trait]
+impl ResettableStage for MockChannelReaderProvider {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+impl PreviousStage for MockChannelReaderProvider {
+    type Previous = MockChannelReaderProvider;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        Some(self)
     }
 }

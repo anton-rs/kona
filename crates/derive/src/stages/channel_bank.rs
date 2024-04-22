@@ -3,7 +3,7 @@
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     stages::ChannelReaderProvider,
-    traits::{OriginProvider, ResettableStage},
+    traits::{OriginProvider, PreviousStage, ResettableStage},
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -37,7 +37,7 @@ pub trait ChannelBankProvider {
 #[derive(Debug)]
 pub struct ChannelBank<P>
 where
-    P: ChannelBankProvider + OriginProvider + Debug,
+    P: ChannelBankProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
 {
     /// The rollup configuration.
     cfg: Arc<RollupConfig>,
@@ -51,7 +51,7 @@ where
 
 impl<P> ChannelBank<P>
 where
-    P: ChannelBankProvider + OriginProvider + Debug,
+    P: ChannelBankProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
 {
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
@@ -166,7 +166,7 @@ where
 #[async_trait]
 impl<P> ChannelReaderProvider for ChannelBank<P>
 where
-    P: ChannelBankProvider + OriginProvider + Send + Debug,
+    P: ChannelBankProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
 {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         match self.read() {
@@ -188,19 +188,35 @@ where
 
 impl<P> OriginProvider for ChannelBank<P>
 where
-    P: ChannelBankProvider + OriginProvider + Debug,
+    P: ChannelBankProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
 }
 
+impl<P> PreviousStage for ChannelBank<P>
+where
+    P: ChannelBankProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+{
+    type Previous = P;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+}
+
 #[async_trait]
 impl<P> ResettableStage for ChannelBank<P>
 where
-    P: ChannelBankProvider + OriginProvider + Send + Debug,
+    P: ChannelBankProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
+    async fn reset(
+        &mut self,
+        block_info: BlockInfo,
+        system_config: &SystemConfig,
+    ) -> StageResult<()> {
+        self.prev.reset(block_info, system_config).await?;
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         Err(StageError::Eof)

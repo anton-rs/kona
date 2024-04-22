@@ -2,7 +2,7 @@
 
 use crate::{
     stages::ChannelBankProvider,
-    traits::{OriginProvider, ResettableStage},
+    traits::{OriginProvider, PreviousStage, ResettableStage},
     types::{into_frames, BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque};
@@ -31,7 +31,7 @@ pub trait FrameQueueProvider {
 #[derive(Debug)]
 pub struct FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
 {
     /// The previous stage in the pipeline.
     pub prev: P,
@@ -41,7 +41,7 @@ where
 
 impl<P> FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
 {
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     ///
@@ -54,7 +54,7 @@ where
 #[async_trait]
 impl<P> ChannelBankProvider for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginProvider + Send + Debug,
+    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
 {
     async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
@@ -87,19 +87,35 @@ where
 
 impl<P> OriginProvider for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
     }
 }
 
+impl<P> PreviousStage for FrameQueue<P>
+where
+    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+{
+    type Previous = P;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+}
+
 #[async_trait]
 impl<P> ResettableStage for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginProvider + Send + Debug,
+    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
+    async fn reset(
+        &mut self,
+        block_info: BlockInfo,
+        system_config: &SystemConfig,
+    ) -> StageResult<()> {
+        self.prev.reset(block_info, system_config).await?;
         self.queue = VecDeque::default();
         Err(StageError::Eof)
     }

@@ -2,13 +2,21 @@
 
 use crate::{
     stages::L1RetrievalProvider,
-    traits::{ChainProvider, OriginProvider, ResettableStage},
+    traits::{ChainProvider, OriginProvider, PreviousStage, ResettableStage},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
+use spin::Mutex;
 use tracing::warn;
+
+/// Defines a trait for advancing the L1 block in the [L1Traversal] stage.
+#[async_trait]
+pub trait L1BlockAdvance {
+    /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
+    async fn advance_l1_block(&mut self) -> StageResult<()>;
+}
 
 /// The [L1Traversal] stage of the derivation pipeline.
 ///
@@ -25,18 +33,31 @@ pub struct L1Traversal<Provider: ChainProvider> {
     data_source: Provider,
     /// Signals whether or not the traversal stage is complete.
     done: bool,
+    /// Marks if the L1Traversal stage should attempt to advance to the next block.
+    pub advance: Arc<Mutex<bool>>,
     /// The system config.
     pub system_config: SystemConfig,
     /// A reference to the rollup config.
     pub rollup_config: Arc<RollupConfig>,
 }
 
-impl<F: ChainProvider> L1RetrievalProvider for L1Traversal<F> {
+#[async_trait]
+impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
     fn batcher_addr(&self) -> Address {
         self.system_config.batcher_addr
     }
 
-    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
+    async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
+        // let advance = match  {
+        //     Ok(advance) => advance,
+        //     Err(_) => return Err(StageError::Custom(anyhow::anyhow!("Failed to lock advance
+        // mutex"))), };
+        let mut advance = self.advance.lock();
+        if *advance {
+            *advance = false;
+            drop(advance);
+            self.advance_l1_block().await?;
+        }
         if !self.done {
             self.done = true;
             Ok(self.block)
@@ -48,11 +69,12 @@ impl<F: ChainProvider> L1RetrievalProvider for L1Traversal<F> {
 
 impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
-    pub fn new(data_source: F, cfg: Arc<RollupConfig>) -> Self {
+    pub fn new(data_source: F, advance: Arc<Mutex<bool>>, cfg: Arc<RollupConfig>) -> Self {
         Self {
             block: Some(BlockInfo::default()),
             data_source,
             done: false,
+            advance,
             system_config: SystemConfig::default(),
             rollup_config: cfg,
         }
@@ -62,11 +84,14 @@ impl<F: ChainProvider> L1Traversal<F> {
     pub fn data_source(&self) -> &F {
         &self.data_source
     }
+}
 
+#[async_trait]
+impl<F: ChainProvider + Send> L1BlockAdvance for L1Traversal<F> {
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
     /// This function fetches the next L1 [BlockInfo] from the data source and updates the
     /// [SystemConfig] with the receipts from the block.
-    pub async fn advance_l1_block(&mut self) -> StageResult<()> {
+    async fn advance_l1_block(&mut self) -> StageResult<()> {
         // Pull the next block or return EOF.
         // StageError::EOF has special handling further up the pipeline.
         let block = match self.block {
@@ -109,6 +134,14 @@ impl<F: ChainProvider> L1Traversal<F> {
 impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
     fn origin(&self) -> Option<&BlockInfo> {
         self.block.as_ref()
+    }
+}
+
+impl<F: ChainProvider + Send> PreviousStage for L1Traversal<F> {
+    type Previous = L1Traversal<F>;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        None
     }
 }
 
@@ -179,7 +212,7 @@ pub(crate) mod tests {
             let hash = blocks.get(i).map(|b| b.hash).unwrap_or_default();
             provider.insert_receipts(hash, vec![receipt.clone()]);
         }
-        L1Traversal::new(provider, Arc::new(rollup_config))
+        L1Traversal::new(provider, Arc::new(Mutex::new(false)), Arc::new(rollup_config))
     }
 
     pub(crate) fn new_populated_test_traversal() -> L1Traversal<TestChainProvider> {
@@ -193,8 +226,8 @@ pub(crate) mod tests {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
         assert!(traversal.advance_l1_block().await.is_ok());
     }
 
@@ -202,8 +235,8 @@ pub(crate) mod tests {
     async fn test_l1_traversal_missing_receipts() {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let mut traversal = new_test_traversal(blocks, vec![]);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
         matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::ReceiptFetch(_));
     }
 
@@ -222,8 +255,8 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_l1_traversal_missing_blocks() {
         let mut traversal = new_test_traversal(vec![], vec![]);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
         matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::BlockInfoFetch(_));
     }
 
@@ -248,8 +281,8 @@ pub(crate) mod tests {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
         assert!(traversal.advance_l1_block().await.is_ok());
         let expected = address!("000000000000000000000000000000000000bEEF");
         assert_eq!(traversal.system_config.batcher_addr, expected);

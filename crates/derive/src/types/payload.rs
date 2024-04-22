@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use anyhow::Result;
-use op_alloy_consensus::TxDeposit;
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.

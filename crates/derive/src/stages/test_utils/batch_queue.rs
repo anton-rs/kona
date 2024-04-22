@@ -2,8 +2,8 @@
 
 use crate::{
     stages::batch_queue::BatchQueueProvider,
-    traits::OriginProvider,
-    types::{Batch, BlockInfo, StageError, StageResult},
+    traits::{OriginProvider, PreviousStage, ResettableStage},
+    types::{Batch, BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
@@ -34,5 +34,20 @@ impl OriginProvider for MockBatchQueueProvider {
 impl BatchQueueProvider for MockBatchQueueProvider {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         self.batches.pop().ok_or(StageError::Eof)?
+    }
+}
+
+#[async_trait]
+impl ResettableStage for MockBatchQueueProvider {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+impl PreviousStage for MockBatchQueueProvider {
+    type Previous = MockBatchQueueProvider;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        Some(self)
     }
 }

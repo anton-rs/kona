@@ -2,10 +2,10 @@
 
 use crate::{
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
-    traits::OriginProvider,
+    traits::{OriginProvider, PreviousStage, ResettableStage},
     types::{
         BlockID, BlockInfo, BuilderError, L2BlockInfo, L2PayloadAttributes, SingleBatch,
-        StageError, StageResult,
+        StageError, StageResult, SystemConfig,
     },
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -46,6 +46,21 @@ pub struct MockAttributesProvider {
 impl OriginProvider for MockAttributesProvider {
     fn origin(&self) -> Option<&BlockInfo> {
         self.origin.as_ref()
+    }
+}
+
+#[async_trait]
+impl ResettableStage for MockAttributesProvider {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+impl PreviousStage for MockAttributesProvider {
+    type Previous = MockAttributesProvider;
+
+    fn previous(&self) -> Option<&Self::Previous> {
+        Some(self)
     }
 }
 
