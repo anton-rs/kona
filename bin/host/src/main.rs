@@ -7,7 +7,8 @@ use std::str::FromStr;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _cli = Cli::parse();
-
+    tracing_subscriber::Registry::default().init();
+    tracing::info!("host telemetry initialized");
     Ok(())
 }
 
