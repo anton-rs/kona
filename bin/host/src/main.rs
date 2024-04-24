@@ -1,36 +1,51 @@
+mod parser;
+mod types;
+use crate::{
+    parser::parse_b256,
+    types::{Network, RpcKind}
+};
+
 use alloy_primitives::B256;
-use clap::{Parser, ValueEnum};
+use anyhow::{anyhow, Result};
+use clap::{ArgAction, Parser};
 use serde::Serialize;
 use std::path::PathBuf;
-use std::str::FromStr;
+use tracing::Level;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     let _cli = Cli::parse();
-    tracing_subscriber::Registry::default().init();
+    let _ = init_tracing_subscriber(_cli.v);
     tracing::info!("host telemetry initialized");
     Ok(())
 }
 
-fn parse_b256(s: &str) -> Result<B256, String> {
-    B256::from_str(s).map_err(|_| format!("Invalid B256 value: {}", s))
-}
-
-/// Available networks.
-#[derive(Debug, Clone, ValueEnum, Serialize)]
-pub enum Network {
-    /// Optimism Mainnet
-    Optimism,
-}
-
-#[derive(Debug, Clone, ValueEnum, Serialize)]
-pub enum RpcKind {
-    DebugRpc,
+/// Initializes the tracing subscriber
+///
+/// # Arguments
+/// * `verbosity_level` - The verbosity level (0-4)
+///
+/// # Returns
+/// * `Result<()>` - Ok if successful, Err otherwise.
+fn init_tracing_subscriber(verbosity_level: u8) -> Result<()> {
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(match verbosity_level {
+            0 => Level::ERROR,
+            1 => Level::WARN,
+            2 => Level::INFO,
+            3 => Level::DEBUG,
+            _ => Level::TRACE,
+        })
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))
 }
 
 /// The host binary CLI application arguments.
 #[derive(Parser, Serialize)]
 pub struct Cli {
+    /// Verbosity level (0-4)
+    #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
+    v: u8,
     /// The rollup chain parameters
     #[clap(long)]
     pub rollup_config: PathBuf,
@@ -67,13 +82,16 @@ pub struct Cli {
     /// Address of the L1 Beacon API endpoint to use.
     #[clap(long)]
     pub l1_beacon_address: String,
-    /// Trust the L1 RPC, sync faster at risk of malicious/buggy RPC providing bad or inconsistent L1 data
+    /// Trust the L1 RPC, sync faster at risk of malicious/buggy RPC providing bad or inconsistent
+    /// L1 data
     #[clap(long)]
     pub l1_trust_rpc: bool,
-    /// The kind of RPC provider, used to inform optimal transactions receipts fetching, and thus reduce costs.
+    /// The kind of RPC provider, used to inform optimal transactions receipts fetching, and thus
+    /// reduce costs.
     #[clap(long)]
     pub l1_rpc_provider_kind: RpcKind,
-    /// Run the specified client program as a separate process detached from the host. Default is to run the client program in the host process.
+    /// Run the specified client program as a separate process detached from the host. Default is
+    /// to run the client program in the host process.
     #[clap(long)]
     pub exec: String,
     /// Run in pre-image server mode without executing any client program.
