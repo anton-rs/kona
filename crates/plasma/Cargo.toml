@@ -1,0 +1,33 @@
+[package]
+name = "kona-plasma"
+description = "Plasma Data Availability Adapter"
+version = "0.0.1"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+# Workspace
+anyhow.workspace = true
+tracing.workspace = true
+
+# Local
+kona-primitives = { path = "../primitives", verison = "0.0.1" }
+
+# External
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
+alloy-primitives = { workspace = true, features = ["rlp"] }
+async-trait = "0.1.77"
+
+# `serde` feature dependencies
+serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
+
+[dev-dependencies]
+tracing-subscriber = "0.3.18"
+serde_json = { version = "1.0.68", default-features = false }
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
