@@ -1,6 +1,6 @@
 //! This module contains the [RollupConfig] type.
 
-use super::Genesis;
+use crate::genesis::Genesis;
 use alloy_primitives::Address;
 
 /// The Rollup configuration.

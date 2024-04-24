@@ -1,0 +1,29 @@
+[package]
+name = "kona-primitives"
+description = "Primitive types for kona crates"
+version = "0.0.1"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+
+# Alloy Types
+alloy-sol-types = { version = "0.7.0", default-features = false }
+alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
+alloy-primitives = { workspace = true, features = ["rlp"] }
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
+op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
+
+# `serde` feature dependencies
+serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_json = { version = "1.0.68", default-features = false }
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]

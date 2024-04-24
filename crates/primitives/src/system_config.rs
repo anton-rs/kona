@@ -1,7 +1,9 @@
 //! This module contains the [SystemConfig] type.
 
-use super::RollupConfig;
-use crate::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
+use crate::{
+    params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
+    rollup_config::RollupConfig,
+};
 use alloy_consensus::Receipt;
 use alloy_primitives::{address, Address, Log, U256};
 use alloy_sol_types::{sol, SolType};
@@ -229,7 +231,7 @@ impl Default for SystemAccounts {
 
 #[cfg(test)]
 mod test {
-    use crate::types::Genesis;
+    use crate::genesis::Genesis;
 
     use super::*;
     use alloc::vec;
@@ -240,8 +242,8 @@ mod test {
     fn mock_rollup_config(system_config: SystemConfig) -> RollupConfig {
         RollupConfig {
             genesis: Genesis {
-                l1: crate::types::BlockID::default(),
-                l2: crate::types::BlockID::default(),
+                l1: crate::block::BlockID::default(),
+                l2: crate::block::BlockID::default(),
                 timestamp: 0,
                 system_config,
             },
