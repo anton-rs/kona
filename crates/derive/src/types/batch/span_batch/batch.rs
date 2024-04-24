@@ -8,7 +8,6 @@ use crate::{
         SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
     },
 };
-
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
 use op_alloy_consensus::OpTxType;
