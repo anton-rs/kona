@@ -730,10 +730,12 @@ mod tests {
         };
         let inclusion_block = BlockInfo::default();
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 41, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        fetcher.short_circuit = true;
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -769,7 +771,7 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -812,7 +814,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 8, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -862,7 +865,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -911,7 +915,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -957,7 +962,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 14, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -977,7 +983,7 @@ mod tests {
         assert_eq!(logs.len(), 1);
         let str = alloc::format!(
             "dropped batch, epoch is too old, minimum: {}",
-            l2_safe_head.block_info.id(),
+            l2_block.block_info.id(),
         );
         assert!(logs[0].contains(&str));
     }
@@ -1297,7 +1303,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -1347,7 +1354,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
@@ -1411,7 +1419,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
@@ -1476,7 +1485,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
