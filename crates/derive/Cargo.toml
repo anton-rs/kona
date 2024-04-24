@@ -13,9 +13,9 @@ homepage.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
+alloy-rlp = { workspace = true, features = ["derive"] }
 
 # External
-alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
 alloy-sol-types = { version = "0.7.0", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
 op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
