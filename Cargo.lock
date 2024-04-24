@@ -1462,6 +1462,7 @@ dependencies = [
  "async-trait",
  "c-kzg",
  "hashbrown",
+ "kona-plasma",
  "kona-primitives",
  "lru",
  "miniz_oxide",
@@ -1493,6 +1494,21 @@ dependencies = [
  "anyhow",
  "reqwest",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "kona-plasma"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
+ "alloy-primitives",
+ "anyhow",
+ "async-trait",
+ "kona-primitives",
+ "serde",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
 ]

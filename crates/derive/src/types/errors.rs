@@ -5,6 +5,7 @@ use crate::types::{BlockID, Frame};
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
+use kona_plasma::types::PlasmaError;
 
 /// A result type for the derivation pipeline stages.
 pub type StageResult<T> = Result<T, StageError>;
@@ -14,6 +15,8 @@ pub type StageResult<T> = Result<T, StageError>;
 pub enum StageError {
     /// There is no data to read from the channel bank.
     Eof,
+    /// Plasma data source error.
+    Plasma(PlasmaError),
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
@@ -61,6 +64,7 @@ impl PartialEq<StageError> for StageError {
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
+                (StageError::Plasma(_), StageError::Plasma(_)) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
                 (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
                 (StageError::NoChannel, StageError::NoChannel) |
@@ -93,6 +97,7 @@ impl Display for StageError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             StageError::Eof => write!(f, "End of file"),
+            StageError::Plasma(e) => write!(f, "Plasma error: {:?}", e),
             StageError::NotEnoughData => write!(f, "Not enough data"),
             StageError::BlockFetch(hash) => {
                 write!(f, "Failed to fetch block info and transactions by hash: {}", hash)
@@ -126,6 +131,8 @@ pub enum ResetError {
     /// The first argument is the expected timestamp, and the second argument is the actual
     /// timestamp.
     BadTimestamp(u64, u64),
+    /// A reorg is required.
+    ReorgRequired,
 }
 
 impl PartialEq<ResetError> for ResetError {
@@ -137,6 +144,7 @@ impl PartialEq<ResetError> for ResetError {
             (ResetError::BadTimestamp(e1, a1), ResetError::BadTimestamp(e2, a2)) => {
                 e1 == e2 && a1 == a2
             }
+            (ResetError::ReorgRequired, ResetError::ReorgRequired) => true,
             _ => false,
         }
     }
@@ -151,6 +159,7 @@ impl Display for ResetError {
             ResetError::BadTimestamp(expected, actual) => {
                 write!(f, "Bad timestamp: expected {}, got {}", expected, actual)
             }
+            ResetError::ReorgRequired => write!(f, "Reorg required"),
         }
     }
 }

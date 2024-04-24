@@ -17,6 +17,10 @@ alloy-rlp = { workspace = true, features = ["derive"] }
 
 # Local
 kona-primitives = { path = "../primitives", version = "0.0.1" }
+kona-plasma = { path = "../plasma", version = "0.0.1" }
+
+# Local
+kona-primitives = { path = "../primitives", version = "0.0.1" }
 
 # External
 alloy-sol-types = { version = "0.7.1", default-features = false }
@@ -51,7 +55,7 @@ serde_json = { version = "1.0.116", default-features = false }
 
 [features]
 default = ["serde", "k256"]
-serde = ["dep:serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde"]
+serde = ["dep:serde", "kona-plasma/serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde"]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256", "op-alloy-consensus/k256"]
 online = [
   "dep:revm-primitives",
