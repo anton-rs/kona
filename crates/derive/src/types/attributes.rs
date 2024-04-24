@@ -3,7 +3,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{block::L2BlockInfo, RawTransaction, Withdrawal};
+use super::{L2BlockInfo, RawTransaction, Withdrawal};
 use alloc::vec::Vec;
 use alloy_primitives::{Address, B256};
 

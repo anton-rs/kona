@@ -1659,6 +1659,7 @@ dependencies = [
  "async-trait",
  "c-kzg",
  "hashbrown",
+ "kona-primitives",
  "lru",
  "miniz_oxide",
  "op-alloy-consensus",
@@ -1705,6 +1706,20 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "kona-primitives"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
+ "alloy-primitives",
+ "alloy-rlp",
+ "alloy-sol-types",
+ "anyhow",
+ "op-alloy-consensus",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

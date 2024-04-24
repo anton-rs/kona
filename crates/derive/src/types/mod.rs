@@ -1,7 +1,7 @@
 //! This module contains all of the types used within the derivation pipeline.
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+/// Re-export the kona primitive prelude
+pub use kona_primitives::prelude::*;
 
 use alloc::vec::Vec;
 pub use alloy_consensus::Receipt;
@@ -11,14 +11,8 @@ use alloy_rlp::{Decodable, Encodable};
 mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
 
-mod system_config;
-pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
-
 mod deposits;
 pub use deposits::*;
-
-mod rollup_config;
-pub use rollup_config::RollupConfig;
 
 pub mod batch;
 pub use batch::{
@@ -37,9 +31,6 @@ pub use payload::{
     L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
 };
 
-mod block;
-pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock, Withdrawal};
-
 mod l1_block_info;
 pub use l1_block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
 
@@ -53,9 +44,6 @@ pub use sidecar::{
     VersionInformation, KZG_COMMITMENT_SIZE, KZG_PROOF_SIZE,
 };
 
-mod genesis;
-pub use genesis::Genesis;
-
 mod frame;
 pub use frame::Frame;
 
@@ -66,7 +54,7 @@ mod errors;
 pub use errors::*;
 
 /// A raw transaction
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct RawTransaction(pub Bytes);
 

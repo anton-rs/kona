@@ -14,6 +14,9 @@ anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 
+# Local
+kona-primitives = { path = "../primitives", version = "0.0.1" }
+
 # External
 alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
 alloy-sol-types = { version = "0.7.0", default-features = false }
