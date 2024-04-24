@@ -19,7 +19,7 @@ alloy-rlp = { workspace = true, features = ["derive"] }
 kona-primitives = { path = "../primitives", version = "0.0.1" }
 
 # External
-alloy-sol-types = { version = "0.7.0", default-features = false }
+alloy-sol-types = { version = "0.7.1", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
 op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
 alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
@@ -42,12 +42,12 @@ alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f
 reqwest = { version = "0.12", default-features = false, optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.36", features = ["full"] }
+tokio = { version = "1.37", features = ["full"] }
 proptest = "1.4.0"
 tracing-subscriber = "0.3.18"
 alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
 alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
-serde_json = { version = "1.0.68", default-features = false }
+serde_json = { version = "1.0.116", default-features = false }
 
 [features]
 default = ["serde", "k256"]
