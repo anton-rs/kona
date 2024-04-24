@@ -13,7 +13,6 @@ use tracing::warn;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct BlobSource<F, B>
 where
     F: ChainProvider + Send,

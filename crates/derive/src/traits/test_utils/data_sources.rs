@@ -16,6 +16,8 @@ use hashbrown::HashMap;
 pub struct MockBlockFetcher {
     /// Blocks
     pub blocks: Vec<L2BlockInfo>,
+    /// Short circuit the block return to be the first block.
+    pub short_circuit: bool,
     /// Payloads
     pub payloads: Vec<L2ExecutionPayloadEnvelope>,
     /// System configs
@@ -29,13 +31,16 @@ impl MockBlockFetcher {
         payloads: Vec<L2ExecutionPayloadEnvelope>,
         system_configs: HashMap<u64, SystemConfig>,
     ) -> Self {
-        Self { blocks, payloads, system_configs }
+        Self { blocks, short_circuit: false, payloads, system_configs }
     }
 }
 
 #[async_trait]
 impl L2ChainProvider for MockBlockFetcher {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
+        if self.short_circuit {
+            return self.blocks.first().copied().ok_or_else(|| anyhow::anyhow!("Block not found"));
+        }
         self.blocks
             .iter()
             .find(|b| b.block_info.number == number)
