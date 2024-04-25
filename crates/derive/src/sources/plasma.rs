@@ -135,18 +135,20 @@ where
                 return self.next().await
             }
             Some(Err(PlasmaError::MissingPastWindow)) => {
-                return Some(Err(StageError::Custom(anyhow::anyhow!(
-                    "data for comm {:?} not available",
+                tracing::warn!("missing past window, skipping batch");
+                return Some(Err(StageError::Critical(anyhow::anyhow!(
+                    "data for commitment {:?} not available",
                     commitment
                 ))));
             }
             Some(Err(PlasmaError::ChallengePending)) => {
                 // Continue stepping without slowing down.
+                tracing::debug!("plasma challenge pending, proceeding");
                 return Some(Err(StageError::NotEnoughData));
             }
             Some(Err(e)) => {
                 // Return temporary error so we can keep retrying.
-                return Some(Err(StageError::Custom(anyhow::anyhow!(
+                return Some(Err(StageError::Temporary(anyhow::anyhow!(
                     "failed to fetch input data with comm {:?} from da service: {:?}",
                     commitment,
                     e
@@ -154,7 +156,7 @@ where
             }
             None => {
                 // Return temporary error so we can keep retrying.
-                return Some(Err(StageError::Custom(anyhow::anyhow!(
+                return Some(Err(StageError::Temporary(anyhow::anyhow!(
                     "failed to fetch input data with comm {:?} from da service",
                     commitment
                 ))));
