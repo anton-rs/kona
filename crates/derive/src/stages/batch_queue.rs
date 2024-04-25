@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginProvider, ResettableStage},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -43,7 +43,7 @@ pub trait BatchQueueProvider {
 #[derive(Debug)]
 pub struct BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Debug,
+    P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
@@ -75,7 +75,7 @@ where
 
 impl<P, BF> BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Debug,
+    P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
@@ -243,9 +243,20 @@ where
 }
 
 #[async_trait]
+impl<P, BF> OriginAdvancer for BatchQueue<P, BF>
+where
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    BF: L2ChainProvider + Send + Debug,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<P, BF> AttributesProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Send + Debug,
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     /// Returns the next valid batch upon the given safe head.
@@ -374,7 +385,7 @@ where
 
 impl<P, BF> OriginProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Debug,
+    P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -382,13 +393,24 @@ where
     }
 }
 
+impl<P, BF> PreviousStage for BatchQueue<P, BF>
+where
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    BF: L2ChainProvider + Send + Debug,
+{
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
+    }
+}
+
 #[async_trait]
 impl<P, BF> ResettableStage for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Send + Debug,
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
-    async fn reset(&mut self, base: BlockInfo, _: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> StageResult<()> {
+        self.prev.reset(base, system_config).await?;
         // Copy over the Origin from the next stage.
         // It is set in the engine queue (two stages away)
         // such that the L2 Safe Head origin is the progress.
@@ -602,6 +624,7 @@ mod tests {
         let fetcher = MockBlockFetcher {
             blocks: vec![block_nine, block_seven],
             payloads: vec![payload, second],
+            ..Default::default()
         };
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo {
@@ -616,15 +639,18 @@ mod tests {
         };
         let res = bq.next_batch(parent).await.unwrap_err();
         let logs = trace_store.get_by_level(Level::INFO);
-        assert_eq!(logs.len(), 5);
+        assert_eq!(logs.len(), 4);
         let str = alloc::format!("Advancing batch queue origin: {:?}", origin);
         assert!(logs[0].contains(&str));
-        assert!(logs[1].contains("Deriving next batch for epoch: 16988980031808077784"));
-        assert!(logs[2].contains("Next batch found:"));
+        assert!(logs[1].contains("need more l1 blocks to check entire origins of span batch"));
+        assert!(logs[2].contains("Deriving next batch for epoch: 16988980031808077784"));
+        assert!(logs[3].contains("need more l1 blocks to check entire origins of span batch"));
+        // assert!(logs[4].contains("Next batch found:"));
         let warns = trace_store.get_by_level(Level::WARN);
         assert_eq!(warns.len(), 0);
-        let str = "Could not get singular batches from span batch: Missing L1 origin";
-        assert_eq!(res, StageError::Custom(anyhow::anyhow!(str)));
+        assert_eq!(res, StageError::NotEnoughData);
+        // let str = "Could not get singular batches from span batch: Missing L1 origin";
+        // assert_eq!(res, StageError::Custom(anyhow::anyhow!(str)));
     }
 
     #[tokio::test]

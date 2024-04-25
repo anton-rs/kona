@@ -2,7 +2,10 @@
 
 use crate::{
     stages::FrameQueueProvider,
-    traits::{AsyncIterator, DataAvailabilityProvider, OriginProvider, ResettableStage},
+    traits::{
+        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, PreviousStage,
+        ResettableStage,
+    },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
@@ -12,6 +15,7 @@ use async_trait::async_trait;
 
 /// Provides L1 blocks for the [L1Retrieval] stage.
 /// This is the previous stage in the pipeline.
+#[async_trait]
 pub trait L1RetrievalProvider {
     /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
     /// This function can only be called once while the stage is in progress, and will return
@@ -19,7 +23,7 @@ pub trait L1RetrievalProvider {
     /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
-    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
+    async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
 
     /// Returns the batcher [Address] from the [crate::types::SystemConfig].
     fn batcher_addr(&self) -> Address;
@@ -36,7 +40,7 @@ pub trait L1RetrievalProvider {
 pub struct L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + OriginProvider,
+    P: L1RetrievalProvider + PreviousStage,
 {
     /// The previous stage in the pipeline.
     pub prev: P,
@@ -49,7 +53,7 @@ where
 impl<DAP, P> L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + OriginProvider,
+    P: L1RetrievalProvider + PreviousStage,
 {
     /// Creates a new [L1Retrieval] stage with the previous [L1Traversal] stage and given
     /// [DataAvailabilityProvider].
@@ -61,10 +65,21 @@ where
 }
 
 #[async_trait]
+impl<DAP, P> OriginAdvancer for L1Retrieval<DAP, P>
+where
+    DAP: DataAvailabilityProvider + Send,
+    P: L1RetrievalProvider + PreviousStage + Send,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<DAP, P> FrameQueueProvider for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + OriginProvider + Send,
+    P: L1RetrievalProvider + PreviousStage + Send,
 {
     type Item = DAP::Item;
 
@@ -72,7 +87,8 @@ where
         if self.data.is_none() {
             let next = self
                 .prev
-                .next_l1_block()? // SAFETY: This question mark bubbles up the Eof error.
+                .next_l1_block()
+                .await? // SAFETY: This question mark bubbles up the Eof error.
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
             self.data = Some(self.provider.open_data(&next, self.prev.batcher_addr()).await?);
         }
@@ -92,10 +108,20 @@ where
 impl<DAP, P> OriginProvider for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + OriginProvider,
+    P: L1RetrievalProvider + PreviousStage,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
+    }
+}
+
+impl<DAP, P> PreviousStage for L1Retrieval<DAP, P>
+where
+    DAP: DataAvailabilityProvider + Send,
+    P: L1RetrievalProvider + PreviousStage + Send,
+{
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
     }
 }
 
@@ -103,9 +129,10 @@ where
 impl<DAP, P> ResettableStage for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + OriginProvider + Send,
+    P: L1RetrievalProvider + PreviousStage + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
+        self.prev.reset(base, cfg).await?;
         self.data = Some(self.provider.open_data(&base, cfg.batcher_addr).await?);
         Ok(())
     }
