@@ -4,8 +4,8 @@ use super::{SpanBatchError, SpanBatchTransactions};
 use crate::{
     traits::L2ChainProvider,
     types::{
-        BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
-        SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+        BatchValidity, BlockInfo, L2BlockInfo, RollupConfig, SingleBatch, SpanBatchBits,
+        SpanBatchElement,
     },
 };
 use alloc::vec::Vec;
@@ -314,36 +314,6 @@ impl SpanBatch {
         }
 
         BatchValidity::Accept
-    }
-
-    /// Converts the span batch to a raw span batch.
-    pub fn to_raw_span_batch(
-        &self,
-        _origin_changed_bit: u8,
-        genesis_timestamp: u64,
-        _chain_id: u64,
-    ) -> Result<RawSpanBatch, SpanBatchError> {
-        if self.batches.is_empty() {
-            return Err(SpanBatchError::EmptySpanBatch);
-        }
-
-        let span_start = self.batches.first().ok_or(SpanBatchError::EmptySpanBatch)?;
-        let span_end = self.batches.last().ok_or(SpanBatchError::EmptySpanBatch)?;
-
-        Ok(RawSpanBatch {
-            prefix: SpanBatchPrefix {
-                rel_timestamp: span_start.timestamp - genesis_timestamp,
-                l1_origin_num: span_end.epoch_num,
-                parent_check: self.parent_check,
-                l1_origin_check: self.l1_origin_check,
-            },
-            payload: SpanBatchPayload {
-                block_count: self.batches.len() as u64,
-                origin_bits: self.origin_bits.clone(),
-                block_tx_counts: self.block_tx_counts.clone(),
-                txs: self.txs.clone(),
-            },
-        })
     }
 
     /// Converts all [SpanBatchElement]s after the L2 safe head to [SingleBatch]es. The resulting
