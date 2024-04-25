@@ -15,6 +15,10 @@ pub type StageResult<T> = Result<T, StageError>;
 pub enum StageError {
     /// There is no data to read from the channel bank.
     Eof,
+    /// A temporary error that allows the operation to be retried.
+    Temporary(anyhow::Error),
+    /// A critical error.
+    Critical(anyhow::Error),
     /// Plasma data source error.
     Plasma(PlasmaError),
     /// There is not enough data progress, but if we wait, the stage will eventually return data
@@ -64,6 +68,8 @@ impl PartialEq<StageError> for StageError {
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
+                (StageError::Temporary(_), StageError::Temporary(_)) |
+                (StageError::Critical(_), StageError::Critical(_)) |
                 (StageError::Plasma(_), StageError::Plasma(_)) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
                 (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
@@ -97,6 +103,8 @@ impl Display for StageError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             StageError::Eof => write!(f, "End of file"),
+            StageError::Temporary(e) => write!(f, "Temporary error: {}", e),
+            StageError::Critical(e) => write!(f, "Critical error: {}", e),
             StageError::Plasma(e) => write!(f, "Plasma error: {:?}", e),
             StageError::NotEnoughData => write!(f, "Not enough data"),
             StageError::BlockFetch(hash) => {
