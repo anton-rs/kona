@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "bin/host"]
 exclude = ["examples/minimal", "examples/simple-revm", "fpvm-tests/cannon-rs-tests"]
 resolver = "2"
 
