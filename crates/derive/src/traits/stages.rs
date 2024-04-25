@@ -17,11 +17,16 @@ pub trait OriginProvider {
     fn origin(&self) -> Option<&BlockInfo>;
 }
 
-/// Provides a method for accessing a previous stage.
-pub trait PreviousStage {
-    /// The previous stage.
-    type Previous: ResettableStage + PreviousStage;
+/// Defines a trait for advancing the L1 origin of the pipeline.
+#[async_trait]
+pub trait OriginAdvancer {
+    /// Advances the internal state of the lowest stage to the next l1 origin.
+    /// This method is the equivalent of the reference implementation `advance_l1_block`.
+    async fn advance_origin(&mut self) -> StageResult<()>;
+}
 
+/// Provides a method for accessing a previous stage.
+pub trait PreviousStage: ResettableStage + OriginAdvancer + OriginProvider {
     /// Returns the previous stage.
-    fn previous(&self) -> Option<&Self::Previous>;
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>>;
 }

@@ -2,7 +2,7 @@
 
 use crate::{
     stages::NextAttributes,
-    traits::ResettableStage,
+    traits::{OriginAdvancer, ResettableStage},
     types::{
         BlockInfo, L2AttributesWithParent, L2BlockInfo, StageError, StageResult, SystemConfig,
     },
@@ -24,12 +24,11 @@ pub trait ResetProvider {
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
 pub struct DerivationPipeline<
-    S: NextAttributes + ResettableStage + Debug + Send,
+    S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send,
     R: ResetProvider + Send,
 > {
-    /// The stack of stages in the pipeline.
-    /// The stack is reponsible for advancing the L1 traversal stage.
-    pub stack: S,
+    /// A handle to the next attributes.
+    pub attributes: S,
     /// Reset provider for the pipeline.
     pub reset: R,
     /// A list of prepared [L2AttributesWithParent] to be used by the derivation pipeline consumer.
@@ -40,12 +39,14 @@ pub struct DerivationPipeline<
     pub cursor: L2BlockInfo,
 }
 
-impl<S: NextAttributes + ResettableStage + Debug + Send, R: ResetProvider + Send>
-    DerivationPipeline<S, R>
+impl<
+        S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send,
+        R: ResetProvider + Send,
+    > DerivationPipeline<S, R>
 {
     /// Creates a new instance of the [DerivationPipeline].
-    pub fn new(stack: S, reset: R, cursor: L2BlockInfo) -> Self {
-        Self { stack, prepared: VecDeque::new(), reset, needs_reset: false, cursor }
+    pub fn new(attributes: S, reset: R, cursor: L2BlockInfo) -> Self {
+        Self { attributes, prepared: VecDeque::new(), reset, needs_reset: false, cursor }
     }
 
     /// Set the [L2BlockInfo] cursor to be used when pulling the next attributes.
@@ -63,6 +64,23 @@ impl<S: NextAttributes + ResettableStage + Debug + Send, R: ResetProvider + Send
         self.needs_reset = true;
     }
 
+    /// Resets the pipeline.
+    async fn reset_pipe(&mut self, bi: BlockInfo, sc: &SystemConfig) -> StageResult<()> {
+        match self.attributes.reset(bi, sc).await {
+            Ok(()) => {
+                tracing::info!("Stages reset");
+            }
+            Err(StageError::Eof) => {
+                tracing::info!("Stages reset with EOF");
+            }
+            Err(err) => {
+                tracing::error!("Stages reset failed: {:?}", err);
+                return Err(err);
+            }
+        }
+        Ok(())
+    }
+
     /// Attempts to progress the pipeline.
     /// A [StageError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
     /// Any other error is critical and the derivation pipeline should be reset.
@@ -76,12 +94,11 @@ impl<S: NextAttributes + ResettableStage + Debug + Send, R: ResetProvider + Send
         if self.needs_reset {
             let block_info = self.reset.block_info().await;
             let system_config = self.reset.system_config().await;
-            self.stack.reset(block_info, &system_config).await?;
+            self.reset_pipe(block_info, &system_config).await?;
             self.needs_reset = false;
         }
 
-        // Step over the engine queue.
-        match self.stack.next_attributes(self.cursor).await {
+        match self.attributes.next_attributes(self.cursor).await {
             Ok(a) => {
                 tracing::info!("attributes queue stage step returned l2 attributes");
                 tracing::info!("prepared L2 attributes: {:?}", a);
@@ -90,6 +107,7 @@ impl<S: NextAttributes + ResettableStage + Debug + Send, R: ResetProvider + Send
             }
             Err(StageError::Eof) => {
                 tracing::info!("attributes queue stage complete");
+                self.attributes.advance_origin().await?;
             }
             // TODO: match on the EngineELSyncing error here and log
             Err(err) => {

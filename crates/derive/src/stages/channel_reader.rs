@@ -2,7 +2,7 @@
 
 use crate::{
     stages::BatchQueueProvider,
-    traits::{OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{Batch, BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 
@@ -27,7 +27,7 @@ pub trait ChannelReaderProvider {
 #[derive(Debug)]
 pub struct ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Debug,
 {
     /// The previous stage of the derivation pipeline.
     prev: P,
@@ -39,7 +39,7 @@ where
 
 impl<P> ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Debug,
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
@@ -63,9 +63,19 @@ where
 }
 
 #[async_trait]
+impl<P> OriginAdvancer for ChannelReader<P>
+where
+    P: ChannelReaderProvider + PreviousStage + Send + Debug,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<P> BatchQueueProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
+    P: ChannelReaderProvider + PreviousStage + Send + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
@@ -91,7 +101,7 @@ where
 
 impl<P> OriginProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
@@ -101,7 +111,7 @@ where
 #[async_trait]
 impl<P> ResettableStage for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + ResettableStage + OriginProvider + Debug + Send,
+    P: ChannelReaderProvider + PreviousStage + Debug + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
@@ -112,12 +122,10 @@ where
 
 impl<P> PreviousStage for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Send + Debug,
 {
-    type Previous = P;
-
-    fn previous(&self) -> Option<&Self::Previous> {
-        Some(&self.prev)
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
     }
 }
 

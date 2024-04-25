@@ -2,7 +2,7 @@
 
 use crate::{
     stages::ChannelBankProvider,
-    traits::{OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{into_frames, BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque};
@@ -31,7 +31,7 @@ pub trait FrameQueueProvider {
 #[derive(Debug)]
 pub struct FrameQueue<P>
 where
-    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + Debug,
 {
     /// The previous stage in the pipeline.
     pub prev: P,
@@ -41,7 +41,7 @@ where
 
 impl<P> FrameQueue<P>
 where
-    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + Debug,
 {
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     ///
@@ -52,9 +52,19 @@ where
 }
 
 #[async_trait]
+impl<P> OriginAdvancer for FrameQueue<P>
+where
+    P: FrameQueueProvider + PreviousStage + Send + Debug,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<P> ChannelBankProvider for FrameQueue<P>
 where
-    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
+    P: FrameQueueProvider + PreviousStage + Send + Debug,
 {
     async fn next_frame(&mut self) -> StageResult<Frame> {
         if self.queue.is_empty() {
@@ -87,7 +97,7 @@ where
 
 impl<P> OriginProvider for FrameQueue<P>
 where
-    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
@@ -96,19 +106,17 @@ where
 
 impl<P> PreviousStage for FrameQueue<P>
 where
-    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Debug,
+    P: FrameQueueProvider + PreviousStage + Send + Debug,
 {
-    type Previous = P;
-
-    fn previous(&self) -> Option<&Self::Previous> {
-        Some(&self.prev)
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
     }
 }
 
 #[async_trait]
 impl<P> ResettableStage for FrameQueue<P>
 where
-    P: FrameQueueProvider + PreviousStage + ResettableStage + OriginProvider + Send + Debug,
+    P: FrameQueueProvider + PreviousStage + Send + Debug,
 {
     async fn reset(
         &mut self,

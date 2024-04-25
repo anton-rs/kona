@@ -14,7 +14,7 @@
 //! 8. (Omitted) Engine Queue
 
 mod l1_traversal;
-pub use l1_traversal::{L1BlockAdvance, L1Traversal};
+pub use l1_traversal::L1Traversal;
 
 mod l1_retrieval;
 pub use l1_retrieval::{L1Retrieval, L1RetrievalProvider};
