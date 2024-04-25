@@ -30,11 +30,6 @@ pub mod traits;
 pub mod types;
 
 #[cfg(feature = "online")]
-mod stack;
-#[cfg(feature = "online")]
-pub use stack::*;
-
-#[cfg(feature = "online")]
 mod online;
 #[cfg(feature = "online")]
 pub use online::prelude::*;

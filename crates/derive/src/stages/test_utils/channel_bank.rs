@@ -2,7 +2,7 @@
 
 use crate::{
     stages::ChannelBankProvider,
-    traits::{OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -31,6 +31,13 @@ impl OriginProvider for MockChannelBankProvider {
 }
 
 #[async_trait]
+impl OriginAdvancer for MockChannelBankProvider {
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl ChannelBankProvider for MockChannelBankProvider {
     async fn next_frame(&mut self) -> StageResult<Frame> {
         self.data.pop().unwrap_or(Err(StageError::Eof))
@@ -45,9 +52,7 @@ impl ResettableStage for MockChannelBankProvider {
 }
 
 impl PreviousStage for MockChannelBankProvider {
-    type Previous = MockChannelBankProvider;
-
-    fn previous(&self) -> Option<&Self::Previous> {
-        Some(self)
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(self))
     }
 }

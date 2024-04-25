@@ -2,7 +2,7 @@
 
 use crate::{
     stages::ChannelReaderProvider,
-    traits::{OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -32,6 +32,13 @@ impl OriginProvider for MockChannelReaderProvider {
 }
 
 #[async_trait]
+impl OriginAdvancer for MockChannelReaderProvider {
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl ChannelReaderProvider for MockChannelReaderProvider {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         self.data.pop().unwrap_or(Err(StageError::Eof))
@@ -46,9 +53,7 @@ impl ResettableStage for MockChannelReaderProvider {
 }
 
 impl PreviousStage for MockChannelReaderProvider {
-    type Previous = MockChannelReaderProvider;
-
-    fn previous(&self) -> Option<&Self::Previous> {
-        Some(self)
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(self))
     }
 }
