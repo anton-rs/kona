@@ -31,3 +31,4 @@ serde_json = { version = "1.0.68", default-features = false }
 [features]
 default = ["serde"]
 serde = ["dep:serde"]
+test-utils = []
