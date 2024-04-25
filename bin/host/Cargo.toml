@@ -12,7 +12,7 @@ exclude.workspace = true
 # workspace
 anyhow.workspace = true
 tracing.workspace = true
-alloy-primitives.workspace = true
+alloy-primitives = { workspace = true, features = ["serde"] }
 
 tokio = { version = "1.37.0", features = ["full"] }
 clap = { version = "4.5.4", features = ["derive", "env"] }

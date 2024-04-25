@@ -15,7 +15,7 @@ exclude = ["**/target", "benches/", "tests"]
 anyhow = { version = "1.0.79", default-features = false }
 tracing = { version = "0.1.40", default-features = false }
 cfg-if = "1.0.0"
-alloy-primitives = { version = "0.7.0", default-features = false, features = ["serde"] }
+alloy-primitives = { version = "0.7.0", default-features = false }
 
 [profile.dev]
 opt-level = 1

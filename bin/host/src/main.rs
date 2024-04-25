@@ -1,16 +1,16 @@
-mod parser;
-mod types;
 use crate::{
     parser::parse_b256,
     types::{Network, RpcKind}
 };
-
 use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
 use serde::Serialize;
 use std::path::PathBuf;
 use tracing::Level;
+
+mod parser;
+mod types;
 
 #[tokio::main]
 async fn main() -> Result<()> {

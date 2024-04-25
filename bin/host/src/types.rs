@@ -8,7 +8,9 @@ pub enum Network {
     Optimism,
 }
 
+/// Available RPC provider types.
 #[derive(Debug, Clone, ValueEnum, Serialize)]
 pub enum RpcKind {
+    /// debug alloy provider
     DebugRpc,
 }
