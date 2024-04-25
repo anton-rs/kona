@@ -19,9 +19,6 @@ alloy-rlp = { workspace = true, features = ["derive"] }
 kona-primitives = { path = "../primitives", version = "0.0.1" }
 kona-plasma = { path = "../plasma", version = "0.0.1" }
 
-# Local
-kona-primitives = { path = "../primitives", version = "0.0.1" }
-
 # External
 alloy-sol-types = { version = "0.7.1", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }

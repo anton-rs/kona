@@ -10,6 +10,7 @@ homepage.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+
 # Alloy Types
 alloy-sol-types = { version = "0.7.1", default-features = false }
 alloy-rlp = { version = "0.3.4", default-features = false, features = ["derive"] }
