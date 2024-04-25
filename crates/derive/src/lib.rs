@@ -8,21 +8,13 @@ extern crate alloc;
 
 use alloc::sync::Arc;
 use core::fmt::Debug;
+use kona_primitives::rollup_config::RollupConfig;
 use traits::ChainProvider;
-use types::RollupConfig;
 
-mod params;
-pub use params::{
-    ChannelID, CHANNEL_ID_LENGTH, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC,
-    DEPOSIT_EVENT_ABI, DEPOSIT_EVENT_ABI_HASH, DEPOSIT_EVENT_VERSION_0, DERIVATION_VERSION_0,
-    FRAME_OVERHEAD, MAX_CHANNEL_BANK_SIZE, MAX_FRAME_LEN, MAX_RLP_BYTES_PER_CHANNEL,
-    MAX_SPAN_BATCH_BYTES, SEQUENCER_FEE_VAULT_ADDRESS,
-};
-
+pub mod errors;
 pub mod sources;
 pub mod stages;
 pub mod traits;
-pub mod types;
 
 #[cfg(feature = "online")]
 mod online;

@@ -13,11 +13,13 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 /// 24 bytes per tx overhead (size of slice header in memory).
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
-use crate::types::{L1BlockInfoBedrock, L1BlockInfoEcotone};
-
-use super::{
-    Block, BlockInfo, L1BlockInfoTx, L2BlockInfo, OpBlock, RollupConfig, SystemConfig, Withdrawal,
+use crate::{
+    block::{Block, BlockInfo, L2BlockInfo, OpBlock, Withdrawal},
+    block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx},
+    rollup_config::RollupConfig,
+    system_config::SystemConfig,
 };
+
 use alloy_rlp::{Decodable, Encodable};
 
 #[cfg(feature = "serde")]

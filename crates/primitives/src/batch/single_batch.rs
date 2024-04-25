@@ -1,7 +1,9 @@
 //! This module contains the [SingleBatch] type.
 
 use super::validity::BatchValidity;
-use crate::types::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
+use crate::block::{BlockInfo, BlockID, L2BlockInfo};
+use crate::raw_tx::RawTransaction;
+use crate::rollup_config::RollupConfig;
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
 use alloy_rlp::{Decodable, Encodable};
@@ -183,8 +185,7 @@ impl Decodable for SingleBatch {
 
 #[cfg(test)]
 mod tests {
-    use super::SingleBatch;
-    use crate::types::RawTransaction;
+    use super::*;
     use alloc::vec;
     use alloy_primitives::{hex, B256};
     use alloy_rlp::{BytesMut, Decodable, Encodable};

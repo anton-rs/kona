@@ -2,7 +2,7 @@
 //!
 //! [Transaction]: alloy_consensus::Transaction
 
-use crate::types::{RawTransaction, UpgradeDepositSource};
+use crate::{deposits::UpgradeDepositSource, raw_tx::RawTransaction};
 use alloc::{string::String, vec, vec::Vec};
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
 use alloy_rlp::Encodable;

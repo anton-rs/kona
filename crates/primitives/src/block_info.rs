@@ -1,6 +1,11 @@
 //! This module contains the [L1BlockInfoTx] type, and various encoding / decoding methods for it.
 
-use super::{BlockID, DepositSourceDomain, L1InfoDepositSource, RollupConfig, SystemConfig};
+use super::{
+    block::BlockID,
+    deposits::{DepositSourceDomain, L1InfoDepositSource},
+    rollup_config::RollupConfig,
+    system_config::SystemConfig,
+};
 use alloc::vec::Vec;
 use alloy_consensus::Header;
 use alloy_primitives::{address, Address, Bytes, TxKind, B256, U256};

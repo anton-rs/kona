@@ -1,15 +1,17 @@
 //! Data Sources Test Utilities
 
-use crate::{
-    traits::{ChainProvider, L2ChainProvider},
-    types::{BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig},
-};
+use kona_primitives::block::{BlockInfo, L2BlockInfo};
+use kona_primitives::payload::L2ExecutionPayloadEnvelope;
+use kona_primitives::rollup_config::RollupConfig;
+use kona_primitives::system_config::SystemConfig;
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
 use hashbrown::HashMap;
+
+use crate::traits::{ChainProvider, L2ChainProvider};
 
 /// A mock block fetcher.
 #[derive(Debug, Default)]

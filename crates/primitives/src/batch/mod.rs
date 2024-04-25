@@ -1,7 +1,9 @@
 //! This module contains the batch types for the OP Stack derivation pipeline: [SpanBatch] &
 //! [SingleBatch].
 
-use super::DecodeError;
+use crate::block::{BlockInfo, L2BlockInfo};
+use crate::rollup_config::RollupConfig;
+
 use crate::{
     traits::L2ChainProvider,
     types::{BlockInfo, L2BlockInfo, RollupConfig},
@@ -101,6 +103,43 @@ impl Batch {
                     .map_err(DecodeError::SpanBatchError)?;
                 Ok(Batch::Span(span_batch))
             }
+        }
+    }
+}
+
+/// A decoding error.
+#[derive(Debug)]
+pub enum DecodeError {
+    /// The buffer is empty.
+    EmptyBuffer,
+    /// Alloy RLP Encoding Error.
+    AlloyRlpError(alloy_rlp::Error),
+    /// Span Batch Error.
+    SpanBatchError(SpanBatchError),
+}
+
+impl From<alloy_rlp::Error> for DecodeError {
+    fn from(e: alloy_rlp::Error) -> Self {
+        DecodeError::AlloyRlpError(e)
+    }
+}
+
+impl PartialEq<DecodeError> for DecodeError {
+    fn eq(&self, other: &DecodeError) -> bool {
+        matches!(
+            (self, other),
+            (DecodeError::EmptyBuffer, DecodeError::EmptyBuffer) |
+                (DecodeError::AlloyRlpError(_), DecodeError::AlloyRlpError(_))
+        )
+    }
+}
+
+impl Display for DecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            DecodeError::EmptyBuffer => write!(f, "Empty buffer"),
+            DecodeError::AlloyRlpError(e) => write!(f, "Alloy RLP Decoding Error: {}", e),
+            DecodeError::SpanBatchError(e) => write!(f, "Span Batch Decoding Error: {:?}", e),
         }
     }
 }

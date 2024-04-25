@@ -1,8 +1,17 @@
 //! This module contains the [Frame] type used within the derivation pipeline.
 
-use crate::params::{ChannelID, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
+
+use crate::channel::ChannelID;
+
+/// Count the tagging info as 200 in terms of buffer size.
+pub const FRAME_OVERHEAD: usize = 200;
+
+/// Frames cannot be larger than 1MB.
+/// Data transactions that carry frames are generally not larger than 128 KB due to L1 network
+/// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
+pub const MAX_FRAME_LEN: usize = 1000;
 
 /// A channel frame is a segment of a channel's data.
 ///
@@ -69,11 +78,11 @@ impl Frame {
     /// Frames are stored in L1 transactions with the following format:
     /// * `data = DerivationVersion0 ++ Frame(s)`
     /// Where there is one or more frames concatenated together.
-    pub fn parse_frames(encoded: &[u8]) -> Result<Vec<Self>> {
+    pub fn parse_frames(encoded: &[u8], version: u8) -> Result<Vec<Self>> {
         if encoded.is_empty() {
             bail!("No frames to parse");
         }
-        if encoded[0] != DERIVATION_VERSION_0 {
+        if encoded[0] != version {
             bail!("Unsupported derivation version");
         }
 
@@ -110,6 +119,8 @@ mod test {
 
     use super::*;
 
+    const DERIVATION_VERSION_0: u8 = 0;
+
     #[test]
     fn test_encode_frame_roundtrip() {
         let frame =
@@ -129,7 +140,7 @@ mod test {
             bytes.extend_from_slice(&frame.encode());
         });
 
-        let frames = Frame::parse_frames(bytes.as_slice()).unwrap();
+        let frames = Frame::parse_frames(bytes.as_slice(), DERIVATION_VERSION_0).unwrap();
         assert_eq!(frames.len(), 5);
         (0..5).for_each(|i| {
             assert_eq!(frames[i], frame);

@@ -1,6 +1,6 @@
 //! Contains sidecar types for blobs.
 
-use crate::types::Blob;
+use crate::blob::Blob;
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::FixedBytes;
 #[cfg(feature = "online")]

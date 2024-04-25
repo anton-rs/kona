@@ -1,13 +1,21 @@
 //! This module contains the [Channel] struct.
 
-use crate::{
-    params::ChannelID,
-    types::{BlockInfo, Frame},
-};
+use crate::{block::BlockInfo, frame::Frame};
+
 use alloc::vec::Vec;
 use alloy_primitives::Bytes;
 use anyhow::{anyhow, bail, Result};
 use hashbrown::HashMap;
+
+/// [MAX_RLP_BYTES_PER_CHANNEL] is the maximum amount of bytes that will be read from
+/// a channel. This limit is set when decoding the RLP.
+pub const MAX_RLP_BYTES_PER_CHANNEL: u64 = 10_000_000;
+
+/// [CHANNEL_ID_LENGTH] is the length of the channel ID.
+pub const CHANNEL_ID_LENGTH: usize = 16;
+
+/// [ChannelID] is an opaque identifier for a channel.
+pub type ChannelID = [u8; CHANNEL_ID_LENGTH];
 
 /// A Channel is a set of batches that are split into at least one, but possibly multiple frames.
 /// Frames are allowed to be ingested out of order.
@@ -147,7 +155,7 @@ mod test {
     use std::println;
 
     use super::Channel;
-    use crate::types::{BlockInfo, Frame};
+    use crate::{block::BlockInfo, frame::Frame};
     use alloc::{
         string::{String, ToString},
         vec,

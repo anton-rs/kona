@@ -1,9 +1,8 @@
 //! Test utilities for data availability.
 
-use crate::{
-    traits::{AsyncIterator, DataAvailabilityProvider},
-    types::{BlockInfo, StageError, StageResult},
-};
+use kona_primitives::block::BlockInfo;
+use crate::errors::{StageResult, StageError};
+use crate::traits::{AsyncIterator, DataAvailabilityProvider};
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
