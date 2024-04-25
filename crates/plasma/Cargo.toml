@@ -14,7 +14,7 @@ anyhow.workspace = true
 tracing.workspace = true
 
 # Local
-kona-primitives = { path = "../primitives", verison = "0.0.1" }
+kona-primitives = { path = "../primitives" }
 
 # External
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
