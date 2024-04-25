@@ -43,6 +43,7 @@ alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f
 reqwest = { version = "0.12", default-features = false, optional = true }
 
 [dev-dependencies]
+kona-plasma = { path = "../plasma", version = "0.0.1", features = ["default", "test-utils"] }
 tokio = { version = "1.37", features = ["full"] }
 proptest = "1.4.0"
 tracing-subscriber = "0.3.18"

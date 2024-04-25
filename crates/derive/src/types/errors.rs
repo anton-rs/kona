@@ -141,6 +141,8 @@ pub enum ResetError {
     BadTimestamp(u64, u64),
     /// A reorg is required.
     ReorgRequired,
+    /// A new expired challenge.
+    NewExpiredChallenge,
 }
 
 impl PartialEq<ResetError> for ResetError {
@@ -153,6 +155,7 @@ impl PartialEq<ResetError> for ResetError {
                 e1 == e2 && a1 == a2
             }
             (ResetError::ReorgRequired, ResetError::ReorgRequired) => true,
+            (ResetError::NewExpiredChallenge, ResetError::NewExpiredChallenge) => true,
             _ => false,
         }
     }
@@ -168,6 +171,7 @@ impl Display for ResetError {
                 write!(f, "Bad timestamp: expected {}, got {}", expected, actual)
             }
             ResetError::ReorgRequired => write!(f, "Reorg required"),
+            ResetError::NewExpiredChallenge => write!(f, "New expired challenge"),
         }
     }
 }

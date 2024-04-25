@@ -62,16 +62,19 @@ where
         // for the same origin and noop if the origin was already processed. It is also called if
         // there is not commitment in the current origin.
         match self.input_fetcher.advance_l1_origin(&self.chain_provider, self.id).await {
-            Some(Ok(_)) => (),
+            Some(Ok(_)) => {
+                tracing::debug!("plasma input fetcher - l1 origin advanced");
+            }
             Some(Err(PlasmaError::ReorgRequired)) => {
                 tracing::error!("new expired challenge");
-                return Some(StageResult::Err(StageError::Custom(anyhow::anyhow!(
-                    "new expired challenge"
-                ))));
+                return Some(StageResult::Err(StageError::Reset(ResetError::NewExpiredChallenge)));
             }
             Some(Err(e)) => {
                 tracing::error!("failed to advance plasma L1 origin: {:?}", e);
-                return Some(StageResult::Err(StageError::Plasma(e)));
+                return Some(StageResult::Err(StageError::Temporary(anyhow::anyhow!(
+                    "failed to advance plasma L1 origin: {:?}",
+                    e
+                ))));
             }
             None => {
                 tracing::warn!("l1 origin advance returned None");
@@ -91,12 +94,14 @@ where
 
             // If the data is empty,
             if data.is_empty() {
+                tracing::warn!("empty data from plasma source");
                 return Some(Err(StageError::Plasma(PlasmaError::NotEnoughData)));
             }
 
             // If the tx data type is not plasma, we forward it downstream to let the next
             // steps validate and potentially parse it as L1 DA inputs.
             if data[0] != TX_DATA_VERSION_1 {
+                tracing::info!("non-plasma tx data, forwarding downstream");
                 return Some(Ok(data));
             }
 
@@ -176,4 +181,104 @@ where
 
         return Some(Ok(data));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stages::test_utils::{CollectingLayer, TraceStorage};
+    use alloc::vec;
+    use kona_plasma::test_utils::{TestChainProvider, TestPlasmaInputFetcher};
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    #[tokio::test]
+    async fn test_next_plasma_advance_origin_reorg_error() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher {
+            advances: vec![Err(PlasmaError::ReorgRequired)],
+            ..Default::default()
+        };
+        let source = vec![Bytes::from("hello"), Bytes::from("world")].into_iter();
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::Reset(ResetError::NewExpiredChallenge));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_advance_origin_other_error() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher {
+            advances: vec![Err(PlasmaError::NotEnoughData)],
+            ..Default::default()
+        };
+        let source = vec![Bytes::from("hello"), Bytes::from("world")].into_iter();
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        matches!(err, StageError::Temporary(_));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_not_enough_source_data() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let source = vec![].into_iter();
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::Plasma(PlasmaError::NotEnoughData));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_empty_source_data() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let source = vec![Bytes::from("")].into_iter();
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::Plasma(PlasmaError::NotEnoughData));
+
+        let logs = trace_store.get_by_level(Level::WARN);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("empty data from plasma source"));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_non_plasma_tx_data_forwards() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let first = Bytes::copy_from_slice(&[2u8]);
+        let source = vec![first.clone()].into_iter();
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let data = plasma_source.next().await.unwrap().unwrap();
+        assert_eq!(data, first);
+
+        let logs = trace_store.get_by_level(Level::INFO);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("non-plasma tx data, forwarding downstream"));
+    }
+
+    // TODO: more tests
 }

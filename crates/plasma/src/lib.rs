@@ -19,3 +19,6 @@ pub mod prelude {
         types::{FinalizedHeadSignal, Keccak256Commitment, PlasmaError, SystemConfig},
     };
 }
+
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
