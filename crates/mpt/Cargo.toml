@@ -19,10 +19,10 @@ alloy-rlp = { workspace = true, default-features = false }
 alloy-trie = { version = "0.3.1", default-features = false }
 
 [dev-dependencies]
+alloy-consensus.workspace = true
 tokio = { version = "1.36.0", features = ["full"] }
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
 reqwest = "0.12"
 tracing-subscriber = "0.3.18"
