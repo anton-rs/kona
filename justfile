@@ -37,7 +37,7 @@ lint-cannon:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std --exclude kona-derive -- -D warnings 
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std --exclude kona-derive --exclude kona-host -- -D warnings
 
 # Lint the workspace (risc-v arch)
 lint-asterisc:
@@ -70,7 +70,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host
 
 # Build for the `asterisc` target
 build-asterisc *args='':
@@ -79,4 +79,4 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host
