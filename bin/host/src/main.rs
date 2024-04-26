@@ -1,6 +1,6 @@
 use crate::{
     parser::parse_b256,
-    types::{Network, RpcKind}
+    types::{Network, RpcKind},
 };
 use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
