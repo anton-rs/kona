@@ -18,6 +18,35 @@ pub struct RawSpanBatch {
     pub payload: SpanBatchPayload,
 }
 
+impl TryFrom<SpanBatch> for RawSpanBatch {
+    type Error = SpanBatchError;
+
+    fn try_from(value: SpanBatch) -> Result<Self, Self::Error> {
+        if value.batches.is_empty() {
+            return Err(SpanBatchError::EmptySpanBatch);
+        }
+
+        // These should never error since we check for an empty batch above.
+        let span_start = value.batches.first().ok_or(SpanBatchError::EmptySpanBatch)?;
+        let span_end = value.batches.last().ok_or(SpanBatchError::EmptySpanBatch)?;
+
+        Ok(RawSpanBatch {
+            prefix: SpanBatchPrefix {
+                rel_timestamp: span_start.timestamp - value.genesis_timestamp,
+                l1_origin_num: span_end.epoch_num,
+                parent_check: value.parent_check,
+                l1_origin_check: value.l1_origin_check,
+            },
+            payload: SpanBatchPayload {
+                block_count: value.batches.len() as u64,
+                origin_bits: value.origin_bits.clone(),
+                block_tx_counts: value.block_tx_counts.clone(),
+                txs: value.txs.clone(),
+            },
+        })
+    }
+}
+
 impl RawSpanBatch {
     /// Returns the batch type
     pub fn get_batch_type(&self) -> BatchType {
@@ -105,8 +134,41 @@ impl RawSpanBatch {
 #[cfg(test)]
 mod test {
     extern crate std;
-    use super::RawSpanBatch;
-    use alloc::vec::Vec;
+    use super::{RawSpanBatch, SpanBatch, SpanBatchElement};
+    use alloc::{vec, vec::Vec};
+    use alloy_primitives::FixedBytes;
+
+    #[test]
+    fn test_try_from_span_batch_empty_batches_errors() {
+        let span_batch = SpanBatch::default();
+        let raw_span_batch = RawSpanBatch::try_from(span_batch).unwrap_err();
+        assert_eq!(raw_span_batch, super::SpanBatchError::EmptySpanBatch);
+    }
+
+    #[test]
+    fn test_try_from_span_batch_succeeds() {
+        let parent_check = FixedBytes::from([2u8; 20]);
+        let l1_origin_check = FixedBytes::from([3u8; 20]);
+        let first = SpanBatchElement { epoch_num: 100, timestamp: 400, transactions: Vec::new() };
+        let last = SpanBatchElement { epoch_num: 200, timestamp: 500, transactions: Vec::new() };
+        let span_batch = SpanBatch {
+            batches: vec![first, last],
+            genesis_timestamp: 300,
+            parent_check,
+            l1_origin_check,
+            ..Default::default()
+        };
+        let expected_prefix = super::SpanBatchPrefix {
+            rel_timestamp: 100,
+            l1_origin_num: 200,
+            parent_check,
+            l1_origin_check,
+        };
+        let expected_payload = super::SpanBatchPayload { block_count: 2, ..Default::default() };
+        let raw_span_batch = RawSpanBatch::try_from(span_batch).unwrap();
+        assert_eq!(raw_span_batch.prefix, expected_prefix);
+        assert_eq!(raw_span_batch.payload, expected_payload);
+    }
 
     #[test]
     fn test_decode_encode_raw_span_batch() {
