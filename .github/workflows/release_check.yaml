@@ -1,0 +1,40 @@
+name: Release-plz (PR Check)
+on: push
+
+jobs:
+  release-plz:
+    name: Release-plz (PR Check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-semver-checks
+        uses: jaxxstorm/action-install-gh-release@v1.11.0
+        with:
+          repo: obi1kenobi/cargo-semver-checks
+          tag: v0.31.0
+          cache: enable
+      - name: Install release-plz
+        uses: jaxxstorm/action-install-gh-release@v1.11.0
+        with:
+          repo: MarcoIeni/release-plz
+          tag: ${{ inputs.version }}
+          cache: enable
+      - name: Run release-plz
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          release-plz release \
+            --dry-run \
+            --git-token ${GITHUB_TOKEN} \
+            --repo-url https://github.com/${GITHUB_REPOSITORY}
+          release-plz release-pr \
+            --dry-run \
+            --git-token ${GITHUB_TOKEN} \
+            --repo-url https://github.com/${GITHUB_REPOSITORY}\
