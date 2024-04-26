@@ -6,6 +6,9 @@
 
 extern crate alloc;
 
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
+
 pub mod attributes;
 pub mod batch;
 pub mod blob;

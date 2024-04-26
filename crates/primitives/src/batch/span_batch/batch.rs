@@ -1,13 +1,10 @@
 //! The Span Batch Type
 
 use super::{SpanBatchError, SpanBatchTransactions};
-use crate::{
-    traits::L2ChainProvider,
-    types::{
-        BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
-        SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
-    },
-};
+use crate::block::{BlockInfo, L2BlockInfo};
+use crate::rollup_config::RollupConfig;
+use crate::batch::{L2ChainProvider, BatchValidity, RawSpanBatch, SingleBatch, SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix};
+
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
 use op_alloy_consensus::OpTxType;
@@ -430,11 +427,12 @@ impl SpanBatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        stages::test_utils::{CollectingLayer, TraceStorage},
-        traits::test_utils::MockBlockFetcher,
-        types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction},
-    };
+    use crate::block::BlockID;
+    use crate::genesis::Genesis;
+    use crate::payload::{L2ExecutionPayload, L2ExecutionPayloadEnvelope};
+    use crate::raw_tx::RawTransaction;
+    use crate::test_utils::{CollectingLayer, TraceStorage};
+    use crate::test_utils::MockBlockFetcher;
     use alloc::vec;
     use alloy_primitives::{b256, Bytes, B256};
     use op_alloy_consensus::OpTxType;

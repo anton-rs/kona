@@ -4,10 +4,6 @@
 use crate::block::{BlockInfo, L2BlockInfo};
 use crate::rollup_config::RollupConfig;
 
-use crate::{
-    traits::L2ChainProvider,
-    types::{BlockInfo, L2BlockInfo, RollupConfig},
-};
 use alloy_rlp::{Buf, Decodable};
 
 mod batch_type;
@@ -26,6 +22,33 @@ pub use span_batch::{
 
 mod single_batch;
 pub use single_batch::SingleBatch;
+
+use core::fmt::Display;
+use alloc::sync::Arc;
+use crate::payload::L2ExecutionPayloadEnvelope;
+use crate::system_config::SystemConfig;
+use async_trait::async_trait;
+use alloc::boxed::Box;
+
+// TODO: remove and split up the span batch check so it doesn't need an L2ChainProvider argument
+/// Describes the functionality of a data source that fetches safe blocks.
+#[async_trait]
+pub trait L2ChainProvider {
+    /// Returns the L2 block info given a block number.
+    /// Errors if the block does not exist.
+    async fn l2_block_info_by_number(&mut self, number: u64) -> anyhow::Result<L2BlockInfo>;
+
+    /// Returns an execution payload for a given number.
+    /// Errors if the execution payload does not exist.
+    async fn payload_by_number(&mut self, number: u64) -> anyhow::Result<L2ExecutionPayloadEnvelope>;
+
+    /// Returns the [SystemConfig] by L2 number.
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+        rollup_config: Arc<RollupConfig>,
+    ) -> anyhow::Result<SystemConfig>;
+}
 
 /// A batch with its inclusion block.
 #[derive(Debug, Clone, PartialEq, Eq)]

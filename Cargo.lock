@@ -1521,6 +1521,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-sol-types",
  "anyhow",
+ "async-trait",
  "hashbrown",
  "op-alloy-consensus",
  "proptest",
