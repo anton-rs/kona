@@ -2,15 +2,15 @@
 
 use crate::{
     stages::{
-        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue,
-        L1Retrieval, L1Traversal, NextAttributes, StatefulAttributesBuilder
+        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+        L1Traversal, NextAttributes, StatefulAttributesBuilder,
     },
     traits::{DataAvailabilityProvider, ResettableStage},
     types::RollupConfig,
 };
 
-use alloy_provider::ReqwestProvider;
 use alloc::sync::Arc;
+use alloy_provider::ReqwestProvider;
 use core::fmt::Debug;
 
 /// Creates a new [OnlineStageStack].
@@ -20,7 +20,10 @@ pub fn new_online_stack(
     chain_provider: AlloyChainProvider<ReqwestProvider>,
     dap_source: impl DataAvailabilityProvider + Send + Sync + Debug,
     fetcher: AlloyL2ChainProvider<ReqwestProvider>,
-    builder: StatefulAttributesBuilder<AlloyChainProvider<ReqwestProvider>, AlloyL2ChainProvider<ReqwestProvider>>,
+    builder: StatefulAttributesBuilder<
+        AlloyChainProvider<ReqwestProvider>,
+        AlloyL2ChainProvider<ReqwestProvider>,
+    >,
 ) -> impl NextAttributes + ResettableStage + Debug + Send {
     let l1_traversal = L1Traversal::new(chain_provider, rollup_config.clone());
     let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);

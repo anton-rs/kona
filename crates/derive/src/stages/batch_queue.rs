@@ -656,8 +656,7 @@ mod tests {
         let fetcher = MockBlockFetcher::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
-        let result = bq.next_batch(parent).await;
-        assert!(result.is_ok());
-        assert_eq!(result, Err(StageError::NotEnoughData));
+        let batch = bq.next_batch(parent).await.unwrap();
+        assert_eq!(batch, SingleBatch::default());
     }
 }
