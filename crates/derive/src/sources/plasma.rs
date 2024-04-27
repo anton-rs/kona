@@ -437,5 +437,63 @@ mod tests {
         assert!(logs[0].contains("failed to pull next data from the plasma source iterator"));
     }
 
+    #[tokio::test]
+    async fn test_next_plasma_succeeds() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let chain_provider = TestChainProvider::default();
+        let expected_input = Bytes::from(
+            &b"11111111111111111111111111111111111111111111111111111111111111111111"[..],
+        );
+        let input_fetcher = TestPlasmaInputFetcher {
+            advances: vec![Ok(())],
+            inputs: vec![Ok(expected_input.clone())],
+            ..Default::default()
+        };
+        let id = BlockID { number: 1, ..Default::default() };
+        let signature = Signature::test_signature();
+        let batcher_address = Address::left_padding_from(&[6]);
+        let input = Bytes::from(alloy_primitives::hex!(
+            "01001d2b0bda21d56b8bd12d4f94ebacffdfb35f5e226f84b461103bb8beab6353be"
+        ));
+        let tx = TxEnvelope::Eip1559(
+            TxEip1559 {
+                chain_id: 1u64,
+                nonce: 2,
+                max_fee_per_gas: 3,
+                max_priority_fee_per_gas: 4,
+                gas_limit: 5,
+                to: TxKind::Call(batcher_address),
+                value: U256::from(7_u64),
+                input,
+                access_list: Default::default(),
+            }
+            .into_signed(signature),
+        );
+        let signer = alloy_primitives::address!("26e7b8bddd30a259d73d04ac83072d5eefec0eb0");
+        let txs = vec![tx];
+        let source_chain_provider = TestChainProvider {
+            blocks: vec![(1, BlockInfo::default(), txs)],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                source_chain_provider,
+                batcher_address,
+                BlockInfo::default(),
+                signer,
+            ));
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let data = plasma_source.next().await.unwrap().unwrap();
+        assert_eq!(data, expected_input);
+
+        let logs = trace_store.get_by_level(Level::DEBUG);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("plasma input fetcher - l1 origin advanced"));
+    }
+
     // TODO: more tests
 }
