@@ -45,7 +45,7 @@ pub trait BeaconClient {
 }
 
 /// An online implementation of the [BeaconClient] trait.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OnlineBeaconClient<T: Provider<Http<Client>>> {
     /// The inner Ethereum JSON-RPC provider.
     inner: T,
