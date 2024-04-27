@@ -12,14 +12,14 @@ homepage.workspace = true
 # Workspace
 anyhow.workspace = true
 tracing.workspace = true
+alloy-consensus.workspace = true
+alloy-primitives = { workspace = true, features = ["rlp"] }
 
 # Local
 kona-primitives = { path = "../primitives" }
 kona-providers = { path = "../providers" }
 
 # External
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
-alloy-primitives = { workspace = true, features = ["rlp"] }
 async-trait = "0.1.77"
 
 # `serde` feature dependencies
