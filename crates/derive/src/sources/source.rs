@@ -2,33 +2,39 @@
 
 use crate::{
     sources::{BlobSource, CalldataSource, PlasmaSource},
-    traits::{AsyncIterator, BlobProvider, ChainProvider},
+    traits::{AsyncIterator, BlobProvider},
     types::StageResult,
 };
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use kona_plasma::traits::PlasmaInputFetcher;
+use kona_providers::ChainProvider;
 
 /// An enum over the various data sources.
 #[derive(Debug, Clone)]
-pub enum DataSource<CP, B>
+pub enum DataSource<CP, B, PIF, I>
 where
     CP: ChainProvider + Send,
     B: BlobProvider + Send,
+    PIF: PlasmaInputFetcher<CP> + Send,
+    I: Iterator<Item = Bytes> + Send,
 {
     /// A calldata source.
     Calldata(CalldataSource<CP>),
     /// A blob source.
     Blob(BlobSource<CP, B>),
     /// A plasma source.
-    Plasma(PlasmaSource<CP>),
+    Plasma(PlasmaSource<CP, PIF, I>),
 }
 
 #[async_trait]
-impl<CP, B> AsyncIterator for DataSource<CP, B>
+impl<CP, B, PIF, I> AsyncIterator for DataSource<CP, B, PIF, I>
 where
     CP: ChainProvider + Send,
     B: BlobProvider + Send,
+    PIF: PlasmaInputFetcher<CP> + Send,
+    I: Iterator<Item = Bytes> + Send,
 {
     type Item = Bytes;
 

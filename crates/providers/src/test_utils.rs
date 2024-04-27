@@ -1,72 +1,15 @@
-//! Data Sources Test Utilities
+//! Test utilities for kona providers.
 
-use crate::{
-    traits::{ChainProvider, L2ChainProvider},
-    types::{BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig},
-};
+use crate::{ChainProvider, L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
 use hashbrown::HashMap;
-
-/// A mock block fetcher.
-#[derive(Debug, Default)]
-pub struct MockBlockFetcher {
-    /// Blocks
-    pub blocks: Vec<L2BlockInfo>,
-    /// Short circuit the block return to be the first block.
-    pub short_circuit: bool,
-    /// Payloads
-    pub payloads: Vec<L2ExecutionPayloadEnvelope>,
-    /// System configs
-    pub system_configs: HashMap<u64, SystemConfig>,
-}
-
-impl MockBlockFetcher {
-    /// Creates a new [MockBlockFetcher] with the given origin and batches.
-    pub fn new(
-        blocks: Vec<L2BlockInfo>,
-        payloads: Vec<L2ExecutionPayloadEnvelope>,
-        system_configs: HashMap<u64, SystemConfig>,
-    ) -> Self {
-        Self { blocks, short_circuit: false, payloads, system_configs }
-    }
-}
-
-#[async_trait]
-impl L2ChainProvider for MockBlockFetcher {
-    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
-        if self.short_circuit {
-            return self.blocks.first().copied().ok_or_else(|| anyhow::anyhow!("Block not found"));
-        }
-        self.blocks
-            .iter()
-            .find(|b| b.block_info.number == number)
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("Block not found"))
-    }
-
-    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
-        self.payloads
-            .iter()
-            .find(|p| p.execution_payload.block_number == number)
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("Payload not found"))
-    }
-
-    async fn system_config_by_number(
-        &mut self,
-        number: u64,
-        _: Arc<RollupConfig>,
-    ) -> Result<SystemConfig> {
-        self.system_configs
-            .get(&number)
-            .ok_or_else(|| anyhow::anyhow!("System config not found"))
-            .cloned()
-    }
-}
+use kona_primitives::{
+    BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig,
+};
 
 /// A mock chain provider for testing.
 #[derive(Debug, Clone, Default)]
@@ -155,5 +98,62 @@ impl ChainProvider for TestChainProvider {
             .map(|(_, b)| *b)
             .ok_or_else(|| anyhow::anyhow!("Block not found"))?;
         Ok((block, Vec::new()))
+    }
+}
+
+/// An [L2ChainProvider] implementation for testing.
+#[derive(Debug, Default)]
+pub struct TestL2ChainProvider {
+    /// Blocks
+    pub blocks: Vec<L2BlockInfo>,
+    /// Short circuit the block return to be the first block.
+    pub short_circuit: bool,
+    /// Payloads
+    pub payloads: Vec<L2ExecutionPayloadEnvelope>,
+    /// System configs
+    pub system_configs: HashMap<u64, SystemConfig>,
+}
+
+impl TestL2ChainProvider {
+    /// Creates a new [MockBlockFetcher] with the given origin and batches.
+    pub fn new(
+        blocks: Vec<L2BlockInfo>,
+        payloads: Vec<L2ExecutionPayloadEnvelope>,
+        system_configs: HashMap<u64, SystemConfig>,
+    ) -> Self {
+        Self { blocks, short_circuit: false, payloads, system_configs }
+    }
+}
+
+#[async_trait]
+impl L2ChainProvider for TestL2ChainProvider {
+    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
+        if self.short_circuit {
+            return self.blocks.first().copied().ok_or_else(|| anyhow::anyhow!("Block not found"));
+        }
+        self.blocks
+            .iter()
+            .find(|b| b.block_info.number == number)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Block not found"))
+    }
+
+    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
+        self.payloads
+            .iter()
+            .find(|p| p.execution_payload.block_number == number)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Payload not found"))
+    }
+
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+        _: Arc<RollupConfig>,
+    ) -> Result<SystemConfig> {
+        self.system_configs
+            .get(&number)
+            .ok_or_else(|| anyhow::anyhow!("System config not found"))
+            .cloned()
     }
 }

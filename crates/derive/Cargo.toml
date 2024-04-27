@@ -18,6 +18,8 @@ alloy-rlp = { workspace = true, features = ["derive"] }
 
 # Local
 kona-primitives = { path = "../primitives", version = "0.0.1" }
+kona-plasma = { path = "../plasma", version = "0.0.1" }
+kona-providers = { path = "../providers", version = "0.0.1" }
 
 # External
 alloy-sol-types = { version = "0.7.1", default-features = false }
@@ -42,6 +44,7 @@ alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f
 reqwest = { version = "0.12", default-features = false, optional = true }
 
 [dev-dependencies]
+kona-plasma = { path = "../plasma", version = "0.0.1", features = ["default", "test-utils"] }
 tokio = { version = "1.37", features = ["full"] }
 proptest = "1.4.0"
 tracing-subscriber = "0.3.18"
@@ -51,7 +54,7 @@ serde_json = { version = "1.0.116", default-features = false }
 
 [features]
 default = ["serde", "k256"]
-serde = ["dep:serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde"]
+serde = ["dep:serde", "kona-plasma/serde", "kona-providers/serde", "kona-primitives/serde", "alloy-primitives/serde", "alloy-consensus/serde", "op-alloy-consensus/serde"]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256", "op-alloy-consensus/k256"]
 online = [
   "dep:revm-primitives",
@@ -66,3 +69,4 @@ online = [
   "revm-primitives/serde",
   "revm-primitives/c-kzg",
 ]
+test-utils = [ "kona-providers/test-utils", "kona-plasma/test-utils" ]

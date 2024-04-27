@@ -1556,7 +1556,9 @@ dependencies = [
  "async-trait",
  "c-kzg",
  "hashbrown",
+ "kona-plasma",
  "kona-primitives",
+ "kona-providers",
  "lru",
  "miniz_oxide",
  "op-alloy-consensus",
@@ -1605,6 +1607,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-plasma"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
+ "alloy-primitives",
+ "anyhow",
+ "async-trait",
+ "kona-primitives",
+ "kona-providers",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "kona-preimage"
 version = "0.0.1"
 dependencies = [
@@ -1629,6 +1647,26 @@ dependencies = [
  "op-alloy-consensus",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "kona-providers"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
+ "alloy-primitives",
+ "alloy-rlp",
+ "alloy-sol-types",
+ "anyhow",
+ "async-trait",
+ "hashbrown",
+ "kona-primitives",
+ "op-alloy-consensus",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
