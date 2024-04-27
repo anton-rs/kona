@@ -1,12 +1,10 @@
 //! Contains a helper method to derive deposit transactions from L1 Receipts.
 
-use crate::{
-    params::DEPOSIT_EVENT_ABI_HASH,
-    types::{decode_deposit, DepositError, RawTransaction},
-};
+use crate::types::{DepositError, RawTransaction};
 use alloc::vec::Vec;
 use alloy_consensus::Receipt;
 use alloy_primitives::{Address, Log, B256};
+use kona_primitives::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
 
 /// Derive deposits for transaction receipts.
 ///

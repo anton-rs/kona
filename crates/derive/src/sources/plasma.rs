@@ -8,12 +8,13 @@ use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use kona_plasma::{
-    traits::{ChainProvider, PlasmaInputFetcher},
+    traits::PlasmaInputFetcher,
     types::{
         decode_keccak256, Keccak256Commitment, PlasmaError, MAX_INPUT_SIZE, TX_DATA_VERSION_1,
     },
 };
 use kona_primitives::block::BlockID;
+use kona_providers::ChainProvider;
 
 /// A plasma data iterator.
 #[derive(Debug, Clone)]
@@ -188,7 +189,8 @@ mod tests {
     use super::*;
     use crate::stages::test_utils::{CollectingLayer, TraceStorage};
     use alloc::vec;
-    use kona_plasma::test_utils::{TestChainProvider, TestPlasmaInputFetcher};
+    use kona_plasma::test_utils::TestPlasmaInputFetcher;
+    use kona_providers::test_utils::TestChainProvider;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

@@ -7,17 +7,33 @@
 extern crate alloc;
 
 pub mod block;
-pub mod genesis;
-pub mod params;
-pub mod rollup_config;
-pub mod system_config;
+pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock, Withdrawal};
 
-/// The prelude exports common types and traits.
-pub mod prelude {
-    pub use crate::{
-        block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock, Withdrawal},
-        genesis::Genesis,
-        rollup_config::RollupConfig,
-        system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType},
-    };
-}
+pub mod block_info;
+pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
+
+pub mod raw_tx;
+pub use raw_tx::RawTransaction;
+
+pub mod deposits;
+pub use deposits::{
+    decode_deposit, DepositError, DepositSourceDomain, DepositSourceDomainIdentifier,
+    L1InfoDepositSource, UpgradeDepositSource, UserDepositSource, DEPOSIT_EVENT_ABI_HASH,
+};
+
+pub mod genesis;
+pub use genesis::Genesis;
+
+pub mod params;
+pub use params::*;
+
+pub mod payload;
+pub use payload::{
+    L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
+};
+
+pub mod rollup_config;
+pub use rollup_config::RollupConfig;
+
+pub mod system_config;
+pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};

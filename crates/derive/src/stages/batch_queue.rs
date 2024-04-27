@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -12,6 +12,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_providers::L2ChainProvider;
 use tracing::{error, info, warn};
 
 /// Provides [Batch]es for the [BatchQueue] stage.
@@ -434,7 +435,6 @@ mod tests {
             channel_reader::BatchReader,
             test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
         },
-        traits::test_utils::MockBlockFetcher,
         types::{
             BatchType, BlockID, Genesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
             L2ExecutionPayloadEnvelope,
@@ -443,6 +443,7 @@ mod tests {
     use alloc::vec;
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
+    use kona_providers::test_utils::TestL2ChainProvider;
     use miniz_oxide::deflate::compress_to_vec_zlib;
     use op_alloy_consensus::{OpTxType, TxDeposit};
     use tracing::Level;
@@ -461,7 +462,7 @@ mod tests {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let result = bq.derive_next_batch(false, parent).await.unwrap_err();
@@ -474,7 +475,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let batch = reader.next_batch(cfg.as_ref()).unwrap();
         let mock = MockBatchQueueProvider::new(vec![Ok(batch)]);
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
         assert_eq!(res, StageError::NotEnoughData);
@@ -491,7 +492,7 @@ mod tests {
         }
         let mut mock = MockBatchQueueProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo {
             l1_origin: BlockID { number: 10, ..Default::default() },
@@ -619,7 +620,7 @@ mod tests {
                 ..Default::default()
             },
         };
-        let fetcher = MockBlockFetcher {
+        let fetcher = TestL2ChainProvider {
             blocks: vec![block_nine, block_seven],
             payloads: vec![payload, second],
             ..Default::default()
@@ -653,7 +654,7 @@ mod tests {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let batch = bq.next_batch(parent).await.unwrap();

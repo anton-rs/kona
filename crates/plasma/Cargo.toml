@@ -15,6 +15,7 @@ tracing.workspace = true
 
 # Local
 kona-primitives = { path = "../primitives" }
+kona-providers = { path = "../providers" }
 
 # External
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
@@ -29,6 +30,6 @@ tracing-subscriber = "0.3.18"
 serde_json = { version = "1.0.68", default-features = false }
 
 [features]
-default = ["serde"]
-serde = ["dep:serde"]
-test-utils = []
+default = [ "serde" ]
+serde = [ "dep:serde", "kona-providers/serde", "kona-primitives/serde" ]
+test-utils = [ "kona-providers/test-utils" ]
