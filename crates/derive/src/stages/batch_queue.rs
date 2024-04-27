@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginProvider, ResettableStage},
+    traits::{OriginProvider, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -12,6 +12,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_providers::L2ChainProvider;
 use tracing::{error, info, warn};
 
 /// Provides [Batch]es for the [BatchQueue] stage.
@@ -409,10 +410,10 @@ mod tests {
     use super::*;
     use crate::{
         stages::{channel_reader::BatchReader, test_utils::MockBatchQueueProvider},
-        traits::test_utils::MockBlockFetcher,
         types::BatchType,
     };
     use alloc::vec;
+    use kona_providers::test_utils::TestL2ChainProvider;
     use miniz_oxide::deflate::compress_to_vec_zlib;
 
     fn new_batch_reader() -> BatchReader {
@@ -428,7 +429,7 @@ mod tests {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let result = bq.derive_next_batch(false, parent).await.unwrap_err();
@@ -441,7 +442,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let batch = reader.next_batch(cfg.as_ref()).unwrap();
         let mock = MockBatchQueueProvider::new(vec![Ok(batch)]);
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
         assert_eq!(res, StageError::NotEnoughData);
@@ -472,7 +473,7 @@ mod tests {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
         let mock = MockBatchQueueProvider::new(data);
-        let fetcher = MockBlockFetcher::default();
+        let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let result = bq.next_batch(parent).await;

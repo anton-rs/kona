@@ -35,22 +35,9 @@ pub type ChannelID = [u8; CHANNEL_ID_LENGTH];
 /// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
 pub const MAX_FRAME_LEN: usize = 1000;
 
-/// Deposit log event abi signature.
-pub const DEPOSIT_EVENT_ABI: &str = "TransactionDeposited(address,address,uint256,bytes)";
-
 /// `keccak256("ConfigUpdate(uint256,uint8,bytes)")`
 pub const CONFIG_UPDATE_TOPIC: B256 =
     b256!("1d2b0bda21d56b8bd12d4f94ebacffdfb35f5e226f84b461103bb8beab6353be");
 
 /// The initial version of the system config event log.
 pub const CONFIG_UPDATE_EVENT_VERSION_0: B256 = B256::ZERO;
-
-/// Deposit event abi hash.
-///
-/// This is the keccak256 hash of the deposit event ABI signature.
-/// `keccak256("TransactionDeposited(address,address,uint256,bytes)")`
-pub const DEPOSIT_EVENT_ABI_HASH: B256 =
-    b256!("b3813568d9991fc951961fcb4c784893574240a28925604d09fc577c55bb7c32");
-
-/// The initial version of the deposit event log.
-pub const DEPOSIT_EVENT_VERSION_0: B256 = B256::ZERO;

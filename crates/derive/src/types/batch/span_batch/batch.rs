@@ -1,15 +1,13 @@
 //! The Span Batch Type
 
 use super::{SpanBatchError, SpanBatchTransactions};
-use crate::{
-    traits::L2ChainProvider,
-    types::{
-        BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
-        SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
-    },
+use crate::types::{
+    BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch, SpanBatchBits,
+    SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
 };
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
+use kona_providers::L2ChainProvider;
 use op_alloy_consensus::OpTxType;
 use tracing::{info, warn};
 
@@ -432,11 +430,11 @@ mod tests {
     use super::*;
     use crate::{
         stages::test_utils::{CollectingLayer, TraceStorage},
-        traits::test_utils::MockBlockFetcher,
         types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction},
     };
     use alloc::vec;
     use alloy_primitives::{b256, Bytes, B256};
+    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::OpTxType;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -491,7 +489,7 @@ mod tests {
         let l1_blocks = vec![];
         let l2_safe_head = L2BlockInfo::default();
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let batch = SpanBatch::default();
         assert_eq!(
             batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
@@ -512,7 +510,7 @@ mod tests {
         let l1_blocks = vec![BlockInfo::default()];
         let l2_safe_head = L2BlockInfo::default();
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let batch = SpanBatch::default();
         assert_eq!(
             batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
@@ -534,7 +532,7 @@ mod tests {
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo::default();
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
@@ -561,7 +559,7 @@ mod tests {
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo::default();
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
@@ -592,7 +590,7 @@ mod tests {
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, timestamp: 21, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
@@ -620,7 +618,7 @@ mod tests {
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
@@ -646,7 +644,7 @@ mod tests {
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, timestamp: 11, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 21, ..Default::default() };
         let batch = SpanBatch { batches: vec![first, second], ..Default::default() };
@@ -673,7 +671,7 @@ mod tests {
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, timestamp: 8, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch { batches: vec![first, second], ..Default::default() };
@@ -700,7 +698,7 @@ mod tests {
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
-        let mut fetcher = MockBlockFetcher::default();
+        let mut fetcher = TestL2ChainProvider::default();
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch { batches: vec![first, second], ..Default::default() };
@@ -733,7 +731,7 @@ mod tests {
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         fetcher.short_circuit = true;
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
@@ -773,7 +771,7 @@ mod tests {
             block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -817,7 +815,7 @@ mod tests {
             l1_origin: BlockID { number: 8, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -868,7 +866,7 @@ mod tests {
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -918,7 +916,7 @@ mod tests {
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -965,7 +963,7 @@ mod tests {
             l1_origin: BlockID { number: 14, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -1022,7 +1020,7 @@ mod tests {
             block_info: BlockInfo { number: 40, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 20, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 10, timestamp: 20, ..Default::default() };
         let third = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
@@ -1072,7 +1070,7 @@ mod tests {
             block_info: BlockInfo { number: 40, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 20, transactions: vec![] };
         let second = SpanBatchElement { epoch_num: 10, timestamp: 20, transactions: vec![] };
         let third = SpanBatchElement { epoch_num: 11, timestamp: 20, transactions: vec![] };
@@ -1125,7 +1123,7 @@ mod tests {
             block_info: BlockInfo { number: 40, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement {
             epoch_num: 10,
             timestamp: 20,
@@ -1188,7 +1186,7 @@ mod tests {
             block_info: BlockInfo { number: 40, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement {
             epoch_num: 10,
             timestamp: 20,
@@ -1247,7 +1245,7 @@ mod tests {
             block_info: BlockInfo { number: 40, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let filler_bytes = RawTransaction(Bytes::copy_from_slice(&[OpTxType::Eip1559 as u8]));
         let first = SpanBatchElement {
             epoch_num: 10,
@@ -1306,7 +1304,7 @@ mod tests {
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -1361,7 +1359,7 @@ mod tests {
             parent_beacon_block_root: None,
             execution_payload: L2ExecutionPayload { block_number: 41, ..Default::default() },
         };
-        let mut fetcher = MockBlockFetcher {
+        let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             payloads: vec![payload],
             ..Default::default()
@@ -1430,7 +1428,7 @@ mod tests {
                 ..Default::default()
             },
         };
-        let mut fetcher = MockBlockFetcher {
+        let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             payloads: vec![payload],
             ..Default::default()
@@ -1496,7 +1494,7 @@ mod tests {
                 ..Default::default()
             },
         };
-        let mut fetcher = MockBlockFetcher {
+        let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             payloads: vec![payload],
             ..Default::default()
