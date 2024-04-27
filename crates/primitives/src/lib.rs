@@ -21,6 +21,9 @@ pub use deposits::{
     L1InfoDepositSource, UpgradeDepositSource, UserDepositSource, DEPOSIT_EVENT_ABI_HASH,
 };
 
+mod attributes;
+pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
+
 pub mod genesis;
 pub use genesis::Genesis;
 
