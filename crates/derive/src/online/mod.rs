@@ -38,6 +38,9 @@ pub fn new_online_stack(
 #[allow(unreachable_pub)]
 pub mod test_utils;
 
+pub mod dap;
+pub use dap::AlloyDataAvailabilityProvider;
+
 mod beacon_client;
 pub use beacon_client::{BeaconClient, OnlineBeaconClient};
 
