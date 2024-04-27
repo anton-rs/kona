@@ -526,7 +526,6 @@ mod tests {
         let mut batch_txs: Vec<Bytes> = vec![];
         let mut second_batch_txs: Vec<Bytes> = vec![];
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
-            // assert_eq!(batch, Batch::Span(Default::default()));
             if let Batch::Span(span) = &batch {
                 let bys = span.batches[0]
                     .transactions
@@ -576,7 +575,6 @@ mod tests {
             b256!("8527cdb6f601acf9b483817abd1da92790c92b19000000000000000000000000");
         mock.origin = Some(BlockInfo {
             number: 16988980031808077784,
-            // 1639845645
             timestamp: 1639845845,
             parent_hash: Default::default(),
             hash: origin_check,
@@ -645,12 +643,9 @@ mod tests {
         assert!(logs[1].contains("need more l1 blocks to check entire origins of span batch"));
         assert!(logs[2].contains("Deriving next batch for epoch: 16988980031808077784"));
         assert!(logs[3].contains("need more l1 blocks to check entire origins of span batch"));
-        // assert!(logs[4].contains("Next batch found:"));
         let warns = trace_store.get_by_level(Level::WARN);
         assert_eq!(warns.len(), 0);
         assert_eq!(res, StageError::NotEnoughData);
-        // let str = "Could not get singular batches from span batch: Missing L1 origin";
-        // assert_eq!(res, StageError::Custom(anyhow::anyhow!(str)));
     }
 
     #[tokio::test]
@@ -663,6 +658,6 @@ mod tests {
         let parent = L2BlockInfo::default();
         let result = bq.next_batch(parent).await;
         assert!(result.is_ok());
-        // assert_eq!(result, Err(StageError::NotEnoughData));
+        assert_eq!(result, Err(StageError::NotEnoughData));
     }
 }

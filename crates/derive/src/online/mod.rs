@@ -1,23 +1,15 @@
 //! Contains "online" implementations for providers.
 
-/// Prelude for online providers.
-pub(crate) mod prelude {
-    pub use super::{
-        new_online_stack, AlloyChainProvider, AlloyL2ChainProvider, BeaconClient,
-        OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation,
-    };
-}
-
 use crate::{
     stages::{
-        AttributesBuilder, AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue,
-        L1Retrieval, L1Traversal, NextAttributes,
+        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue,
+        L1Retrieval, L1Traversal, NextAttributes, StatefulAttributesBuilder
     },
-    traits::{
-        ChainProvider, DataAvailabilityProvider, L2ChainProvider, OriginProvider, ResettableStage,
-    },
+    traits::{DataAvailabilityProvider, ResettableStage},
     types::RollupConfig,
 };
+
+use alloy_provider::ReqwestProvider;
 use alloc::sync::Arc;
 use core::fmt::Debug;
 
@@ -25,10 +17,10 @@ use core::fmt::Debug;
 #[cfg(feature = "online")]
 pub fn new_online_stack(
     rollup_config: Arc<RollupConfig>,
-    chain_provider: impl ChainProvider + Clone + Debug + Send,
-    dap_source: impl DataAvailabilityProvider + OriginProvider + Clone + Debug + Send,
-    fetcher: impl L2ChainProvider + Clone + Debug + Send,
-    builder: impl AttributesBuilder + Clone + Debug + Send,
+    chain_provider: AlloyChainProvider<ReqwestProvider>,
+    dap_source: impl DataAvailabilityProvider + Send + Sync + Debug,
+    fetcher: AlloyL2ChainProvider<ReqwestProvider>,
+    builder: StatefulAttributesBuilder<AlloyChainProvider<ReqwestProvider>, AlloyL2ChainProvider<ReqwestProvider>>,
 ) -> impl NextAttributes + ResettableStage + Debug + Send {
     let l1_traversal = L1Traversal::new(chain_provider, rollup_config.clone());
     let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);

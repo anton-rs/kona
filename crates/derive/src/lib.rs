@@ -6,15 +6,6 @@
 
 extern crate alloc;
 
-/// Prelude exports common types and traits.
-pub mod prelude {
-    pub use super::{builder::DerivationPipeline, params::*};
-    // pub use super::traits::prelude::*;
-    // pub use super::types::prelude::*;
-    // pub use super::stages::prelude::*;
-    // pub use super::sources::prelude::*;
-}
-
 mod params;
 pub use params::{
     ChannelID, CHANNEL_ID_LENGTH, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC,
@@ -24,6 +15,8 @@ pub use params::{
 };
 
 pub mod builder;
+pub use builder::DerivationPipeline;
+
 pub mod sources;
 pub mod stages;
 pub mod traits;
@@ -32,4 +25,7 @@ pub mod types;
 #[cfg(feature = "online")]
 mod online;
 #[cfg(feature = "online")]
-pub use online::prelude::*;
+pub use online::{
+    new_online_stack, AlloyChainProvider, AlloyL2ChainProvider, BeaconClient,
+    OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation,
+};
