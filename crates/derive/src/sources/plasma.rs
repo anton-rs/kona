@@ -194,103 +194,248 @@ where
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::stages::test_utils::{CollectingLayer, TraceStorage};
-//     use alloc::vec;
-//     use kona_plasma::test_utils::TestPlasmaInputFetcher;
-//     use kona_providers::test_utils::TestChainProvider;
-//     use tracing::Level;
-//     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-//
-//     #[tokio::test]
-//     async fn test_next_plasma_advance_origin_reorg_error() {
-//         let chain_provider = TestChainProvider::default();
-//         let input_fetcher = TestPlasmaInputFetcher {
-//             advances: vec![Err(PlasmaError::ReorgRequired)],
-//             ..Default::default()
-//         };
-//         let source = vec![Bytes::from("hello"), Bytes::from("world")].into_iter();
-//         let id = BlockID { number: 1, ..Default::default() };
-//
-//         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
-//
-//         let err = plasma_source.next().await.unwrap().unwrap_err();
-//         assert_eq!(err, StageError::Reset(ResetError::NewExpiredChallenge));
-//     }
-//
-//     #[tokio::test]
-//     async fn test_next_plasma_advance_origin_other_error() {
-//         let chain_provider = TestChainProvider::default();
-//         let input_fetcher = TestPlasmaInputFetcher {
-//             advances: vec![Err(PlasmaError::NotEnoughData)],
-//             ..Default::default()
-//         };
-//         let source = vec![Bytes::from("hello"), Bytes::from("world")].into_iter();
-//         let id = BlockID { number: 1, ..Default::default() };
-//
-//         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
-//
-//         let err = plasma_source.next().await.unwrap().unwrap_err();
-//         matches!(err, StageError::Temporary(_));
-//     }
-//
-//     #[tokio::test]
-//     async fn test_next_plasma_not_enough_source_data() {
-//         let chain_provider = TestChainProvider::default();
-//         let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default()
-// };         let source = vec![].into_iter();
-//         let id = BlockID { number: 1, ..Default::default() };
-//
-//         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
-//
-//         let err = plasma_source.next().await.unwrap().unwrap_err();
-//         assert_eq!(err, StageError::Plasma(PlasmaError::NotEnoughData));
-//     }
-//
-//     #[tokio::test]
-//     async fn test_next_plasma_empty_source_data() {
-//         let trace_store: TraceStorage = Default::default();
-//         let layer = CollectingLayer::new(trace_store.clone());
-//         tracing_subscriber::Registry::default().with(layer).init();
-//
-//         let chain_provider = TestChainProvider::default();
-//         let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default()
-// };         let source = vec![Bytes::from("")].into_iter();
-//         let id = BlockID { number: 1, ..Default::default() };
-//
-//         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
-//
-//         let err = plasma_source.next().await.unwrap().unwrap_err();
-//         assert_eq!(err, StageError::Plasma(PlasmaError::NotEnoughData));
-//
-//         let logs = trace_store.get_by_level(Level::WARN);
-//         assert_eq!(logs.len(), 1);
-//         assert!(logs[0].contains("empty data from plasma source"));
-//     }
-//
-//     #[tokio::test]
-//     async fn test_next_plasma_non_plasma_tx_data_forwards() {
-//         let trace_store: TraceStorage = Default::default();
-//         let layer = CollectingLayer::new(trace_store.clone());
-//         tracing_subscriber::Registry::default().with(layer).init();
-//
-//         let chain_provider = TestChainProvider::default();
-//         let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default()
-// };         let first = Bytes::copy_from_slice(&[2u8]);
-//         let source = vec![first.clone()].into_iter();
-//         let id = BlockID { number: 1, ..Default::default() };
-//
-//         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
-//
-//         let data = plasma_source.next().await.unwrap().unwrap();
-//         assert_eq!(data, first);
-//
-//         let logs = trace_store.get_by_level(Level::INFO);
-//         assert_eq!(logs.len(), 1);
-//         assert!(logs[0].contains("non-plasma tx data, forwarding downstream"));
-//     }
-//
-//     // TODO: more tests
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        sources::calldata::CalldataSource,
+        stages::test_utils::{CollectingLayer, TraceStorage},
+        traits::test_utils::TestBlobProvider,
+    };
+    use alloc::{vec, vec::Vec};
+    use alloy_consensus::{SignableTransaction, TxEip1559, TxEnvelope};
+    use alloy_primitives::{Address, Signature, TxKind, U256};
+    use kona_plasma::test_utils::TestPlasmaInputFetcher;
+    use kona_primitives::BlockInfo;
+    use kona_providers::test_utils::TestChainProvider;
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    #[tokio::test]
+    async fn test_next_plasma_advance_origin_reorg_error() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher {
+            advances: vec![Err(PlasmaError::ReorgRequired)],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                chain_provider.clone(),
+                Address::default(),
+                BlockInfo::default(),
+                Address::default(),
+            ));
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::Reset(ResetError::NewExpiredChallenge));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_advance_origin_other_error() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher {
+            advances: vec![Err(PlasmaError::NotEnoughData)],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                chain_provider.clone(),
+                Address::default(),
+                BlockInfo::default(),
+                Address::default(),
+            ));
+        let id = BlockID { number: 1, ..Default::default() };
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        matches!(err, StageError::Temporary(_));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_internal_block_fetch_fail() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let id = BlockID { number: 1, ..Default::default() };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                chain_provider.clone(),
+                Address::default(),
+                BlockInfo::default(),
+                Address::default(),
+            ));
+
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::BlockFetch(Default::default()));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_calldata_eof() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let id = BlockID { number: 1, ..Default::default() };
+        let source_chain_provider = TestChainProvider {
+            blocks: vec![(1, BlockInfo::default(), Vec::new())],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                source_chain_provider,
+                Address::default(),
+                BlockInfo::default(),
+                Address::default(),
+            ));
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::Eof);
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_not_enough_source_data() {
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let id = BlockID { number: 1, ..Default::default() };
+        let signature = Signature::test_signature();
+        let batcher_address = Address::left_padding_from(&[6]);
+        let tx = TxEnvelope::Eip1559(
+            TxEip1559 {
+                chain_id: 1u64,
+                nonce: 2,
+                max_fee_per_gas: 3,
+                max_priority_fee_per_gas: 4,
+                gas_limit: 5,
+                to: TxKind::Call(batcher_address),
+                value: U256::from(7_u64),
+                input: Bytes::from(vec![]),
+                access_list: Default::default(),
+            }
+            .into_signed(signature),
+        );
+        let signer = alloy_primitives::address!("616268d0e4d1a33d8f95aba56e880b6e29551174");
+        let txs = vec![tx];
+        let source_chain_provider = TestChainProvider {
+            blocks: vec![(1, BlockInfo::default(), txs)],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                source_chain_provider,
+                batcher_address,
+                BlockInfo::default(),
+                signer,
+            ));
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        // We cant assert NotEnoughData here since we can't force the calldata source to pop
+        // nothing.
+        assert_eq!(err, StageError::Eof);
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_non_plasma_tx_data_forwards() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let id = BlockID { number: 1, ..Default::default() };
+        let signature = Signature::test_signature();
+        let batcher_address = Address::left_padding_from(&[6]);
+        let tx = TxEnvelope::Eip1559(
+            TxEip1559 {
+                chain_id: 1u64,
+                nonce: 2,
+                max_fee_per_gas: 3,
+                max_priority_fee_per_gas: 4,
+                gas_limit: 5,
+                to: TxKind::Call(batcher_address),
+                value: U256::from(7_u64),
+                input: Bytes::from(vec![8]),
+                access_list: Default::default(),
+            }
+            .into_signed(signature),
+        );
+        let signer = alloy_primitives::address!("616268d0e4d1a33d8f95aba56e880b6e29551174");
+        let txs = vec![tx];
+        let source_chain_provider = TestChainProvider {
+            blocks: vec![(1, BlockInfo::default(), txs)],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                source_chain_provider,
+                batcher_address,
+                BlockInfo::default(),
+                signer,
+            ));
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let data = plasma_source.next().await.unwrap().unwrap();
+        assert_eq!(data, vec![8u8]);
+
+        let logs = trace_store.get_by_level(Level::INFO);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("non-plasma tx data, forwarding downstream"));
+    }
+
+    #[tokio::test]
+    async fn test_next_plasma_valid_commitment_failed_to_pull_next_data() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let chain_provider = TestChainProvider::default();
+        let input_fetcher = TestPlasmaInputFetcher { advances: vec![Ok(())], ..Default::default() };
+        let id = BlockID { number: 1, ..Default::default() };
+        let signature = Signature::test_signature();
+        let batcher_address = Address::left_padding_from(&[6]);
+        let input = Bytes::from(
+            &b"01001d2b0bda21d56b8bd12d4f94ebacffdfb35f5e226f84b461103bb8beab6353be"[..],
+        );
+        let tx = TxEnvelope::Eip1559(
+            TxEip1559 {
+                chain_id: 1u64,
+                nonce: 2,
+                max_fee_per_gas: 3,
+                max_priority_fee_per_gas: 4,
+                gas_limit: 5,
+                to: TxKind::Call(batcher_address),
+                value: U256::from(7_u64),
+                input,
+                access_list: Default::default(),
+            }
+            .into_signed(signature),
+        );
+        let signer = alloy_primitives::address!("616268d0e4d1a33d8f95aba56e880b6e29551174");
+        let txs = vec![tx];
+        let source_chain_provider = TestChainProvider {
+            blocks: vec![(1, BlockInfo::default(), txs)],
+            ..Default::default()
+        };
+        let source: BaseDataSource<TestChainProvider, TestBlobProvider> =
+            BaseDataSource::Calldata(CalldataSource::new(
+                source_chain_provider,
+                batcher_address,
+                BlockInfo::default(),
+                signer,
+            ));
+        let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
+
+        let err = plasma_source.next().await.unwrap().unwrap_err();
+        assert_eq!(err, StageError::Eof);
+
+        let logs = trace_store.get_by_level(Level::WARN);
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].contains("failed to pull next data from the plasma source iterator"));
+    }
+
+    // TODO: more tests
+}

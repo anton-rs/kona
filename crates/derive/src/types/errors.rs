@@ -65,12 +65,20 @@ impl PartialEq<StageError> for StageError {
         if let (StageError::Reset(a), StageError::Reset(b)) = (self, other) {
             return a == b;
         }
+        if let (StageError::Plasma(a), StageError::Plasma(b)) = (self, other) {
+            return a == b;
+        }
+        if let (StageError::BlockFetch(a), StageError::BlockFetch(b)) = (self, other) {
+            return a == b;
+        }
+        if let (StageError::AttributesBuild(a), StageError::AttributesBuild(b)) = (self, other) {
+            return a == b;
+        }
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
                 (StageError::Temporary(_), StageError::Temporary(_)) |
                 (StageError::Critical(_), StageError::Critical(_)) |
-                (StageError::Plasma(_), StageError::Plasma(_)) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
                 (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
                 (StageError::NoChannel, StageError::NoChannel) |

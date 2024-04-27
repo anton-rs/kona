@@ -1,14 +1,32 @@
 //! Test Utilities for derive traits
 
 use crate::{
-    traits::{AsyncIterator, DataAvailabilityProvider},
-    types::{BlockInfo, StageError, StageResult},
+    traits::{AsyncIterator, BlobProvider, DataAvailabilityProvider},
+    types::{Blob, BlockInfo, IndexedBlobHash, StageError, StageResult},
 };
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
 use core::fmt::Debug;
+
+/// Mock blob provider
+#[derive(Debug, Default, Clone)]
+pub struct TestBlobProvider {
+    /// Specifies the blobs to return when get_blobs is called.
+    pub(crate) blobs: Vec<Blob>,
+}
+
+#[async_trait]
+impl BlobProvider for TestBlobProvider {
+    async fn get_blobs(
+        &mut self,
+        _block_ref: &BlockInfo,
+        _blob_hashes: Vec<IndexedBlobHash>,
+    ) -> Result<Vec<Blob>> {
+        Ok(self.blobs.clone())
+    }
+}
 
 /// Mock data iterator
 #[derive(Debug, Default, PartialEq)]
