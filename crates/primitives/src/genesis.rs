@@ -1,6 +1,6 @@
 //! This module contains the [Genesis] type.
 
-use super::{BlockID, SystemConfig};
+use crate::{block::BlockID, system_config::SystemConfig};
 
 /// Represents the genesis state of the rollup.
 #[derive(Debug, Clone, Copy, Default)]

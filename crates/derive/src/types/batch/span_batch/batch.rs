@@ -1,16 +1,14 @@
 //! The Span Batch Type
 
-#![allow(unused)]
-
 use super::{SpanBatchError, SpanBatchTransactions};
 use crate::{
     traits::L2ChainProvider,
     types::{
-        BatchValidity, BlockInfo, L2BlockInfo, RawSpanBatch, RollupConfig, SingleBatch,
-        SpanBatchBits, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+        BatchValidity, BlockInfo, L2BlockInfo, RollupConfig, SingleBatch, SpanBatchBits,
+        SpanBatchElement,
     },
 };
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
 use op_alloy_consensus::OpTxType;
 use tracing::{info, warn};
@@ -115,7 +113,7 @@ impl SpanBatch {
         // If the span batch does not overlap the current safe chain, parent block should be the L2
         // safe head.
         let mut parent_num = l2_safe_head.block_info.number;
-        let parent_block = l2_safe_head;
+        let mut parent_block = l2_safe_head;
         if self.timestamp() < next_timestamp {
             if self.timestamp() > l2_safe_head.block_info.timestamp {
                 // Batch timestamp cannot be between safe head and next timestamp.
@@ -129,7 +127,7 @@ impl SpanBatch {
             parent_num = l2_safe_head.block_info.number -
                 (l2_safe_head.block_info.timestamp - self.timestamp()) / cfg.block_time -
                 1;
-            let parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
+            parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
                 Ok(block) => block,
                 Err(e) => {
                     warn!("failed to fetch L2 block number {parent_num}: {e}");
@@ -323,36 +321,6 @@ impl SpanBatch {
         BatchValidity::Accept
     }
 
-    /// Converts the span batch to a raw span batch.
-    pub fn to_raw_span_batch(
-        &self,
-        origin_changed_bit: u8,
-        genesis_timestamp: u64,
-        chain_id: u64,
-    ) -> Result<RawSpanBatch, SpanBatchError> {
-        if self.batches.is_empty() {
-            return Err(SpanBatchError::EmptySpanBatch);
-        }
-
-        let span_start = self.batches.first().ok_or(SpanBatchError::EmptySpanBatch)?;
-        let span_end = self.batches.last().ok_or(SpanBatchError::EmptySpanBatch)?;
-
-        Ok(RawSpanBatch {
-            prefix: SpanBatchPrefix {
-                rel_timestamp: span_start.timestamp - genesis_timestamp,
-                l1_origin_num: span_end.epoch_num,
-                parent_check: self.parent_check,
-                l1_origin_check: self.l1_origin_check,
-            },
-            payload: SpanBatchPayload {
-                block_count: self.batches.len() as u64,
-                origin_bits: self.origin_bits.clone(),
-                block_tx_counts: self.block_tx_counts.clone(),
-                txs: self.txs.clone(),
-            },
-        })
-    }
-
     /// Converts all [SpanBatchElement]s after the L2 safe head to [SingleBatch]es. The resulting
     /// [SingleBatch]es do not contain a parent hash, as it is populated by the Batch Queue
     /// stage.
@@ -377,13 +345,13 @@ impl SpanBatch {
             let origin_epoch_hash = l1_origins[origin_index..l1_origins.len()]
                 .iter()
                 .enumerate()
-                .find(|(i, origin)| origin.timestamp == batch.timestamp)
+                .find(|(_, origin)| origin.timestamp == batch.timestamp)
                 .map(|(i, origin)| {
                     origin_index = i;
                     origin.hash
                 })
                 .ok_or(SpanBatchError::MissingL1Origin)?;
-            let mut single_batch = SingleBatch {
+            let single_batch = SingleBatch {
                 epoch_num: batch.epoch_num,
                 epoch_hash: origin_epoch_hash,
                 timestamp: batch.timestamp,
@@ -449,6 +417,7 @@ mod tests {
         traits::test_utils::MockBlockFetcher,
         types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction},
     };
+    use alloc::vec;
     use alloy_primitives::{b256, Bytes, B256};
     use op_alloy_consensus::OpTxType;
     use tracing::Level;
@@ -458,7 +427,7 @@ mod tests {
     fn test_timestamp() {
         let timestamp = 10;
         let first_element = SpanBatchElement { timestamp, ..Default::default() };
-        let mut batch =
+        let batch =
             SpanBatch { batches: vec![first_element, Default::default()], ..Default::default() };
         assert_eq!(batch.timestamp(), timestamp);
     }
@@ -467,7 +436,7 @@ mod tests {
     fn test_starting_epoch_num() {
         let epoch_num = 10;
         let first_element = SpanBatchElement { epoch_num, ..Default::default() };
-        let mut batch =
+        let batch =
             SpanBatch { batches: vec![first_element, Default::default()], ..Default::default() };
         assert_eq!(batch.starting_epoch_num(), epoch_num);
     }
@@ -742,10 +711,12 @@ mod tests {
         };
         let inclusion_block = BlockInfo::default();
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 41, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
+        fetcher.short_circuit = true;
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch {
@@ -781,7 +752,7 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -824,7 +795,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 8, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -874,7 +846,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -923,7 +896,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -969,7 +943,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 14, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -989,7 +964,7 @@ mod tests {
         assert_eq!(logs.len(), 1);
         let str = alloc::format!(
             "dropped batch, epoch is too old, minimum: {}",
-            l2_safe_head.block_info.id(),
+            l2_block.block_info.id(),
         );
         assert!(logs[0].contains(&str));
     }
@@ -1309,7 +1284,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = MockBlockFetcher { blocks: vec![l2_block], ..Default::default() };
@@ -1359,7 +1335,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, timestamp: 10, parent_hash, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
@@ -1423,7 +1400,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
@@ -1488,7 +1466,8 @@ mod tests {
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: 40, parent_hash, timestamp: 10, ..Default::default() },
+            l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {

@@ -62,7 +62,6 @@ impl BatchWithInclusionBlock {
 
 /// A Batch.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(clippy::large_enum_variant)]
 pub enum Batch {
     /// A single batch
     Single(SingleBatch),

@@ -11,7 +11,6 @@ use async_trait::async_trait;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct CalldataSource<CP>
 where
     CP: ChainProvider + Send,
