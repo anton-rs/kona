@@ -637,14 +637,13 @@ mod tests {
         };
         let res = bq.next_batch(parent).await.unwrap_err();
         let logs = trace_store.get_by_level(Level::INFO);
-        assert_eq!(logs.len(), 4);
+        assert_eq!(logs.len(), 2);
         let str = alloc::format!("Advancing batch queue origin: {:?}", origin);
         assert!(logs[0].contains(&str));
-        assert!(logs[1].contains("need more l1 blocks to check entire origins of span batch"));
-        assert!(logs[2].contains("Deriving next batch for epoch: 16988980031808077784"));
-        assert!(logs[3].contains("need more l1 blocks to check entire origins of span batch"));
+        assert!(logs[1].contains("Deriving next batch for epoch: 16988980031808077784"));
         let warns = trace_store.get_by_level(Level::WARN);
-        assert_eq!(warns.len(), 0);
+        assert_eq!(warns.len(), 1);
+        assert!(warns[0].contains("batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid"));
         assert_eq!(res, StageError::NotEnoughData);
     }
 
