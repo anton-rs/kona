@@ -1,11 +1,12 @@
 //! Contains "online" implementations for providers.
 
 use crate::{
+    sources::DataSourceFactory,
     stages::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, NextAttributes, StatefulAttributesBuilder,
     },
-    traits::{DataAvailabilityProvider, ResettableStage},
+    traits::ResettableStage,
     types::RollupConfig,
 };
 
@@ -18,7 +19,14 @@ use core::fmt::Debug;
 pub fn new_online_stack(
     rollup_config: Arc<RollupConfig>,
     chain_provider: AlloyChainProvider<ReqwestProvider>,
-    dap_source: impl DataAvailabilityProvider + Send + Sync + Debug,
+    dap_source: DataSourceFactory<
+        AlloyChainProvider<ReqwestProvider>,
+        OnlineBlobProvider<
+            ReqwestProvider,
+            OnlineBeaconClient<ReqwestProvider>,
+            SimpleSlotDerivation,
+        >,
+    >,
     fetcher: AlloyL2ChainProvider<ReqwestProvider>,
     builder: StatefulAttributesBuilder<
         AlloyChainProvider<ReqwestProvider>,

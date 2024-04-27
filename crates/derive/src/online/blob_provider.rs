@@ -56,7 +56,7 @@ impl From<anyhow::Error> for OnlineBlobProviderError {
 }
 
 /// An online implementation of the [BlobProvider] trait.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OnlineBlobProvider<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> {
     /// The inner Ethereum JSON-RPC provider.
     _inner: T,
@@ -168,7 +168,7 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
 }
 
 /// Minimal slot derivation implementation.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SimpleSlotDerivation;
 
 impl SlotDerivation for SimpleSlotDerivation {

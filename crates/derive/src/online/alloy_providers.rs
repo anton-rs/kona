@@ -24,7 +24,7 @@ const CACHE_SIZE: usize = 16;
 /// **Note**:
 /// This provider fetches data using the `debug_getRawHeader`, `debug_getRawReceipts`, and
 /// `debug_getRawBlock` methods. The RPC must support this namespace.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AlloyChainProvider<T: Provider<Http<reqwest::Client>>> {
     /// The inner Ethereum JSON-RPC provider.
     inner: T,
