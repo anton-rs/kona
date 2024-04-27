@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginProvider, ResettableStage},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -43,7 +43,7 @@ pub trait BatchQueueProvider {
 #[derive(Debug)]
 pub struct BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Debug,
+    P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
@@ -75,7 +75,7 @@ where
 
 impl<P, BF> BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Debug,
+    P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
@@ -243,9 +243,20 @@ where
 }
 
 #[async_trait]
+impl<P, BF> OriginAdvancer for BatchQueue<P, BF>
+where
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    BF: L2ChainProvider + Send + Debug,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<P, BF> AttributesProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Send + Debug,
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     /// Returns the next valid batch upon the given safe head.
@@ -290,7 +301,7 @@ where
         // We always update the origin of this stage if it's not the same so
         // after the update code runs, this is consistent.
         let origin_behind =
-            self.origin.map_or(true, |origin| origin.number < parent.l1_origin.number);
+            self.prev.origin().map_or(true, |origin| origin.number < parent.l1_origin.number);
 
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
@@ -374,7 +385,7 @@ where
 
 impl<P, BF> OriginProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Debug,
+    P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -382,13 +393,24 @@ where
     }
 }
 
+impl<P, BF> PreviousStage for BatchQueue<P, BF>
+where
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    BF: L2ChainProvider + Send + Debug,
+{
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
+    }
+}
+
 #[async_trait]
 impl<P, BF> ResettableStage for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginProvider + Send + Debug,
+    P: BatchQueueProvider + PreviousStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
-    async fn reset(&mut self, base: BlockInfo, _: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> StageResult<()> {
+        self.prev.reset(base, system_config).await?;
         // Copy over the Origin from the next stage.
         // It is set in the engine queue (two stages away)
         // such that the L2 Safe Head origin is the progress.
@@ -408,12 +430,23 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::{channel_reader::BatchReader, test_utils::MockBatchQueueProvider},
+        stages::{
+            channel_reader::BatchReader,
+            test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
+        },
         traits::test_utils::MockBlockFetcher,
-        types::BatchType,
+        types::{
+            BatchType, BlockID, Genesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
+            L2ExecutionPayloadEnvelope,
+        },
     };
     use alloc::vec;
+    use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
+    use alloy_rlp::{BytesMut, Encodable};
     use miniz_oxide::deflate::compress_to_vec_zlib;
+    use op_alloy_consensus::{OpTxType, TxDeposit};
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     fn new_batch_reader() -> BatchReader {
         let raw_data = include_bytes!("../../testdata/raw_batch.hex");
@@ -448,24 +481,172 @@ mod tests {
         assert!(bq.is_last_in_span());
     }
 
-    // TODO(refcell): The batch reader here loops forever.
-    //                Maybe the cursor isn't being used?
-    //                UPDATE: the batch data is not valid
-    // #[tokio::test]
-    // async fn test_next_batch_succeeds() {
-    //     let mut reader = new_batch_reader();
-    //     let mut batch_vec: Vec<StageResult<Batch>> = vec![];
-    //     while let Some(batch) = reader.next_batch() {
-    //         batch_vec.push(Ok(batch));
-    //     }
-    //     let mock = MockBatchQueueProvider::new(batch_vec);
-    //     let telemetry = TestTelemetry::new();
-    //     let fetcher = MockBlockFetcher::default();
-    //     let mut bq = BatchQueue::new(RollupConfig::default(), mock, telemetry, fetcher);
-    //     let res = bq.next_batch(L2BlockInfo::default()).await.unwrap();
-    //     assert_eq!(res, SingleBatch::default());
-    //     assert!(bq.is_last_in_span());
-    // }
+    #[tokio::test]
+    async fn test_next_batch_origin_behind() {
+        let mut reader = new_batch_reader();
+        let cfg = Arc::new(RollupConfig::default());
+        let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+            batch_vec.push(Ok(batch));
+        }
+        let mut mock = MockBatchQueueProvider::new(batch_vec);
+        mock.origin = Some(BlockInfo::default());
+        let fetcher = MockBlockFetcher::default();
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let parent = L2BlockInfo {
+            l1_origin: BlockID { number: 10, ..Default::default() },
+            ..Default::default()
+        };
+        let res = bq.next_batch(parent).await.unwrap_err();
+        assert_eq!(res, StageError::NotEnoughData);
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_missing_origin() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let mut reader = new_batch_reader();
+        let payload_block_hash =
+            b256!("4444444444444444444444444444444444444444444444444444444444444444");
+        let cfg = Arc::new(RollupConfig {
+            delta_time: Some(0),
+            block_time: 100,
+            max_sequencer_drift: 10000000,
+            seq_window_size: 10000000,
+            genesis: Genesis {
+                l2: BlockID { number: 8, hash: payload_block_hash },
+                l1: BlockID { number: 16988980031808077784, ..Default::default() },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+        let mut batch_txs: Vec<Bytes> = vec![];
+        let mut second_batch_txs: Vec<Bytes> = vec![];
+        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+            if let Batch::Span(span) = &batch {
+                let bys = span.batches[0]
+                    .transactions
+                    .iter()
+                    .cloned()
+                    .map(|tx| tx.0)
+                    .collect::<Vec<Bytes>>();
+                let sbys = span.batches[1]
+                    .transactions
+                    .iter()
+                    .cloned()
+                    .map(|tx| tx.0)
+                    .collect::<Vec<Bytes>>();
+                second_batch_txs.extend(sbys);
+                batch_txs.extend(bys);
+            }
+            batch_vec.push(Ok(batch));
+        }
+        // Insert a deposit transaction in the front of the second batch txs
+        let expected = L1BlockInfoBedrock {
+            number: 16988980031808077784,
+            time: 1697121143,
+            base_fee: 10419034451,
+            block_hash: b256!("392012032675be9f94aae5ab442de73c5f4fb1bf30fa7dd0d2442239899a40fc"),
+            sequence_number: 4,
+            batcher_address: address!("6887246668a3b87f54deb3b94ba47a6f63f32985"),
+            l1_fee_overhead: U256::from(0xbc),
+            l1_fee_scalar: U256::from(0xa6fe0),
+        };
+        let deposit_tx_calldata: Bytes = L1BlockInfoTx::Bedrock(expected).encode_calldata();
+        let tx = TxDeposit {
+            source_hash: B256::left_padding_from(&[0xde, 0xad]),
+            from: Address::left_padding_from(&[0xbe, 0xef]),
+            mint: Some(1),
+            gas_limit: 2,
+            to: TxKind::Call(Address::left_padding_from(&[3])),
+            value: U256::from(4_u64),
+            input: deposit_tx_calldata,
+            is_system_transaction: false,
+        };
+        let mut buf = BytesMut::new();
+        tx.encode(&mut buf);
+        let prefixed = [&[OpTxType::Deposit as u8], &buf[..]].concat();
+        second_batch_txs.insert(0, Bytes::copy_from_slice(&prefixed));
+        let mut mock = MockBatchQueueProvider::new(batch_vec);
+        let origin_check =
+            b256!("8527cdb6f601acf9b483817abd1da92790c92b19000000000000000000000000");
+        mock.origin = Some(BlockInfo {
+            number: 16988980031808077784,
+            timestamp: 1639845845,
+            parent_hash: Default::default(),
+            hash: origin_check,
+        });
+        let origin = mock.origin;
+
+        let parent_check =
+            b256!("01ddf682e2f8a6f10c2207e02322897e65317196000000000000000000000000");
+        let block_nine = L2BlockInfo {
+            block_info: BlockInfo {
+                number: 9,
+                timestamp: 1639845645,
+                parent_hash: parent_check,
+                hash: origin_check,
+            },
+            ..Default::default()
+        };
+        let block_seven = L2BlockInfo {
+            block_info: BlockInfo {
+                number: 7,
+                timestamp: 1639845745,
+                parent_hash: parent_check,
+                hash: origin_check,
+            },
+            ..Default::default()
+        };
+        let payload = L2ExecutionPayloadEnvelope {
+            parent_beacon_block_root: None,
+            execution_payload: L2ExecutionPayload {
+                block_number: 8,
+                block_hash: payload_block_hash,
+                transactions: batch_txs,
+                ..Default::default()
+            },
+        };
+        let second = L2ExecutionPayloadEnvelope {
+            parent_beacon_block_root: None,
+            execution_payload: L2ExecutionPayload {
+                block_number: 9,
+                block_hash: payload_block_hash,
+                transactions: second_batch_txs,
+                ..Default::default()
+            },
+        };
+        let fetcher = MockBlockFetcher {
+            blocks: vec![block_nine, block_seven],
+            payloads: vec![payload, second],
+            ..Default::default()
+        };
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let parent = L2BlockInfo {
+            block_info: BlockInfo {
+                number: 9,
+                timestamp: 1639845745,
+                parent_hash: parent_check,
+                hash: origin_check,
+            },
+            l1_origin: BlockID { number: 16988980031808077784, hash: origin_check },
+            ..Default::default()
+        };
+        let res = bq.next_batch(parent).await.unwrap_err();
+        let logs = trace_store.get_by_level(Level::INFO);
+        assert_eq!(logs.len(), 4);
+        let str = alloc::format!("Advancing batch queue origin: {:?}", origin);
+        assert!(logs[0].contains(&str));
+        assert!(logs[1].contains("need more l1 blocks to check entire origins of span batch"));
+        assert!(logs[2].contains("Deriving next batch for epoch: 16988980031808077784"));
+        assert!(logs[3].contains("need more l1 blocks to check entire origins of span batch"));
+        let warns = trace_store.get_by_level(Level::WARN);
+        assert_eq!(warns.len(), 0);
+        assert_eq!(res, StageError::NotEnoughData);
+    }
 
     #[tokio::test]
     async fn test_batch_queue_empty_bytes() {
@@ -475,7 +656,7 @@ mod tests {
         let fetcher = MockBlockFetcher::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
-        let result = bq.next_batch(parent).await;
-        assert!(result.is_err());
+        let batch = bq.next_batch(parent).await.unwrap();
+        assert_eq!(batch, SingleBatch::default());
     }
 }

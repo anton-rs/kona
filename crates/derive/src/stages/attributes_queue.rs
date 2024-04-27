@@ -1,7 +1,7 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    traits::{OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{
         BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, ResetError,
         RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
@@ -30,6 +30,14 @@ pub trait AttributesProvider {
     fn is_last_in_span(&self) -> bool;
 }
 
+/// [NextAttributes] is a trait abstraction that generalizes the [AttributesQueue] stage.
+#[async_trait]
+pub trait NextAttributes {
+    /// Returns the next [L2AttributesWithParent] from the current batch.
+    async fn next_attributes(&mut self, parent: L2BlockInfo)
+        -> StageResult<L2AttributesWithParent>;
+}
+
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [L2PayloadAttributes]. The outputted payload
 /// attributes cannot be buffered because each batch->attributes transformation
@@ -45,7 +53,7 @@ pub trait AttributesProvider {
 #[derive(Debug)]
 pub struct AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug,
+    P: AttributesProvider + PreviousStage + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// The rollup config.
@@ -62,7 +70,7 @@ where
 
 impl<P, AB> AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug,
+    P: AttributesProvider + PreviousStage + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
@@ -139,9 +147,44 @@ where
     }
 }
 
+impl<P, AB> PreviousStage for AttributesQueue<P, AB>
+where
+    P: AttributesProvider + PreviousStage + Send + Debug,
+    AB: AttributesBuilder + Send + Debug,
+{
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
+    }
+}
+
+#[async_trait]
+impl<P, AB> OriginAdvancer for AttributesQueue<P, AB>
+where
+    P: AttributesProvider + PreviousStage + Debug + Send,
+    AB: AttributesBuilder + Debug + Send,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
+impl<P, AB> NextAttributes for AttributesQueue<P, AB>
+where
+    P: AttributesProvider + PreviousStage + Debug + Send,
+    AB: AttributesBuilder + Debug + Send,
+{
+    async fn next_attributes(
+        &mut self,
+        parent: L2BlockInfo,
+    ) -> StageResult<L2AttributesWithParent> {
+        self.next_attributes(parent).await
+    }
+}
+
 impl<P, AB> OriginProvider for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Debug,
+    P: AttributesProvider + PreviousStage + Debug,
     AB: AttributesBuilder + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
@@ -152,10 +195,15 @@ where
 #[async_trait]
 impl<P, AB> ResettableStage for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginProvider + Send + Debug,
+    P: AttributesProvider + PreviousStage + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
-    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> StageResult<()> {
+    async fn reset(
+        &mut self,
+        block_info: BlockInfo,
+        system_config: &SystemConfig,
+    ) -> StageResult<()> {
+        self.prev.reset(block_info, system_config).await?;
         info!("resetting attributes queue");
         self.batch = None;
         self.is_last_in_span = false;

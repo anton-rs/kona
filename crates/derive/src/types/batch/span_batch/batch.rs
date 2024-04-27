@@ -138,8 +138,10 @@ impl SpanBatch {
         }
         if !self.check_parent_hash(parent_block.block_info.parent_hash) {
             warn!(
-                "parent block number mismatch, expected: {parent_num}, received: {}",
-                parent_block.block_info.number
+                "parent block number mismatch, expected: {parent_num}, received: {}, parent hash: {}, self hash: {}",
+                parent_block.block_info.number,
+                parent_block.block_info.parent_hash,
+                self.parent_check,
             );
             return BatchValidity::Drop;
         }
@@ -307,7 +309,10 @@ impl SpanBatch {
                     }
                 };
                 if safe_block_ref.l1_origin.number != self.batches[i as usize].epoch_num {
-                    warn!("overlapped block's L1 origin number does not match");
+                    warn!(
+                        "overlapped block's L1 origin number does not match {}, {}",
+                        safe_block_ref.l1_origin.number, self.batches[i as usize].epoch_num
+                    );
                     return BatchValidity::Drop;
                 }
             }
@@ -330,6 +335,13 @@ impl SpanBatch {
             if batch.timestamp <= l2_safe_head.block_info.timestamp {
                 continue;
             }
+            tracing::info!(
+                "checking {} l1 origins with first timestamp: {}, batch timestamp: {}, {}",
+                l1_origins.len(),
+                l1_origins[0].timestamp,
+                batch.timestamp,
+                batch.epoch_num
+            );
             let origin_epoch_hash = l1_origins[origin_index..l1_origins.len()]
                 .iter()
                 .enumerate()

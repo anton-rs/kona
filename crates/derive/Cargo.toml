@@ -60,6 +60,7 @@ online = [
   "dep:alloy-provider",
   "dep:alloy-transport-http",
   "dep:reqwest",
+  "alloy-provider/reqwest",
   "alloy-consensus/serde",
   "c-kzg/serde",
   "revm-primitives/serde",

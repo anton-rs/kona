@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use anyhow::Result;
-use op_alloy_consensus::OpTxEnvelope;
+use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -135,7 +135,12 @@ impl L2ExecutionPayloadEnvelope {
                     execution_payload.block_hash
                 );
             }
-            let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
+
+            let ty = execution_payload.transactions[0][0];
+            if ty != OpTxType::Deposit as u8 {
+                anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
+            }
+            let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0][1..].as_ref())
                 .map_err(|e| anyhow::anyhow!(e))?;
 
             let OpTxEnvelope::Deposit(tx) = tx else {
@@ -175,7 +180,11 @@ impl L2ExecutionPayloadEnvelope {
                 execution_payload.block_hash
             );
         }
-        let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0].as_ref())
+        let ty = execution_payload.transactions[0][0];
+        if ty != OpTxType::Deposit as u8 {
+            anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
+        }
+        let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0][1..].as_ref())
             .map_err(|e| anyhow::anyhow!(e))?;
 
         let OpTxEnvelope::Deposit(tx) = tx else {

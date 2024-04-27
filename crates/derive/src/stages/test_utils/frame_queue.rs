@@ -2,15 +2,15 @@
 
 use crate::{
     stages::FrameQueueProvider,
-    traits::OriginProvider,
-    types::{BlockInfo, StageError, StageResult},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 
 /// A mock [FrameQueueProvider] for testing the [FrameQueue] stage.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MockFrameQueueProvider {
     /// The data to return.
     pub data: Vec<StageResult<Bytes>>,
@@ -30,10 +30,30 @@ impl OriginProvider for MockFrameQueueProvider {
 }
 
 #[async_trait]
+impl OriginAdvancer for MockFrameQueueProvider {
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl FrameQueueProvider for MockFrameQueueProvider {
     type Item = Bytes;
 
     async fn next_data(&mut self) -> StageResult<Self::Item> {
         self.data.pop().unwrap_or(Err(StageError::Eof))
+    }
+}
+
+#[async_trait]
+impl ResettableStage for MockFrameQueueProvider {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+        Ok(())
+    }
+}
+
+impl PreviousStage for MockFrameQueueProvider {
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(self))
     }
 }

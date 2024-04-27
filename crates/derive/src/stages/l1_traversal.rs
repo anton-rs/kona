@@ -2,7 +2,7 @@
 
 use crate::{
     stages::L1RetrievalProvider,
-    traits::{ChainProvider, OriginProvider, ResettableStage},
+    traits::{ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
@@ -31,12 +31,13 @@ pub struct L1Traversal<Provider: ChainProvider> {
     pub rollup_config: Arc<RollupConfig>,
 }
 
-impl<F: ChainProvider> L1RetrievalProvider for L1Traversal<F> {
+#[async_trait]
+impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
     fn batcher_addr(&self) -> Address {
         self.system_config.batcher_addr
     }
 
-    fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
+    async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
         if !self.done {
             self.done = true;
             Ok(self.block)
@@ -62,11 +63,14 @@ impl<F: ChainProvider> L1Traversal<F> {
     pub fn data_source(&self) -> &F {
         &self.data_source
     }
+}
 
+#[async_trait]
+impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
     /// This function fetches the next L1 [BlockInfo] from the data source and updates the
     /// [SystemConfig] with the receipts from the block.
-    pub async fn advance_l1_block(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> StageResult<()> {
         // Pull the next block or return EOF.
         // StageError::EOF has special handling further up the pipeline.
         let block = match self.block {
@@ -109,6 +113,12 @@ impl<F: ChainProvider> L1Traversal<F> {
 impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
     fn origin(&self) -> Option<&BlockInfo> {
         self.block.as_ref()
+    }
+}
+
+impl<F: ChainProvider + Send> PreviousStage for L1Traversal<F> {
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        None
     }
 }
 
@@ -193,18 +203,18 @@ pub(crate) mod tests {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        assert!(traversal.advance_l1_block().await.is_ok());
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
+        assert!(traversal.advance_origin().await.is_ok());
     }
 
     #[tokio::test]
     async fn test_l1_traversal_missing_receipts() {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let mut traversal = new_test_traversal(blocks, vec![]);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::ReceiptFetch(_));
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
+        matches!(traversal.advance_origin().await.unwrap_err(), StageError::ReceiptFetch(_));
     }
 
     #[tokio::test]
@@ -214,17 +224,17 @@ pub(crate) mod tests {
         let blocks = vec![block, block];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert!(traversal.advance_l1_block().await.is_ok());
-        let err = traversal.advance_l1_block().await.unwrap_err();
+        assert!(traversal.advance_origin().await.is_ok());
+        let err = traversal.advance_origin().await.unwrap_err();
         assert_eq!(err, StageError::ReorgDetected(block.hash, block.parent_hash));
     }
 
     #[tokio::test]
     async fn test_l1_traversal_missing_blocks() {
         let mut traversal = new_test_traversal(vec![], vec![]);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        matches!(traversal.advance_l1_block().await.unwrap_err(), StageError::BlockInfoFetch(_));
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
+        matches!(traversal.advance_origin().await.unwrap_err(), StageError::BlockInfoFetch(_));
     }
 
     #[tokio::test]
@@ -236,10 +246,10 @@ pub(crate) mod tests {
         let blocks = vec![block1, block2];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert!(traversal.advance_l1_block().await.is_ok());
+        assert!(traversal.advance_origin().await.is_ok());
         // Only the second block should fail since the second receipt
         // contains invalid logs that will error for a system config update.
-        let err = traversal.advance_l1_block().await.unwrap_err();
+        let err = traversal.advance_origin().await.unwrap_err();
         matches!(err, StageError::SystemConfigUpdate(_));
     }
 
@@ -248,9 +258,9 @@ pub(crate) mod tests {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert_eq!(traversal.next_l1_block().unwrap(), Some(BlockInfo::default()));
-        assert_eq!(traversal.next_l1_block().unwrap_err(), StageError::Eof);
-        assert!(traversal.advance_l1_block().await.is_ok());
+        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
+        assert!(traversal.advance_origin().await.is_ok());
         let expected = address!("000000000000000000000000000000000000bEEF");
         assert_eq!(traversal.system_config.batcher_addr, expected);
     }

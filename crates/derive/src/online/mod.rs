@@ -1,11 +1,37 @@
 //! Contains "online" implementations for providers.
 
-/// Prelude for online providers.
-pub(crate) mod prelude {
-    pub use super::{
-        AlloyChainProvider, AlloyL2ChainProvider, BeaconClient, OnlineBeaconClient,
-        OnlineBlobProvider, SimpleSlotDerivation,
-    };
+use crate::{
+    stages::{
+        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+        L1Traversal, NextAttributes, StatefulAttributesBuilder,
+    },
+    traits::{DataAvailabilityProvider, ResettableStage},
+    types::RollupConfig,
+};
+
+use alloc::sync::Arc;
+use alloy_provider::ReqwestProvider;
+use core::fmt::Debug;
+
+/// Creates a new [OnlineStageStack].
+#[cfg(feature = "online")]
+pub fn new_online_stack(
+    rollup_config: Arc<RollupConfig>,
+    chain_provider: AlloyChainProvider<ReqwestProvider>,
+    dap_source: impl DataAvailabilityProvider + Send + Sync + Debug,
+    fetcher: AlloyL2ChainProvider<ReqwestProvider>,
+    builder: StatefulAttributesBuilder<
+        AlloyChainProvider<ReqwestProvider>,
+        AlloyL2ChainProvider<ReqwestProvider>,
+    >,
+) -> impl NextAttributes + ResettableStage + Debug + Send {
+    let l1_traversal = L1Traversal::new(chain_provider, rollup_config.clone());
+    let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
+    let frame_queue = FrameQueue::new(l1_retrieval);
+    let channel_bank = ChannelBank::new(rollup_config.clone(), frame_queue);
+    let channel_reader = ChannelReader::new(channel_bank, rollup_config.clone());
+    let batch_queue = BatchQueue::new(rollup_config.clone(), channel_reader, fetcher);
+    AttributesQueue::new(*rollup_config, batch_queue, builder)
 }
 
 #[cfg(test)]

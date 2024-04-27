@@ -6,11 +6,6 @@
 
 extern crate alloc;
 
-use alloc::sync::Arc;
-use core::fmt::Debug;
-use traits::ChainProvider;
-use types::RollupConfig;
-
 mod params;
 pub use params::{
     ChannelID, CHANNEL_ID_LENGTH, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC,
@@ -18,6 +13,9 @@ pub use params::{
     FRAME_OVERHEAD, MAX_CHANNEL_BANK_SIZE, MAX_FRAME_LEN, MAX_RLP_BYTES_PER_CHANNEL,
     MAX_SPAN_BATCH_BYTES, SEQUENCER_FEE_VAULT_ADDRESS,
 };
+
+pub mod builder;
+pub use builder::DerivationPipeline;
 
 pub mod sources;
 pub mod stages;
@@ -27,18 +25,7 @@ pub mod types;
 #[cfg(feature = "online")]
 mod online;
 #[cfg(feature = "online")]
-pub use online::prelude::*;
-
-/// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
-#[derive(Debug, Clone, Copy)]
-pub struct DerivationPipeline;
-
-impl DerivationPipeline {
-    /// Creates a new instance of the [DerivationPipeline].
-    pub fn new<P>(_rollup_config: Arc<RollupConfig>, _chain_provider: P) -> Self
-    where
-        P: ChainProvider + Clone + Debug + Send,
-    {
-        unimplemented!("TODO: High-level pipeline composition helper.")
-    }
-}
+pub use online::{
+    new_online_stack, AlloyChainProvider, AlloyL2ChainProvider, BeaconClient, OnlineBeaconClient,
+    OnlineBlobProvider, SimpleSlotDerivation,
+};

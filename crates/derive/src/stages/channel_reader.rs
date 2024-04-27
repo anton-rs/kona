@@ -2,8 +2,8 @@
 
 use crate::{
     stages::BatchQueueProvider,
-    traits::OriginProvider,
-    types::{Batch, BlockInfo, RollupConfig, StageError, StageResult},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    types::{Batch, BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -27,7 +27,7 @@ pub trait ChannelReaderProvider {
 #[derive(Debug)]
 pub struct ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Debug,
 {
     /// The previous stage of the derivation pipeline.
     prev: P,
@@ -39,7 +39,7 @@ where
 
 impl<P> ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Debug,
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
@@ -63,9 +63,19 @@ where
 }
 
 #[async_trait]
+impl<P> OriginAdvancer for ChannelReader<P>
+where
+    P: ChannelReaderProvider + PreviousStage + Send + Debug,
+{
+    async fn advance_origin(&mut self) -> StageResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<P> BatchQueueProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginProvider + Send + Debug,
+    P: ChannelReaderProvider + PreviousStage + Send + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
@@ -91,10 +101,31 @@ where
 
 impl<P> OriginProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginProvider + Debug,
+    P: ChannelReaderProvider + PreviousStage + Debug,
 {
     fn origin(&self) -> Option<&BlockInfo> {
         self.prev.origin()
+    }
+}
+
+#[async_trait]
+impl<P> ResettableStage for ChannelReader<P>
+where
+    P: ChannelReaderProvider + PreviousStage + Debug + Send,
+{
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
+        self.prev.reset(base, cfg).await?;
+        self.next_channel();
+        Ok(())
+    }
+}
+
+impl<P> PreviousStage for ChannelReader<P>
+where
+    P: ChannelReaderProvider + PreviousStage + Send + Debug,
+{
+    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
+        Some(Box::new(&self.prev))
     }
 }
 
@@ -122,11 +153,11 @@ impl BatchReader {
         }
 
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
-        let mut decompressed_reader = self.decompressed.as_slice();
+        let mut decompressed_reader = self.decompressed.as_slice()[self.cursor..].as_ref();
         let batch = Batch::decode(&mut decompressed_reader, cfg).ok()?;
 
         // Advance the cursor on the reader.
-        self.cursor += self.decompressed.len() - decompressed_reader.len();
+        self.cursor = self.decompressed.len() - decompressed_reader.len();
 
         Some(batch)
     }
