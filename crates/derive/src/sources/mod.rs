@@ -1,7 +1,7 @@
 //! This module contains data source impelmentations.
 
 mod factory;
-pub use factory::DataSourceFactory;
+pub use factory::{BaseDataSource, DataSourceFactory};
 
 mod blobs;
 pub use blobs::BlobSource;

@@ -12,5 +12,10 @@ pub use chain_provider::ChainProvider;
 pub mod l2_chain_provider;
 pub use l2_chain_provider::L2ChainProvider;
 
+#[cfg(feature = "online")]
+pub mod alloy_providers;
+#[cfg(feature = "online")]
+pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider};
+
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

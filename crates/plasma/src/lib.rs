@@ -15,5 +15,10 @@ pub use traits::PlasmaInputFetcher;
 pub mod types;
 pub use types::{FinalizedHeadSignal, Keccak256Commitment, PlasmaError, SystemConfig};
 
+#[cfg(feature = "online")]
+pub mod online;
+#[cfg(feature = "online")]
+pub use online::OnlinePlasmaInputFetcher;
+
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

@@ -68,5 +68,7 @@ online = [
   "c-kzg/serde",
   "revm-primitives/serde",
   "revm-primitives/c-kzg",
+  "kona-plasma/online",
+  "kona-providers/online",
 ]
 test-utils = [ "kona-providers/test-utils", "kona-plasma/test-utils" ]

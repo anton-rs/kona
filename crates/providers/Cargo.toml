@@ -29,6 +29,14 @@ op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "ref
 # `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
 
+# `online` feature dependencies
+lru = "0.12.3"
+c-kzg = { version = "1.0.0", default-features = false, optional = true }
+sha2 = { version = "0.10", default-features = false, optional = true }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true} 
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true } 
+reqwest = { version = "0.12", default-features = false, optional = true }
+
 [dev-dependencies]
 hashbrown = "0.14.3"
 tokio = { version = "1.37", features = ["full"] }
@@ -38,4 +46,14 @@ serde_json = { version = "1.0.68", default-features = false }
 [features]
 default = ["serde"]
 serde = ["dep:serde"]
+online = [
+  "dep:c-kzg",
+  "dep:sha2",
+  "dep:alloy-provider",
+  "dep:alloy-transport-http",
+  "dep:reqwest",
+  "alloy-provider/reqwest",
+  "alloy-consensus/serde",
+  "c-kzg/serde",
+]
 test-utils = [ "dep:hashbrown" ]

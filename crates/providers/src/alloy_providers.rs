@@ -1,9 +1,7 @@
 //! This module contains concrete implementations of the data provider traits, using an alloy
 //! provider on the backend.
 
-use crate::types::{
-    Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
-};
+use crate::{ChainProvider, L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{Bytes, B256, U64};
@@ -13,7 +11,9 @@ use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use core::num::NonZeroUsize;
-use kona_providers::{ChainProvider, L2ChainProvider};
+use kona_primitives::{
+    Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
+};
 use lru::LruCache;
 
 const CACHE_SIZE: usize = 16;

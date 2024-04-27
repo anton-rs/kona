@@ -2,8 +2,8 @@
 
 use crate::{
     sources::{BlobSource, CalldataSource, DataSource, PlasmaSource},
-    traits::{BlobProvider, DataAvailabilityProvider},
-    types::{BlockID, BlockInfo, RollupConfig},
+    traits::{AsyncIterator, BlobProvider, DataAvailabilityProvider},
+    types::{BlockID, BlockInfo, RollupConfig, StageResult},
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
@@ -12,23 +12,45 @@ use async_trait::async_trait;
 use kona_plasma::traits::PlasmaInputFetcher;
 use kona_providers::ChainProvider;
 
+/// The [BaseDataSource] enum dispatches data source requests to the appropriate source.
+#[derive(Debug, Clone)]
+pub enum BaseDataSource<C: ChainProvider + Send + Clone, B: BlobProvider + Send + Clone> {
+    /// A calldata source.
+    Calldata(CalldataSource<C>),
+    /// A blob source.
+    Blob(BlobSource<C, B>),
+}
+
+#[async_trait]
+impl<C, B> AsyncIterator for BaseDataSource<C, B>
+where
+    C: ChainProvider + Send + Clone,
+    B: BlobProvider + Send + Clone,
+{
+    type Item = Bytes;
+
+    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
+        match self {
+            BaseDataSource::Calldata(c) => c.next().await,
+            BaseDataSource::Blob(b) => b.next().await,
+        }
+    }
+}
+
 /// A factory for creating a calldata and blob provider.
 #[derive(Debug, Clone, Copy)]
-pub struct DataSourceFactory<C, B, PIF, I>
+pub struct DataSourceFactory<C, B, PIF>
 where
     C: ChainProvider + Send + Clone,
     B: BlobProvider + Clone,
     PIF: PlasmaInputFetcher<C> + Clone,
-    I: Iterator<Item = Bytes> + Send + Clone,
 {
     /// The chain provider to use for the factory.
     pub chain_provider: C,
-    /// The plasma iterator.
-    pub plasma_source: I,
     /// The blob provider
-    pub blob_provider: B,
+    pub blob_provider: Option<B>,
     /// The plasma input fetcher.
-    pub plasma_input_fetcher: PIF,
+    pub plasma_input_fetcher: Option<PIF>,
     /// The ecotone timestamp.
     pub ecotone_timestamp: Option<u64>,
     /// Whether or not plasma is enabled.
@@ -37,18 +59,16 @@ where
     pub signer: Address,
 }
 
-impl<C, B, PIF, I> DataSourceFactory<C, B, PIF, I>
+impl<C, B, PIF> DataSourceFactory<C, B, PIF>
 where
     C: ChainProvider + Send + Clone + Debug,
     B: BlobProvider + Clone + Debug,
     PIF: PlasmaInputFetcher<C> + Clone + Debug,
-    I: Iterator<Item = Bytes> + Send + Clone,
 {
     /// Creates a new factory.
-    pub fn new(provider: C, blobs: B, pif: PIF, s: I, cfg: &RollupConfig) -> Self {
+    pub fn new(provider: C, blobs: Option<B>, pif: Option<PIF>, cfg: &RollupConfig) -> Self {
         Self {
             chain_provider: provider,
-            plasma_source: s,
             blob_provider: blobs,
             plasma_input_fetcher: pif,
             ecotone_timestamp: cfg.ecotone_time,
@@ -59,51 +79,60 @@ where
 }
 
 #[async_trait]
-impl<C, B, PIF, I> DataAvailabilityProvider for DataSourceFactory<C, B, PIF, I>
+impl<C, B, PIF> DataAvailabilityProvider for DataSourceFactory<C, B, PIF>
 where
     C: ChainProvider + Send + Sync + Clone + Debug,
     B: BlobProvider + Send + Sync + Clone + Debug,
     PIF: PlasmaInputFetcher<C> + Send + Sync + Clone + Debug,
-    I: Iterator<Item = Bytes> + Send + Sync + Clone + Debug,
 {
     type Item = Bytes;
-    type DataIter = DataSource<C, B, PIF, I>;
+    type DataIter = DataSource<C, B, PIF>;
 
     async fn open_data(
         &self,
         block_ref: &BlockInfo,
         batcher_address: Address,
     ) -> Result<Self::DataIter> {
-        if let Some(ecotone) = self.ecotone_timestamp {
-            let source = (block_ref.timestamp >= ecotone)
-                .then(|| {
-                    DataSource::Blob(BlobSource::new(
-                        self.chain_provider.clone(),
-                        self.blob_provider.clone(),
-                        batcher_address,
-                        *block_ref,
-                        self.signer,
-                    ))
-                })
-                .unwrap_or_else(|| {
-                    DataSource::Calldata(CalldataSource::new(
-                        self.chain_provider.clone(),
-                        batcher_address,
-                        *block_ref,
-                        self.signer,
-                    ))
-                });
-            Ok(source)
-        } else if self.plasma_enabled {
-            let id = BlockID { hash: block_ref.hash, number: block_ref.number };
-            Ok(DataSource::Plasma(PlasmaSource::new(
-                self.chain_provider.clone(),
-                self.plasma_input_fetcher.clone(),
-                self.plasma_source.clone(),
-                id,
-            )))
+        let ecotone = self.ecotone_timestamp.map(|t| block_ref.timestamp >= t).unwrap_or(false);
+        let source = if ecotone {
+            match self.blob_provider {
+                Some(_) => BaseDataSource::Blob(BlobSource::new(
+                    self.chain_provider.clone(),
+                    self.blob_provider.clone().expect("blob provider must be set"),
+                    batcher_address,
+                    *block_ref,
+                    self.signer,
+                )),
+                None => {
+                    return Err(anyhow!("No blob provider available"));
+                }
+            }
         } else {
-            Err(anyhow!("No data source available"))
+            BaseDataSource::Calldata(CalldataSource::new(
+                self.chain_provider.clone(),
+                batcher_address,
+                *block_ref,
+                self.signer,
+            ))
+        };
+        if self.plasma_enabled {
+            let pif = match &self.plasma_input_fetcher {
+                Some(p) => p,
+                None => {
+                    return Err(anyhow!("No plasma input fetcher available"));
+                }
+            };
+            let id = BlockID { hash: block_ref.hash, number: block_ref.number };
+            return Ok(DataSource::Plasma(PlasmaSource::new(
+                self.chain_provider.clone(),
+                pif.clone(),
+                source,
+                id,
+            )));
+        }
+        match source {
+            BaseDataSource::Blob(b) => Ok(DataSource::Blob(b)),
+            BaseDataSource::Calldata(c) => Ok(DataSource::Calldata(c)),
         }
     }
 }

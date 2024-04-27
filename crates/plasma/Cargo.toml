@@ -25,6 +25,9 @@ async-trait = "0.1.77"
 # `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
 
+# `online` feature dependencies
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true} 
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 serde_json = { version = "1.0.68", default-features = false }
@@ -32,4 +35,11 @@ serde_json = { version = "1.0.68", default-features = false }
 [features]
 default = [ "serde" ]
 serde = [ "dep:serde", "kona-providers/serde", "kona-primitives/serde" ]
+online = [
+    "dep:alloy-provider",
+    "alloy-provider/reqwest",
+    "alloy-consensus/serde",
+    "kona-providers/online",
+]
+
 test-utils = [ "kona-providers/test-utils" ]
