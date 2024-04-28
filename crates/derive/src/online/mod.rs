@@ -3,14 +3,34 @@
 use crate::{
     stages::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
-        L1Traversal, NextAttributes, StatefulAttributesBuilder,
+        L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{DataAvailabilityProvider, ResettableStage},
+    traits::DataAvailabilityProvider,
     types::RollupConfig,
 };
 use alloc::sync::Arc;
 use alloy_provider::ReqwestProvider;
 use core::fmt::Debug;
+
+/// An `online` payload attributes builder for the `AttributesQueue` stage of the derivation
+/// pipeline.
+pub type OnlineAttributesBuilder = StatefulAttributesBuilder<
+    AlloyChainProvider<ReqwestProvider>,
+    AlloyL2ChainProvider<ReqwestProvider>,
+>;
+
+/// An `online` attributes queue for the derivation pipeline.
+pub type OnlineAttributesQueue<DAP> = AttributesQueue<
+    BatchQueue<
+        ChannelReader<
+            ChannelBank<
+                FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider<ReqwestProvider>>>>,
+            >,
+        >,
+        AlloyL2ChainProvider<ReqwestProvider>,
+    >,
+    OnlineAttributesBuilder,
+>;
 
 /// Creates a new online stack.
 #[cfg(feature = "online")]
@@ -19,11 +39,8 @@ pub fn new_online_stack<DAP>(
     chain_provider: AlloyChainProvider<ReqwestProvider>,
     dap_source: DAP,
     fetcher: AlloyL2ChainProvider<ReqwestProvider>,
-    builder: StatefulAttributesBuilder<
-        AlloyChainProvider<ReqwestProvider>,
-        AlloyL2ChainProvider<ReqwestProvider>,
-    >,
-) -> impl NextAttributes + ResettableStage + Debug + Send
+    builder: OnlineAttributesBuilder,
+) -> OnlineAttributesQueue<DAP>
 where
     DAP: DataAvailabilityProvider + Debug + Send,
 {
