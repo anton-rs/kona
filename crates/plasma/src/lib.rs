@@ -12,4 +12,4 @@ pub mod traits;
 pub mod types;
 
 #[cfg(test)]
-pub mod test_util;
+pub mod test_utils;

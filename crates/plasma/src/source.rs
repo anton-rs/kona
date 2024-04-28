@@ -186,13 +186,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::TestPlasmaInputFetcher;
-
     use super::*;
-    // use crate::{
-    //     stages::test_utils::{CollectingLayer, TraceStorage},
-    //     traits::test_utils::{TestChainProvider, TestPlasmaInputFetcher},
-    // };
+    use crate::test_utils::TestPlasmaInputFetcher;
     use alloc::vec;
     use kona_derive::{
         stages::test_utils::{CollectingLayer, TraceStorage},
