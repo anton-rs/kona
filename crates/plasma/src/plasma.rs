@@ -10,7 +10,7 @@ use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
 use kona_derive::{
-    traits::{ChainProvider, DataAvailabilityProvider},
+    traits::{AsyncIterator, ChainProvider, DataAvailabilityProvider},
     types::{BlockInfo, RollupConfig},
 };
 use kona_primitives::BlockID;
@@ -21,7 +21,7 @@ pub struct PlasmaDataSource<C, PIF, I>
 where
     C: ChainProvider + Send + Clone,
     PIF: PlasmaInputFetcher<C> + Clone,
-    I: Iterator<Item = Bytes> + Send + Clone,
+    I: AsyncIterator<Item = Bytes> + Send + Clone,
 {
     /// The chain provider to use for the factory.
     pub chain_provider: C,
@@ -37,7 +37,7 @@ impl<C, PIF, I> PlasmaDataSource<C, PIF, I>
 where
     C: ChainProvider + Send + Clone + Debug,
     PIF: PlasmaInputFetcher<C> + Clone,
-    I: Iterator<Item = Bytes> + Send + Clone,
+    I: AsyncIterator<Item = Bytes> + Send + Clone,
 {
     /// Creates a new factory.
     pub fn new(provider: C, pif: PIF, s: I, cfg: &RollupConfig) -> Self {
@@ -55,7 +55,7 @@ impl<C, PIF, I> DataAvailabilityProvider for PlasmaDataSource<C, PIF, I>
 where
     C: ChainProvider + Send + Clone + Debug + Sync,
     PIF: PlasmaInputFetcher<C> + Clone + Debug + Send + Sync,
-    I: Iterator<Item = Bytes> + Send + Clone + Debug + Sync,
+    I: AsyncIterator<Item = Bytes> + Send + Clone + Debug + Sync,
 {
     type Item = Bytes;
     type DataIter = PlasmaSource<C, PIF, I>;

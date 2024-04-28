@@ -67,7 +67,7 @@ impl DataAvailabilityProvider for TestDAP {
 #[derive(Debug, Clone, Default)]
 pub struct TestChainProvider {
     /// Maps block numbers to block information using a tuple list.
-    pub blocks: Vec<(u64, BlockInfo)>,
+    pub blocks: Vec<(u64, BlockInfo, Vec<TxEnvelope>)>,
     /// Maps block hashes to header information using a tuple list.
     pub headers: Vec<(B256, Header)>,
     /// Maps block hashes to receipts using a tuple list.
@@ -77,7 +77,7 @@ pub struct TestChainProvider {
 impl TestChainProvider {
     /// Insert a block into the mock chain provider.
     pub fn insert_block(&mut self, number: u64, block: BlockInfo) {
-        self.blocks.push((number, block));
+        self.blocks.push((number, block, Vec::new()));
     }
 
     /// Insert receipts into the mock chain provider.
@@ -124,7 +124,7 @@ impl ChainProvider for TestChainProvider {
     }
 
     async fn block_info_by_number(&mut self, _number: u64) -> Result<BlockInfo> {
-        if let Some((_, block)) = self.blocks.iter().find(|(n, _)| *n == _number) {
+        if let Some((_, block, _)) = self.blocks.iter().find(|(n, _, _)| *n == _number) {
             Ok(*block)
         } else {
             Err(anyhow::anyhow!("Block not found"))
@@ -143,13 +143,13 @@ impl ChainProvider for TestChainProvider {
         &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
-        let block = self
+        let (block, txs) = self
             .blocks
             .iter()
-            .find(|(_, b)| b.hash == hash)
-            .map(|(_, b)| *b)
+            .find(|(_, b, _)| b.hash == hash)
+            .map(|(_, b, v)| (*b, v.clone()))
             .ok_or_else(|| anyhow::anyhow!("Block not found"))?;
-        Ok((block, Vec::new()))
+        Ok((block, txs))
     }
 }
 

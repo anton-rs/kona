@@ -62,6 +62,12 @@ impl PartialEq<StageError> for StageError {
         if let (StageError::Reset(a), StageError::Reset(b)) = (self, other) {
             return a == b;
         }
+        if let (StageError::AttributesBuild(a), StageError::AttributesBuild(b)) = (self, other) {
+            return a == b;
+        }
+        if let (StageError::BlockFetch(a), StageError::BlockFetch(b)) = (self, other) {
+            return a == b;
+        }
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
@@ -72,7 +78,6 @@ impl PartialEq<StageError> for StageError {
                 (StageError::NoChannel, StageError::NoChannel) |
                 (StageError::ChannelNotFound, StageError::ChannelNotFound) |
                 (StageError::MissingOrigin, StageError::MissingOrigin) |
-                (StageError::AttributesBuild(_), StageError::AttributesBuild(_)) |
                 (StageError::ReceiptFetch(_), StageError::ReceiptFetch(_)) |
                 (StageError::BlockInfoFetch(_), StageError::BlockInfoFetch(_)) |
                 (StageError::SystemConfigUpdate(_), StageError::SystemConfigUpdate(_)) |
