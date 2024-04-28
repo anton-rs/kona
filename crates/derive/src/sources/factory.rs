@@ -2,17 +2,17 @@
 
 use crate::{
     sources::{BlobSource, CalldataSource, DataSource, PlasmaSource},
-    traits::{BlobProvider, DataAvailabilityProvider},
+    traits::{BlobProvider, ChainProvider, DataAvailabilityProvider, PlasmaInputFetcher},
     types::{BlockID, BlockInfo, RollupConfig},
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_plasma::traits::PlasmaInputFetcher;
-use kona_providers::ChainProvider;
 
 /// A factory for creating a calldata and blob provider.
+///
+/// TODO: Delete this, very leaky.
 #[derive(Debug, Clone, Copy)]
 pub struct DataSourceFactory<C, B, PIF, I>
 where

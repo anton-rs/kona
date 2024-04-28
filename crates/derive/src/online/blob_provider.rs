@@ -76,7 +76,7 @@ impl<T: Provider<Http<Client>>, B: BeaconClient, S: SlotDerivation> OnlineBlobPr
     /// Creates a new instance of the [OnlineBlobProvider].
     ///
     /// The `genesis_time` and `slot_interval` arguments are _optional_ and the
-    /// [OnlineBlockProvider] will attempt to load them dynamically at runtime if they are not
+    /// [OnlineBlobProvider] will attempt to load them dynamically at runtime if they are not
     /// provided.
     pub fn new(
         _inner: T,

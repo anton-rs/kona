@@ -1,9 +1,7 @@
-//! Types for the Kona Plasma crate.
-
 use alloc::boxed::Box;
-use alloy_primitives::{Address, Bytes, U256};
+use alloy_primitives::Bytes;
 use core::fmt::Display;
-use kona_primitives::block::BlockInfo;
+use kona_primitives::BlockInfo;
 
 /// A plasma error.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -32,6 +30,9 @@ impl Display for PlasmaError {
     }
 }
 
+/// A callback method for the finalized head signal.
+pub type FinalizedHeadSignal = Box<dyn Fn(BlockInfo) + Send>;
+
 /// Max input size ensures the canonical chain cannot include input batches too large to
 /// challenge in the Data Availability Challenge contract. Value in number of bytes.
 /// This value can only be changed in a hard fork.
@@ -42,11 +43,11 @@ pub const MAX_INPUT_SIZE: usize = 130672;
 /// used downstream when parsing the frames.
 pub const TX_DATA_VERSION_1: u8 = 1;
 
-/// The default commitment type.
-pub type Keccak256Commitment = Bytes;
-
 /// The default commitment type for the DA storage.
 pub const KECCAK_256_COMMITMENT_TYPE: u8 = 0;
+
+/// The default commitment type.
+pub type Keccak256Commitment = Bytes;
 
 /// DecodeKeccak256 validates and casts the commitment into a Keccak256Commitment.
 pub fn decode_keccak256(commitment: &[u8]) -> Result<Keccak256Commitment, PlasmaError> {
@@ -61,24 +62,4 @@ pub fn decode_keccak256(commitment: &[u8]) -> Result<Keccak256Commitment, Plasma
         return Err(PlasmaError::NotEnoughData);
     }
     Ok(Bytes::copy_from_slice(c))
-}
-
-/// A callback method for the finalized head signal.
-pub type FinalizedHeadSignal = Box<dyn Fn(BlockInfo) + Send>;
-
-/// Optimism system config contract values
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-pub struct SystemConfig {
-    /// Batch sender address
-    pub batcher_addr: Address,
-    /// L2 gas limit
-    pub gas_limit: U256,
-    /// Fee overhead
-    #[cfg_attr(feature = "serde", serde(rename = "overhead"))]
-    pub l1_fee_overhead: U256,
-    /// Fee scalar
-    #[cfg_attr(feature = "serde", serde(rename = "scalar"))]
-    pub l1_fee_scalar: U256,
 }

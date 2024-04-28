@@ -2,14 +2,12 @@
 
 use crate::{
     sources::{BlobSource, CalldataSource, PlasmaSource},
-    traits::{AsyncIterator, BlobProvider},
+    traits::{AsyncIterator, BlobProvider, ChainProvider, PlasmaInputFetcher},
     types::StageResult,
 };
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
-use kona_plasma::traits::PlasmaInputFetcher;
-use kona_providers::ChainProvider;
 
 /// An enum over the various data sources.
 #[derive(Debug, Clone)]

@@ -9,23 +9,24 @@ use crate::{
     traits::ResettableStage,
     types::RollupConfig,
 };
-
 use alloc::sync::Arc;
+use alloy_primitives::Bytes;
 use alloy_provider::ReqwestProvider;
 use core::fmt::Debug;
 
-/// Creates a new [OnlineStageStack].
+type BlobProvider =
+    OnlineBlobProvider<ReqwestProvider, OnlineBeaconClient<ReqwestProvider>, SimpleSlotDerivation>;
+
+/// Creates a new online stack.
 #[cfg(feature = "online")]
 pub fn new_online_stack(
     rollup_config: Arc<RollupConfig>,
     chain_provider: AlloyChainProvider<ReqwestProvider>,
     dap_source: DataSourceFactory<
         AlloyChainProvider<ReqwestProvider>,
-        OnlineBlobProvider<
-            ReqwestProvider,
-            OnlineBeaconClient<ReqwestProvider>,
-            SimpleSlotDerivation,
-        >,
+        BlobProvider,
+        (),
+        alloc::collections::vec_deque::IntoIter<Bytes>,
     >,
     fetcher: AlloyL2ChainProvider<ReqwestProvider>,
     builder: StatefulAttributesBuilder<

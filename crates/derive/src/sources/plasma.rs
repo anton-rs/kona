@@ -1,20 +1,16 @@
 //! Plasma Data Source
 
 use crate::{
-    traits::AsyncIterator,
-    types::{ResetError, StageError, StageResult},
+    traits::{AsyncIterator, ChainProvider, PlasmaInputFetcher},
+    types::{
+        decode_keccak256, Keccak256Commitment, PlasmaError, ResetError, StageError, StageResult,
+        MAX_INPUT_SIZE, TX_DATA_VERSION_1,
+    },
 };
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
-use kona_plasma::{
-    traits::PlasmaInputFetcher,
-    types::{
-        decode_keccak256, Keccak256Commitment, PlasmaError, MAX_INPUT_SIZE, TX_DATA_VERSION_1,
-    },
-};
 use kona_primitives::block::BlockID;
-use kona_providers::ChainProvider;
 
 /// A plasma data iterator.
 #[derive(Debug, Clone)]
@@ -138,7 +134,7 @@ where
                 tracing::warn!("challenge expired, skipping batch");
                 self.commitment = None;
                 // Skip the input.
-                return self.next().await
+                return self.next().await;
             }
             Some(Err(PlasmaError::MissingPastWindow)) => {
                 tracing::warn!("missing past window, skipping batch");
@@ -187,10 +183,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stages::test_utils::{CollectingLayer, TraceStorage};
+    use crate::{
+        stages::test_utils::{CollectingLayer, TraceStorage},
+        traits::test_utils::{TestChainProvider, TestPlasmaInputFetcher},
+    };
     use alloc::vec;
-    use kona_plasma::test_utils::TestPlasmaInputFetcher;
-    use kona_providers::test_utils::TestChainProvider;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

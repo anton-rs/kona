@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -12,7 +12,6 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_providers::L2ChainProvider;
 use tracing::{error, info, warn};
 
 /// Provides [Batch]es for the [BatchQueue] stage.
@@ -435,6 +434,7 @@ mod tests {
             channel_reader::BatchReader,
             test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
         },
+        traits::test_utils::TestL2ChainProvider,
         types::{
             BatchType, BlockID, Genesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
             L2ExecutionPayloadEnvelope,
@@ -443,7 +443,6 @@ mod tests {
     use alloc::vec;
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use kona_providers::test_utils::TestL2ChainProvider;
     use miniz_oxide::deflate::compress_to_vec_zlib;
     use op_alloy_consensus::{OpTxType, TxDeposit};
     use tracing::Level;

@@ -1,11 +1,10 @@
 //! This module contains derivation errors thrown within the pipeline.
 
 use super::SpanBatchError;
-use crate::types::{BlockID, Frame};
+use crate::types::{BlockID, Frame, PlasmaError};
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
-use kona_plasma::types::PlasmaError;
 
 /// A result type for the derivation pipeline stages.
 pub type StageResult<T> = Result<T, StageError>;
