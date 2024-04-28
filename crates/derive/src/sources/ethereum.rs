@@ -1,4 +1,5 @@
-//! Contains a Factory for creating a calldata and blob provider.
+//! Contains the [EthereumDataSource], which is a concrete implementation of the
+//! [DataAvailabilityProvider] trait for the Ethereum protocol.
 
 use crate::{
     sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},

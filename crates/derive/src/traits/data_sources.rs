@@ -18,15 +18,6 @@ pub trait BlobProvider {
     ) -> Result<Vec<Blob>>;
 }
 
-/// The PlasmaProvider trait specifies the functionality of a data source that can fetch plasma
-/// inputs.
-#[async_trait]
-#[allow(dead_code)]
-pub(crate) trait PlasmaProvider {
-    /// Fetches the plasma input for the given commitment at the given block number.
-    async fn get_input(&self, commitment: &[u8], block_number: u64) -> Result<Bytes>;
-}
-
 /// Describes the functionality of a data source that can provide data availability information.
 #[async_trait]
 pub trait DataAvailabilityProvider {

@@ -9,5 +9,5 @@ pub use blobs::BlobSource;
 mod calldata;
 pub use calldata::CalldataSource;
 
-mod source;
-pub use source::EthereumDataSourceVariant;
+mod variant;
+pub use variant::EthereumDataSourceVariant;

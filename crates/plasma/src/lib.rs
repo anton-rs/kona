@@ -6,6 +6,7 @@
 
 extern crate alloc;
 
+pub mod plasma;
 pub mod source;
 pub mod traits;
 pub mod types;
