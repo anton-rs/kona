@@ -18,41 +18,41 @@ use kona_primitives::block::BlockID;
 
 /// A plasma data iterator.
 #[derive(Debug, Clone)]
-pub struct PlasmaSource<CP, PIF, I>
+pub struct PlasmaSource<C, F, I>
 where
-    CP: ChainProvider + Send,
-    PIF: PlasmaInputFetcher<CP> + Send,
+    C: ChainProvider + Send,
+    F: PlasmaInputFetcher<C> + Send,
     I: Iterator<Item = Bytes>,
 {
-    /// The plasma input fetcher.
-    input_fetcher: PIF,
     /// The chain provider to use for the plasma source.
-    chain_provider: CP,
+    pub chain_provider: C,
+    /// The plasma input fetcher.
+    pub input_fetcher: F,
     /// A source data iterator.
-    source: I,
+    pub source: I,
     /// Keeps track of a pending commitment so we can keep trying to fetch the input.
-    commitment: Option<Keccak256Commitment>,
-    /// The block Id.
-    id: BlockID,
+    pub commitment: Option<Keccak256Commitment>,
+    /// The block id.
+    pub id: BlockID,
 }
 
-impl<CP, PIF, I> PlasmaSource<CP, PIF, I>
+impl<C, F, I> PlasmaSource<C, F, I>
 where
-    CP: ChainProvider + Send,
-    PIF: PlasmaInputFetcher<CP> + Send,
+    C: ChainProvider + Send,
+    F: PlasmaInputFetcher<C> + Send,
     I: Iterator<Item = Bytes>,
 {
     /// Instantiates a new plasma data source.
-    pub fn new(chain_provider: CP, input_fetcher: PIF, source: I, id: BlockID) -> Self {
+    pub fn new(chain_provider: C, input_fetcher: F, source: I, id: BlockID) -> Self {
         Self { chain_provider, input_fetcher, source, id, commitment: None }
     }
 }
 
 #[async_trait]
-impl<CP, PIF, I> AsyncIterator for PlasmaSource<CP, PIF, I>
+impl<C, F, I> AsyncIterator for PlasmaSource<C, F, I>
 where
-    CP: ChainProvider + Send,
-    PIF: PlasmaInputFetcher<CP> + Send,
+    C: ChainProvider + Send,
+    F: PlasmaInputFetcher<C> + Send,
     I: Iterator<Item = Bytes> + Send,
 {
     type Item = Bytes;
