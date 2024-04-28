@@ -11,5 +11,10 @@ pub mod source;
 pub mod traits;
 pub mod types;
 
+#[cfg(feature = "online")]
+pub mod online;
+#[cfg(feature = "online")]
+pub use online::OnlinePlasmaInputFetcher;
+
 #[cfg(test)]
 pub mod test_utils;
