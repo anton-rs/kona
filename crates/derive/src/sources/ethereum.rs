@@ -19,9 +19,9 @@ where
     B: BlobProvider + Clone,
 {
     /// The chain provider to use for the factory.
-    pub chain_provider: C,
+    pub chain_provider: Option<C>,
     /// The blob provider
-    pub blob_provider: B,
+    pub blob_provider: Option<B>,
     /// The ecotone timestamp.
     pub ecotone_timestamp: Option<u64>,
     /// The L1 Signer.
@@ -34,7 +34,7 @@ where
     B: BlobProvider + Clone + Debug,
 {
     /// Creates a new factory.
-    pub fn new(provider: C, blobs: B, cfg: &RollupConfig) -> Self {
+    pub fn new(provider: Option<C>, blobs: Option<B>, cfg: &RollupConfig) -> Self {
         Self {
             chain_provider: provider,
             blob_provider: blobs,
@@ -58,28 +58,27 @@ where
         block_ref: &BlockInfo,
         batcher_address: Address,
     ) -> Result<Self::DataIter> {
-        if let Some(ecotone) = self.ecotone_timestamp {
-            let source = (block_ref.timestamp >= ecotone)
-                .then(|| {
-                    EthereumDataSourceVariant::Blob(BlobSource::new(
-                        self.chain_provider.clone(),
-                        self.blob_provider.clone(),
-                        batcher_address,
-                        *block_ref,
-                        self.signer,
-                    ))
-                })
-                .unwrap_or_else(|| {
-                    EthereumDataSourceVariant::Calldata(CalldataSource::new(
-                        self.chain_provider.clone(),
-                        batcher_address,
-                        *block_ref,
-                        self.signer,
-                    ))
-                });
-            Ok(source)
+        let ecotone_enabled =
+            self.ecotone_timestamp.map(|e| block_ref.timestamp >= e).unwrap_or(false);
+        let chain_provider =
+            self.chain_provider.clone().ok_or_else(|| anyhow!("No chain provider available"))?;
+        if ecotone_enabled {
+            let blob_provider =
+                self.blob_provider.clone().ok_or_else(|| anyhow!("No blob provider available"))?;
+            Ok(EthereumDataSourceVariant::Blob(BlobSource::new(
+                chain_provider,
+                blob_provider,
+                batcher_address,
+                *block_ref,
+                self.signer,
+            )))
         } else {
-            Err(anyhow!("No data source available"))
+            Ok(EthereumDataSourceVariant::Calldata(CalldataSource::new(
+                chain_provider,
+                batcher_address,
+                *block_ref,
+                self.signer,
+            )))
         }
     }
 }
