@@ -8,7 +8,7 @@ use crate::{
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 
 /// A factory for creating an Ethereum data source provider.
@@ -58,28 +58,23 @@ where
         block_ref: &BlockInfo,
         batcher_address: Address,
     ) -> Result<Self::DataIter> {
-        if let Some(ecotone) = self.ecotone_timestamp {
-            let source = (block_ref.timestamp >= ecotone)
-                .then(|| {
-                    EthereumDataSourceVariant::Blob(BlobSource::new(
-                        self.chain_provider.clone(),
-                        self.blob_provider.clone(),
-                        batcher_address,
-                        *block_ref,
-                        self.signer,
-                    ))
-                })
-                .unwrap_or_else(|| {
-                    EthereumDataSourceVariant::Calldata(CalldataSource::new(
-                        self.chain_provider.clone(),
-                        batcher_address,
-                        *block_ref,
-                        self.signer,
-                    ))
-                });
-            Ok(source)
+        let ecotone_enabled =
+            self.ecotone_timestamp.map(|e| block_ref.timestamp >= e).unwrap_or(false);
+        if ecotone_enabled {
+            Ok(EthereumDataSourceVariant::Blob(BlobSource::new(
+                self.chain_provider.clone(),
+                self.blob_provider.clone(),
+                batcher_address,
+                *block_ref,
+                self.signer,
+            )))
         } else {
-            Err(anyhow!("No data source available"))
+            Ok(EthereumDataSourceVariant::Calldata(CalldataSource::new(
+                self.chain_provider.clone(),
+                batcher_address,
+                *block_ref,
+                self.signer,
+            )))
         }
     }
 }
