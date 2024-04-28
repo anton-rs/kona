@@ -1,4 +1,4 @@
-//! Test utilities for the Plasma crate.
+//! Test utilities for the `kona-plasma` crate.
 
 use crate::{
     traits::PlasmaInputFetcher,
@@ -6,13 +6,9 @@ use crate::{
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
-use anyhow::Result;
 use async_trait::async_trait;
-use kona_primitives::{
-    block::{BlockID, BlockInfo},
-    system_config::SystemConfig,
-};
-use kona_providers::test_utils::TestChainProvider;
+use kona_derive::traits::test_utils::TestChainProvider;
+use kona_primitives::{BlockID, BlockInfo, SystemConfig};
 
 /// A mock plasma input fetcher for testing.
 #[derive(Debug, Clone, Default)]

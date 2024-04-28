@@ -1,13 +1,15 @@
 //! The Span Batch Type
 
 use super::{SpanBatchError, SpanBatchTransactions};
-use crate::types::{
-    BatchValidity, BlockInfo, L2BlockInfo, RollupConfig, SingleBatch, SpanBatchBits,
-    SpanBatchElement,
+use crate::{
+    traits::L2ChainProvider,
+    types::{
+        BatchValidity, BlockInfo, L2BlockInfo, RollupConfig, SingleBatch, SpanBatchBits,
+        SpanBatchElement,
+    },
 };
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
-use kona_providers::L2ChainProvider;
 use op_alloy_consensus::OpTxType;
 use tracing::{info, warn};
 
@@ -412,11 +414,11 @@ mod tests {
     use super::*;
     use crate::{
         stages::test_utils::{CollectingLayer, TraceStorage},
+        traits::test_utils::TestL2ChainProvider,
         types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction},
     };
     use alloc::vec;
     use alloy_primitives::{b256, Bytes, B256};
-    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::OpTxType;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

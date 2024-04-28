@@ -31,12 +31,15 @@ impl TraceStorage {
     }
 }
 
+/// A subscriber layer that collects traces and their log levels.
 #[derive(Debug, Default)]
 pub struct CollectingLayer {
+    /// The storage for the collected traces.
     pub storage: TraceStorage,
 }
 
 impl CollectingLayer {
+    /// Creates a new collecting layer with the specified storage.
     pub fn new(storage: TraceStorage) -> Self {
         Self { storage }
     }

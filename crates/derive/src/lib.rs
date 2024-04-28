@@ -22,9 +22,6 @@ pub mod traits;
 pub mod types;
 
 #[cfg(feature = "online")]
-mod online;
+pub mod online;
 #[cfg(feature = "online")]
-pub use online::{
-    new_online_stack, AlloyChainProvider, AlloyL2ChainProvider, BeaconClient, OnlineBeaconClient,
-    OnlineBlobProvider, SimpleSlotDerivation,
-};
+pub use online::new_online_stack;

@@ -1,7 +1,7 @@
 //! Blob Data Source
 
 use crate::{
-    traits::{AsyncIterator, BlobProvider, SignedRecoverable},
+    traits::{AsyncIterator, BlobProvider, ChainProvider, SignedRecoverable},
     types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -9,7 +9,6 @@ use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::Result;
 use async_trait::async_trait;
-use kona_providers::ChainProvider;
 use tracing::warn;
 
 /// A data iterator that reads from a blob.

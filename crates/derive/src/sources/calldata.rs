@@ -1,14 +1,13 @@
 //! CallData Source
 
 use crate::{
-    traits::{AsyncIterator, SignedRecoverable},
+    traits::{AsyncIterator, ChainProvider, SignedRecoverable},
     types::{BlockInfo, StageError, StageResult},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
-use kona_providers::ChainProvider;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]

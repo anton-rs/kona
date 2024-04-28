@@ -1,20 +1,20 @@
 //! Plasma Data Source
 
 use crate::{
-    traits::AsyncIterator,
-    types::{ResetError, StageError, StageResult},
-};
-use alloc::boxed::Box;
-use alloy_primitives::Bytes;
-use async_trait::async_trait;
-use kona_plasma::{
     traits::PlasmaInputFetcher,
     types::{
         decode_keccak256, Keccak256Commitment, PlasmaError, MAX_INPUT_SIZE, TX_DATA_VERSION_1,
     },
 };
+use alloc::boxed::Box;
+use alloy_primitives::Bytes;
+use anyhow::anyhow;
+use async_trait::async_trait;
+use kona_derive::{
+    traits::{AsyncIterator, ChainProvider},
+    types::{ResetError, StageError, StageResult},
+};
 use kona_primitives::block::BlockID;
-use kona_providers::ChainProvider;
 
 /// A plasma data iterator.
 #[derive(Debug, Clone)]
@@ -89,14 +89,14 @@ where
                 Ok(d) => d,
                 Err(e) => {
                     tracing::warn!("failed to pull next data from the plasma source iterator");
-                    return Some(Err(StageError::Plasma(e)));
+                    return Some(Err(StageError::Custom(anyhow!(e))));
                 }
             };
 
             // If the data is empty,
             if data.is_empty() {
                 tracing::warn!("empty data from plasma source");
-                return Some(Err(StageError::Plasma(PlasmaError::NotEnoughData)));
+                return Some(Err(StageError::Custom(anyhow!(PlasmaError::NotEnoughData))));
             }
 
             // If the tx data type is not plasma, we forward it downstream to let the next
@@ -138,7 +138,7 @@ where
                 tracing::warn!("challenge expired, skipping batch");
                 self.commitment = None;
                 // Skip the input.
-                return self.next().await
+                return self.next().await;
             }
             Some(Err(PlasmaError::MissingPastWindow)) => {
                 tracing::warn!("missing past window, skipping batch");
@@ -187,10 +187,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stages::test_utils::{CollectingLayer, TraceStorage};
+    use crate::test_utils::TestPlasmaInputFetcher;
     use alloc::vec;
-    use kona_plasma::test_utils::TestPlasmaInputFetcher;
-    use kona_providers::test_utils::TestChainProvider;
+    use kona_derive::{
+        stages::test_utils::{CollectingLayer, TraceStorage},
+        traits::test_utils::TestChainProvider,
+    };
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -236,7 +238,7 @@ mod tests {
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
         let err = plasma_source.next().await.unwrap().unwrap_err();
-        assert_eq!(err, StageError::Plasma(PlasmaError::NotEnoughData));
+        assert_eq!(err, StageError::Custom(anyhow!(PlasmaError::NotEnoughData)));
     }
 
     #[tokio::test]
@@ -253,7 +255,7 @@ mod tests {
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
         let err = plasma_source.next().await.unwrap().unwrap_err();
-        assert_eq!(err, StageError::Plasma(PlasmaError::NotEnoughData));
+        assert_eq!(err, StageError::Custom(anyhow!(PlasmaError::NotEnoughData)));
 
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);

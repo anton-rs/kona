@@ -9,7 +9,7 @@ tests: test test-online test-docs
 
 # Test for the native target
 test *args='':
-  cargo nextest run --workspace --all $@
+  cargo nextest run --workspace --all --all-features  $@
 
 # Run online tests
 test-online:

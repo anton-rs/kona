@@ -6,14 +6,10 @@
 
 extern crate alloc;
 
-// Re-export kona primitives.
-pub use kona_primitives::*;
-
+pub mod plasma;
+pub mod source;
 pub mod traits;
-pub use traits::PlasmaInputFetcher;
-
 pub mod types;
-pub use types::{FinalizedHeadSignal, Keccak256Commitment, PlasmaError, SystemConfig};
 
-#[cfg(any(test, feature = "test-utils"))]
+#[cfg(test)]
 pub mod test_utils;

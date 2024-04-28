@@ -2,9 +2,11 @@
 //! [SingleBatch].
 
 use super::DecodeError;
-use crate::types::{BlockInfo, L2BlockInfo, RollupConfig};
+use crate::{
+    traits::L2ChainProvider,
+    types::{BlockInfo, L2BlockInfo, RollupConfig},
+};
 use alloy_rlp::{Buf, Decodable};
-use kona_providers::L2ChainProvider;
 
 mod batch_type;
 pub use batch_type::BatchType;
