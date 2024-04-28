@@ -7,9 +7,9 @@ default:
 # Run all tests
 tests: test test-online test-docs
 
-# Test for the native target
+# Test for the native target with all features
 test *args='':
-  cargo nextest run --workspace --all --all-features  $@
+  cargo nextest run --workspace --all --all-features $@
 
 # Run online tests
 test-online:
@@ -30,23 +30,23 @@ fmt-native-check:
 lint-native: fmt-native-check
   cargo +nightly clippy --workspace --all --all-features --all-targets -- -D warnings
 
-# Lint the workspace (mips arch)
+# Lint the workspace (mips arch). Currently, only the `kona-common` crate is linted for the `cannon` target, as it is the only crate with architecture-specific code.
 lint-cannon:
   docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy --workspace --all --all-features --target /mips-unknown-none.json -Zbuild-std --exclude kona-derive --exclude kona-host -- -D warnings
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy -p kona-common --all-features --target /mips-unknown-none.json -Zbuild-std -- -D warnings
 
-# Lint the workspace (risc-v arch)
+# Lint the workspace (risc-v arch). Currently, only the `kona-common` crate is linted for the `asterisc` target, as it is the only crate with architecture-specific code.
 lint-asterisc:
   docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy --workspace --all --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std --exclude kona-derive -- -D warnings
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy -p kona-common --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings
 
 # Lint the Rust documentation
 lint-docs:
@@ -63,7 +63,7 @@ build: build-native build-cannon build-asterisc
 build-native *args='':
   cargo build --workspace --all $@
 
-# Build for the `cannon` target
+# Build for the `cannon` target. Any crates that require the stdlib are excluded from the build for this target.
 build-cannon *args='':
   docker run \
     --rm \
@@ -72,7 +72,7 @@ build-cannon *args='':
     -w="/workdir" \
     ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host
 
-# Build for the `asterisc` target
+# Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
   docker run \
     --rm \
