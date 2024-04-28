@@ -3,9 +3,6 @@
 /// Re-export the kona primitives.
 pub use kona_primitives::*;
 
-mod attributes;
-pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
-
 pub mod batch;
 pub use batch::{
     Batch, BatchType, BatchValidity, BatchWithInclusionBlock, RawSpanBatch, SingleBatch, SpanBatch,

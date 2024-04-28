@@ -3,13 +3,12 @@
 use crate::{
     stages::NextAttributes,
     traits::{OriginAdvancer, ResettableStage},
-    types::{
-        BlockInfo, L2AttributesWithParent, L2BlockInfo, StageError, StageResult, SystemConfig,
-    },
+    types::{StageError, StageResult},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, SystemConfig};
 
 /// Provides the [BlockInfo] and [SystemConfig] for the stack to reset the stages.
 #[async_trait]
