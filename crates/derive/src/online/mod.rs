@@ -33,7 +33,6 @@ pub type OnlineAttributesQueue<DAP> = AttributesQueue<
 >;
 
 /// Creates a new online stack.
-#[cfg(feature = "online")]
 pub fn new_online_stack<DAP>(
     rollup_config: Arc<RollupConfig>,
     chain_provider: AlloyChainProvider<ReqwestProvider>,
