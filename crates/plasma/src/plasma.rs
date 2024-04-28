@@ -39,14 +39,14 @@ where
 }
 
 #[async_trait]
-impl<C, PIF, I> DataAvailabilityProvider for PlasmaDataSource<C, PIF, I>
+impl<C, F, I> DataAvailabilityProvider for PlasmaDataSource<C, F, I>
 where
     C: ChainProvider + Send + Clone + Debug + Sync,
-    PIF: PlasmaInputFetcher<C> + Clone + Debug + Send + Sync,
+    F: PlasmaInputFetcher<C> + Clone + Debug + Send + Sync,
     I: Iterator<Item = Bytes> + Send + Clone + Debug + Sync,
 {
     type Item = Bytes;
-    type DataIter = PlasmaSource<C, PIF, I>;
+    type DataIter = PlasmaSource<C, F, I>;
 
     async fn open_data(&self, block_ref: &BlockInfo, _: Address) -> Result<Self::DataIter> {
         Ok(PlasmaSource::new(
