@@ -34,8 +34,5 @@ pub use frame::Frame;
 mod channel;
 pub use channel::Channel;
 
-mod plasma;
-pub use plasma::*;
-
 mod errors;
 pub use errors::*;

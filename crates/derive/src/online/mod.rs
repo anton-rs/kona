@@ -1,39 +1,32 @@
 //! Contains "online" implementations for providers.
 
 use crate::{
-    sources::DataSourceFactory,
     stages::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, NextAttributes, StatefulAttributesBuilder,
     },
-    traits::ResettableStage,
+    traits::{DataAvailabilityProvider, ResettableStage},
     types::RollupConfig,
 };
 use alloc::sync::Arc;
-use alloy_primitives::Bytes;
 use alloy_provider::ReqwestProvider;
 use core::fmt::Debug;
 
-type BlobProvider =
-    OnlineBlobProvider<ReqwestProvider, OnlineBeaconClient<ReqwestProvider>, SimpleSlotDerivation>;
-
 /// Creates a new online stack.
 #[cfg(feature = "online")]
-pub fn new_online_stack(
+pub fn new_online_stack<DAP>(
     rollup_config: Arc<RollupConfig>,
     chain_provider: AlloyChainProvider<ReqwestProvider>,
-    dap_source: DataSourceFactory<
-        AlloyChainProvider<ReqwestProvider>,
-        BlobProvider,
-        (),
-        alloc::collections::vec_deque::IntoIter<Bytes>,
-    >,
+    dap_source: DAP,
     fetcher: AlloyL2ChainProvider<ReqwestProvider>,
     builder: StatefulAttributesBuilder<
         AlloyChainProvider<ReqwestProvider>,
         AlloyL2ChainProvider<ReqwestProvider>,
     >,
-) -> impl NextAttributes + ResettableStage + Debug + Send {
+) -> impl NextAttributes + ResettableStage + Debug + Send
+where
+    DAP: DataAvailabilityProvider + Debug + Send,
+{
     let l1_traversal = L1Traversal::new(chain_provider, rollup_config.clone());
     let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
     let frame_queue = FrameQueue::new(l1_retrieval);
@@ -43,8 +36,7 @@ pub fn new_online_stack(
     AttributesQueue::new(*rollup_config, batch_queue, builder)
 }
 
-#[cfg(test)]
-#[allow(unreachable_pub)]
+#[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
 
 mod beacon_client;

@@ -2,7 +2,7 @@
 
 use crate::{
     traits::{AsyncIterator, ChainProvider, DataAvailabilityProvider, L2ChainProvider},
-    types::{FinalizedHeadSignal, PlasmaError, StageError, StageResult},
+    types::{StageError, StageResult},
 };
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
@@ -12,10 +12,8 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
 use kona_primitives::{
-    BlockID, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig,
+    BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig,
 };
-
-use super::PlasmaInputFetcher;
 
 /// Mock data iterator
 #[derive(Debug, Default, PartialEq)]
@@ -210,49 +208,4 @@ impl L2ChainProvider for TestL2ChainProvider {
             .ok_or_else(|| anyhow::anyhow!("System config not found"))
             .cloned()
     }
-}
-
-/// A mock plasma input fetcher for testing.
-#[derive(Debug, Clone, Default)]
-pub struct TestPlasmaInputFetcher {
-    /// Inputs to return.
-    pub inputs: Vec<Result<Bytes, PlasmaError>>,
-    /// Advance L1 origin results.
-    pub advances: Vec<Result<(), PlasmaError>>,
-    /// Reset results.
-    pub resets: Vec<Result<(), PlasmaError>>,
-}
-
-#[async_trait]
-impl PlasmaInputFetcher<TestChainProvider> for TestPlasmaInputFetcher {
-    async fn get_input(
-        &mut self,
-        _fetcher: &TestChainProvider,
-        _commitment: Bytes,
-        _block: BlockID,
-    ) -> Option<Result<Bytes, PlasmaError>> {
-        self.inputs.pop()
-    }
-
-    async fn advance_l1_origin(
-        &mut self,
-        _fetcher: &TestChainProvider,
-        _block: BlockID,
-    ) -> Option<Result<(), PlasmaError>> {
-        self.advances.pop()
-    }
-
-    async fn reset(
-        &mut self,
-        _block_number: BlockInfo,
-        _cfg: SystemConfig,
-    ) -> Option<Result<(), PlasmaError>> {
-        self.resets.pop()
-    }
-
-    async fn finalize(&mut self, _block_number: BlockInfo) -> Option<Result<(), PlasmaError>> {
-        None
-    }
-
-    fn on_finalized_head_signal(&mut self, _block_number: FinalizedHeadSignal) {}
 }

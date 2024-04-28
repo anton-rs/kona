@@ -1,3 +1,5 @@
+//! Types for the `kona-plasma` crate.
+
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use core::fmt::Display;

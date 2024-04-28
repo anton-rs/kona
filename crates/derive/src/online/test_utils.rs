@@ -12,16 +12,19 @@ use alloy_transport_http::Http;
 use async_trait::async_trait;
 use reqwest::Client;
 
-pub(crate) fn spawn_anvil() -> (ReqwestProvider<Ethereum>, AnvilInstance) {
+/// Spawns an Anvil instance and returns a provider and the instance.
+pub fn spawn_anvil() -> (ReqwestProvider<Ethereum>, AnvilInstance) {
     let anvil = Anvil::new().try_spawn().expect("could not spawn anvil");
     (anvil_http_provider(&anvil), anvil)
 }
 
-pub(crate) fn anvil_http_provider(anvil: &AnvilInstance) -> ReqwestProvider<Ethereum> {
+/// Returns an Anvil HTTP provider wrapping the given [AnvilInstance].
+pub fn anvil_http_provider(anvil: &AnvilInstance) -> ReqwestProvider<Ethereum> {
     http_provider(&anvil.endpoint())
 }
 
-pub(crate) fn http_provider(url: &str) -> ReqwestProvider<Ethereum> {
+/// Returns an HTTP provider for the given URL.
+pub fn http_provider(url: &str) -> ReqwestProvider<Ethereum> {
     let url = url.parse().unwrap();
     let http = Http::<Client>::new(url);
     ReqwestProvider::new(RpcClient::new(http, true))

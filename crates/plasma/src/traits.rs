@@ -1,11 +1,10 @@
 //! This module contains traits for the plasma extension of the derivation pipeline.
 
 use crate::types::{FinalizedHeadSignal, PlasmaError};
-
-use super::ChainProvider;
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use kona_derive::traits::ChainProvider;
 use kona_primitives::{BlockID, BlockInfo, SystemConfig};
 
 /// A plasma input fetcher.

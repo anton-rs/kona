@@ -41,6 +41,11 @@ alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", o
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", optional = true } 
 reqwest = { version = "0.12", default-features = false, optional = true }
 
+# `test-utils` feature dependencies
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false, optional = true }
+tracing-subscriber = { version = "0.3.18", optional = true }
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false, optional = true }
+
 [dev-dependencies]
 tokio = { version = "1.37", features = ["full"] }
 proptest = "1.4.0"
@@ -50,7 +55,7 @@ alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07",
 serde_json = { version = "1.0.116", default-features = false }
 
 [features]
-default = ["serde", "k256", "online"]
+default = ["serde", "k256"]
 serde = [
   "dep:serde",
   "kona-primitives/serde",
@@ -72,3 +77,4 @@ online = [
   "revm-primitives/serde",
   "revm-primitives/c-kzg",
 ]
+test-utils = ["dep:alloy-node-bindings", "dep:tracing-subscriber", "dep:alloy-rpc-client"]

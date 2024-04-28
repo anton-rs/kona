@@ -26,10 +26,11 @@ async-trait = "0.1.77"
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
+kona-derive = { path = "../derive", features = ["test-utils"] }
 tracing-subscriber = "0.3.18"
 serde_json = { version = "1.0.68", default-features = false }
+tokio = { version = "1.37", features = ["full"] }
 
 [features]
-default = [ "serde" ]
-serde = [ "dep:serde", "kona-providers/serde", "kona-primitives/serde" ]
-test-utils = [ "kona-providers/test-utils" ]
+default = ["serde"]
+serde = ["dep:serde", "kona-primitives/serde"]

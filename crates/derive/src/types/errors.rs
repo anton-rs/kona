@@ -1,7 +1,7 @@
 //! This module contains derivation errors thrown within the pipeline.
 
 use super::SpanBatchError;
-use crate::types::{BlockID, Frame, PlasmaError};
+use crate::types::{BlockID, Frame};
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
@@ -18,8 +18,6 @@ pub enum StageError {
     Temporary(anyhow::Error),
     /// A critical error.
     Critical(anyhow::Error),
-    /// Plasma data source error.
-    Plasma(PlasmaError),
     /// There is not enough data progress, but if we wait, the stage will eventually return data
     /// or produce an EOF error.
     NotEnoughData,
@@ -69,7 +67,6 @@ impl PartialEq<StageError> for StageError {
             (StageError::Eof, StageError::Eof) |
                 (StageError::Temporary(_), StageError::Temporary(_)) |
                 (StageError::Critical(_), StageError::Critical(_)) |
-                (StageError::Plasma(_), StageError::Plasma(_)) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
                 (StageError::NoChannelsAvailable, StageError::NoChannelsAvailable) |
                 (StageError::NoChannel, StageError::NoChannel) |
@@ -104,7 +101,6 @@ impl Display for StageError {
             StageError::Eof => write!(f, "End of file"),
             StageError::Temporary(e) => write!(f, "Temporary error: {}", e),
             StageError::Critical(e) => write!(f, "Critical error: {}", e),
-            StageError::Plasma(e) => write!(f, "Plasma error: {:?}", e),
             StageError::NotEnoughData => write!(f, "Not enough data"),
             StageError::BlockFetch(hash) => {
                 write!(f, "Failed to fetch block info and transactions by hash: {}", hash)

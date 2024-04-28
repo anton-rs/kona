@@ -37,5 +37,5 @@ pub use attributes_queue::{
     StatefulAttributesBuilder,
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
