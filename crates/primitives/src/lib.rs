@@ -35,8 +35,8 @@ pub use payload::{
 pub mod rollup_config;
 pub use rollup_config::RollupConfig;
 
-mod attributes;
-pub mod system_config;
+pub mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
 
+pub mod system_config;
 pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};
