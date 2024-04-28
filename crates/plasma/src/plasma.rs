@@ -1,52 +1,40 @@
 //! Contains the [PlasmaDataSource], which is a concrete implementation of the
-//! [DataAvailabilityProvider] trait for the Plasma protocol. Used as an adapter to the
+//! [DataAvailabilityProvider] trait for the Plasma source. Used as an adapter to the
 //! [kona_derive] crate's derivation pipeline construction.
-//!
-//! [DataAvailabilityProvider]: kona_derive::traits::DataAvailabilityProvider
 
 use crate::{source::PlasmaSource, traits::PlasmaInputFetcher};
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
-use kona_derive::{
-    traits::{ChainProvider, DataAvailabilityProvider},
-    types::{BlockInfo, RollupConfig},
-};
-use kona_primitives::BlockID;
+use kona_derive::traits::{ChainProvider, DataAvailabilityProvider};
+use kona_primitives::BlockInfo;
 
-/// A factory for creating an Ethereum data source provider.
+/// The plasma data source implements the [DataAvailabilityProvider] trait for the Plasma source.
 #[derive(Debug, Clone, Copy)]
-pub struct PlasmaDataSource<C, PIF, I>
+pub struct PlasmaDataSource<C, F, I>
 where
     C: ChainProvider + Send + Clone,
-    PIF: PlasmaInputFetcher<C> + Clone,
+    F: PlasmaInputFetcher<C> + Clone,
     I: Iterator<Item = Bytes> + Send + Clone,
 {
-    /// The chain provider to use for the factory.
+    /// The chain provider.
     pub chain_provider: C,
+    /// The plasma input fetcher.
+    pub plasma_input_fetcher: F,
     /// The plasma iterator.
     pub plasma_source: I,
-    /// The plasma input fetcher.
-    pub plasma_input_fetcher: PIF,
-    /// The L1 Signer.
-    pub signer: Address,
 }
 
-impl<C, PIF, I> PlasmaDataSource<C, PIF, I>
+impl<C, F, I> PlasmaDataSource<C, F, I>
 where
     C: ChainProvider + Send + Clone + Debug,
-    PIF: PlasmaInputFetcher<C> + Clone,
+    F: PlasmaInputFetcher<C> + Clone,
     I: Iterator<Item = Bytes> + Send + Clone,
 {
-    /// Creates a new factory.
-    pub fn new(provider: C, pif: PIF, s: I, cfg: &RollupConfig) -> Self {
-        Self {
-            chain_provider: provider,
-            plasma_source: s,
-            plasma_input_fetcher: pif,
-            signer: cfg.genesis.system_config.batcher_addr,
-        }
+    /// Creates a new [PlasmaDataSource] from the given providers.
+    pub fn new(chain_provider: C, plasma_input_fetcher: F, plasma_source: I) -> Self {
+        Self { chain_provider, plasma_input_fetcher, plasma_source }
     }
 }
 
@@ -61,12 +49,11 @@ where
     type DataIter = PlasmaSource<C, PIF, I>;
 
     async fn open_data(&self, block_ref: &BlockInfo, _: Address) -> Result<Self::DataIter> {
-        let id = BlockID { hash: block_ref.hash, number: block_ref.number };
         Ok(PlasmaSource::new(
             self.chain_provider.clone(),
             self.plasma_input_fetcher.clone(),
             self.plasma_source.clone(),
-            id,
+            block_ref.id(),
         ))
     }
 }
