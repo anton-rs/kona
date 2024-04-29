@@ -18,12 +18,9 @@ pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatch
         r.advance(1);
     }
 
-    // Copy the reader, as we need to read the header to determine if the payload is a list.
-    // TODO(clabby): This is horribly inefficient. It'd be nice if we could peek at this rather than
-    // forcibly having to advance the buffer passed, should read more into the alloy rlp docs to
-    // see if this is possible.
-    let r_copy = Vec::from(*r);
-    let rlp_header = Header::decode(&mut r_copy.as_slice())
+    // Read the RLP header with a different reader pointer. This prevents the initial pointer from
+    // being advanced in the case that what we read is invalid.
+    let rlp_header = Header::decode(&mut (**r).as_ref())
         .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
 
     let tx_payload = if rlp_header.list {
