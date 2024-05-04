@@ -9,13 +9,19 @@ test: build-cannon-examples build-asterisc-examples test-cannon test-asterisc
 
 # Build cannon programs
 build-cannon-examples:
-  @cd ../examples/minimal && just build-cannon --release
-  @cd ../examples/simple-revm && just build-cannon --release
+  @cd ../examples/minimal && just build-cannon --profile release-client
+  @cd ../examples/simple-revm && just build-cannon --profile release-client
+  @mkdir -p bin/cannon
+  @cp ../target/mips-unknown-none/release-client/minimal bin/cannon/minimal
+  @cp ../target/mips-unknown-none/release-client/simple-revm bin/cannon/simple-revm
 
 # Build asterisc programs
 build-asterisc-examples:
-  @cd ../examples/minimal && just build-asterisc --release
-  @cd ../examples/simple-revm && just build-asterisc --release
+  @cd ../examples/minimal && just build-asterisc --profile release-client
+  @cd ../examples/simple-revm && just build-asterisc --profile release-client
+  @mkdir -p bin/asterisc
+  @cp ../target/riscv64gc-unknown-none-elf/release-client/minimal bin/asterisc/minimal
+  @cp ../target/riscv64gc-unknown-none-elf/release-client/simple-revm bin/asterisc/simple-revm
 
 # Test programs on `cannon`
 test-cannon: test-cannon-go test-cannon-rs

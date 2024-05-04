@@ -10,7 +10,7 @@ use std::{collections::HashMap, io::BufWriter};
 #[test]
 fn test_simple_revm() {
     let elf_bytes = include_bytes!(
-        "../../../examples/simple-revm/target/mips-unknown-none/release/simple-revm"
+        "../../bin/cannon/simple-revm"
     );
     let mut state = load_elf(elf_bytes).unwrap();
     patch_stack(&mut state).unwrap();

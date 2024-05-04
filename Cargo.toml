@@ -25,3 +25,9 @@ overflow-checks = false
 
 [profile.bench]
 debug = true
+
+[profile.release-client]
+inherits = "release"
+panic = "abort"
+codegen-units = 1
+lto = "fat"

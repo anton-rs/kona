@@ -36,8 +36,8 @@ jobs:
         with:
           name: images-${{ matrix.fpvm }}
           path: |
-            examples/minimal/target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release/minimal
-            examples/simple-revm/target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release/simple-revm
+            target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release-client/minimal
+            target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release-client/simple-revm
   fpvm-example-tests:
     needs: build-example-programs
     runs-on: ubuntu-latest
@@ -45,6 +45,8 @@ jobs:
     strategy:
       matrix:
         fpvm: ["cannon-go", "cannon-rs", "asterisc"]
+    env:
+      FPVM: ${{ matrix.fpvm }}
     name: ${{ matrix.fpvm }}-tests
     steps:
       - name: Checkout sources
@@ -93,8 +95,9 @@ jobs:
           name: images-${{ contains(matrix.fpvm, 'cannon') && 'cannon' || 'asterisc' }}
       - name: Restore Targets
         run: |
-          mv minimal/target examples/minimal
-          mv simple-revm/target examples/simple-revm
+          mkdir -p fpvm-tests/bin/$FPVM
+          mv minimal fpvm-tests/bin/$FPVM
+          mv simple-revm fpvm-tests/bin/$FPVM
       - name: Run FPVM tests
         working-directory: ./fpvm-tests
         run: just test-${{ matrix.fpvm }}

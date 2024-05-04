@@ -1,13 +1,8 @@
 [package]
 name = "minimal"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+publish = false
 
 [dependencies]
 kona-common = { path = "../../crates/common" }
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"

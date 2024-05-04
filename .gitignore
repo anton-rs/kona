@@ -3,5 +3,6 @@ target
 
 # Example targets
 examples/**/target
+fpvm-tests/bin
 
 .DS_Store
