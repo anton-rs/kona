@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*", "bin/host"]
-exclude = ["examples/minimal", "examples/simple-revm", "fpvm-tests/cannon-rs-tests"]
+members = ["crates/*", "bin/host", "examples/*"]
+exclude = ["fpvm-tests/cannon-rs-tests"]
 resolver = "2"
 
 [workspace.package]

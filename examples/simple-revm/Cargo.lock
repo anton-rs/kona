@@ -39,9 +39,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-primitives"
-version = "0.7.0"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99bbad0a6b588ef4aec1b5ddbbfdacd9ef04e00b979617765b03174318ee1f3a"
+checksum = "525448f6afc1b70dd0f9d0a8145631bf2f5e434678ab23ab18409ca264cae6b3"
 dependencies = [
  "bytes",
  "cfg-if",
@@ -385,7 +385,7 @@ dependencies = [
 name = "kona-preimage"
 version = "0.0.1"
 dependencies = [
- "alloy-primitives 0.7.0",
+ "alloy-primitives 0.7.2",
  "anyhow",
  "cfg-if",
  "kona-common",

@@ -1,5 +1,5 @@
 #![no_std]
-#![no_main]
+#![cfg_attr(any(target_arch = "mips", target_arch = "riscv64"), no_main)]
 
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
@@ -18,6 +18,7 @@ use revm::{
 
 extern crate alloc;
 
+#[allow(dead_code)]
 const HEAP_SIZE: usize = 0xFFFFFFF;
 
 const EVM_ID_ADDRESS: Address = address!("dead00000000000000000000000000000000beef");
@@ -32,8 +33,12 @@ static CLIENT_PREIMAGE_PIPE: PipeHandle =
 static CLIENT_HINT_PIPE: PipeHandle =
     PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
 
-#[no_mangle]
+#[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
 pub extern "C" fn _start() {
+    main()
+}
+
+fn main() {
     kona_common::alloc_heap!(HEAP_SIZE);
 
     let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
@@ -45,7 +50,7 @@ pub extern "C" fn _start() {
     match run_evm(&mut oracle, &hint_writer, digest, code) {
         Ok(_) => io::print("Success, hashes matched!\n"),
         Err(e) => {
-            let _ = io::print_err(alloc::format!("Error: {}\n", e).as_ref());
+            io::print_err(alloc::format!("Error: {}\n", e).as_ref());
             io::exit(1);
         }
     }
@@ -100,11 +105,7 @@ fn run_evm(
     // Call EVM identity contract.
     let value = call_evm(&mut evm)?;
     if value.as_ref() != evm.context.evm.env.tx.data.as_ref() {
-        bail!(alloc::format!(
-            "Expected: {} | Got: {}\n",
-            hex::encode(digest),
-            hex::encode(value)
-        ));
+        bail!(alloc::format!("Expected: {} | Got: {}\n", hex::encode(digest), hex::encode(value)));
     }
 
     // Set up SHA2 precompile call
@@ -115,11 +116,7 @@ fn run_evm(
     // Call SHA2 precompile.
     let value = call_evm(&mut evm)?;
     if value.as_ref() != digest.as_ref() {
-        bail!(alloc::format!(
-            "Expected: {} | Got: {}\n",
-            hex::encode(digest),
-            hex::encode(value)
-        ));
+        bail!(alloc::format!("Expected: {} | Got: {}\n", hex::encode(digest), hex::encode(value)));
     }
 
     Ok(())
@@ -133,19 +130,15 @@ where
     DB: Database,
     <DB as revm::Database>::Error: core::fmt::Display,
 {
-    let ref_tx = evm
-        .transact()
-        .map_err(|e| anyhow!("Failed state transition: {}", e))?;
+    let ref_tx = evm.transact().map_err(|e| anyhow!("Failed state transition: {}", e))?;
     let value = match ref_tx.result {
-        ExecutionResult::Success {
-            output: Output::Call(value),
-            ..
-        } => value,
+        ExecutionResult::Success { output: Output::Call(value), .. } => value,
         e => bail!("EVM Execution failed: {:?}", e),
     };
     Ok(value)
 }
 
+#[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     let msg = alloc::format!("Panic: {}", info);
