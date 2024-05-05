@@ -6,6 +6,9 @@
 
 extern crate alloc;
 
+mod db;
+pub use db::{TrieAccount, TrieCacheDB};
+
 mod node;
 pub use node::TrieNode;
 
