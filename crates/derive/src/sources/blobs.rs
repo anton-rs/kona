@@ -136,7 +136,11 @@ where
             return Ok(());
         }
 
-        let blobs = self.blob_fetcher.get_blobs(&self.block_ref, blob_hashes).await?;
+        let blobs =
+            self.blob_fetcher.get_blobs(&self.block_ref, &blob_hashes).await.map_err(|e| {
+                warn!("Failed to fetch blobs: {e}");
+                anyhow::anyhow!("Failed to fetch blobs: {e}")
+            })?;
 
         // Fill the blob pointers.
         let mut blob_index = 0;

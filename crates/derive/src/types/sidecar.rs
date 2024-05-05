@@ -3,6 +3,11 @@
 use crate::types::Blob;
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::FixedBytes;
+
+#[cfg(feature = "online")]
+use crate::types::IndexedBlobHash;
+#[cfg(feature = "online")]
+use alloy_primitives::B256;
 #[cfg(feature = "online")]
 use c_kzg::{Bytes48, KzgProof, KzgSettings};
 #[cfg(feature = "online")]
@@ -37,6 +42,7 @@ where
 {
     String::deserialize(de)?.parse().map_err(serde::de::Error::custom)
 }
+
 /// A blob sidecar.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -55,6 +61,37 @@ pub struct BlobSidecar {
 }
 
 impl BlobSidecar {
+    /// Verify the blob sidecar against it's [IndexedBlobHash].
+    #[cfg(feature = "online")]
+    pub fn verify_blob(&self, hash: &IndexedBlobHash) -> anyhow::Result<()> {
+        if self.index as usize != hash.index {
+            return Err(anyhow::anyhow!(
+                "invalid sidecar ordering, blob hash index {} does not match sidecar index {}",
+                hash.index,
+                self.index
+            ));
+        }
+
+        // Ensure the blob's kzg commitment hashes to the expected value.
+        if self.to_kzg_versioned_hash() != hash.hash {
+            return Err(anyhow::anyhow!(
+                "expected hash {} for blob at index {} but got {}",
+                hash.hash,
+                hash.index,
+                B256::from(self.to_kzg_versioned_hash())
+            ));
+        }
+
+        // Confirm blob data is valid by verifying its proof against the commitment
+        match self.verify_blob_kzg_proof() {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(anyhow::anyhow!("blob at index {} failed verification", self.index)),
+            Err(e) => {
+                Err(anyhow::anyhow!("blob at index {} failed verification: {}", self.index, e))
+            }
+        }
+    }
+
     /// Verifies the blob kzg proof.
     #[cfg(feature = "online")]
     pub fn verify_blob_kzg_proof(&self) -> anyhow::Result<bool> {
