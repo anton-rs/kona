@@ -13,10 +13,14 @@ homepage.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
-alloy-rlp = { workspace = true, default-features = false }
+alloy-rlp.workspace = true
+alloy-consensus.workspace = true
 
 # External
 alloy-trie = { version = "0.3.1", default-features = false }
+smallvec = "1.13"
+revm-primitives = { version = "3.1.1", default-features = false }
+revm = { version = "8.0.0", default-features = false }
 
 [dev-dependencies]
 alloy-consensus.workspace = true
@@ -26,3 +30,4 @@ alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
 reqwest = "0.12"
 tracing-subscriber = "0.3.18"
+futures = { version = "0.3.30", default-features = false }

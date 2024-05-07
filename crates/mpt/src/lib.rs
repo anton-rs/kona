@@ -7,7 +7,7 @@
 extern crate alloc;
 
 mod node;
-pub use node::{NodeElement, TrieNode};
+pub use node::TrieNode;
 
 mod list_walker;
 pub use list_walker::OrderedListWalker;
