@@ -1,7 +1,7 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation
 //! pipeline's stages.
 
-use crate::types::{Blob, BlockInfo, IndexedBlobHash, StageResult};
+use crate::types::{Blob, BlobProviderError, BlockInfo, IndexedBlobHash, StageResult};
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
@@ -14,8 +14,8 @@ pub trait BlobProvider {
     async fn get_blobs(
         &mut self,
         block_ref: &BlockInfo,
-        blob_hashes: Vec<IndexedBlobHash>,
-    ) -> Result<Vec<Blob>>;
+        blob_hashes: &[IndexedBlobHash],
+    ) -> Result<Vec<Blob>, BlobProviderError>;
 }
 
 /// Describes the functionality of a data source that can provide data availability information.

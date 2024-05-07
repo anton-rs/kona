@@ -123,6 +123,47 @@ impl Display for StageError {
     }
 }
 
+/// An error returned by the [BlobProviderError].
+#[derive(Debug)]
+pub enum BlobProviderError {
+    /// The number of specified blob hashes did not match the number of returned sidecars.
+    SidecarLengthMismatch(usize, usize),
+    /// Slot derivation error.
+    Slot(anyhow::Error),
+    /// A custom [anyhow::Error] occurred.
+    Custom(anyhow::Error),
+}
+
+impl PartialEq for BlobProviderError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::SidecarLengthMismatch(a, b), Self::SidecarLengthMismatch(c, d)) => {
+                a == c && b == d
+            }
+            (Self::Slot(_), Self::Slot(_)) | (Self::Custom(_), Self::Custom(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Display for BlobProviderError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::SidecarLengthMismatch(a, b) => write!(f, "expected {} sidecars but got {}", a, b),
+            Self::Slot(e) => {
+                write!(f, "Slot Derivation Error: {}", e)
+            }
+            Self::Custom(err) => write!(f, "{}", err),
+        }
+    }
+}
+
+impl From<anyhow::Error> for BlobProviderError {
+    fn from(err: anyhow::Error) -> Self {
+        Self::Custom(err)
+    }
+}
+
 /// A reset error
 #[derive(Debug)]
 pub enum ResetError {
