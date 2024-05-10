@@ -268,7 +268,7 @@ where
             if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
                 return self
                     .pop_next_batch(parent)
-                    .ok_or(anyhow!("failed to pop next batch from span batch").into());
+                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch").into());
             }
             // Parent block does not match the next batch.
             // Means the previously returned batch is invalid.

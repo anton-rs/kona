@@ -138,7 +138,7 @@ mod test {
         let host = tokio::task::spawn(async move {
             let mut v = Vec::new();
             let route_hint = |hint: String| {
-                v.push(hint.clone());
+                v.push(hint);
                 Ok(())
             };
             hint_reader.next_hint(route_hint).unwrap();

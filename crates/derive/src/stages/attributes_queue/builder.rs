@@ -119,11 +119,13 @@ where
             ));
         }
 
-        let mut upgrade_transactions: Vec<RawTransaction> = vec![];
-        if self.rollup_cfg.is_ecotone_active(next_l2_time) {
-            upgrade_transactions =
-                EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
-        }
+        // Build upgrade transactions using the ecotone builder.
+        let upgrade_transactions: Vec<RawTransaction> =
+            if self.rollup_cfg.is_ecotone_active(next_l2_time) {
+                EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?
+            } else {
+                vec![]
+            };
 
         // Build and encode the L1 info transaction for the current payload.
         let (_, l1_info_tx_envelope) = L1BlockInfoTx::try_new_with_deposit_tx(
@@ -142,16 +144,19 @@ where
         txs.extend(deposit_transactions);
         txs.extend(upgrade_transactions);
 
-        let mut withdrawals = None;
-        if self.rollup_cfg.is_canyon_active(next_l2_time) {
-            withdrawals = Some(Vec::default());
-        }
+        // Initialize withdrawals if canyon is active.
+        let withdrawals = if self.rollup_cfg.is_canyon_active(next_l2_time) {
+            Some(Vec::default())
+        } else {
+            None
+        };
 
-        let mut parent_beacon_root = None;
-        if self.rollup_cfg.is_ecotone_active(next_l2_time) {
-            // if the parent beacon root is not available, default to zero hash
-            parent_beacon_root = Some(l1_header.parent_beacon_block_root.unwrap_or_default());
-        }
+        // Set the parent beacon block root if ecotone is active.
+        let parent_beacon_root = if self.rollup_cfg.is_ecotone_active(next_l2_time) {
+            Some(l1_header.parent_beacon_block_root.unwrap_or_default())
+        } else {
+            None
+        };
 
         Ok(L2PayloadAttributes {
             timestamp: next_l2_time,

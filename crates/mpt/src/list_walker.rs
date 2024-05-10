@@ -59,13 +59,13 @@ where
         if !ordered_list.is_empty() {
             if ordered_list.len() <= EMPTY_STRING_CODE as usize {
                 // If the list length is < 0x80, the final element is the first element.
-                let first = ordered_list.pop_back().ok_or(anyhow!("Empty list fetched"))?;
+                let first = ordered_list.pop_back().ok_or_else(|| anyhow!("Empty list fetched"))?;
                 ordered_list.push_front(first);
             } else {
                 // If the list length is > 0x80, the element at index 0x80-1 is the first element.
                 let first = ordered_list
                     .remove((EMPTY_STRING_CODE - 1) as usize)
-                    .ok_or(anyhow!("Empty list fetched"))?;
+                    .ok_or_else(|| anyhow!("Empty list fetched"))?;
                 ordered_list.push_front(first);
             }
         }

@@ -73,12 +73,12 @@ pub(crate) async fn get_live_derivable_receipts_list(
         .get_block(block_number.into(), true)
         .await
         .map_err(|e| anyhow!(e))?
-        .ok_or(anyhow!("Missing block"))?;
+        .ok_or_else(|| anyhow!("Missing block"))?;
     let receipts = provider
         .get_block_receipts(block_number.into())
         .await
         .map_err(|e| anyhow!(e))?
-        .ok_or(anyhow!("Missing receipts"))?;
+        .ok_or_else(|| anyhow!("Missing receipts"))?;
 
     let consensus_receipts = receipts
         .into_iter()
@@ -138,7 +138,7 @@ pub(crate) async fn get_live_derivable_transactions_list(
         .get_block(block_number.into(), true)
         .await
         .map_err(|e| anyhow!(e))?
-        .ok_or(anyhow!("Missing block"))?;
+        .ok_or_else(|| anyhow!("Missing block"))?;
 
     let BlockTransactions::Full(txs) = block.transactions else {
         anyhow::bail!("Did not fetch full block");

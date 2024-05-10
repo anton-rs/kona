@@ -43,7 +43,7 @@ where
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
-        Self { prev, next_batch: None, cfg: cfg.clone() }
+        Self { prev, next_batch: None, cfg }
     }
 
     /// Creates the batch reader from available channel data.

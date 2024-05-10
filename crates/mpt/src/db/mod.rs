@@ -251,10 +251,10 @@ where
                             Ok(U256::ZERO)
                         } else {
                             let fetcher = self.preimage_fetcher;
-                            let storage_root = self
-                                .storage_roots
-                                .get_mut(&address)
-                                .ok_or(anyhow!("Storage root not found for account {address}"))?;
+                            let storage_root =
+                                self.storage_roots.get_mut(&address).ok_or_else(|| {
+                                    anyhow!("Storage root not found for account {address}")
+                                })?;
 
                             let hashed_slot_key = keccak256(index.to_be_bytes::<32>().as_slice());
                             let slot_value =

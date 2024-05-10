@@ -41,7 +41,7 @@ pub struct L2PayloadAttributes {
 }
 
 /// Payload Attributes with parent block reference.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct L2AttributesWithParent {
     /// The payload attributes.
     pub attributes: L2PayloadAttributes,

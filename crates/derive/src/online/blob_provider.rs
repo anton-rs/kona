@@ -156,7 +156,8 @@ where
             .into_iter()
             .enumerate()
             .map(|(i, sidecar)| {
-                let hash = blob_hashes.get(i).ok_or(anyhow::anyhow!("failed to get blob hash"))?;
+                let hash =
+                    blob_hashes.get(i).ok_or_else(|| anyhow::anyhow!("failed to get blob hash"))?;
                 match sidecar.verify_blob(hash) {
                     Ok(_) => Ok(sidecar.blob),
                     Err(e) => Err(e),

@@ -186,7 +186,7 @@ mod test {
         });
         let host = tokio::task::spawn(async move {
             let get_preimage =
-                |key| preimages.get(&key).ok_or(anyhow::anyhow!("Preimage not available"));
+                |key| preimages.get(&key).ok_or_else(|| anyhow::anyhow!("Preimage not available"));
 
             loop {
                 if oracle_server.next_preimage_request(get_preimage).is_err() {

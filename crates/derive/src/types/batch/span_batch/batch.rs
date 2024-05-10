@@ -113,8 +113,7 @@ impl SpanBatch {
         // If the span batch does not overlap the current safe chain, parent block should be the L2
         // safe head.
         let mut parent_num = l2_safe_head.block_info.number;
-        let mut parent_block = l2_safe_head;
-        if self.timestamp() < next_timestamp {
+        let parent_block = if self.timestamp() < next_timestamp {
             if self.timestamp() > l2_safe_head.block_info.timestamp {
                 // Batch timestamp cannot be between safe head and next timestamp.
                 warn!("batch has misaligned timestamp, block time is too short");
@@ -127,15 +126,18 @@ impl SpanBatch {
             parent_num = l2_safe_head.block_info.number -
                 (l2_safe_head.block_info.timestamp - self.timestamp()) / cfg.block_time -
                 1;
-            parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
+            match fetcher.l2_block_info_by_number(parent_num).await {
                 Ok(block) => block,
                 Err(e) => {
                     warn!("failed to fetch L2 block number {parent_num}: {e}");
                     // Unable to validate the batch for now. Retry later.
                     return BatchValidity::Undecided;
                 }
-            };
-        }
+            }
+        } else {
+            l2_safe_head
+        };
+
         if !self.check_parent_hash(parent_block.block_info.parent_hash) {
             warn!(
                 "parent block number mismatch, expected: {parent_num}, received: {}, parent hash: {}, self hash: {}",

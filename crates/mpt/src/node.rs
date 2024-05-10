@@ -146,9 +146,9 @@ impl TrieNode {
                 let branch_nibble = path[nibble_offset] as usize;
                 nibble_offset += BRANCH_NODE_NIBBLES;
 
-                let branch_node = stack
-                    .get_mut(branch_nibble)
-                    .ok_or(anyhow!("Key does not exist in trie (branch element not found)"))?;
+                let branch_node = stack.get_mut(branch_nibble).ok_or_else(|| {
+                    anyhow!("Key does not exist in trie (branch element not found)")
+                })?;
                 match branch_node {
                     TrieNode::Empty => {
                         anyhow::bail!("Key does not exist in trie (empty node in branch)")
@@ -461,7 +461,7 @@ mod test {
                 acc
             });
         let fetcher = |h: B256| -> Result<Bytes> {
-            preimages.get(&h).cloned().ok_or(anyhow!("Failed to find preimage"))
+            preimages.get(&h).cloned().ok_or_else(|| anyhow!("Failed to find preimage"))
         };
 
         let mut root_node = TrieNode::decode(&mut fetcher(root).unwrap().as_ref()).unwrap();
