@@ -10,7 +10,7 @@ import (
 )
 
 func TestMinimal(t *testing.T) {
-	programELF, err := elf.Open("../../examples/minimal/target/riscv64gc-unknown-none-elf/release/minimal")
+	programELF, err := elf.Open("../../target/riscv64gc-unknown-none-elf/release-client-lto/minimal")
 	require.NoError(t, err)
 	defer programELF.Close()
 

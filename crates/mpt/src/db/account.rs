@@ -2,7 +2,7 @@
 
 use alloy_primitives::{B256, U256};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use revm_primitives::{Account, AccountInfo};
+use revm::primitives::{Account, AccountInfo};
 
 /// An Ethereum account as represented in the trie.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, RlpEncodable, RlpDecodable)]

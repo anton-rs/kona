@@ -1,0 +1,19 @@
+set positional-arguments
+
+# Build for the `cannon` target
+build-cannon *args='':
+  docker run \
+    --rm \
+    --platform linux/amd64 \
+    -v `pwd`/../../../:/workdir \
+    -w="/workdir/bin/programs/simple-revm" \
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build -Zbuild-std --bin simple-revm $@
+
+# Build for the `asterisc` target
+build-asterisc *args='':
+  docker run \
+    --rm \
+    --platform linux/amd64 \
+    -v `pwd`/../../../:/workdir \
+    -w="/workdir/bin/programs/simple-revm" \
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build -Zbuild-std --bin simple-revm $@

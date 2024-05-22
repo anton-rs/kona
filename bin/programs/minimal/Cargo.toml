@@ -1,0 +1,18 @@
+[package]
+name = "minimal"
+version = "0.1.0"
+publish = false
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+cfg-if.workspace = true
+kona-common = { path = "../../../crates/common" }
+kona-common-proc = { path = "../../../crates/common-proc" }
+
+[[bin]]
+name = "minimal"
+path = "src/main.rs"

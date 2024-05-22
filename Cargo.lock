@@ -141,9 +141,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-primitives"
-version = "0.7.1"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50c715249705afa1e32be79dabfd35e2ef0f1cc02ad2cf48c9d1e20026ee637b"
+checksum = "db8aa973e647ec336810a9356af8aea787249c9d00b1525359f3db29a68d231b"
 dependencies = [
  "alloy-rlp",
  "bytes",
@@ -1550,6 +1550,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-common-proc"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "cfg-if",
+ "kona-common",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.60",
+]
+
+[[package]]
 name = "kona-derive"
 version = "0.0.1"
 dependencies = [
@@ -1572,7 +1584,7 @@ dependencies = [
  "op-alloy-consensus",
  "proptest",
  "reqwest",
- "revm-primitives",
+ "revm-primitives 3.1.1",
  "serde",
  "serde_json",
  "sha2",
@@ -1611,7 +1623,6 @@ dependencies = [
  "futures",
  "reqwest",
  "revm",
- "revm-primitives",
  "smallvec",
  "tokio",
  "tracing",
@@ -1734,6 +1745,15 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
+
+[[package]]
+name = "minimal"
+version = "0.1.0"
+dependencies = [
+ "cfg-if",
+ "kona-common",
+ "kona-common-proc",
+]
 
 [[package]]
 name = "miniz_oxide"
@@ -2276,9 +2296,9 @@ dependencies = [
 
 [[package]]
 name = "revm"
-version = "8.0.0"
+version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72a454c1c650b2b2e23f0c461af09e6c31e1d15e1cbebe905a701c46b8a50afc"
+checksum = "3a2c336f9921588e50871c00024feb51a521eca50ce6d01494bb9c50f837c8ed"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -2289,23 +2309,23 @@ dependencies = [
 
 [[package]]
 name = "revm-interpreter"
-version = "4.0.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d322f2730cd300e99d271a1704a2dfb8973d832428f5aa282aaa40e2473b5eec"
+checksum = "a58182c7454179826f9dad2ca577661963092ce9d0fd0c9d682c1e9215a72e70"
 dependencies = [
- "revm-primitives",
+ "revm-primitives 4.0.0",
 ]
 
 [[package]]
 name = "revm-precompile"
-version = "6.0.0"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "931f692f3f4fc72ec39d5d270f8e9d208c4a6008de7590ee96cf948e3b6d3f8d"
+checksum = "dc8af9aa737eef0509a50d9f3cc1a631557a00ef2e70a3aa8a75d9ee0ed275bb"
 dependencies = [
  "aurora-engine-modexp",
  "k256",
  "once_cell",
- "revm-primitives",
+ "revm-primitives 4.0.0",
  "ripemd",
  "sha2",
  "substrate-bn",
@@ -2330,6 +2350,23 @@ dependencies = [
  "hex",
  "once_cell",
  "serde",
+]
+
+[[package]]
+name = "revm-primitives"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9bf5d465e64b697da6a111cb19e798b5b2ebb18e5faf2ad48e9e8d47c64add2"
+dependencies = [
+ "alloy-primitives",
+ "auto_impl",
+ "bitflags 2.5.0",
+ "bitvec",
+ "cfg-if",
+ "dyn-clone",
+ "enumn",
+ "hashbrown",
+ "hex",
 ]
 
 [[package]]
@@ -2634,6 +2671,18 @@ checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
 dependencies = [
  "digest 0.10.7",
  "rand_core",
+]
+
+[[package]]
+name = "simple-revm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cfg-if",
+ "kona-common",
+ "kona-common-proc",
+ "kona-preimage",
+ "revm",
 ]
 
 [[package]]

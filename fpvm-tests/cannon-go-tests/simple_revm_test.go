@@ -81,7 +81,7 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 }
 
 func TestSimpleRevm(t *testing.T) {
-	elfProgram, err := elf.Open("../../examples/simple-revm/target/mips-unknown-none/release/simple-revm")
+	elfProgram, err := elf.Open("../../target/mips-unknown-none/release-client-lto/simple-revm")
 	require.NoError(t, err, "open ELF file")
 
 	state, err := mipsevm.LoadELF(elfProgram)

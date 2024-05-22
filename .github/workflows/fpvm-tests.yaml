@@ -20,8 +20,7 @@ jobs:
           cache-on-failure: true
           prefix-key: ${{ matrix.fpvm }}
           cache-directories: |
-            examples/minimal/target
-            examples/simple-revm/target
+            target/
       - uses: taiki-e/install-action@just
       - name: Log into ghcr
         uses: docker/login-action@v3
@@ -36,8 +35,8 @@ jobs:
         with:
           name: images-${{ matrix.fpvm }}
           path: |
-            examples/minimal/target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release/minimal
-            examples/simple-revm/target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release/simple-revm
+            target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release-client-lto/minimal
+            target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release-client-lto/simple-revm
   fpvm-example-tests:
     needs: build-example-programs
     runs-on: ubuntu-latest
@@ -46,6 +45,8 @@ jobs:
       matrix:
         fpvm: ["cannon-go", "cannon-rs", "asterisc"]
     name: ${{ matrix.fpvm }}-tests
+    env:
+      TARGET_NAME: ${{ contains(matrix.fpvm, 'cannon') && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -93,8 +94,9 @@ jobs:
           name: images-${{ contains(matrix.fpvm, 'cannon') && 'cannon' || 'asterisc' }}
       - name: Restore Targets
         run: |
-          mv minimal/target examples/minimal
-          mv simple-revm/target examples/simple-revm
+          mkdir -p target/$TARGET_NAME/release-client-lto/
+          mv minimal target/$TARGET_NAME/release-client-lto
+          mv simple-revm target/$TARGET_NAME/release-client-lto
       - name: Run FPVM tests
         working-directory: ./fpvm-tests
         run: just test-${{ matrix.fpvm }}

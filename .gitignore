@@ -1,7 +1,5 @@
-# Rust target
-target
-
-# Example targets
-examples/**/target
-
+# MacOS dust
 .DS_Store
+
+# Rust target
+target/

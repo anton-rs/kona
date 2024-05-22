@@ -15,12 +15,11 @@ tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp.workspace = true
 alloy-consensus.workspace = true
+revm.workspace = true
 
 # External
 alloy-trie = { version = "0.3.1", default-features = false }
 smallvec = "1.13"
-revm-primitives = { version = "3.1.1", default-features = false }
-revm = { version = "8.0.0", default-features = false }
 
 [dev-dependencies]
 alloy-consensus.workspace = true
