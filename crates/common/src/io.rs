@@ -59,6 +59,7 @@ mod native_io {
     extern crate std;
 
     use crate::{io::FileDescriptor, traits::BasicKernelInterface};
+    use alloc::boxed::Box;
     use anyhow::{anyhow, Result};
     use std::{
         fs::File,
@@ -73,7 +74,10 @@ mod native_io {
     impl BasicKernelInterface for NativeIO {
         fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
             let raw_fd: usize = fd.into();
-            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+            let file = unsafe {
+                let b = Box::new(File::from_raw_fd(raw_fd as i32));
+                Box::leak(b)
+            };
             let n = file
                 .write(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
@@ -82,20 +86,17 @@ mod native_io {
             file.seek(SeekFrom::Current(-(buf.len() as i64)))
                 .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
 
-            // forget the file descriptor so that the `Drop` impl doesn't close it.
-            std::mem::forget(file);
-
             Ok(n)
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
             let raw_fd: usize = fd.into();
-            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+            let file = unsafe {
+                let b = Box::new(File::from_raw_fd(raw_fd as i32));
+                Box::leak(b)
+            };
             let n =
                 file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
-
-            // forget the file descriptor so that the `Drop` impl doesn't close it.
-            std::mem::forget(file);
 
             Ok(n)
         }
