@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*", "bin/host"]
-exclude = ["examples/minimal", "examples/simple-revm", "fpvm-tests/cannon-rs-tests"]
+members = ["crates/*", "bin/host", "bin/programs/*"]
+exclude = ["fpvm-tests/cannon-rs-tests", "bin/programs/optimism"]
 resolver = "2"
 
 [workspace.package]
@@ -12,12 +12,16 @@ homepage = "https://github.com/ethereum-optimism/kona"
 exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
+# General
 anyhow = { version = "1.0.79", default-features = false }
 tracing = { version = "0.1.40", default-features = false }
 cfg-if = "1.0.0"
+
+# Ethereum
 alloy-primitives = { version = "0.7.1", default-features = false }
 alloy-rlp = { version = "0.3.4", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
+revm = { version = "9.0.0", default-features = false }
 
 [profile.dev]
 opt-level = 1
@@ -25,3 +29,13 @@ overflow-checks = false
 
 [profile.bench]
 debug = true
+
+[profile.dev-client]
+inherits = "dev"
+panic = "abort"
+
+[profile.release-client-lto]
+inherits = "release"
+panic = "abort"
+codegen-units = 1
+lto = "fat"

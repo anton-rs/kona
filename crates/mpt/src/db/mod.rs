@@ -9,9 +9,9 @@ use alloy_trie::Nibbles;
 use anyhow::{anyhow, Result};
 use revm::{
     db::{AccountState, DbAccount},
+    primitives::{hash_map::Entry, Account, AccountInfo, Bytecode, HashMap},
     Database, DatabaseCommit, InMemoryDB,
 };
-use revm_primitives::{hash_map::Entry, Account, AccountInfo, Bytecode, HashMap};
 
 mod account;
 pub use account::TrieAccount;

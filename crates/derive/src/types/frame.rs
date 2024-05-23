@@ -67,8 +67,8 @@ impl Frame {
     /// frame.
     ///
     /// Frames are stored in L1 transactions with the following format:
-    /// * `data = DerivationVersion0 ++ Frame(s)`
-    /// Where there is one or more frames concatenated together.
+    /// * `data = DerivationVersion0 ++ Frame(s)` Where there is one or more frames concatenated
+    ///   together.
     pub fn parse_frames(encoded: &[u8]) -> Result<Vec<Self>> {
         if encoded.is_empty() {
             bail!("No frames to parse");
