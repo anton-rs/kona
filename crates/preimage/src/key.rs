@@ -23,6 +23,10 @@ pub enum PreimageKeyType {
     /// `keccak256(commitment ++ z)`, and then the high-order byte of the digest is set to the
     /// type byte.
     Blob = 5,
+    /// Precompile key types are global and context independent. Precompile keys are constructed as
+    /// `keccak256(precompile_addr ++ input)`, and then the high-order byte of the digest is set to
+    /// the type byte.
+    Precompile = 6,
 }
 
 impl TryFrom<u8> for PreimageKeyType {
@@ -35,6 +39,7 @@ impl TryFrom<u8> for PreimageKeyType {
             3 => PreimageKeyType::GlobalGeneric,
             4 => PreimageKeyType::Sha256,
             5 => PreimageKeyType::Blob,
+            6 => PreimageKeyType::Precompile,
             _ => anyhow::bail!("Invalid preimage key type"),
         })
     }
@@ -108,7 +113,14 @@ mod test {
 
     #[test]
     fn test_preimage_keys() {
-        let types = [PreimageKeyType::Local, PreimageKeyType::Keccak256];
+        let types = [
+            PreimageKeyType::Local,
+            PreimageKeyType::Keccak256,
+            PreimageKeyType::GlobalGeneric,
+            PreimageKeyType::Sha256,
+            PreimageKeyType::Blob,
+            PreimageKeyType::Precompile,
+        ];
 
         for key_type in types {
             let key = PreimageKey::new([0xFFu8; 32], key_type);
