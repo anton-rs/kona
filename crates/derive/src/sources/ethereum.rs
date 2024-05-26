@@ -78,3 +78,71 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use alloy_consensus::TxEnvelope;
+    use alloy_eips::eip2718::Decodable2718;
+    use alloy_primitives::{address, Address};
+    use kona_primitives::{BlockInfo, RollupConfig};
+
+    use crate::{
+        sources::{EthereumDataSource, EthereumDataSourceVariant},
+        traits::{
+            test_utils::{TestBlobProvider, TestChainProvider},
+            AsyncIterator, DataAvailabilityProvider,
+        },
+    };
+
+    #[tokio::test]
+    async fn test_validate_ethereum_data_source() {
+        let chain = TestChainProvider::default();
+        let blob = TestBlobProvider::default();
+        let block_ref = BlockInfo::default();
+        let batcher_address = Address::default();
+
+        // If the ecotone_timestamp is not set, a Calldata source should be returned.
+        let cfg = RollupConfig { ecotone_time: None, ..Default::default() };
+        let data_source = EthereumDataSource::new(chain.clone(), blob.clone(), &cfg);
+        let data_iter = data_source.open_data(&block_ref, batcher_address).await.unwrap();
+        assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
+
+        // If the ecotone_timestamp is set, and the block_ref timestamp is prior to the
+        // ecotone_timestamp, a calldata source is created.
+        let cfg = RollupConfig { ecotone_time: Some(100), ..Default::default() };
+        let data_source = EthereumDataSource::new(chain, blob, &cfg);
+        let data_iter = data_source.open_data(&block_ref, batcher_address).await.unwrap();
+        assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
+
+        // If the ecotone_timestamp is set, and the block_ref timestamp is greater than
+        // or equal to the ecotone_timestamp, a Blob source is created.
+        let block_ref = BlockInfo { timestamp: 101, ..Default::default() };
+        let data_iter = data_source.open_data(&block_ref, batcher_address).await.unwrap();
+        assert!(matches!(data_iter, EthereumDataSourceVariant::Blob(_)));
+    }
+
+    #[tokio::test]
+    async fn test_open_ethereum_calldata_source_pre_ecotone() {
+        let mut chain = TestChainProvider::default();
+        let blob = TestBlobProvider::default();
+        let batcher_address = address!("6887246668a3b87F54DeB3b94Ba47a6f63F32985");
+        let batch_inbox = address!("FF00000000000000000000000000000000000010");
+        let block_ref = BlockInfo { number: 10, ..Default::default() };
+
+        let mut cfg = RollupConfig::default();
+        cfg.genesis.system_config.batcher_addr = batcher_address;
+
+        // load a test batcher transaction
+        let raw_batcher_tx = include_bytes!("../../testdata/raw_batcher_tx.hex");
+        let tx = TxEnvelope::decode_2718(&mut raw_batcher_tx.as_ref()).unwrap();
+        chain.insert_block_with_transactions(10, block_ref, alloc::vec![tx]);
+
+        let data_source = EthereumDataSource::new(chain, blob, &cfg);
+        let mut data_iter = data_source.open_data(&block_ref, batch_inbox).await.unwrap();
+        assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
+
+        // Should successfully retrieve a calldata batch from the block
+        let calldata_batch = data_iter.next().await.unwrap().unwrap();
+        assert_eq!(calldata_batch.len(), 119823);
+    }
+}

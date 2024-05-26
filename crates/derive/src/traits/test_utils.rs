@@ -1,8 +1,10 @@
 //! Test Utilities for derive traits
 
 use crate::{
-    traits::{AsyncIterator, ChainProvider, DataAvailabilityProvider, L2ChainProvider},
-    types::{StageError, StageResult},
+    traits::{
+        AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
+    },
+    types::{Blob, BlobProviderError, IndexedBlobHash, StageError, StageResult},
 };
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
@@ -72,12 +74,25 @@ pub struct TestChainProvider {
     pub headers: Vec<(B256, Header)>,
     /// Maps block hashes to receipts using a tuple list.
     pub receipts: Vec<(B256, Vec<Receipt>)>,
+    /// Maps block hashes to transactions using a tuple list.
+    pub transactions: Vec<(B256, Vec<TxEnvelope>)>,
 }
 
 impl TestChainProvider {
     /// Insert a block into the mock chain provider.
     pub fn insert_block(&mut self, number: u64, block: BlockInfo) {
         self.blocks.push((number, block));
+    }
+
+    /// Insert a block with transactions into the mock chain provider.
+    pub fn insert_block_with_transactions(
+        &mut self,
+        number: u64,
+        block: BlockInfo,
+        txs: Vec<TxEnvelope>,
+    ) {
+        self.blocks.push((number, block));
+        self.transactions.push((block.hash, txs));
     }
 
     /// Insert receipts into the mock chain provider.
@@ -149,7 +164,49 @@ impl ChainProvider for TestChainProvider {
             .find(|(_, b)| b.hash == hash)
             .map(|(_, b)| *b)
             .ok_or_else(|| anyhow::anyhow!("Block not found"))?;
-        Ok((block, Vec::new()))
+        let txs = self
+            .transactions
+            .iter()
+            .find(|(h, _)| *h == hash)
+            .map(|(_, txs)| txs.clone())
+            .unwrap_or_default();
+        Ok((block, txs))
+    }
+}
+
+/// A mock blob provider for testing.
+#[derive(Debug, Clone, Default)]
+pub struct TestBlobProvider {
+    /// Maps block hashes to blob data.
+    pub blobs: HashMap<B256, Blob>,
+}
+
+impl TestBlobProvider {
+    /// Insert a blob into the mock blob provider.
+    pub fn insert_blob(&mut self, hash: B256, blob: Blob) {
+        self.blobs.insert(hash, blob);
+    }
+
+    /// Clears blobs from the mock blob provider.
+    pub fn clear(&mut self) {
+        self.blobs.clear();
+    }
+}
+
+#[async_trait]
+impl BlobProvider for TestBlobProvider {
+    async fn get_blobs(
+        &mut self,
+        _block_ref: &BlockInfo,
+        blob_hashes: &[IndexedBlobHash],
+    ) -> Result<Vec<Blob>, BlobProviderError> {
+        let mut blobs = Vec::new();
+        for blob_hash in blob_hashes {
+            if let Some(data) = self.blobs.get(&blob_hash.hash) {
+                blobs.push(*data);
+            }
+        }
+        Ok(blobs)
     }
 }
 
