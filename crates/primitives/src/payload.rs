@@ -140,7 +140,6 @@ impl L2ExecutionPayloadEnvelope {
             if ty != OpTxType::Deposit as u8 {
                 anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
             }
-
             let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
                 .map_err(|e| anyhow::anyhow!(e))?;
 
