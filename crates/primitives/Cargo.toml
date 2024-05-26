@@ -16,6 +16,7 @@ alloy-primitives = { workspace = true, features = ["rlp"] }
 
 # Alloy Types
 alloy-sol-types = { version = "0.7.1", default-features = false }
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
 op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
 
 # `serde` feature dependencies
