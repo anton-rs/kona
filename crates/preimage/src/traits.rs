@@ -1,6 +1,7 @@
 use crate::PreimageKey;
-use alloc::{string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use anyhow::Result;
+use core::future::Future;
 
 /// A [PreimageOracleClient] is a high-level interface to read data from the host, keyed by a
 /// [PreimageKey].
@@ -36,20 +37,22 @@ pub trait HintWriterClient {
 
 /// A [PreimageOracleServer] is a high-level interface to accept read requests from the client and
 /// write the preimage data to the client pipe.
+#[async_trait::async_trait]
 pub trait PreimageOracleServer {
     /// Get the next preimage request and return the response to the client.
     ///
     /// # Returns
     /// - `Ok(())` if the data was successfully written into the client pipe.
     /// - `Err(_)` if the data could not be written to the client.
-    fn next_preimage_request<'a>(
-        &self,
-        get_preimage: impl FnMut(PreimageKey) -> Result<&'a Vec<u8>>,
-    ) -> Result<()>;
+    async fn next_preimage_request<F, Fut>(&mut self, get_preimage: F) -> Result<()>
+    where
+        F: FnMut(PreimageKey) -> Fut + Send,
+        Fut: Future<Output = Result<Arc<Vec<u8>>>> + Send;
 }
 
 /// A [HintReaderServer] is a high-level interface to read preimage hints from the
 /// [HintWriterClient] and prepare them for consumption by the client program.
+#[async_trait::async_trait]
 pub trait HintReaderServer {
     /// Get the next hint request and return the acknowledgement to the client.
     ///
@@ -57,5 +60,8 @@ pub trait HintReaderServer {
     /// - `Ok(())` if the hint was received and the client was notified of the host's
     ///   acknowledgement.
     /// - `Err(_)` if the hint was not received correctly.
-    fn next_hint(&self, route_hint: impl FnMut(String) -> Result<()>) -> Result<()>;
+    async fn next_hint<F, Fut>(&mut self, route_hint: F) -> Result<()>
+    where
+        F: FnMut(String) -> Fut + Send,
+        Fut: Future<Output = Result<()>> + Send;
 }

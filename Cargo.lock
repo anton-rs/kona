@@ -1652,6 +1652,7 @@ version = "0.0.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
+ "async-trait",
  "cfg-if",
  "kona-common",
  "tempfile",
