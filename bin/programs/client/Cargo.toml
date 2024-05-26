@@ -1,0 +1,13 @@
+[package]
+name = "kona-client"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+cfg-if.workspace = true
+kona-common = { path = "../../../crates/common" }
+kona-common-proc = { path = "../../../crates/common-proc" }

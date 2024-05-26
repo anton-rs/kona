@@ -17,7 +17,7 @@ pub enum FileDescriptor {
     PreimageRead,
     /// Write-only. Used to request pre-images.
     PreimageWrite,
-    /// Other file descriptor, usually used for testing purposes.
+    /// Other file descriptor.
     Wildcard(usize),
 }
 

@@ -91,6 +91,13 @@ impl From<PreimageKey> for [u8; 32] {
     }
 }
 
+impl From<PreimageKey> for B256 {
+    fn from(value: PreimageKey) -> Self {
+        let raw: [u8; 32] = value.into();
+        B256::from(raw)
+    }
+}
+
 impl TryFrom<[u8; 32]> for PreimageKey {
     type Error = anyhow::Error;
 

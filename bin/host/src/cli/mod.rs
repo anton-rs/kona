@@ -9,7 +9,7 @@ mod parser;
 pub(crate) use parser::parse_b256;
 
 mod types;
-pub(crate) use types::{Network, RpcKind};
+pub(crate) use types::Network;
 
 mod tracing_util;
 pub(crate) use tracing_util::init_tracing_subscriber;
@@ -31,7 +31,7 @@ pub struct HostCli {
     pub data_dir: Option<PathBuf>,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
     #[clap(long)]
-    pub l2_node_address: String,
+    pub l2_node_address: Option<String>,
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256)]
     pub l1_head: B256,
@@ -52,23 +52,23 @@ pub struct HostCli {
     pub l2_genesis_path: PathBuf,
     /// Address of L1 JSON-RPC endpoint to use (eth namespace required)
     #[clap(long)]
-    pub l1_node_address: String,
+    pub l1_node_address: Option<String>,
     /// Address of the L1 Beacon API endpoint to use.
     #[clap(long)]
-    pub l1_beacon_address: String,
-    /// Trust the L1 RPC, sync faster at risk of malicious/buggy RPC providing bad or inconsistent
-    /// L1 data
-    #[clap(long)]
-    pub l1_trust_rpc: bool,
-    /// The kind of RPC provider, used to inform optimal transactions receipts fetching, and thus
-    /// reduce costs.
-    #[clap(long)]
-    pub l1_rpc_provider_kind: RpcKind,
+    pub l1_beacon_address: Option<String>,
     /// Run the specified client program as a separate process detached from the host. Default is
     /// to run the client program in the host process.
     #[clap(long)]
     pub exec: String,
-    /// Run in pre-image server mode without executing any client program.
+    /// Run in pre-image server mode without executing any client program. Defaults to `false`.
     #[clap(long)]
     pub server: bool,
+}
+
+impl HostCli {
+    pub fn is_offline(&self) -> bool {
+        self.l1_node_address.is_none() ||
+            self.l2_node_address.is_none() ||
+            self.l1_beacon_address.is_none()
+    }
 }
