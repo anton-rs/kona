@@ -1,8 +1,7 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that stores data in memory.
 
-use alloy_primitives::B256;
-
 use super::KeyValueStore;
+use alloy_primitives::B256;
 use std::collections::HashMap;
 
 /// A simple, synchronous key-value store that stores data in memory. This is useful for testing and
@@ -20,8 +19,8 @@ impl MemoryKeyValueStore {
 }
 
 impl KeyValueStore for MemoryKeyValueStore {
-    fn get(&self, key: B256) -> Option<&Vec<u8>> {
-        self.store.get(&key)
+    fn get(&self, key: B256) -> Option<Vec<u8>> {
+        self.store.get(&key).cloned()
     }
 
     fn set(&mut self, key: B256, value: Vec<u8>) {
