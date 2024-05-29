@@ -1,6 +1,7 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
+use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
@@ -17,7 +18,7 @@ use super::{
     Block, BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo, OpBlock,
     RollupConfig, SystemConfig, Withdrawal,
 };
-use alloy_rlp::{Decodable, Encodable};
+use alloy_rlp::Encodable;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -139,7 +140,7 @@ impl L2ExecutionPayloadEnvelope {
             if ty != OpTxType::Deposit as u8 {
                 anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
             }
-            let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0][1..].as_ref())
+            let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
                 .map_err(|e| anyhow::anyhow!(e))?;
 
             let OpTxEnvelope::Deposit(tx) = tx else {
@@ -183,7 +184,7 @@ impl L2ExecutionPayloadEnvelope {
         if ty != OpTxType::Deposit as u8 {
             anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
         }
-        let tx = OpTxEnvelope::decode(&mut execution_payload.transactions[0][1..].as_ref())
+        let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
             .map_err(|e| anyhow::anyhow!(e))?;
 
         let OpTxEnvelope::Deposit(tx) = tx else {
