@@ -73,12 +73,14 @@ impl SystemConfig {
                     !topics.is_empty() &&
                     topics[0] == CONFIG_UPDATE_TOPIC
                 {
-                    self.process_config_update_log(log, rollup_config, l1_time)?;
+                    if let Err(e) = self.process_config_update_log(log, rollup_config, l1_time) {
+                        anyhow::bail!("Failed to process config update log: {:?}", e);
+                    }
                 }
-                Ok(())
+                Ok::<(), anyhow::Error>(())
             })?;
         }
-        Ok(())
+        Ok::<(), anyhow::Error>(())
     }
 
     /// Decodes an EVM log entry emitted by the system config contract and applies it as a
