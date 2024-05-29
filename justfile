@@ -1,4 +1,9 @@
 set positional-arguments
+alias t := tests
+alias l := lint
+alias ln := lint-native
+alias fmt := fmt-native-fix
+alias b := build
 
 # default recipe to display help information
 default:
