@@ -1,6 +1,9 @@
 use crate::{
     cli::{init_tracing_subscriber, HostCli},
-    kv::{DiskKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore},
+    kv::{
+        DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
+        SplitKeyValueStore,
+    },
     server::PreimageServer,
 };
 use anyhow::{anyhow, Result};
@@ -49,10 +52,15 @@ async fn start_server(cfg: HostCli) -> Result<()> {
     let oracle_server = OracleServer::new(preimage_pipe);
     let hint_reader = HintReader::new(hint_pipe);
 
+    let local_kv_store = LocalKeyValueStore::new(cfg.clone());
     let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = cfg.data_dir {
-        Arc::new(RwLock::new(DiskKeyValueStore::new(data_dir.clone())))
+        let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
+        let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
+        Arc::new(RwLock::new(split_kv_store))
     } else {
-        Arc::new(RwLock::new(MemoryKeyValueStore::new()))
+        let mem_kv_store = MemoryKeyValueStore::new();
+        let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
+        Arc::new(RwLock::new(split_kv_store))
     };
 
     let fetcher = (!cfg.is_offline()).then(|| {
@@ -77,10 +85,15 @@ async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
     let oracle_server = OracleServer::new(preimage_pipe);
     let hint_reader = HintReader::new(hint_pipe);
 
+    let local_kv_store = LocalKeyValueStore::new(cfg.clone());
     let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = cfg.data_dir {
-        Arc::new(RwLock::new(DiskKeyValueStore::new(data_dir.clone())))
+        let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
+        let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
+        Arc::new(RwLock::new(split_kv_store))
     } else {
-        Arc::new(RwLock::new(MemoryKeyValueStore::new()))
+        let mem_kv_store = MemoryKeyValueStore::new();
+        let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
+        Arc::new(RwLock::new(split_kv_store))
     };
 
     let fetcher = (!cfg.is_offline()).then(|| {

@@ -1,7 +1,7 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
 //! the preimage oracle.
 
-use alloy_primitives::B256;
+use alloy_primitives::{B256, U256};
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
@@ -79,6 +79,11 @@ impl PreimageKey {
     /// Returns the [PreimageKeyType] for the [PreimageKey].
     pub fn key_type(&self) -> PreimageKeyType {
         self.key_type
+    }
+
+    /// Returns the value of the [PreimageKey] as a [U256].
+    pub fn key_value(&self) -> U256 {
+        U256::from_be_slice(self.data.as_slice())
     }
 }
 
