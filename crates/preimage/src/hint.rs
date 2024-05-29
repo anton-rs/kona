@@ -1,6 +1,7 @@
 use crate::{traits::HintWriterClient, HintReaderServer, PipeHandle};
-use alloc::{string::String, vec};
+use alloc::{boxed::Box, string::String, vec};
 use anyhow::Result;
+use core::future::Future;
 use tracing::{debug, error};
 
 /// A [HintWriter] is a high-level interface to the hint pipe. It provides a way to write hints to
@@ -58,8 +59,13 @@ impl HintReader {
     }
 }
 
+#[async_trait::async_trait]
 impl HintReaderServer for HintReader {
-    fn next_hint(&self, mut route_hint: impl FnMut(String) -> Result<()>) -> Result<()> {
+    async fn next_hint<F, Fut>(&mut self, mut route_hint: F) -> Result<()>
+    where
+        F: FnMut(String) -> Fut + Send,
+        Fut: Future<Output = Result<()>> + Send,
+    {
         // Read the length of the raw hint payload.
         let mut len_buf = [0u8; 4];
         self.pipe_handle.read_exact(&mut len_buf)?;
@@ -74,7 +80,7 @@ impl HintReaderServer for HintReader {
         debug!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
 
         // Route the hint
-        if let Err(e) = route_hint(payload) {
+        if let Err(e) = route_hint(payload).await {
             // Write back on error to prevent blocking the client.
             self.pipe_handle.write(&[0x00])?;
 
@@ -90,15 +96,18 @@ impl HintReaderServer for HintReader {
         Ok(())
     }
 }
+
 #[cfg(test)]
 mod test {
     extern crate std;
 
     use super::*;
-    use alloc::vec::Vec;
+    use alloc::{sync::Arc, vec::Vec};
+    use core::pin::Pin;
     use kona_common::FileDescriptor;
     use std::{fs::File, os::fd::AsRawFd};
     use tempfile::tempfile;
+    use tokio::sync::Mutex;
 
     /// Test struct containing the [HintReader] and [HintWriter]. The [File]s are stored in this
     /// struct so that they are not dropped until the end of the test.
@@ -132,20 +141,27 @@ mod test {
         const MOCK_DATA: &str = "test-hint 0xfacade";
 
         let sys = client_and_host();
-        let (hint_writer, hint_reader) = (sys.hint_writer, sys.hint_reader);
+        let (hint_writer, mut hint_reader) = (sys.hint_writer, sys.hint_reader);
+        let incoming_hints = Arc::new(Mutex::new(Vec::new()));
 
         let client = tokio::task::spawn(async move { hint_writer.write(MOCK_DATA) });
-        let host = tokio::task::spawn(async move {
-            let mut v = Vec::new();
-            let route_hint = |hint: String| {
-                v.push(hint.clone());
-                Ok(())
-            };
-            hint_reader.next_hint(route_hint).unwrap();
+        let host = tokio::task::spawn({
+            let incoming_hints_ref = Arc::clone(&incoming_hints);
+            async move {
+                let route_hint =
+                    move |hint: String| -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+                        let hints = Arc::clone(&incoming_hints_ref);
+                        Box::pin(async move {
+                            hints.lock().await.push(hint.clone());
+                            Ok(())
+                        })
+                    };
+                hint_reader.next_hint(&route_hint).await.unwrap();
 
-            assert_eq!(v.len(), 1);
-
-            v.remove(0)
+                let mut hints = incoming_hints.lock().await;
+                assert_eq!(hints.len(), 1);
+                hints.remove(0)
+            }
         });
 
         let (_, h) = tokio::join!(client, host);

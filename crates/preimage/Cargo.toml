@@ -18,6 +18,9 @@ alloy-primitives.workspace = true
 # local
 kona-common = { path = "../common", version = "0.0.1" }
 
+# external
+async-trait = "0.1.80"
+
 [dev-dependencies]
 tokio = { version = "1.36.0", features = ["full"] }
 tempfile = "3.10.0"
