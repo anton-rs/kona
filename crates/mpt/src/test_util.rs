@@ -2,63 +2,16 @@
 
 extern crate std;
 
+use crate::ordered_trie_with_encoder;
 use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{keccak256, Bytes, Log, B256};
 use alloy_provider::{network::eip2718::Encodable2718, Provider, ProviderBuilder};
-use alloy_rlp::{BufMut, Encodable};
 use alloy_rpc_types::BlockTransactions;
-use alloy_trie::{HashBuilder, Nibbles};
 use anyhow::{anyhow, Result};
 use reqwest::Url;
 
 const RPC_URL: &str = "https://docs-demo.quiknode.pro/";
-
-/// Compute a trie root of the collection of items with a custom encoder.
-pub(crate) fn ordered_trie_with_encoder<T, F>(items: &[T], mut encode: F) -> HashBuilder
-where
-    F: FnMut(&T, &mut dyn BufMut),
-{
-    let mut index_buffer = Vec::new();
-    let mut value_buffer = Vec::new();
-    let items_len = items.len();
-
-    // Store preimages for all intermediates
-    let path_nibbles = (0..items_len)
-        .map(|i| {
-            let i = adjust_index_for_rlp(i, items_len);
-            index_buffer.clear();
-            i.encode(&mut index_buffer);
-            Nibbles::unpack(&index_buffer)
-        })
-        .collect::<Vec<_>>();
-
-    let mut hb = HashBuilder::default().with_proof_retainer(path_nibbles);
-    for i in 0..items_len {
-        let index = adjust_index_for_rlp(i, items_len);
-
-        index_buffer.clear();
-        index.encode(&mut index_buffer);
-
-        value_buffer.clear();
-        encode(&items[index], &mut value_buffer);
-
-        hb.add_leaf(Nibbles::unpack(&index_buffer), &value_buffer);
-    }
-
-    hb
-}
-
-/// Adjust the index of an item for rlp encoding.
-pub(crate) const fn adjust_index_for_rlp(i: usize, len: usize) -> usize {
-    if i > 0x7f {
-        i
-    } else if i == 0x7f || i + 1 == len {
-        0
-    } else {
-        i + 1
-    }
-}
 
 /// Grabs a live merkleized receipts list within a block header.
 pub(crate) async fn get_live_derivable_receipts_list(

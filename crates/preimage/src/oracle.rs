@@ -1,5 +1,5 @@
 use crate::{PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer};
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 use anyhow::{bail, Result};
 use core::future::Future;
 use tracing::debug;
@@ -88,10 +88,10 @@ impl OracleServer {
 
 #[async_trait::async_trait]
 impl PreimageOracleServer for OracleServer {
-    async fn next_preimage_request<F, Fut>(&mut self, mut get_preimage: F) -> Result<()>
+    async fn next_preimage_request<F, Fut>(&self, mut get_preimage: F) -> Result<()>
     where
         F: FnMut(PreimageKey) -> Fut + Send,
-        Fut: Future<Output = Result<Arc<Vec<u8>>>> + Send,
+        Fut: Future<Output = Result<Vec<u8>>> + Send,
     {
         // Read the preimage request from the client, and throw early if there isn't is any.
         let mut buf = [0u8; 32];
@@ -123,6 +123,7 @@ mod test {
 
     use super::*;
     use crate::PreimageKeyType;
+    use alloc::sync::Arc;
     use alloy_primitives::keccak256;
     use core::pin::Pin;
     use kona_common::FileDescriptor;
@@ -174,13 +175,13 @@ mod test {
 
         let preimages = {
             let mut preimages = HashMap::new();
-            preimages.insert(key_a, Arc::new(MOCK_DATA_A.to_vec()));
-            preimages.insert(key_b, Arc::new(MOCK_DATA_B.to_vec()));
+            preimages.insert(key_a, MOCK_DATA_A.to_vec());
+            preimages.insert(key_b, MOCK_DATA_B.to_vec());
             Arc::new(Mutex::new(preimages))
         };
 
         let sys = client_and_host();
-        let (oracle_reader, mut oracle_server) = (sys.oracle_reader, sys.oracle_server);
+        let (oracle_reader, oracle_server) = (sys.oracle_reader, sys.oracle_server);
 
         let client = tokio::task::spawn(async move {
             let contents_a = oracle_reader.get(key_a).unwrap();
@@ -194,20 +195,19 @@ mod test {
         });
         let host = tokio::task::spawn(async move {
             #[allow(clippy::type_complexity)]
-            let get_preimage = move |key: PreimageKey| -> Pin<
-                Box<dyn Future<Output = Result<Arc<Vec<u8>>>> + Send>,
-            > {
-                let preimages = Arc::clone(&preimages);
-                Box::pin(async move {
-                    // Simulate fetching preimage data
-                    preimages
-                        .lock()
-                        .await
-                        .get(&key)
-                        .ok_or(anyhow::anyhow!("Preimage not available"))
-                        .cloned()
-                })
-            };
+            let get_preimage =
+                move |key: PreimageKey| -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send>> {
+                    let preimages = Arc::clone(&preimages);
+                    Box::pin(async move {
+                        // Simulate fetching preimage data
+                        preimages
+                            .lock()
+                            .await
+                            .get(&key)
+                            .ok_or(anyhow::anyhow!("Preimage not available"))
+                            .cloned()
+                    })
+                };
 
             loop {
                 if oracle_server.next_preimage_request(&get_preimage).await.is_err() {

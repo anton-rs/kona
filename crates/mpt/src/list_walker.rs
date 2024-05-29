@@ -147,9 +147,9 @@ impl<PreimageFetcher> Iterator for OrderedListWalker<PreimageFetcher> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_util::{
-        get_live_derivable_receipts_list, get_live_derivable_transactions_list,
+    use crate::{
         ordered_trie_with_encoder,
+        test_util::{get_live_derivable_receipts_list, get_live_derivable_transactions_list},
     };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};

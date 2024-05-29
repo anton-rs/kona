@@ -61,7 +61,7 @@ impl HintReader {
 
 #[async_trait::async_trait]
 impl HintReaderServer for HintReader {
-    async fn next_hint<F, Fut>(&mut self, mut route_hint: F) -> Result<()>
+    async fn next_hint<F, Fut>(&self, mut route_hint: F) -> Result<()>
     where
         F: FnMut(String) -> Fut + Send,
         Fut: Future<Output = Result<()>> + Send,
@@ -141,7 +141,7 @@ mod test {
         const MOCK_DATA: &str = "test-hint 0xfacade";
 
         let sys = client_and_host();
-        let (hint_writer, mut hint_reader) = (sys.hint_writer, sys.hint_reader);
+        let (hint_writer, hint_reader) = (sys.hint_writer, sys.hint_reader);
         let incoming_hints = Arc::new(Mutex::new(Vec::new()));
 
         let client = tokio::task::spawn(async move { hint_writer.write(MOCK_DATA) });

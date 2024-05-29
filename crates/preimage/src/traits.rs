@@ -1,5 +1,5 @@
 use crate::PreimageKey;
-use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use anyhow::Result;
 use core::future::Future;
 
@@ -44,10 +44,10 @@ pub trait PreimageOracleServer {
     /// # Returns
     /// - `Ok(())` if the data was successfully written into the client pipe.
     /// - `Err(_)` if the data could not be written to the client.
-    async fn next_preimage_request<F, Fut>(&mut self, get_preimage: F) -> Result<()>
+    async fn next_preimage_request<F, Fut>(&self, get_preimage: F) -> Result<()>
     where
         F: FnMut(PreimageKey) -> Fut + Send,
-        Fut: Future<Output = Result<Arc<Vec<u8>>>> + Send;
+        Fut: Future<Output = Result<Vec<u8>>> + Send;
 }
 
 /// A [HintReaderServer] is a high-level interface to read preimage hints from the
@@ -60,7 +60,7 @@ pub trait HintReaderServer {
     /// - `Ok(())` if the hint was received and the client was notified of the host's
     ///   acknowledgement.
     /// - `Err(_)` if the hint was not received correctly.
-    async fn next_hint<F, Fut>(&mut self, route_hint: F) -> Result<()>
+    async fn next_hint<F, Fut>(&self, route_hint: F) -> Result<()>
     where
         F: FnMut(String) -> Fut + Send,
         Fut: Future<Output = Result<()>> + Send;
