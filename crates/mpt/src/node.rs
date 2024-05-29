@@ -364,7 +364,7 @@ fn rlp_list_element_length(buf: &mut &[u8]) -> alloy_rlp::Result<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{test_util::ordered_trie_with_encoder, TrieNode};
+    use crate::{ordered_trie_with_encoder, TrieNode};
     use alloc::{collections::BTreeMap, vec, vec::Vec};
     use alloy_primitives::{b256, bytes, hex, keccak256, Bytes, B256};
     use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};

@@ -15,5 +15,8 @@ pub use node::TrieNode;
 mod list_walker;
 pub use list_walker::OrderedListWalker;
 
+mod util;
+pub use util::ordered_trie_with_encoder;
+
 #[cfg(test)]
 mod test_util;
