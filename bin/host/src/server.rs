@@ -13,7 +13,7 @@ pub struct PreimageServer<P, H, KV>
 where
     P: PreimageOracleServer,
     H: HintReaderServer,
-    KV: KeyValueStore,
+    KV: KeyValueStore + ?Sized,
 {
     /// The oracle server.
     oracle_server: P,
@@ -30,7 +30,7 @@ impl<P, H, KV> PreimageServer<P, H, KV>
 where
     P: PreimageOracleServer + Send + Sync + 'static,
     H: HintReaderServer + Send + Sync + 'static,
-    KV: KeyValueStore + Send + Sync + 'static,
+    KV: KeyValueStore + Send + Sync + ?Sized + 'static,
 {
     /// Create a new [PreimageServer] with the given [PreimageOracleServer],
     /// [HintReaderServer], and [KeyValueStore]. Holds onto the file descriptors for the pipes
@@ -85,7 +85,6 @@ where
                             .await
                             .get(key.into())
                             .ok_or_else(|| anyhow!("Preimage not found"))
-                            .cloned()
                     })
                 }
             };

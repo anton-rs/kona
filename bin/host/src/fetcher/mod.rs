@@ -21,7 +21,7 @@ mod precompiles;
 /// The [Fetcher] struct is responsible for fetching preimages from a remote source.
 pub struct Fetcher<KV>
 where
-    KV: KeyValueStore,
+    KV: KeyValueStore + ?Sized,
 {
     /// Key-value store for preimages.
     kv_store: Arc<RwLock<KV>>,
@@ -37,7 +37,7 @@ where
 
 impl<KV> Fetcher<KV>
 where
-    KV: KeyValueStore,
+    KV: KeyValueStore + ?Sized,
 {
     /// Create a new [Fetcher] with the given [KeyValueStore].
     pub fn new(
@@ -60,9 +60,9 @@ where
 
         // Acquire a read lock on the key-value store.
         let kv_lock = self.kv_store.read().await;
-        let mut preimage = kv_lock.get(key).cloned();
+        let mut preimage = kv_lock.get(key);
 
-        // Drop the read lock before beginning the loop.
+        // Drop the read lock before beginning the retry loop.
         drop(kv_lock);
 
         // Use a loop to keep retrying the prefetch as long as the key is not found
@@ -71,7 +71,7 @@ where
             self.prefetch(hint).await?;
 
             let kv_lock = self.kv_store.read().await;
-            preimage = kv_lock.get(key).cloned();
+            preimage = kv_lock.get(key);
         }
 
         preimage.ok_or_else(|| anyhow!("Preimage not found."))

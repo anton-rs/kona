@@ -1,6 +1,6 @@
 use crate::{
     cli::{init_tracing_subscriber, HostCli},
-    kv::MemoryKeyValueStore,
+    kv::{DiskKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore},
     server::PreimageServer,
 };
 use anyhow::{anyhow, Result};
@@ -49,18 +49,21 @@ async fn start_server(cfg: HostCli) -> Result<()> {
     let oracle_server = OracleServer::new(preimage_pipe);
     let hint_reader = HintReader::new(hint_pipe);
 
-    // TODO: Optional disk store if `cli.data_dir` is set.
-    let mem_kv_store = Arc::new(RwLock::new(MemoryKeyValueStore::new()));
+    let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = cfg.data_dir {
+        Arc::new(RwLock::new(DiskKeyValueStore::new(data_dir.clone())))
+    } else {
+        Arc::new(RwLock::new(MemoryKeyValueStore::new()))
+    };
 
     let fetcher = (!cfg.is_offline()).then(|| {
         let l1_provider = util::http_provider(&cfg.l1_node_address.expect("Provider must be set"));
         let l2_provider = util::http_provider(&cfg.l2_node_address.expect("Provider must be set"));
-        Arc::new(RwLock::new(Fetcher::new(mem_kv_store.clone(), l1_provider, l2_provider)))
+        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider)))
     });
 
     // Start the server and wait for it to complete.
     info!("Starting preimage server.");
-    let server = PreimageServer::new(oracle_server, hint_reader, mem_kv_store, fetcher);
+    let server = PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher);
     server.start().await?;
     info!("Preimage server has exited.");
 
@@ -74,17 +77,20 @@ async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
     let oracle_server = OracleServer::new(preimage_pipe);
     let hint_reader = HintReader::new(hint_pipe);
 
-    // TODO: Optional disk store if `cli.data_dir` is set.
-    let mem_kv_store = Arc::new(RwLock::new(MemoryKeyValueStore::new()));
+    let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = cfg.data_dir {
+        Arc::new(RwLock::new(DiskKeyValueStore::new(data_dir.clone())))
+    } else {
+        Arc::new(RwLock::new(MemoryKeyValueStore::new()))
+    };
 
     let fetcher = (!cfg.is_offline()).then(|| {
         let l1_provider = util::http_provider(&cfg.l1_node_address.expect("Provider must be set"));
         let l2_provider = util::http_provider(&cfg.l2_node_address.expect("Provider must be set"));
-        Arc::new(RwLock::new(Fetcher::new(mem_kv_store.clone(), l1_provider, l2_provider)))
+        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider)))
     });
 
     // Create the server and start it.
-    let server = PreimageServer::new(oracle_server, hint_reader, mem_kv_store, fetcher);
+    let server = PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher);
     let server_task = tokio::task::spawn(server.start());
 
     // Start the client program in a separate child process.
