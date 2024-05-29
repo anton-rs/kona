@@ -129,7 +129,7 @@ impl L1BlockInfoTx {
             let scalar = system_config.l1_fee_scalar.to_be_bytes::<32>();
             let blob_base_fee_scalar = (scalar[0] == L1_SCALAR_ECOTONE)
                 .then(|| {
-                    Ok(u32::from_be_bytes(
+                    Ok::<u32, anyhow::Error>(u32::from_be_bytes(
                         scalar[24..28]
                             .try_into()
                             .map_err(|_| anyhow!("Failed to parse L1 blob base fee scalar"))?,
