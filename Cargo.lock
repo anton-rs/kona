@@ -1588,7 +1588,7 @@ dependencies = [
 
 [[package]]
 name = "kona-common"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "kona-common-proc"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -1609,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "kona-derive"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
@@ -1669,7 +1669,7 @@ dependencies = [
 
 [[package]]
 name = "kona-mpt"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=e3f2f07)",
  "alloy-primitives",
@@ -1707,7 +1707,7 @@ dependencies = [
 
 [[package]]
 name = "kona-preimage"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",

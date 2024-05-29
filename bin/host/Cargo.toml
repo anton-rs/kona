@@ -16,9 +16,9 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 
 # local
-kona-common = { path = "../../crates/common", version = "0.0.1" }
-kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
-kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }
+kona-common = { path = "../../crates/common", version = "0.0.2" }
+kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
+kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
 
 # external
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
