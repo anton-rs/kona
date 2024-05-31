@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use alloy_rlp::{BufMut, Encodable};
-use alloy_trie::{HashBuilder, Nibbles};
+use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 
 /// Compute a trie root of the collection of items with a custom encoder.
 pub fn ordered_trie_with_encoder<T, F>(items: &[T], mut encode: F) -> HashBuilder
@@ -23,7 +23,7 @@ where
         })
         .collect::<Vec<_>>();
 
-    let mut hb = HashBuilder::default().with_proof_retainer(path_nibbles);
+    let mut hb = HashBuilder::default().with_proof_retainer(ProofRetainer::new(path_nibbles));
     for i in 0..items_len {
         let index = adjust_index_for_rlp(i, items_len);
 

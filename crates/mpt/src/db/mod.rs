@@ -2,9 +2,10 @@
 //! incremental updates through fetching node preimages on the fly during execution.
 
 use crate::TrieNode;
+use alloc::vec::Vec;
 use alloy_consensus::constants::KECCAK_EMPTY;
 use alloy_primitives::{keccak256, Address, Bytes, B256, U256};
-use alloy_rlp::Decodable;
+use alloy_rlp::{Decodable, Encodable};
 use alloy_trie::Nibbles;
 use anyhow::{anyhow, Result};
 use revm::{
@@ -12,6 +13,7 @@ use revm::{
     primitives::{hash_map::Entry, Account, AccountInfo, Bytecode, HashMap},
     Database, DatabaseCommit, InMemoryDB,
 };
+use tracing::trace;
 
 mod account;
 pub use account::TrieAccount;
@@ -88,15 +90,16 @@ where
     /// Returns the current state root of the trie DB, and replaces the root node with the new
     /// blinded form. This action drops all the cached account state.
     pub fn state_root(&mut self) -> Result<B256> {
-        let blinded = self.root_node.clone().blind();
+        trace!("Start state root update");
+        self.root_node.blind();
+        trace!("State root node updated successfully");
 
-        let commitment = if let TrieNode::Blinded { commitment } = blinded {
+        let commitment = if let TrieNode::Blinded { commitment } = self.root_node {
             commitment
         } else {
             anyhow::bail!("Root node is not a blinded node")
         };
 
-        self.root_node = blinded;
         self.root = commitment;
         Ok(commitment)
     }
@@ -142,7 +145,14 @@ where
     /// the trie nodes on the path to the account. If the account has a non-empty storage trie
     /// root hash, the account's storage trie will be traversed to recover the account's storage
     /// slots. If the account has a non-empty
-    pub fn load_account_from_trie(&mut self, address: Address) -> Result<DbAccount> {
+    ///
+    /// # Takes
+    /// - `address`: The address of the account to load.
+    ///
+    /// # Returns
+    /// - `Ok(DbAccount)`: The account loaded from the trie.
+    /// - `Err(_)`: If the account could not be loaded from the trie.
+    pub(crate) fn load_account_from_trie(&mut self, address: Address) -> Result<DbAccount> {
         let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
         let trie_account_rlp =
             self.root_node.open(&hashed_address_nibbles, 0, self.preimage_fetcher)?;
@@ -178,7 +188,10 @@ where
     ///
     /// Accounts objects and code are stored separately in the cache, this will take the code from
     /// the account and instead map it to the code hash.
-    pub fn insert_contract(&mut self, account: &mut AccountInfo) {
+    ///
+    /// # Takes
+    /// - `account`: The account to insert the code for.
+    pub(crate) fn insert_contract(&mut self, account: &mut AccountInfo) {
         if let Some(code) = &account.code {
             if !code.is_empty() {
                 if account.code_hash == KECCAK_EMPTY {
@@ -192,9 +205,47 @@ where
         }
     }
 
-    /// Inserts a block hash into the cache.
-    pub fn insert_block_hash(&mut self, number: U256, hash: B256) {
-        self.db.block_hashes.insert(number, hash);
+    /// Modifies a storage slot of an account in the trie DB.
+    ///
+    /// # Takes
+    /// - `address`: The address of the account.
+    /// - `index`: The index of the storage slot.
+    /// - `value`: The new value of the storage slot.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the storage slot was successfully modified.
+    /// - `Err(_)` if the storage slot could not be modified.
+    pub(crate) fn change_storage(
+        &mut self,
+        address: Address,
+        index: U256,
+        value: U256,
+    ) -> Result<()> {
+        let storage_root = self
+            .storage_roots
+            .get_mut(&address)
+            .ok_or(anyhow!("Storage root not found for account: {address}"))?;
+        let hashed_slot_key = keccak256(index.to_be_bytes::<32>().as_slice());
+
+        let mut rlp_buf = Vec::with_capacity(value.length());
+        value.encode(&mut rlp_buf);
+
+        if let Ok(storage_slot_rlp) =
+            storage_root.open(&Nibbles::unpack(hashed_slot_key), 0, self.preimage_fetcher)
+        {
+            // If the storage slot already exists, update it.
+            *storage_slot_rlp = rlp_buf.into();
+        } else {
+            // If the storage slot does not exist, insert it.
+            storage_root.insert(
+                &Nibbles::unpack(hashed_slot_key),
+                rlp_buf.into(),
+                0,
+                self.preimage_fetcher,
+            )?;
+        }
+
+        Ok(())
     }
 }
 
@@ -203,8 +254,48 @@ where
     PF: Fn(B256) -> Result<Bytes> + Copy,
     CHF: Fn(B256) -> Result<Bytes> + Copy,
 {
-    fn commit(&mut self, _: HashMap<Address, Account>) {
-        unimplemented!("TrieCacheDB::commit")
+    fn commit(&mut self, updated_accounts: HashMap<Address, Account>) {
+        let preimage_fetcher = self.preimage_fetcher;
+        for (address, account) in updated_accounts {
+            let account_path = Nibbles::unpack(keccak256(address.as_slice()));
+            let mut trie_account = TrieAccount {
+                balance: account.info.balance,
+                nonce: account.info.nonce,
+                code_hash: account.info.code_hash,
+                ..Default::default()
+            };
+
+            // Update the account's storage root
+            for (index, value) in account.storage {
+                self.change_storage(address, index, value.present_value)
+                    .expect("Failed to update account storage");
+            }
+            let acc_storage_root =
+                self.storage_roots.get_mut(&address).expect("Storage root not found for account");
+            acc_storage_root.blind();
+            if let TrieNode::Blinded { commitment } = acc_storage_root {
+                trie_account.storage_root = *commitment;
+            } else {
+                panic!("Storage root was not blinded successfully");
+            }
+
+            // RLP encode the account.
+            let mut account_buf = Vec::with_capacity(trie_account.length());
+            trie_account.encode(&mut account_buf);
+
+            if let Ok(account_rlp_ref) = self.root_node.open(&account_path, 0, preimage_fetcher) {
+                // Update the existing account in the trie.
+                *account_rlp_ref = account_buf.into();
+            } else {
+                // Insert the new account into the trie.
+                self.root_node
+                    .insert(&account_path, account_buf.into(), 0, preimage_fetcher)
+                    .expect("Failed to insert account into trie");
+            }
+        }
+
+        // Update the root hash of the trie.
+        self.state_root().expect("Failed to update state root");
     }
 }
 
@@ -224,7 +315,10 @@ where
                     self.db.contracts.insert(account.info.code_hash, code.clone());
                 }
                 self.db.accounts.insert(address, account);
-                self.db.accounts.get_mut(&address).unwrap()
+                self.db
+                    .accounts
+                    .get_mut(&address)
+                    .ok_or(anyhow!("Account not found in cache: {address}"))?
             }
         };
         Ok(basic.info())
@@ -233,7 +327,7 @@ where
     fn code_by_hash(&mut self, code_hash: B256) -> Result<Bytecode, Self::Error> {
         match self.db.contracts.entry(code_hash) {
             Entry::Occupied(entry) => Ok(entry.get().clone()),
-            Entry::Vacant(_) => unreachable!("Code hash not found in cache: {code_hash}"),
+            Entry::Vacant(_) => anyhow::bail!("Code hash not found in cache: {code_hash}"),
         }
     }
 
@@ -266,7 +360,7 @@ where
                             self.db
                                 .accounts
                                 .get_mut(&address)
-                                .expect("Must exist")
+                                .ok_or(anyhow!("Account not found in cache: {address}"))?
                                 .storage
                                 .insert(index, int_slot);
                             Ok(int_slot)
@@ -291,10 +385,11 @@ where
         }
     }
 
-    fn block_hash(&mut self, number: U256) -> Result<B256, Self::Error> {
-        match self.db.block_hashes.entry(number) {
-            Entry::Occupied(entry) => Ok(*entry.get()),
-            Entry::Vacant(_) => anyhow::bail!("Block hash for number not found"),
-        }
+    fn block_hash(&mut self, _: U256) -> Result<B256, Self::Error> {
+        // match self.db.block_hashes.entry(number) {
+        //     Entry::Occupied(entry) => Ok(*entry.get()),
+        //     Entry::Vacant(_) => anyhow::bail!("Block hash for number not found"),
+        // }
+        unimplemented!("Block hash not implemented; Need to unroll the starting block hash for this operation.")
     }
 }

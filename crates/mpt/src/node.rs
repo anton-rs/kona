@@ -84,13 +84,11 @@ pub enum TrieNode {
 impl TrieNode {
     /// Blinds the [TrieNode] if it is longer than an encoded [B256] string in length, and returns
     /// the mutated node.
-    pub fn blind(self) -> Self {
+    pub fn blind(&mut self) {
         if self.length() > B256::ZERO.length() {
             let mut rlp_buf = Vec::with_capacity(self.length());
             self.encode(&mut rlp_buf);
-            TrieNode::Blinded { commitment: keccak256(rlp_buf) }
-        } else {
-            self
+            *self = TrieNode::Blinded { commitment: keccak256(rlp_buf) }
         }
     }
 
@@ -142,9 +140,9 @@ impl TrieNode {
                 }
             }
             TrieNode::Leaf { prefix, value } => {
-                // If the key length is one, it only contains the prefix and no shared nibbles.
-                // Return the key and value.
-                if prefix.len() == 1 || nibble_offset + prefix.len() >= path.len() {
+                // If the key length is 0 or the shared nibbles overflow the remaining path, return
+                // the key and value.
+                if prefix.len() == 0 || nibble_offset + prefix.len() >= path.len() {
                     return Ok(value);
                 }
 
@@ -300,7 +298,7 @@ impl TrieNode {
     /// Returns the RLP payload length of the [TrieNode].
     pub(crate) fn payload_length(&self) -> usize {
         match self {
-            TrieNode::Empty => 1,
+            TrieNode::Empty => 0,
             TrieNode::Blinded { commitment } => commitment.len(),
             TrieNode::Leaf { prefix, value } => {
                 let encoded_key_len = prefix.length() / 2 + 1;
@@ -308,7 +306,7 @@ impl TrieNode {
             }
             TrieNode::Extension { prefix, node } => {
                 let encoded_key_len = prefix.length() / 2 + 1;
-                encoded_key_len + node.length()
+                encoded_key_len + blinded_length(node)
             }
             TrieNode::Branch { stack } => {
                 // In branch nodes, if an element is longer than an encoded 32 byte string, it is
@@ -333,7 +331,7 @@ impl TrieNode {
         let path = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
         let first_nibble = path[0] >> NIBBLE_WIDTH;
         let first = match first_nibble {
-            PREFIX_EXTENSION_ODD | PREFIX_LEAF_ODD => Some(path[0] & 0x0f),
+            PREFIX_EXTENSION_ODD | PREFIX_LEAF_ODD => Some(path[0] & 0x0F),
             PREFIX_EXTENSION_EVEN | PREFIX_LEAF_EVEN => None,
             _ => anyhow::bail!("Unexpected path identifier in high-order nibble"),
         };
@@ -350,7 +348,7 @@ impl TrieNode {
                 })
             }
             PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
-                // leaf node
+                // Leaf node
                 let value = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
                 Ok(TrieNode::Leaf {
                     prefix: unpack_path_to_nibbles(first, path[1..].as_ref()),
@@ -385,8 +383,14 @@ impl Encodable for TrieNode {
                 // In branch nodes, if an element is longer than 32 bytes in length, it is blinded.
                 // Assuming we have an open trie node, we must re-hash the elements
                 // that are longer than 32 bytes in length.
-                let blinded_nodes =
-                    stack.iter().cloned().map(|node| node.blind()).collect::<Vec<TrieNode>>();
+                let blinded_nodes = stack
+                    .iter()
+                    .cloned()
+                    .map(|mut node| {
+                        node.blind();
+                        node
+                    })
+                    .collect::<Vec<TrieNode>>();
                 blinded_nodes.encode(out);
             }
         }
@@ -457,6 +461,12 @@ impl Decodable for TrieNode {
 
 /// Returns the encoded length of an [Encodable] value, blinding it if it is longer than an encoded
 /// [B256] string in length.
+///
+/// ## Takes
+/// - `value` - The value to encode
+///
+/// ## Returns
+/// - `usize` - The encoded length of the value
 fn blinded_length<T: Encodable>(value: T) -> usize {
     if value.length() > B256::ZERO.length() {
         B256::ZERO.length()
@@ -467,6 +477,10 @@ fn blinded_length<T: Encodable>(value: T) -> usize {
 
 /// Encodes a value into an RLP stream, blidning it with a [keccak256] commitment if it is longer
 /// than an encoded [B256] string in length.
+///
+/// ## Takes
+/// - `value` - The value to encode
+/// - `out` - The RLP stream to write the encoded value to
 fn encode_blinded<T: Encodable>(value: T, out: &mut dyn BufMut) {
     if value.length() > B256::ZERO.length() {
         let mut rlp_buf = Vec::with_capacity(value.length());
@@ -479,6 +493,13 @@ fn encode_blinded<T: Encodable>(value: T, out: &mut dyn BufMut) {
 
 /// Walks through a RLP list's elements and returns the total number of elements in the list.
 /// Returns [alloy_rlp::Error::UnexpectedString] if the RLP stream is not a list.
+///
+/// ## Takes
+/// - `buf` - The RLP stream to walk through
+///
+/// ## Returns
+/// - `Ok(usize)` - The total number of elements in the list
+/// - `Err(_)` - The RLP stream is not a list
 fn rlp_list_element_length(buf: &mut &[u8]) -> alloy_rlp::Result<usize> {
     let header = Header::decode(buf)?;
     if !header.list {
@@ -635,7 +656,8 @@ mod test {
             assert_eq!(v, encoded_value.as_slice());
         }
 
-        let TrieNode::Blinded { commitment } = root_node.blind() else {
+        root_node.blind();
+        let TrieNode::Blinded { commitment } = root_node else {
             panic!("Expected blinded root node");
         };
         assert_eq!(commitment, root);
