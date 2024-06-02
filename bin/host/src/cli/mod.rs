@@ -1,9 +1,14 @@
 //! This module contains all CLI-specific code for the host binary.
 
+use crate::kv::{
+    DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
+    SplitKeyValueStore,
+};
 use alloy_primitives::B256;
 use clap::{ArgAction, Parser};
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
 mod parser;
 pub(crate) use parser::parse_b256;
@@ -66,9 +71,28 @@ pub struct HostCli {
 }
 
 impl HostCli {
+    /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() ||
             self.l2_node_address.is_none() ||
             self.l1_beacon_address.is_none()
+    }
+
+    /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is
+    /// configured to be created.
+    pub fn construct_kv_store(&self) -> SharedKeyValueStore {
+        let local_kv_store = LocalKeyValueStore::new(self.clone());
+
+        let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = self.data_dir {
+            let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
+            let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
+            Arc::new(RwLock::new(split_kv_store))
+        } else {
+            let mem_kv_store = MemoryKeyValueStore::new();
+            let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
+            Arc::new(RwLock::new(split_kv_store))
+        };
+
+        kv_store
     }
 }

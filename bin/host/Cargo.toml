@@ -29,8 +29,9 @@ alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" }
 alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
 reqwest = "0.12"
 tokio = { version = "1.37.0", features = ["full"] }
+futures = "0.3"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 serde = { version = "1.0.198", features = ["derive"] }
 tracing-subscriber = "0.3.18"
-command-fds = "0.3.0"
+command-fds = { version = "0.3", features = ["tokio"] }
 tempfile = "3.10"
