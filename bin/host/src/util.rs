@@ -1,6 +1,6 @@
 //! Contains utility functions and helpers for the host program.
 
-use crate::fetcher::HintType;
+use crate::{fetcher::HintType, types::NativePipeFiles};
 use alloy_primitives::{hex, Bytes};
 use alloy_provider::ReqwestProvider;
 use alloy_rpc_client::RpcClient;
@@ -11,6 +11,7 @@ use kona_preimage::PipeHandle;
 use reqwest::Client;
 use std::{fs::File, os::fd::AsRawFd};
 use tempfile::tempfile;
+use tokio::task::JoinHandle;
 
 /// Parses a hint from a string.
 ///
@@ -38,7 +39,7 @@ pub(crate) fn create_temp_files() -> Result<(File, File)> {
 
 /// Create a pair of pipes for the preimage oracle and hint reader. Also returns the files that are
 /// used to create the pipes, which must be kept alive until the pipes are closed.
-pub(crate) fn create_native_pipes() -> Result<(PipeHandle, PipeHandle, Vec<File>)> {
+pub(crate) fn create_native_pipes() -> Result<(PipeHandle, PipeHandle, NativePipeFiles)> {
     let (po_reader, po_writer) = create_temp_files()?;
     let (hint_reader, hint_writer) = create_temp_files()?;
     let preimage_pipe = PipeHandle::new(
@@ -58,7 +59,14 @@ pub(crate) fn create_native_pipes() -> Result<(PipeHandle, PipeHandle, Vec<File>
         ),
     );
 
-    Ok((preimage_pipe, hint_pipe, vec![po_reader, po_writer, hint_reader, hint_writer]))
+    let files = NativePipeFiles {
+        preimage_read: po_reader,
+        preimage_writ: po_writer,
+        hint_read: hint_reader,
+        hint_writ: hint_writer,
+    };
+
+    Ok((preimage_pipe, hint_pipe, files))
 }
 
 /// Returns an HTTP provider for the given URL.
@@ -66,4 +74,18 @@ pub(crate) fn http_provider(url: &str) -> ReqwestProvider {
     let url = url.parse().unwrap();
     let http = Http::<Client>::new(url);
     ReqwestProvider::new(RpcClient::new(http, true))
+}
+
+/// Flattens the result of a [JoinHandle] into a single result.
+pub(crate) async fn flatten_join_result<T, E>(
+    handle: JoinHandle<Result<T, E>>,
+) -> Result<T, anyhow::Error>
+where
+    E: std::fmt::Display,
+{
+    match handle.await {
+        Ok(Ok(result)) => Ok(result),
+        Ok(Err(err)) => Err(anyhow!("{}", err)),
+        Err(err) => anyhow::bail!(err),
+    }
 }

@@ -851,6 +851,7 @@ checksum = "7bb11bd1378bf3731b182997b40cefe00aba6a6cc74042c8318c1b271d3badf7"
 dependencies = [
  "nix",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -1655,6 +1656,7 @@ dependencies = [
  "anyhow",
  "clap",
  "command-fds",
+ "futures",
  "kona-common",
  "kona-mpt",
  "kona-preimage",
