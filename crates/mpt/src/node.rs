@@ -62,14 +62,14 @@ pub enum TrieNode {
     /// A leaf node is a 2-item node with the encoding `rlp([encoded_path, value])`
     Leaf {
         /// The key of the leaf node
-        key: Bytes,
+        prefix: Nibbles,
         /// The value of the leaf node
         value: Bytes,
     },
     /// An extension node is a 2-item pointer node with the encoding `rlp([encoded_path, key])`
     Extension {
         /// The path prefix of the extension
-        prefix: Bytes,
+        prefix: Nibbles,
         /// The pointer to the child node
         node: Box<TrieNode>,
     },
@@ -82,34 +82,6 @@ pub enum TrieNode {
 }
 
 impl TrieNode {
-    /// Attempts to convert a `path` and `value` into a [TrieNode], if they correspond to a
-    /// [TrieNode::Leaf] or [TrieNode::Extension].
-    ///
-    /// **Note:** This function assumes that the passed reader has already consumed the RLP header
-    /// of the [TrieNode::Leaf] or [TrieNode::Extension] node.
-    pub fn try_decode_leaf_or_extension_payload(buf: &mut &[u8]) -> Result<Self> {
-        // Decode the path and value of the leaf or extension node.
-        let path = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
-
-        // Check the high-order nibble of the path to determine the type of node.
-        match path[0] >> NIBBLE_WIDTH {
-            PREFIX_EXTENSION_EVEN | PREFIX_EXTENSION_ODD => {
-                // extension node
-                let extension_node_value =
-                    TrieNode::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
-                Ok(TrieNode::Extension { prefix: path, node: Box::new(extension_node_value) })
-            }
-            PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
-                // leaf node
-                let value = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
-                Ok(TrieNode::Leaf { key: path, value })
-            }
-            _ => {
-                anyhow::bail!("Unexpected path identifier in high-order nibble")
-            }
-        }
-    }
-
     /// Blinds the [TrieNode] if it is longer than an encoded [B256] string in length, and returns
     /// the mutated node.
     pub fn blind(self) -> Self {
@@ -169,33 +141,26 @@ impl TrieNode {
                     }
                 }
             }
-            TrieNode::Leaf { key, value } => {
-                let key_nibbles = Nibbles::unpack(key.clone());
-                let shared_nibbles = key_nibbles[1..].as_ref();
-
+            TrieNode::Leaf { prefix, value } => {
                 // If the key length is one, it only contains the prefix and no shared nibbles.
                 // Return the key and value.
-                if key.len() == 1 || nibble_offset + shared_nibbles.len() >= path.len() {
+                if prefix.len() == 1 || nibble_offset + prefix.len() >= path.len() {
                     return Ok(value);
                 }
 
-                let item_key_nibbles =
-                    path[nibble_offset..nibble_offset + shared_nibbles.len()].as_ref();
+                let item_key_nibbles = path[nibble_offset..nibble_offset + prefix.len()].as_ref();
 
-                if item_key_nibbles == shared_nibbles {
+                if item_key_nibbles == prefix.as_slice() {
                     Ok(value)
                 } else {
                     anyhow::bail!("Key does not exist in trie (leaf doesn't share nibbles)");
                 }
             }
             TrieNode::Extension { prefix, node } => {
-                let prefix_nibbles = Nibbles::unpack(prefix);
-                let shared_nibbles = prefix_nibbles[1..].as_ref();
-                let item_key_nibbles =
-                    path[nibble_offset..nibble_offset + shared_nibbles.len()].as_ref();
-                if item_key_nibbles == shared_nibbles {
+                let item_key_nibbles = path[nibble_offset..nibble_offset + prefix.len()].as_ref();
+                if item_key_nibbles == prefix.as_slice() {
                     // Increase the offset within the key by the length of the shared nibbles
-                    nibble_offset += shared_nibbles.len();
+                    nibble_offset += prefix.len();
 
                     // Follow extension branch
                     if let TrieNode::Blinded { commitment } = node.as_ref() {
@@ -206,7 +171,7 @@ impl TrieNode {
                     }
                     node.open(path, nibble_offset, fetcher)
                 } else {
-                    anyhow::bail!("Key does not exist in trie (extension doesn't share nibbles)");
+                    anyhow::bail!("Key does not exist in trie (extension doesn't share nibbles) - {item_key_nibbles:?} {prefix:?} {path:?}");
                 }
             }
             TrieNode::Blinded { commitment } => {
@@ -218,6 +183,185 @@ impl TrieNode {
             _ => anyhow::bail!("Invalid trie node type encountered"),
         }
     }
+
+    /// Inserts a [TrieNode] at the given path into the trie rooted at Self.
+    ///
+    /// ## Takes
+    /// - `self` - The root trie node
+    /// - `path` - The nibbles representation of the path to the leaf node
+    /// - `node` - The node to insert at the given path
+    /// - `nibble_offset` - The number of nibbles that have already been traversed in the `path`
+    /// - `fetcher` - The preimage fetcher for intermediate blinded nodes
+    ///
+    /// ## Returns
+    /// - `Err(_)` - Could not insert the node at the given path in the trie.
+    /// - `Ok(())` - The node was successfully inserted at the given path.
+    pub fn insert(
+        &mut self,
+        path: &Nibbles,
+        value: Bytes,
+        mut nibble_offset: usize,
+        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+    ) -> Result<()> {
+        let remaining_nibbles = path.slice(nibble_offset..);
+        match self {
+            TrieNode::Empty => {
+                // If the trie node is null, insert the leaf node at the current path.
+                *self = TrieNode::Leaf { prefix: remaining_nibbles, value };
+                Ok(())
+            }
+            TrieNode::Leaf { prefix, value: leaf_value } => {
+                // If the trie node is a leaf node, create a new extension pointing to a branch.
+                let shared_extension_nibbles = remaining_nibbles.common_prefix_length(prefix);
+                nibble_offset += shared_extension_nibbles;
+
+                // Create a branch node stack containing the leaf node and the new value.
+                let mut stack = vec![TrieNode::Empty; BRANCH_LIST_LENGTH];
+
+                // If the leaf still has nibbles remaining, insert it into the branch stack.
+                if prefix.len() > shared_extension_nibbles {
+                    let branch_nibble_old = prefix[shared_extension_nibbles] as usize;
+                    let raw_leaf_nibbles =
+                        prefix.slice(BRANCH_NODE_NIBBLES + shared_extension_nibbles..);
+
+                    stack[branch_nibble_old] =
+                        TrieNode::Leaf { prefix: raw_leaf_nibbles, value: leaf_value.clone() };
+                }
+
+                // Insert the new value into the branch stack.
+                let branch_nibble_new = path[nibble_offset] as usize;
+                let raw_leaf_nibbles =
+                    remaining_nibbles.slice(BRANCH_NODE_NIBBLES + shared_extension_nibbles..);
+                stack[branch_nibble_new] =
+                    TrieNode::Leaf { prefix: raw_leaf_nibbles, value: value.clone() };
+
+                // Create an extension node pointing to the branch.
+                let raw_ext_nibbles = remaining_nibbles.slice(..shared_extension_nibbles);
+                let extension = TrieNode::Extension {
+                    prefix: raw_ext_nibbles,
+                    node: Box::new(TrieNode::Branch { stack }),
+                };
+
+                // Replace the leaf node with the extension.
+                *self = extension;
+                Ok(())
+            }
+            TrieNode::Extension { prefix, node } => {
+                let shared_extension_nibbles = remaining_nibbles.common_prefix_length(prefix);
+                if shared_extension_nibbles < remaining_nibbles.len() {
+                    // If the extension node shares some nibbles with the path, continue the
+                    // insertion recursion.
+                    nibble_offset += shared_extension_nibbles;
+                    node.insert(path, value, nibble_offset, fetcher)?;
+                    return Ok(());
+                }
+
+                // If the extension node shares all nibbles with the path, create a new
+                // branch node containing the shortened extension and the new value.
+
+                // Create a branch node stack containing the leaf node and the new value.
+                let mut stack = vec![TrieNode::Empty; BRANCH_LIST_LENGTH];
+
+                // Insert the shortened extension into the branch stack.
+                let extension_nibble = prefix[0] as usize;
+                stack[extension_nibble] = TrieNode::Extension {
+                    prefix: prefix.slice(BRANCH_NODE_NIBBLES..),
+                    node: node.clone(),
+                };
+
+                // Insert the new value into the branch stack.
+                let branch_nibble_new = path[nibble_offset] as usize;
+                stack[branch_nibble_new] = TrieNode::Leaf {
+                    prefix: remaining_nibbles.slice(BRANCH_NODE_NIBBLES..),
+                    value,
+                };
+
+                // Replace the extension node with the branch.
+                *self = TrieNode::Branch { stack };
+                Ok(())
+            }
+            TrieNode::Branch { stack } => {
+                // Follow the branch node to the next node in the path.
+                let branch_nibble = path[nibble_offset] as usize;
+                nibble_offset += BRANCH_NODE_NIBBLES;
+                stack[branch_nibble].insert(path, value, nibble_offset, fetcher)
+            }
+            TrieNode::Blinded { commitment } => {
+                // If a blinded node is approached, reveal the node and continue the insertion
+                // recursion.
+                let trie_node = TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
+                    .map_err(|e| anyhow!(e))?;
+                *self = trie_node;
+                self.insert(path, value, nibble_offset, fetcher)
+            }
+        }
+    }
+
+    /// Returns the RLP payload length of the [TrieNode].
+    pub(crate) fn payload_length(&self) -> usize {
+        match self {
+            TrieNode::Empty => 1,
+            TrieNode::Blinded { commitment } => commitment.len(),
+            TrieNode::Leaf { prefix, value } => {
+                let encoded_key_len = prefix.length() / 2 + 1;
+                encoded_key_len + value.length()
+            }
+            TrieNode::Extension { prefix, node } => {
+                let encoded_key_len = prefix.length() / 2 + 1;
+                encoded_key_len + node.length()
+            }
+            TrieNode::Branch { stack } => {
+                // In branch nodes, if an element is longer than an encoded 32 byte string, it is
+                // blinded. Assuming we have an open trie node, we must re-hash the
+                // elements that are longer than an encoded 32 byte string
+                // in length.
+                stack.iter().fold(0, |mut acc, node| {
+                    acc += blinded_length(node);
+                    acc
+                })
+            }
+        }
+    }
+
+    /// Attempts to convert a `path` and `value` into a [TrieNode], if they correspond to a
+    /// [TrieNode::Leaf] or [TrieNode::Extension].
+    ///
+    /// **Note:** This function assumes that the passed reader has already consumed the RLP header
+    /// of the [TrieNode::Leaf] or [TrieNode::Extension] node.
+    fn try_decode_leaf_or_extension_payload(buf: &mut &[u8]) -> Result<Self> {
+        // Decode the path and value of the leaf or extension node.
+        let path = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
+        let first_nibble = path[0] >> NIBBLE_WIDTH;
+        let first = match first_nibble {
+            PREFIX_EXTENSION_ODD | PREFIX_LEAF_ODD => Some(path[0] & 0x0f),
+            PREFIX_EXTENSION_EVEN | PREFIX_LEAF_EVEN => None,
+            _ => anyhow::bail!("Unexpected path identifier in high-order nibble"),
+        };
+
+        // Check the high-order nibble of the path to determine the type of node.
+        match first_nibble {
+            PREFIX_EXTENSION_EVEN | PREFIX_EXTENSION_ODD => {
+                // Extension node
+                let extension_node_value =
+                    TrieNode::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
+                Ok(TrieNode::Extension {
+                    prefix: unpack_path_to_nibbles(first, path[1..].as_ref()),
+                    node: Box::new(extension_node_value),
+                })
+            }
+            PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
+                // leaf node
+                let value = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
+                Ok(TrieNode::Leaf {
+                    prefix: unpack_path_to_nibbles(first, path[1..].as_ref()),
+                    value,
+                })
+            }
+            _ => {
+                anyhow::bail!("Unexpected path identifier in high-order nibble")
+            }
+        }
+    }
 }
 
 impl Encodable for TrieNode {
@@ -225,15 +369,16 @@ impl Encodable for TrieNode {
         match self {
             Self::Empty => out.put_u8(EMPTY_STRING_CODE),
             Self::Blinded { commitment } => commitment.encode(out),
-            Self::Leaf { key, value } => {
+            Self::Leaf { prefix, value } => {
                 // Encode the leaf node's header and key-value pair.
-                let leaf_list = vec![key, value];
-                leaf_list.encode(out);
+                Header { list: true, payload_length: self.payload_length() }.encode(out);
+                prefix.encode_path_leaf(true).as_slice().encode(out);
+                value.encode(out);
             }
             Self::Extension { prefix, node } => {
                 // Encode the extension node's header, prefix, and pointer node.
-                Header { list: true, payload_length: prefix.length() + node.length() }.encode(out);
-                prefix.encode(out);
+                Header { list: true, payload_length: self.payload_length() }.encode(out);
+                prefix.encode_path_leaf(false).as_slice().encode(out);
                 encode_blinded(node.as_ref(), out);
             }
             Self::Branch { stack } => {
@@ -251,28 +396,17 @@ impl Encodable for TrieNode {
         match self {
             Self::Empty => 1,
             Self::Blinded { commitment } => commitment.length(),
-            Self::Leaf { key, value } => {
-                let leaf_list = vec![key, value];
-                leaf_list.length()
+            Self::Leaf { .. } => {
+                let payload_length = self.payload_length();
+                Header { list: true, payload_length }.length() + payload_length
             }
-            Self::Extension { prefix, node } => {
-                let prefix_length = prefix.length();
-                let node_length = blinded_length(node.as_ref());
-                Header { list: true, payload_length: prefix_length + node_length }.length() +
-                    prefix_length +
-                    node_length
+            Self::Extension { .. } => {
+                let payload_length = self.payload_length();
+                Header { list: true, payload_length }.length() + payload_length
             }
-            Self::Branch { stack } => {
-                // In branch nodes, if an element is longer than an encoded 32 byte string, it is
-                // blinded. Assuming we have an open trie node, we must re-hash the
-                // elements that are longer than an encoded 32 byte string
-                // in length.
-                let inner_length = stack.iter().fold(0, |mut acc, node| {
-                    acc += blinded_length(node);
-                    acc
-                });
-
-                inner_length + Header { list: true, payload_length: inner_length }.length()
+            Self::Branch { .. } => {
+                let payload_length = self.payload_length();
+                Header { list: true, payload_length }.length() + payload_length
             }
         }
     }
@@ -361,6 +495,20 @@ fn rlp_list_element_length(buf: &mut &[u8]) -> alloy_rlp::Result<usize> {
     Ok(list_element_length)
 }
 
+/// Unpack node path to nibbles.
+///
+/// ## Takes
+/// - `first` - first nibble of the path if it is odd. Must be <= 0x0F, or will create invalid
+///   nibbles.
+/// - `rest` - rest of the nibbles packed
+///
+/// ## Returns
+/// - `Nibbles` - unpacked nibbles
+fn unpack_path_to_nibbles(first: Option<u8>, rest: &[u8]) -> Nibbles {
+    let rest = Nibbles::unpack(rest);
+    Nibbles::from_vec_unchecked(first.into_iter().chain(rest.iter().copied()).collect::<Vec<u8>>())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -388,7 +536,10 @@ mod test {
                 TrieNode::Empty,
                 TrieNode::Empty,
                 TrieNode::Empty,
-                TrieNode::Leaf { key: bytes!("30"), value: bytes!("8a74657374207468726565") },
+                TrieNode::Leaf {
+                    prefix: Nibbles::from_nibbles([0x00]),
+                    value: bytes!("8a74657374207468726565"),
+                },
                 TrieNode::Empty,
                 TrieNode::Empty,
                 TrieNode::Empty,
@@ -413,8 +564,12 @@ mod test {
     fn test_encode_decode_extension_open_short() {
         const EXTENSION_RLP: [u8; 19] = hex!("d28300646fcd308b8a74657374207468726565");
 
-        let opened = TrieNode::Leaf { key: bytes!("30"), value: bytes!("8a74657374207468726565") };
-        let expected = TrieNode::Extension { prefix: bytes!("00646f"), node: Box::new(opened) };
+        let opened = TrieNode::Leaf {
+            prefix: Nibbles::from_nibbles([0x00]),
+            value: bytes!("8a74657374207468726565"),
+        };
+        let expected =
+            TrieNode::Extension { prefix: Nibbles::unpack(bytes!("646f")), node: Box::new(opened) };
 
         let mut rlp_buf = Vec::with_capacity(expected.length());
         expected.encode(&mut rlp_buf);
@@ -428,23 +583,28 @@ mod test {
             hex!("e58300646fa0f3fe8b3c5b21d3e52860f1e4a5825a6100bb341069c1e88f4ebf6bd98de0c190");
         let mut rlp_buf = Vec::new();
 
-        let opened = TrieNode::Leaf { key: bytes!("30"), value: [0xFF; 64].into() };
+        let opened =
+            TrieNode::Leaf { prefix: Nibbles::from_nibbles([0x00]), value: [0xFF; 64].into() };
         opened.encode(&mut rlp_buf);
         let blinded = TrieNode::Blinded { commitment: keccak256(&rlp_buf) };
 
         rlp_buf.clear();
         let opened_extension =
-            TrieNode::Extension { prefix: bytes!("00646f"), node: Box::new(opened) };
+            TrieNode::Extension { prefix: Nibbles::unpack(bytes!("646f")), node: Box::new(opened) };
         opened_extension.encode(&mut rlp_buf);
 
-        let expected = TrieNode::Extension { prefix: bytes!("00646f"), node: Box::new(blinded) };
+        let expected = TrieNode::Extension {
+            prefix: Nibbles::unpack(bytes!("646f")),
+            node: Box::new(blinded),
+        };
         assert_eq!(expected, TrieNode::decode(&mut EXTENSION_RLP.as_slice()).unwrap());
     }
 
     #[test]
     fn test_decode_leaf() {
         const LEAF_RLP: [u8; 11] = hex!("ca8320646f8576657262FF");
-        let expected = TrieNode::Leaf { key: bytes!("20646f"), value: bytes!("76657262FF") };
+        let expected =
+            TrieNode::Leaf { prefix: Nibbles::unpack(bytes!("646f")), value: bytes!("76657262FF") };
         assert_eq!(expected, TrieNode::decode(&mut LEAF_RLP.as_slice()).unwrap());
     }
 
@@ -479,5 +639,65 @@ mod test {
             panic!("Expected blinded root node");
         };
         assert_eq!(commitment, root);
+    }
+
+    #[test]
+    fn test_insert_static() {
+        let mut node =
+            TrieNode::Leaf { prefix: Nibbles::unpack(hex!("01")), value: Default::default() };
+        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), 0, |_| Ok(Default::default()))
+            .unwrap();
+        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), 0, |_| Ok(Default::default()))
+            .unwrap();
+
+        let expected = TrieNode::Extension {
+            prefix: Nibbles::unpack(hex!("01")),
+            node: Box::new(TrieNode::Branch {
+                stack: vec![
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Extension {
+                        prefix: Nibbles::unpack(hex!("34")),
+                        node: Box::new(TrieNode::Branch {
+                            stack: vec![
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Leaf { prefix: Default::default(), value: bytes!("01") },
+                                TrieNode::Leaf { prefix: Default::default(), value: bytes!("02") },
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                                TrieNode::Empty,
+                            ],
+                        }),
+                    },
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                    TrieNode::Empty,
+                ],
+            }),
+        };
+
+        assert_eq!(node, expected);
     }
 }

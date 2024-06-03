@@ -106,7 +106,9 @@ where
                 }
                 Ok(leaf_values)
             }
-            TrieNode::Leaf { key, value } => Ok(vec![(key.clone(), value.clone())].into()),
+            TrieNode::Leaf { prefix, value } => {
+                Ok(vec![(prefix.to_vec().into(), value.clone())].into())
+            }
             TrieNode::Extension { node, .. } => {
                 // If the node is a hash, we need to grab the preimage for it and continue
                 // recursing. If it is already retrieved, recurse on it.
