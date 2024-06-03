@@ -1,9 +1,8 @@
 # Kona Book
 
-*Documentation for the Kona project.*
+_Documentation for the Kona project._
 
 <a href="https://github.com/kona-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a>
-<a href="https://t.me/+2yfSX0YikWMxNTRh"><img src="https://img.shields.io/badge/Telegram-x?logo=telegram&label=anton-rs%20contributors"></a>
 
 > 📖 `kona` is in active development, and is not yet ready for use in production. During development, this book will evolve quickly and may contain inaccuracies.
 >
@@ -14,7 +13,7 @@
 Kona is a suite of libraries and build pipelines for developing verifiable Rust programs targeting
 {{#template ../templates/glossary-link.md root=./ ref=fault-proof-vm text=Fault Proof VMs}}.
 
-It is built and maintained by members of [OP Labs][op-labs] as well as open source contributors, and is licensed under the MIT License. 
+It is built and maintained by members of [OP Labs][op-labs] as well as open source contributors, and is licensed under the MIT License.
 
 Kona provides tooling and abstractions around low-level syscalls, memory management, and other common structures that authors of verifiable programs
 will need to interact with. It also provides build pipelines for compiling `no_std` Rust programs to a format that can be executed by supported
