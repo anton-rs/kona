@@ -33,45 +33,48 @@ static CLIENT_HINT_PIPE: PipeHandle =
 
 #[client_entry(0xFFFFFFF)]
 fn main() {
-    let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
-    let hint_writer = HintWriter::new(CLIENT_HINT_PIPE);
+    kona_common::block_on(async {
+        let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
+        let hint_writer = HintWriter::new(CLIENT_HINT_PIPE);
 
-    io::print("Booting EVM and checking hash...\n");
-    let (digest, code) = boot(&mut oracle).expect("Failed to boot");
+        io::print("Booting EVM and checking hash...\n");
+        let (digest, code) = boot(&mut oracle).await.expect("Failed to boot");
 
-    match run_evm(&mut oracle, &hint_writer, digest, code) {
-        Ok(_) => io::print("Success, hashes matched!\n"),
-        Err(e) => {
-            io::print_err(alloc::format!("Error: {}\n", e).as_ref());
-            io::exit(1);
+        match run_evm(&mut oracle, &hint_writer, digest, code).await {
+            Ok(_) => io::print("Success, hashes matched!\n"),
+            Err(e) => {
+                io::print_err(alloc::format!("Error: {}\n", e).as_ref());
+                io::exit(1);
+            }
         }
-    }
+    })
 }
 
 /// Boot the program and load bootstrap information.
 #[inline]
-fn boot(oracle: &mut OracleReader) -> Result<([u8; 32], Vec<u8>)> {
+async fn boot(oracle: &mut OracleReader) -> Result<([u8; 32], Vec<u8>)> {
     let digest = oracle
-        .get(PreimageKey::new_local(DIGEST_IDENT))?
+        .get(PreimageKey::new_local(DIGEST_IDENT))
+        .await?
         .try_into()
         .map_err(|_| anyhow!("Failed to convert digest to [u8; 32]"))?;
-    let code = oracle.get(PreimageKey::new_local(CODE_IDENT))?;
+    let code = oracle.get(PreimageKey::new_local(CODE_IDENT)).await?;
 
     Ok((digest, code))
 }
 
 /// Call the SHA-256 precompile and assert that the input and output match the expected values
 #[inline]
-fn run_evm(
+async fn run_evm(
     oracle: &mut OracleReader,
     hint_writer: &HintWriter,
     digest: [u8; 32],
     code: Vec<u8>,
 ) -> Result<()> {
     // Send a hint for the preimage of the digest to the host so that it can prepare the preimage.
-    hint_writer.write(&alloc::format!("sha2-preimage {}", hex::encode(digest)))?;
+    hint_writer.write(&alloc::format!("sha2-preimage {}", hex::encode(digest))).await?;
     // Get the preimage of `digest` from the host.
-    let input = oracle.get(PreimageKey::new_local(INPUT_IDENT))?;
+    let input = oracle.get(PreimageKey::new_local(INPUT_IDENT)).await?;
 
     let mut cache_db = CacheDB::new(EmptyDB::default());
 

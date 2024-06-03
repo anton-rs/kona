@@ -1,6 +1,7 @@
 use crate::{traits::HintWriterClient, HintReaderServer, PipeHandle};
 use alloc::{boxed::Box, string::String, vec};
 use anyhow::Result;
+use async_trait::async_trait;
 use core::future::Future;
 use tracing::{debug, error};
 
@@ -18,10 +19,11 @@ impl HintWriter {
     }
 }
 
+#[async_trait]
 impl HintWriterClient for HintWriter {
     /// Write a hint to the host. This will overwrite any existing hint in the pipe, and block until
     /// all data has been written.
-    fn write(&self, hint: &str) -> Result<()> {
+    async fn write(&self, hint: &str) -> Result<()> {
         // Form the hint into a byte buffer. The format is a 4-byte big-endian length prefix
         // followed by the hint string.
         let mut hint_bytes = vec![0u8; hint.len() + 4];
@@ -31,13 +33,13 @@ impl HintWriterClient for HintWriter {
         debug!(target: "hint_writer", "Writing hint \"{hint}\"");
 
         // Write the hint to the host.
-        self.pipe_handle.write(&hint_bytes)?;
+        self.pipe_handle.write(&hint_bytes).await?;
 
         debug!(target: "hint_writer", "Successfully wrote hint");
 
         // Read the hint acknowledgement from the host.
         let mut hint_ack = [0u8; 1];
-        self.pipe_handle.read_exact(&mut hint_ack)?;
+        self.pipe_handle.read_exact(&mut hint_ack).await?;
 
         debug!(target: "hint_writer", "Received hint acknowledgement");
 
@@ -59,7 +61,7 @@ impl HintReader {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl HintReaderServer for HintReader {
     async fn next_hint<F, Fut>(&self, mut route_hint: F) -> Result<()>
     where
@@ -68,12 +70,12 @@ impl HintReaderServer for HintReader {
     {
         // Read the length of the raw hint payload.
         let mut len_buf = [0u8; 4];
-        self.pipe_handle.read_exact(&mut len_buf)?;
+        self.pipe_handle.read_exact(&mut len_buf).await?;
         let len = u32::from_be_bytes(len_buf);
 
         // Read the raw hint payload.
         let mut raw_payload = vec![0u8; len as usize];
-        self.pipe_handle.read_exact(raw_payload.as_mut_slice())?;
+        self.pipe_handle.read_exact(raw_payload.as_mut_slice()).await?;
         let payload = String::from_utf8(raw_payload)
             .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?;
 
@@ -82,14 +84,14 @@ impl HintReaderServer for HintReader {
         // Route the hint
         if let Err(e) = route_hint(payload).await {
             // Write back on error to prevent blocking the client.
-            self.pipe_handle.write(&[0x00])?;
+            self.pipe_handle.write(&[0x00]).await?;
 
             error!("Failed to route hint: {e}");
             anyhow::bail!("Failed to rout hint: {e}");
         }
 
         // Write back an acknowledgement to the client to unblock their process.
-        self.pipe_handle.write(&[0x00])?;
+        self.pipe_handle.write(&[0x00]).await?;
 
         debug!(target: "hint_reader", "Successfully routed and acknowledged hint");
 
@@ -144,7 +146,7 @@ mod test {
         let (hint_writer, hint_reader) = (sys.hint_writer, sys.hint_reader);
         let incoming_hints = Arc::new(Mutex::new(Vec::new()));
 
-        let client = tokio::task::spawn(async move { hint_writer.write(MOCK_DATA) });
+        let client = tokio::task::spawn(async move { hint_writer.write(MOCK_DATA).await });
         let host = tokio::task::spawn({
             let incoming_hints_ref = Arc::clone(&incoming_hints);
             async move {
