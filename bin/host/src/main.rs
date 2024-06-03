@@ -107,7 +107,7 @@ async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
     // Start the client program in a separate child process.
     let program_task = task::spawn(start_native_client_program(cfg, files, tx_program, rx_program));
 
-    // Executen both tasks and wait for them to complete.
+    // Execute both tasks and wait for them to complete.
     info!("Starting preimage server and client program.");
     tokio::try_join!(
         util::flatten_join_result(server_task),
