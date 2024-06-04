@@ -6,7 +6,7 @@
 
 extern crate alloc;
 
-mod executor;
+pub mod l2;
 
 mod comms;
 pub use comms::{CachingOracle, HINT_WRITER, ORACLE_READER};

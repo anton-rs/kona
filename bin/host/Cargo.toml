@@ -21,12 +21,12 @@ kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
 kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }
 
 # external
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
-alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
-alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
-alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07" } 
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
 reqwest = "0.12"
 tokio = { version = "1.37.0", features = ["full"] }
 futures = "0.3"

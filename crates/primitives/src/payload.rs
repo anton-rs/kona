@@ -15,7 +15,7 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
 use super::{
-    Block, BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo, OpBlock,
+    BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo, OpBlock,
     RollupConfig, SystemConfig, Withdrawal,
 };
 use alloy_rlp::Encodable;
@@ -73,10 +73,10 @@ pub struct L2ExecutionPayload {
     pub block_number: u64,
     /// The gas limit.
     #[cfg_attr(feature = "serde", serde(rename = "gasLimit"))]
-    pub gas_limit: u64,
+    pub gas_limit: u128,
     /// The gas used.
     #[cfg_attr(feature = "serde", serde(rename = "gasUsed"))]
-    pub gas_used: u64,
+    pub gas_used: u128,
     /// The timestamp.
     #[cfg_attr(feature = "serde", serde(rename = "timestamp"))]
     pub timestamp: u64,
@@ -88,13 +88,16 @@ pub struct L2ExecutionPayload {
         feature = "serde",
         serde(rename = "baseFeePerGas", skip_serializing_if = "Option::is_none")
     )]
-    pub base_fee_per_gas: Option<u64>,
+    pub base_fee_per_gas: Option<u128>,
     /// Block hash.
     #[cfg_attr(feature = "serde", serde(rename = "blockHash"))]
     pub block_hash: B256,
     /// The transactions.
     #[cfg_attr(feature = "serde", serde(rename = "transactions"))]
     pub transactions: Vec<Bytes>,
+    /// The deserialized transactions.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub deserialized_transactions: Vec<OpTxEnvelope>,
     /// The withdrawals.
     #[cfg_attr(
         feature = "serde",
@@ -106,13 +109,13 @@ pub struct L2ExecutionPayload {
         feature = "serde",
         serde(rename = "blobGasUsed", skip_serializing_if = "Option::is_none")
     )]
-    pub blob_gas_used: Option<u64>,
+    pub blob_gas_used: Option<u128>,
     /// The excess blob gas.
     #[cfg_attr(
         feature = "serde",
         serde(rename = "excessBlobGas", skip_serializing_if = "Option::is_none")
     )]
-    pub excess_blob_gas: Option<u64>,
+    pub excess_blob_gas: Option<u128>,
 }
 
 impl L2ExecutionPayloadEnvelope {
@@ -219,41 +222,6 @@ impl L2ExecutionPayloadEnvelope {
     }
 }
 
-impl From<Block> for L2ExecutionPayloadEnvelope {
-    fn from(block: Block) -> Self {
-        let Block { header, body, withdrawals, .. } = block;
-        Self {
-            execution_payload: L2ExecutionPayload {
-                parent_hash: header.parent_hash,
-                fee_recipient: header.beneficiary,
-                state_root: header.state_root,
-                receipts_root: header.receipts_root,
-                logs_bloom: header.logs_bloom,
-                prev_randao: header.difficulty.into(),
-                block_number: header.number,
-                gas_limit: header.gas_limit,
-                gas_used: header.gas_used,
-                timestamp: header.timestamp,
-                extra_data: header.extra_data.clone(),
-                base_fee_per_gas: header.base_fee_per_gas,
-                block_hash: header.hash_slow(),
-                transactions: body
-                    .into_iter()
-                    .map(|tx| {
-                        let mut buf = Vec::with_capacity(tx.length());
-                        tx.encode(&mut buf);
-                        buf.into()
-                    })
-                    .collect(),
-                withdrawals,
-                blob_gas_used: header.blob_gas_used,
-                excess_blob_gas: header.excess_blob_gas,
-            },
-            parent_beacon_block_root: header.parent_beacon_block_root,
-        }
-    }
-}
-
 impl From<OpBlock> for L2ExecutionPayloadEnvelope {
     fn from(block: OpBlock) -> Self {
         let OpBlock { header, body, withdrawals, .. } = block;
@@ -272,6 +240,7 @@ impl From<OpBlock> for L2ExecutionPayloadEnvelope {
                 extra_data: header.extra_data.clone(),
                 base_fee_per_gas: header.base_fee_per_gas,
                 block_hash: header.hash_slow(),
+                deserialized_transactions: body.clone(),
                 transactions: body
                     .into_iter()
                     .map(|tx| {

@@ -11,14 +11,21 @@ homepage.workspace = true
 # workspace
 cfg-if.workspace = true
 alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-rlp.workspace = true
 anyhow.workspace = true
+revm = { workspace = true, features = ["optimism"] }
 
 # local
-kona-common = { path = "../../../crates/common" }
-kona-common-proc = { path = "../../../crates/common-proc" }
-kona-preimage = { path = "../../../crates/preimage" }
+kona-common = { path = "../../../crates/common", version = "0.0.1" }
+kona-common-proc = { path = "../../../crates/common-proc", version = "0.0.1" }
+kona-preimage = { path = "../../../crates/preimage", version = "0.0.1" }
+kona-mpt = { path = "../../../crates/mpt", version = "0.0.1" }
+kona-derive = { path = "../../../crates/derive", version = "0.0.1" }
 
 # external
+op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
 lru = "0.12.3"
 async-trait = "0.1.80"
 spin = "0.9.8"

@@ -18,7 +18,7 @@ kona-primitives = { path = "../primitives" }
 kona-derive = { path = "../derive" }
 
 # External
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
 alloy-primitives = { workspace = true, features = ["rlp"] }
 async-trait = "0.1.80"
 

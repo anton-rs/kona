@@ -1,6 +1,7 @@
 //! This module contains the [TrieNode] type, which represents a node within a standard Merkle
 //! Patricia Trie.
 
+use crate::TrieDBFetcher;
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{keccak256, Bytes, B256};
 use alloy_rlp::{Buf, BufMut, Decodable, Encodable, Header, EMPTY_STRING_CODE};
@@ -128,20 +129,20 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not retrieve the node with the given key from the trie.
     /// - `Ok((_, _))` - The key and value of the node
-    pub fn open<'a>(
+    pub fn open<'a, F: TrieDBFetcher>(
         &'a mut self,
         path: &Nibbles,
-        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+        fetcher: &F,
     ) -> Result<&'a mut Bytes> {
         self.open_inner(path, 0, fetcher)
     }
 
     /// Inner alias for `open` that keeps track of the nibble offset.
-    fn open_inner<'a>(
+    fn open_inner<'a, F: TrieDBFetcher>(
         &'a mut self,
         path: &Nibbles,
         mut nibble_offset: usize,
-        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+        fetcher: &F,
     ) -> Result<&'a mut Bytes> {
         match self {
             TrieNode::Branch { ref mut stack } => {
@@ -158,8 +159,10 @@ impl TrieNode {
                     TrieNode::Blinded { commitment } => {
                         // If the string is a hash, we need to grab the preimage for it and
                         // continue recursing.
-                        let trie_node = TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
-                            .map_err(|e| anyhow!(e))?;
+                        let trie_node = TrieNode::decode(
+                            &mut fetcher.trie_node_preimage(*commitment)?.as_ref(),
+                        )
+                        .map_err(|e| anyhow!(e))?;
                         *branch_node = trie_node;
 
                         // If the value was found in the blinded node, return it.
@@ -195,8 +198,10 @@ impl TrieNode {
                     // Follow extension branch
                     if let TrieNode::Blinded { commitment } = node.as_ref() {
                         *node = Box::new(
-                            TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
-                                .map_err(|e| anyhow!(e))?,
+                            TrieNode::decode(
+                                &mut fetcher.trie_node_preimage(*commitment)?.as_ref(),
+                            )
+                            .map_err(|e| anyhow!(e))?,
                         );
                     }
                     node.open_inner(path, nibble_offset, fetcher)
@@ -205,8 +210,9 @@ impl TrieNode {
                 }
             }
             TrieNode::Blinded { commitment } => {
-                let trie_node = TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
-                    .map_err(|e| anyhow!(e))?;
+                let trie_node =
+                    TrieNode::decode(&mut fetcher.trie_node_preimage(*commitment)?.as_ref())
+                        .map_err(|e| anyhow!(e))?;
                 *self = trie_node;
                 self.open_inner(path, nibble_offset, fetcher)
             }
@@ -225,22 +231,22 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not insert the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully inserted at the given path.
-    pub fn insert(
+    pub fn insert<F: TrieDBFetcher>(
         &mut self,
         path: &Nibbles,
         value: Bytes,
-        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+        fetcher: &F,
     ) -> Result<()> {
         self.insert_inner(path, value, 0, fetcher)
     }
 
     /// Inner alias for `insert` that keeps track of the nibble offset.
-    fn insert_inner(
+    fn insert_inner<F: TrieDBFetcher>(
         &mut self,
         path: &Nibbles,
         value: Bytes,
         mut nibble_offset: usize,
-        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+        fetcher: &F,
     ) -> Result<()> {
         let remaining_nibbles = path.slice(nibble_offset..);
         match self {
@@ -328,8 +334,9 @@ impl TrieNode {
             TrieNode::Blinded { commitment } => {
                 // If a blinded node is approached, reveal the node and continue the insertion
                 // recursion.
-                let trie_node = TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
-                    .map_err(|e| anyhow!(e))?;
+                let trie_node =
+                    TrieNode::decode(&mut fetcher.trie_node_preimage(*commitment)?.as_ref())
+                        .map_err(|e| anyhow!(e))?;
                 *self = trie_node;
                 self.insert_inner(path, value, nibble_offset, fetcher)
             }
@@ -574,12 +581,14 @@ fn unpack_path_to_nibbles(first: Option<u8>, rest: &[u8]) -> Nibbles {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{ordered_trie_with_encoder, TrieNode};
+    use crate::{
+        fetcher::NoopTrieDBFetcher, ordered_trie_with_encoder, test_util::TrieNodeProvider,
+        TrieNode,
+    };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
-    use alloy_primitives::{b256, bytes, hex, keccak256, Bytes, B256};
+    use alloy_primitives::{b256, bytes, hex, keccak256};
     use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};
     use alloy_trie::Nibbles;
-    use anyhow::{anyhow, Result};
 
     #[test]
     fn test_decode_branch() {
@@ -680,14 +689,13 @@ mod test {
                 acc.insert(keccak256(value.as_ref()), value);
                 acc
             });
-        let fetcher = |h: B256| -> Result<Bytes> {
-            preimages.get(&h).cloned().ok_or(anyhow!("Failed to find preimage"))
-        };
+        let fetcher = TrieNodeProvider::new(preimages, Default::default(), Default::default());
 
-        let mut root_node = TrieNode::decode(&mut fetcher(root).unwrap().as_ref()).unwrap();
+        let mut root_node =
+            TrieNode::decode(&mut fetcher.trie_node_preimage(root).unwrap().as_ref()).unwrap();
         for (i, value) in VALUES.iter().enumerate() {
             let path_nibbles = Nibbles::unpack([if i == 0 { EMPTY_STRING_CODE } else { i as u8 }]);
-            let v = root_node.open(&path_nibbles, fetcher).unwrap();
+            let v = root_node.open(&path_nibbles, &fetcher).unwrap();
 
             let mut encoded_value = Vec::with_capacity(value.length());
             value.encode(&mut encoded_value);
@@ -704,10 +712,9 @@ mod test {
     fn test_insert_static() {
         let mut node =
             TrieNode::Leaf { prefix: Nibbles::unpack(hex!("01")), value: Default::default() };
-        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), |_| Ok(Default::default()))
-            .unwrap();
-        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), |_| Ok(Default::default()))
-            .unwrap();
+        let noop_fetcher = NoopTrieDBFetcher;
+        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), &noop_fetcher).unwrap();
+        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), &noop_fetcher).unwrap();
 
         let expected = TrieNode::Extension {
             prefix: Nibbles::unpack(hex!("01")),
