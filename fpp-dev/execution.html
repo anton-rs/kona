@@ -174,7 +174,23 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="execution"><a class="header" href="#execution">Execution</a></h1>
-<p><em>TODO</em></p>
+<p>The execution phase of the program is commonly the heaviest portion of the fault proof program, where the computation
+that is being verified is performed.</p>
+<p>This phase consumes the outputs of the <a href="./prologue.html">prologue phase</a>, and performs the bulk of the verifiable
+computation. After execution has concluded, the outputs are passed along to the <a href="./epilogue.html">epilogue phase</a> for
+final verification.</p>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>At a high-level, in the <code>kona-client</code> program, the execution phase:</p>
+<ol>
+<li>Derives the inputs to the L2 derivation pipeline by unrolling the L1 head hash fetched in the epilogue.</li>
+<li>Passes the inputs to the L2 derivation pipeline, producing the L2 execution payloads required to reproduce
+the L2 safe chain at the claimed height.</li>
+<li>Executes the payloads produced by the L2 derivation pipeline, producing the <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> at the
+L2 claim height.</li>
+</ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 
                     </main>
 

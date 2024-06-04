@@ -174,7 +174,29 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="prologue"><a class="header" href="#prologue">Prologue</a></h1>
-<p><em>TODO</em></p>
+<p>The prologue stage of the program is commonly responsible for bootstrapping the program with inputs from an external
+source, pulled in through the <a href="./env.html#host---client-communication">Host &lt;-&gt; Client communication</a> implementation.</p>
+<p>As a rule of thumb, the prologue implementation should be kept minimal, and should not do much more than establish
+the inputs for the <a href="./execution.html">execution phase</a>.</p>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>As an example, the prologue stage of the <code>kona-client</code> program runs through several steps:</p>
+<ol>
+<li>Pull in the boot information over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">Preimage Oracle ABI</a>, containing:
+<ul>
+<li>The L1 head hash containing all data required to reproduce the L2 safe chain at the claimed block height.</li>
+<li>The latest finalized <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a>.</li>
+<li>The <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
+<li>The block number of the <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
+<li>The L2 chain ID.</li>
+</ul>
+</li>
+<li>Pull in the <code>RollupConfig</code> and <code>L2ChainConfig</code> corresponding to the passed L2 chain ID.</li>
+<li>Validate these values.</li>
+<li>Pass the boot information to the execution phase.</li>
+</ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 
                     </main>
 

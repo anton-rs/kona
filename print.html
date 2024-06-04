@@ -176,8 +176,7 @@
                     <main>
                         <h1 id="kona-book"><a class="header" href="#kona-book">Kona Book</a></h1>
 <p><em>Documentation for the Kona project.</em></p>
-<p><a href="https://github.com/kona-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a>
-<a href="https://t.me/+2yfSX0YikWMxNTRh"><img src="https://img.shields.io/badge/Telegram-x?logo=telegram&label=anton-rs%20contributors"></a></p>
+<p><a href="https://github.com/kona-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a></p>
 <blockquote>
 <p>📖 <code>kona</code> is in active development, and is not yet ready for use in production. During development, this book will evolve quickly and may contain inaccuracies.</p>
 <p>Please <a href="https://github.com/ethereum-optimism/kona/issues/new">open an issue</a> if you find any errors or have any suggestions for improvements, and also feel free to <a href="https://github.com/ethereum-optimism/kona/tree/main/CONTRIBUTING.md">contribute</a> to the project!</p>
@@ -402,11 +401,61 @@ programs to directly invoke a select few syscalls:</p>
 <!-- Kona links -->
 <!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="prologue"><a class="header" href="#prologue">Prologue</a></h1>
-<p><em>TODO</em></p>
+<p>The prologue stage of the program is commonly responsible for bootstrapping the program with inputs from an external
+source, pulled in through the <a href="fpp-dev/./env.html#host---client-communication">Host &lt;-&gt; Client communication</a> implementation.</p>
+<p>As a rule of thumb, the prologue implementation should be kept minimal, and should not do much more than establish
+the inputs for the <a href="fpp-dev/./execution.html">execution phase</a>.</p>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>As an example, the prologue stage of the <code>kona-client</code> program runs through several steps:</p>
+<ol>
+<li>Pull in the boot information over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">Preimage Oracle ABI</a>, containing:
+<ul>
+<li>The L1 head hash containing all data required to reproduce the L2 safe chain at the claimed block height.</li>
+<li>The latest finalized <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a>.</li>
+<li>The <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
+<li>The block number of the <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
+<li>The L2 chain ID.</li>
+</ul>
+</li>
+<li>Pull in the <code>RollupConfig</code> and <code>L2ChainConfig</code> corresponding to the passed L2 chain ID.</li>
+<li>Validate these values.</li>
+<li>Pass the boot information to the execution phase.</li>
+</ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="execution"><a class="header" href="#execution">Execution</a></h1>
-<p><em>TODO</em></p>
+<p>The execution phase of the program is commonly the heaviest portion of the fault proof program, where the computation
+that is being verified is performed.</p>
+<p>This phase consumes the outputs of the <a href="fpp-dev/./prologue.html">prologue phase</a>, and performs the bulk of the verifiable
+computation. After execution has concluded, the outputs are passed along to the <a href="fpp-dev/./epilogue.html">epilogue phase</a> for
+final verification.</p>
+<h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
+<p>At a high-level, in the <code>kona-client</code> program, the execution phase:</p>
+<ol>
+<li>Derives the inputs to the L2 derivation pipeline by unrolling the L1 head hash fetched in the epilogue.</li>
+<li>Passes the inputs to the L2 derivation pipeline, producing the L2 execution payloads required to reproduce
+the L2 safe chain at the claimed height.</li>
+<li>Executes the payloads produced by the L2 derivation pipeline, producing the <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> at the
+L2 claim height.</li>
+</ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="epilogue"><a class="header" href="#epilogue">Epilogue</a></h1>
-<p><em>TODO</em></p>
+<p>The epilogue stage of the program is intended to perform the final validation on the outputs from the
+<a href="fpp-dev/./execution.html">execution phase</a>. In most programs, this entails comparing the outputs of the execution phase
+to portions of the bootstrap data made available during the <a href="fpp-dev/./prologue.html">prologue phase</a>.</p>
+<p>Generally, this phase should consist almost entirely of validation steps.</p>
+<h2 id="example-2"><a class="header" href="#example-2">Example</a></h2>
+<p>In the <code>kona-client</code> program, the prologue phase only contains two directives:</p>
+<ol>
+<li>Validate that the L2 safe chain could be produced at the claimed L2 block height.</li>
+<li>The constructed output root is equivalent to the claimed <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a>.</li>
+</ol>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <p><em>This document contains definitions for terms used throughout the Kona book.</em></p>
 <h4 id="fault-proof-vm"><a class="header" href="#fault-proof-vm">Fault Proof VM</a></h4>
