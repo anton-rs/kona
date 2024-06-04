@@ -7,6 +7,7 @@ use kona_common_proc::client_entry;
 extern crate alloc;
 
 #[client_entry(0xFFFFFFF)]
-fn main() {
+fn main() -> Result<()> {
     io::print("Hello, world!\n");
+    Ok(())
 }

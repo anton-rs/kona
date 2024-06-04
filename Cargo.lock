@@ -1582,9 +1582,15 @@ dependencies = [
 name = "kona-client"
 version = "0.1.0"
 dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "async-trait",
  "cfg-if",
  "kona-common",
  "kona-common-proc",
+ "kona-preimage",
+ "lru",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -1657,6 +1663,7 @@ dependencies = [
  "clap",
  "command-fds",
  "futures",
+ "kona-client",
  "kona-common",
  "kona-mpt",
  "kona-preimage",
@@ -1813,6 +1820,7 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 name = "minimal"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cfg-if",
  "kona-common",
  "kona-common-proc",

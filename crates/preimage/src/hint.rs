@@ -14,7 +14,7 @@ pub struct HintWriter {
 
 impl HintWriter {
     /// Create a new [HintWriter] from a [PipeHandle].
-    pub fn new(pipe_handle: PipeHandle) -> Self {
+    pub const fn new(pipe_handle: PipeHandle) -> Self {
         Self { pipe_handle }
     }
 }

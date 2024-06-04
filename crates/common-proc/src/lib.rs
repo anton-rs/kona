@@ -30,7 +30,9 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
 
     let expanded = quote! {
-        fn #fn_name() {
+        use anyhow::Result as AnyhowResult;
+
+        fn #fn_name() -> AnyhowResult<()> {
             #fn_body
         }
 
@@ -41,7 +43,7 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
                 #[no_mangle]
                 pub extern "C" fn _start() {
                     kona_common::alloc_heap!(HEAP_SIZE);
-                    #fn_name();
+                    #fn_name().unwrap();
                     kona_common::io::exit(0);
                 }
 
