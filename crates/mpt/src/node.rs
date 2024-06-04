@@ -82,6 +82,30 @@ pub enum TrieNode {
 }
 
 impl TrieNode {
+    /// Creates a new [TrieNode::Blinded] node.
+    ///
+    /// ## Takes
+    /// - `commitment` - The commitment that blinds the node
+    ///
+    /// ## Returns
+    /// - `Self` - The new blinded [TrieNode].
+    pub fn new_blinded(commitment: B256) -> Self {
+        TrieNode::Blinded { commitment }
+    }
+
+    /// Returns the commitment of a [TrieNode::Blinded] node, if `self` is of the
+    /// [TrieNode::Blinded] variant.
+    ///
+    /// ## Returns
+    /// - `Some(B256)` - The commitment of the blinded node
+    /// - `None` - `self` is not a [TrieNode::Blinded] node
+    pub fn blinded_commitment(&self) -> Option<B256> {
+        match self {
+            TrieNode::Blinded { commitment } => Some(*commitment),
+            _ => None,
+        }
+    }
+
     /// Blinds the [TrieNode] if it is longer than an encoded [B256] string in length, and returns
     /// the mutated node.
     pub fn blind(&mut self) {
@@ -469,7 +493,7 @@ impl Decodable for TrieNode {
                     }
                     let commitment = B256::decode(buf)?;
 
-                    Ok(Self::Blinded { commitment })
+                    Ok(Self::new_blinded(commitment))
                 }
             }
         }
@@ -502,7 +526,7 @@ fn encode_blinded<T: Encodable>(value: T, out: &mut dyn BufMut) {
     if value.length() > B256::ZERO.length() {
         let mut rlp_buf = Vec::with_capacity(value.length());
         value.encode(&mut rlp_buf);
-        TrieNode::Blinded { commitment: keccak256(rlp_buf) }.encode(out);
+        TrieNode::new_blinded(keccak256(rlp_buf)).encode(out);
     } else {
         value.encode(out);
     }
@@ -562,11 +586,9 @@ mod test {
         const BRANCH_RLP: [u8; 64] = hex!("f83ea0eb08a66a94882454bec899d3e82952dcc918ba4b35a09a84acd98019aef4345080808080808080cd308b8a746573742074687265658080808080808080");
         let expected = TrieNode::Branch {
             stack: vec![
-                TrieNode::Blinded {
-                    commitment: b256!(
-                        "eb08a66a94882454bec899d3e82952dcc918ba4b35a09a84acd98019aef43450"
-                    ),
-                },
+                TrieNode::new_blinded(b256!(
+                    "eb08a66a94882454bec899d3e82952dcc918ba4b35a09a84acd98019aef43450"
+                )),
                 TrieNode::Empty,
                 TrieNode::Empty,
                 TrieNode::Empty,
@@ -624,7 +646,7 @@ mod test {
         let opened =
             TrieNode::Leaf { prefix: Nibbles::from_nibbles([0x00]), value: [0xFF; 64].into() };
         opened.encode(&mut rlp_buf);
-        let blinded = TrieNode::Blinded { commitment: keccak256(&rlp_buf) };
+        let blinded = TrieNode::new_blinded(keccak256(&rlp_buf));
 
         rlp_buf.clear();
         let opened_extension =
@@ -674,9 +696,7 @@ mod test {
         }
 
         root_node.blind();
-        let TrieNode::Blinded { commitment } = root_node else {
-            panic!("Expected blinded root node");
-        };
+        let commitment = root_node.blinded_commitment().unwrap();
         assert_eq!(commitment, root);
     }
 
