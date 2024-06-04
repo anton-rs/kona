@@ -47,7 +47,7 @@ fn main() -> Result<()> {
                 io::exit(1);
             }
         }
-        Ok(())
+        Ok::<(), anyhow::Error>(())
     })
 }
 

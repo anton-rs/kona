@@ -17,6 +17,6 @@ fn main() -> Result<()> {
         let caching_oracle = CachingOracle::<16>::new();
         let boot = BootInfo::load(&caching_oracle).await?;
         io::print(&alloc::format!("{:?}\n", boot));
-        Ok(())
+        Ok::<_, anyhow::Error>(())
     })
 }

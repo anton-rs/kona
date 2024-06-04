@@ -1,3 +1,8 @@
+#![doc = include_str!("../README.md")]
+#![warn(missing_debug_implementations, missing_docs, rustdoc::all)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+
 use crate::{
     cli::{init_tracing_subscriber, HostCli},
     server::PreimageServer,
@@ -16,14 +21,7 @@ use std::{
     panic::AssertUnwindSafe,
     sync::Arc,
 };
-use tokio::{
-    process::Command,
-    sync::{
-        watch::{Receiver, Sender},
-        RwLock,
-    },
-    task,
-};
+use tokio::{process::Command, sync::RwLock, task};
 use tracing::{error, info};
 use types::NativePipeFiles;
 
@@ -90,22 +88,12 @@ async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
         Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider)))
     });
 
-    // Create a channel to signal the server and the client program to exit.
-    let (tx_server, rx_server) = tokio::sync::watch::channel(());
-    let (tx_program, rx_program) = (tx_server.clone(), rx_server.clone());
-
     // Create the server and start it.
-    let server_task = task::spawn(start_native_preimage_server(
-        kv_store,
-        fetcher,
-        preimage_pipe,
-        hint_pipe,
-        tx_server,
-        rx_server,
-    ));
+    let server_task =
+        task::spawn(start_native_preimage_server(kv_store, fetcher, preimage_pipe, hint_pipe));
 
     // Start the client program in a separate child process.
-    let program_task = task::spawn(start_native_client_program(cfg, files, tx_program, rx_program));
+    let program_task = task::spawn(start_native_client_program(cfg, files));
 
     // Execute both tasks and wait for them to complete.
     info!("Starting preimage server and client program.");
@@ -126,8 +114,6 @@ async fn start_native_preimage_server<KV>(
     fetcher: Option<Arc<RwLock<Fetcher<KV>>>>,
     preimage_pipe: PipeHandle,
     hint_pipe: PipeHandle,
-    tx: Sender<()>,
-    mut rx: Receiver<()>,
 ) -> Result<()>
 where
     KV: KeyValueStore + Send + Sync + ?Sized + 'static,
@@ -136,34 +122,17 @@ where
     let hint_reader = HintReader::new(hint_pipe);
 
     let server = PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher);
-
-    let server_pair_task = task::spawn(async move {
-        AssertUnwindSafe(server.start())
-            .catch_unwind()
-            .await
-            .map_err(|_| {
-                error!(target: "preimage_server", "Preimage server panicked");
-                anyhow!("Preimage server panicked")
-            })?
-            .map_err(|e| {
-                error!(target: "preimage_server", "Preimage server exited with an error");
-                anyhow!("Preimage server exited with an error: {:?}", e)
-            })
-    });
-    let rx_server_task = task::spawn(async move { rx.changed().await });
-
-    // Block the current task until either the client program exits or the server exits.
-    tokio::select! {
-        _ = rx_server_task => {
-            info!(target: "preimage_server", "Received shutdown signal from preimage server task.")
-        },
-        res = util::flatten_join_result(server_pair_task) => {
-            res?;
-        }
-    }
-
-    // Signal to the client program that the server has exited.
-    let _ = tx.send(());
+    AssertUnwindSafe(server.start())
+        .catch_unwind()
+        .await
+        .map_err(|_| {
+            error!(target: "preimage_server", "Preimage server panicked");
+            anyhow!("Preimage server panicked")
+        })?
+        .map_err(|e| {
+            error!(target: "preimage_server", "Preimage server exited with an error");
+            anyhow!("Preimage server exited with an error: {:?}", e)
+        })?;
 
     info!("Preimage server has exited.");
     Ok(())
@@ -181,12 +150,7 @@ where
 /// ## Returns
 /// - `Ok(())` if the client program exits successfully.
 /// - `Err(_)` if the client program exits with a non-zero status.
-async fn start_native_client_program(
-    cfg: HostCli,
-    files: NativePipeFiles,
-    tx: Sender<()>,
-    mut rx: Receiver<()>,
-) -> Result<()> {
+async fn start_native_client_program(cfg: HostCli, files: NativePipeFiles) -> Result<()> {
     // Map the file descriptors to the standard streams and the preimage oracle and hint
     // reader's special file descriptors.
     let mut command = Command::new(cfg.exec);
@@ -202,36 +166,19 @@ async fn start_native_client_program(
         ])
         .expect("No errors may occur when mapping file descriptors.");
 
-    let exec_task = task::spawn(async move {
-        let status = command
-            .status()
-            .await
-            .map_err(|e| {
-                error!(target: "client_program", "Failed to execute client program: {:?}", e);
-                anyhow!("Failed to execute client program: {:?}", e)
-            })?
-            .success();
-        Ok::<_, anyhow::Error>(status)
-    });
-    let rx_program_task = task::spawn(async move { rx.changed().await });
+    let status = command
+        .status()
+        .await
+        .map_err(|e| {
+            error!(target: "client_program", "Failed to execute client program: {:?}", e);
+            anyhow!("Failed to execute client program: {:?}", e)
+        })?
+        .success();
 
-    // Block the current task until either the client program exits or the server exits.
-    tokio::select! {
-        _ = rx_program_task => {
-            info!(target: "client_program", "Received shutdown signal from preimage server task.")
-        },
-        res = util::flatten_join_result(exec_task) => {
-            if !(res?) {
-                // Signal to the preimage server that the client program has exited.
-                let _ = tx.send(());
-                error!(target: "client_program", "Client program exited with a non-zero status.");
-                return Err(anyhow!("Client program exited with a non-zero status."));
-            }
-        }
+    if !status {
+        error!(target: "client_program", "Client program exited with a non-zero status.");
+        return Err(anyhow!("Client program exited with a non-zero status."));
     }
-
-    // Signal to the preimage server that the client program has exited.
-    let _ = tx.send(());
 
     info!(target: "client_program", "Client program has exited.");
     Ok(())
