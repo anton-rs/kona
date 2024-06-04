@@ -2,23 +2,12 @@
 
 use crate::{
     stages::NextAttributes,
-    traits::{OriginAdvancer, ResettableStage},
+    traits::{OriginAdvancer, ResetProvider, ResettableStage},
     types::{StageError, StageResult},
 };
-use alloc::{boxed::Box, collections::VecDeque};
-use async_trait::async_trait;
+use alloc::collections::VecDeque;
 use core::fmt::Debug;
 use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, SystemConfig};
-
-/// Provides the [BlockInfo] and [SystemConfig] for the stack to reset the stages.
-#[async_trait]
-pub trait ResetProvider {
-    /// Returns the current [BlockInfo] for the pipeline to reset.
-    async fn block_info(&self) -> BlockInfo;
-
-    /// Returns the current [SystemConfig] for the pipeline to reset.
-    async fn system_config(&self) -> SystemConfig;
-}
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
