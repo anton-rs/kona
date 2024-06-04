@@ -21,9 +21,8 @@ pub trait ResetProvider {
 /// TipState stores the tip information for the derivation pipeline.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TipState {
-    /// The origin [BlockInfo].
-    /// This is used downstream by [kona_derive] to reset the origin
-    /// of the [kona_derive::stages::BatchQueue] and l1 block list.
+    /// The origin [BlockInfo]. This is used by the [crate::stages::BatchQueue]
+    /// to reset it's origin and l1 block list.
     origin: BlockInfo,
     /// The [SystemConfig] is used in two places.
     system_config: SystemConfig,
@@ -61,7 +60,7 @@ impl TipState {
 pub struct WrappedTipState(Arc<Mutex<TipState>>);
 
 impl WrappedTipState {
-    /// Creates a new [ExExResetProvider].
+    /// Creates a new [WrappedTipState].
     pub fn new(ts: Arc<Mutex<TipState>>) -> Self {
         Self(ts)
     }
