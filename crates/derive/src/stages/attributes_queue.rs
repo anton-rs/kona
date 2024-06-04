@@ -1,7 +1,7 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{NextAttributes, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{
         BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, ResetError,
         RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
@@ -28,14 +28,6 @@ pub trait AttributesProvider {
 
     /// Returns whether the current batch is the last in its span.
     fn is_last_in_span(&self) -> bool;
-}
-
-/// [NextAttributes] is a trait abstraction that generalizes the [AttributesQueue] stage.
-#[async_trait]
-pub trait NextAttributes {
-    /// Returns the next [L2AttributesWithParent] from the current batch.
-    async fn next_attributes(&mut self, parent: L2BlockInfo)
-        -> StageResult<L2AttributesWithParent>;
 }
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage

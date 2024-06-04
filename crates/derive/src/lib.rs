@@ -13,9 +13,7 @@ pub use params::{
     MAX_RLP_BYTES_PER_CHANNEL, MAX_SPAN_BATCH_BYTES, SEQUENCER_FEE_VAULT_ADDRESS,
 };
 
-pub mod builder;
-pub use builder::DerivationPipeline;
-
+pub mod pipeline;
 pub mod sources;
 pub mod stages;
 pub mod traits;
