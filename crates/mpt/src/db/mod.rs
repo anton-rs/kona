@@ -155,7 +155,7 @@ where
     pub(crate) fn load_account_from_trie(&mut self, address: Address) -> Result<DbAccount> {
         let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
         let trie_account_rlp =
-            self.root_node.open(&hashed_address_nibbles, 0, self.preimage_fetcher)?;
+            self.root_node.open(&hashed_address_nibbles, self.preimage_fetcher)?;
         let trie_account = TrieAccount::decode(&mut trie_account_rlp.as_ref())
             .map_err(|e| anyhow!("Error decoding trie account: {e}"))?;
 
@@ -231,7 +231,7 @@ where
         value.encode(&mut rlp_buf);
 
         if let Ok(storage_slot_rlp) =
-            storage_root.open(&Nibbles::unpack(hashed_slot_key), 0, self.preimage_fetcher)
+            storage_root.open(&Nibbles::unpack(hashed_slot_key), self.preimage_fetcher)
         {
             // If the storage slot already exists, update it.
             *storage_slot_rlp = rlp_buf.into();
@@ -240,7 +240,6 @@ where
             storage_root.insert(
                 &Nibbles::unpack(hashed_slot_key),
                 rlp_buf.into(),
-                0,
                 self.preimage_fetcher,
             )?;
         }
@@ -283,13 +282,13 @@ where
             let mut account_buf = Vec::with_capacity(trie_account.length());
             trie_account.encode(&mut account_buf);
 
-            if let Ok(account_rlp_ref) = self.root_node.open(&account_path, 0, preimage_fetcher) {
+            if let Ok(account_rlp_ref) = self.root_node.open(&account_path, preimage_fetcher) {
                 // Update the existing account in the trie.
                 *account_rlp_ref = account_buf.into();
             } else {
                 // Insert the new account into the trie.
                 self.root_node
-                    .insert(&account_path, account_buf.into(), 0, preimage_fetcher)
+                    .insert(&account_path, account_buf.into(), preimage_fetcher)
                     .expect("Failed to insert account into trie");
             }
         }
@@ -352,7 +351,7 @@ where
 
                             let hashed_slot_key = keccak256(index.to_be_bytes::<32>().as_slice());
                             let slot_value =
-                                storage_root.open(&Nibbles::unpack(hashed_slot_key), 0, fetcher)?;
+                                storage_root.open(&Nibbles::unpack(hashed_slot_key), fetcher)?;
 
                             let int_slot = U256::decode(&mut slot_value.as_ref())
                                 .map_err(|e| anyhow!("Failed to decode storage slot value: {e}"))?;

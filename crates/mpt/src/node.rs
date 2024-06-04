@@ -99,13 +99,21 @@ impl TrieNode {
     /// ## Takes
     /// - `self` - The root trie node
     /// - `path` - The nibbles representation of the path to the leaf node
-    /// - `nibble_offset` - The number of nibbles that have already been traversed in the `item_key`
     /// - `fetcher` - The preimage fetcher for intermediate blinded nodes
     ///
     /// ## Returns
     /// - `Err(_)` - Could not retrieve the node with the given key from the trie.
     /// - `Ok((_, _))` - The key and value of the node
     pub fn open<'a>(
+        &'a mut self,
+        path: &Nibbles,
+        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+    ) -> Result<&'a mut Bytes> {
+        self.open_inner(path, 0, fetcher)
+    }
+
+    /// Inner alias for `open` that keeps track of the nibble offset.
+    fn open_inner<'a>(
         &'a mut self,
         path: &Nibbles,
         mut nibble_offset: usize,
@@ -131,11 +139,11 @@ impl TrieNode {
                         *branch_node = trie_node;
 
                         // If the value was found in the blinded node, return it.
-                        branch_node.open(path, nibble_offset, fetcher)
+                        branch_node.open_inner(path, nibble_offset, fetcher)
                     }
                     node => {
                         // If the value was found in the blinded node, return it.
-                        node.open(path, nibble_offset, fetcher)
+                        node.open_inner(path, nibble_offset, fetcher)
                     }
                 }
             }
@@ -167,7 +175,7 @@ impl TrieNode {
                                 .map_err(|e| anyhow!(e))?,
                         );
                     }
-                    node.open(path, nibble_offset, fetcher)
+                    node.open_inner(path, nibble_offset, fetcher)
                 } else {
                     anyhow::bail!("Key does not exist in trie (extension doesn't share nibbles) - {item_key_nibbles:?} {prefix:?} {path:?}");
                 }
@@ -176,7 +184,7 @@ impl TrieNode {
                 let trie_node = TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
                     .map_err(|e| anyhow!(e))?;
                 *self = trie_node;
-                self.open(path, nibble_offset, fetcher)
+                self.open_inner(path, nibble_offset, fetcher)
             }
             _ => anyhow::bail!("Invalid trie node type encountered"),
         }
@@ -188,13 +196,22 @@ impl TrieNode {
     /// - `self` - The root trie node
     /// - `path` - The nibbles representation of the path to the leaf node
     /// - `node` - The node to insert at the given path
-    /// - `nibble_offset` - The number of nibbles that have already been traversed in the `path`
     /// - `fetcher` - The preimage fetcher for intermediate blinded nodes
     ///
     /// ## Returns
     /// - `Err(_)` - Could not insert the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully inserted at the given path.
     pub fn insert(
+        &mut self,
+        path: &Nibbles,
+        value: Bytes,
+        fetcher: impl Fn(B256) -> Result<Bytes> + Copy,
+    ) -> Result<()> {
+        self.insert_inner(path, value, 0, fetcher)
+    }
+
+    /// Inner alias for `insert` that keeps track of the nibble offset.
+    fn insert_inner(
         &mut self,
         path: &Nibbles,
         value: Bytes,
@@ -250,7 +267,7 @@ impl TrieNode {
                     // If the extension node shares some nibbles with the path, continue the
                     // insertion recursion.
                     nibble_offset += shared_extension_nibbles;
-                    node.insert(path, value, nibble_offset, fetcher)?;
+                    node.insert_inner(path, value, nibble_offset, fetcher)?;
                     return Ok(());
                 }
 
@@ -282,7 +299,7 @@ impl TrieNode {
                 // Follow the branch node to the next node in the path.
                 let branch_nibble = path[nibble_offset] as usize;
                 nibble_offset += BRANCH_NODE_NIBBLES;
-                stack[branch_nibble].insert(path, value, nibble_offset, fetcher)
+                stack[branch_nibble].insert_inner(path, value, nibble_offset, fetcher)
             }
             TrieNode::Blinded { commitment } => {
                 // If a blinded node is approached, reveal the node and continue the insertion
@@ -290,7 +307,7 @@ impl TrieNode {
                 let trie_node = TrieNode::decode(&mut fetcher(*commitment)?.as_ref())
                     .map_err(|e| anyhow!(e))?;
                 *self = trie_node;
-                self.insert(path, value, nibble_offset, fetcher)
+                self.insert_inner(path, value, nibble_offset, fetcher)
             }
         }
     }
@@ -648,7 +665,7 @@ mod test {
         let mut root_node = TrieNode::decode(&mut fetcher(root).unwrap().as_ref()).unwrap();
         for (i, value) in VALUES.iter().enumerate() {
             let path_nibbles = Nibbles::unpack([if i == 0 { EMPTY_STRING_CODE } else { i as u8 }]);
-            let v = root_node.open(&path_nibbles, 0, fetcher).unwrap();
+            let v = root_node.open(&path_nibbles, fetcher).unwrap();
 
             let mut encoded_value = Vec::with_capacity(value.length());
             value.encode(&mut encoded_value);
@@ -667,9 +684,9 @@ mod test {
     fn test_insert_static() {
         let mut node =
             TrieNode::Leaf { prefix: Nibbles::unpack(hex!("01")), value: Default::default() };
-        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), 0, |_| Ok(Default::default()))
+        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), |_| Ok(Default::default()))
             .unwrap();
-        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), 0, |_| Ok(Default::default()))
+        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), |_| Ok(Default::default()))
             .unwrap();
 
         let expected = TrieNode::Extension {
