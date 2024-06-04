@@ -8,7 +8,7 @@ Generally, this phase should consist almost entirely of validation steps.
 
 ## Example
 
-In the `kona-client` program, the prologue phase only contains a two directives:
+In the `kona-client` program, the prologue phase only contains two directives:
 
 1. Validate that the L2 safe chain could be produced at the claimed L2 block height.
 1. The constructed output root is equivalent to the claimed [L2 output root][l2-output-root].
