@@ -32,13 +32,13 @@ static CLIENT_HINT_PIPE: PipeHandle =
     PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
 
 #[client_entry(0xFFFFFFF)]
-fn main() {
+fn main() -> Result<()> {
     kona_common::block_on(async {
         let mut oracle = OracleReader::new(CLIENT_PREIMAGE_PIPE);
         let hint_writer = HintWriter::new(CLIENT_HINT_PIPE);
 
         io::print("Booting EVM and checking hash...\n");
-        let (digest, code) = boot(&mut oracle).await.expect("Failed to boot");
+        let (digest, code) = boot(&mut oracle).await?;
 
         match run_evm(&mut oracle, &hint_writer, digest, code).await {
             Ok(_) => io::print("Success, hashes matched!\n"),
@@ -47,6 +47,7 @@ fn main() {
                 io::exit(1);
             }
         }
+        Ok(())
     })
 }
 

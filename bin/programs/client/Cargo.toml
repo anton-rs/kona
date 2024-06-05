@@ -8,6 +8,17 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+# workspace
 cfg-if.workspace = true
+alloy-primitives.workspace = true
+anyhow.workspace = true
+
+# local
 kona-common = { path = "../../../crates/common" }
 kona-common-proc = { path = "../../../crates/common-proc" }
+kona-preimage = { path = "../../../crates/preimage" }
+
+# external
+lru = "0.12.3"
+async-trait = "0.1.80"
+spin = "0.9.8"

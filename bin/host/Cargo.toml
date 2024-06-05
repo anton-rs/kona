@@ -6,7 +6,6 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-exclude.workspace = true
 
 [dependencies]
 # workspace
@@ -16,6 +15,7 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 
 # local
+kona-client = { path = "../programs/client", version = "0.1.0" }
 kona-common = { path = "../../crates/common", version = "0.0.1" }
 kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
 kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }
