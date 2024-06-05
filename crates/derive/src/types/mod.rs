@@ -12,11 +12,14 @@ pub use batch::{
     MAX_SPAN_BATCH_SIZE,
 };
 
+/// Re-export eip4844 primitives.
+pub use alloy_eips::eip4844::Blob;
+
 mod ecotone;
 pub use ecotone::*;
 
 mod blob;
-pub use blob::{Blob, BlobData, BlobDecodingError, IndexedBlobHash};
+pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
 
 mod sidecar;
 pub use sidecar::{

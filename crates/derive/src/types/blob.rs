@@ -1,7 +1,8 @@
 //! EIP4844 Blob Type
 
 use alloc::vec::Vec;
-use alloy_primitives::{Bytes, FixedBytes, B256};
+use alloy_eips::eip4844::Blob;
+use alloy_primitives::{Bytes, B256};
 use anyhow::Result;
 
 /// The blob encoding version
@@ -18,9 +19,6 @@ pub(crate) const BLOB_MAX_DATA_SIZE: usize = (4 * 31 + 3) * 1024 - 4; // 130044
 
 /// Blob Encoding/Decoding Rounds
 pub(crate) const BLOB_ENCODING_ROUNDS: usize = 1024;
-
-/// A Blob serialized as 0x-prefixed hex string
-pub type Blob = FixedBytes<BLOB_BYTES_SIZE>;
 
 /// A Blob hash
 #[derive(Default, Clone, Debug)]
