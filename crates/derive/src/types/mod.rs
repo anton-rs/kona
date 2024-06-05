@@ -13,7 +13,7 @@ pub use batch::{
 };
 
 /// Re-export eip4844 primitives.
-pub use alloy_eips::eip4844::Blob;
+pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 
 mod ecotone;
 pub use ecotone::*;
