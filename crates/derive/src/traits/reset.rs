@@ -1,8 +1,5 @@
 //! Traits for resetting stages.
 
-#![allow(unreachable_pub)]
-#![allow(unused)]
-
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use kona_primitives::{BlockInfo, SystemConfig};
