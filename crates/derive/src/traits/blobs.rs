@@ -22,8 +22,8 @@ pub trait BlobProvider {
 /// A blob provider that hold blobs in memory.
 #[derive(Default, Debug, Clone)]
 pub struct InMemoryBlobStore {
-    /// Maps block hashes to blobs.
-    blocks_to_blob: HashMap<B256, Vec<Blob>>,
+    /// Maps block hashes to blobs and their indexed hashes.
+    blocks_to_blob: HashMap<B256, Vec<(IndexedBlobHash, Blob)>>,
 }
 
 impl InMemoryBlobStore {
@@ -33,7 +33,7 @@ impl InMemoryBlobStore {
     }
 
     /// Inserts multiple blobs into the provider.
-    pub fn insert_blobs(&mut self, block_hash: B256, blobs: Vec<Blob>) {
+    pub fn insert_blobs(&mut self, block_hash: B256, blobs: Vec<(IndexedBlobHash, Blob)>) {
         self.blocks_to_blob.entry(block_hash).or_default().extend(blobs);
     }
 }
@@ -67,8 +67,8 @@ impl BlobProvider for WrappedBlobProvider {
         let blobs_for_block =
             locked.blocks_to_blob.get(&block_ref.hash).ok_or_else(|| err(block_ref))?;
         let mut blobs = Vec::new();
-        for _blob_hash in blob_hashes {
-            for blob in blobs_for_block {
+        for (hash, blob) in blobs_for_block {
+            if blob_hashes.contains(hash) {
                 blobs.push(*blob);
             }
         }
