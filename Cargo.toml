@@ -21,7 +21,7 @@ cfg-if = "1.0.0"
 alloy-primitives = { version = "0.7.1", default-features = false }
 alloy-rlp = { version = "0.3.4", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-revm = { version = "9.0.0", default-features = false }
+revm = { git = "https://github.com/bluealloy/revm", rev = "a28a543", default-features = false }
 
 [profile.dev]
 opt-level = 1

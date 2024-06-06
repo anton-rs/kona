@@ -3,6 +3,7 @@
 
 use crate::{TrieDBFetcher, TrieNode};
 use alloc::vec::Vec;
+use alloy_consensus::EMPTY_ROOT_HASH;
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
 use alloy_trie::Nibbles;
@@ -61,7 +62,7 @@ pub use account::TrieAccount;
 /// // Drop the EVM prior to merging the state transitions.
 /// drop(evm);
 ///
-/// state.merge_transitions(BundleRetention::PlainState);
+/// state.merge_transitions(BundleRetention::Reverts);
 /// let bundle = state.take_bundle();
 /// let state_root = state.database.state_root(&bundle).expect("Failed to compute state root");
 /// ```
@@ -171,6 +172,18 @@ where
     /// - `Err(_)` if the accounts could not be updated.
     fn update_accounts(&mut self, bundle: &BundleState) -> Result<()> {
         for (address, bundle_account) in bundle.state() {
+            // Compute the path to the account in the trie.
+            let account_path = Nibbles::unpack(keccak256(address.as_slice()));
+
+            // If the account was destroyed, delete it from the trie.
+            if bundle_account.was_destroyed() ||
+                bundle_account.account_info().map(|a| a.is_empty()).unwrap_or_default()
+            {
+                self.root_node.delete(&account_path, &self.fetcher)?;
+                self.storage_roots.remove(address);
+                continue;
+            }
+
             let account_info =
                 bundle_account.account_info().ok_or(anyhow!("Account info not found"))?;
             let mut trie_account = TrieAccount {
@@ -183,8 +196,8 @@ where
             // Update the account's storage root
             let acc_storage_root = self
                 .storage_roots
-                .get_mut(address)
-                .ok_or(anyhow!("Storage root not found for account"))?;
+                .entry(*address)
+                .or_insert_with(|| TrieNode::new_blinded(EMPTY_ROOT_HASH));
             bundle_account.storage.iter().try_for_each(|(index, value)| {
                 Self::change_storage(acc_storage_root, *index, value.present_value, &self.fetcher)
             })?;
@@ -202,8 +215,7 @@ where
             trie_account.encode(&mut account_buf);
 
             // Insert or update the account in the trie.
-            let account_path = Nibbles::unpack(keccak256(address.as_slice()));
-            if let Ok(account_rlp_ref) = self.root_node.open(&account_path, &self.fetcher) {
+            if let Some(account_rlp_ref) = self.root_node.open(&account_path, &self.fetcher)? {
                 // Update the existing account in the trie.
                 *account_rlp_ref = account_buf.into();
             } else {
@@ -236,14 +248,21 @@ where
         value.encode(&mut rlp_buf);
 
         // Insert or update the storage slot in the trie.
-        let hashed_slot_key = keccak256(index.to_be_bytes::<32>().as_slice());
-        if let Ok(storage_slot_rlp) = storage_root.open(&Nibbles::unpack(hashed_slot_key), fetcher)
-        {
-            // If the storage slot already exists, update it.
-            *storage_slot_rlp = rlp_buf.into();
+        let hashed_slot_key = Nibbles::unpack(keccak256(index.to_be_bytes::<32>().as_slice()));
+        if let Some(storage_slot_rlp) = storage_root.open(&hashed_slot_key, fetcher)? {
+            let storage_slot_value = U256::decode(&mut storage_slot_rlp.as_ref())
+                .map_err(|e| anyhow!("Failed to decode storage slot value: {e}"))?;
+
+            if !storage_slot_value.is_zero() && value.is_zero() {
+                // If the storage slot is being set to zero, prune it from the trie.
+                storage_root.delete(&hashed_slot_key, fetcher)?;
+            } else {
+                // Otherwise, update the storage slot.
+                *storage_slot_rlp = rlp_buf.into();
+            }
         } else {
             // If the storage slot does not exist, insert it.
-            storage_root.insert(&Nibbles::unpack(hashed_slot_key), rlp_buf.into(), fetcher)?;
+            storage_root.insert(&hashed_slot_key, rlp_buf.into(), fetcher)?;
         }
 
         Ok(())
@@ -259,7 +278,7 @@ where
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
         // Fetch the account from the trie.
         let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
-        let Ok(trie_account_rlp) = self.root_node.open(&hashed_address_nibbles, &self.fetcher)
+        let Some(trie_account_rlp) = self.root_node.open(&hashed_address_nibbles, &self.fetcher)?
         else {
             // If the account does not exist in the trie, return `Ok(None)`.
             return Ok(None);
@@ -291,21 +310,30 @@ where
 
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
         // Fetch the account's storage root from the cache. If storage is being accessed, the
-        // account should have been loaded into the cache by the `basic` method.
-        let storage_root = self
-            .storage_roots
-            .get_mut(&address)
-            .ok_or(anyhow!("Storage root not found for account {address}"))?;
-
-        // Fetch the storage slot from the trie.
-        let hashed_slot_key = keccak256(index.to_be_bytes::<32>().as_slice());
-        let slot_value = storage_root.open(&Nibbles::unpack(hashed_slot_key), &self.fetcher)?;
-
-        // Decode the storage slot value.
-        let int_slot = U256::decode(&mut slot_value.as_ref())
-            .map_err(|e| anyhow!("Failed to decode storage slot value: {e}"))?;
-
-        Ok(int_slot)
+        // account should have been loaded into the cache by the `basic` method. If the account was
+        // non-existing, the storage root will not be present.
+        match self.storage_roots.get_mut(&address) {
+            None => {
+                // If the storage root for the account does not exist, return zero.
+                Ok(U256::ZERO)
+            }
+            Some(storage_root) => {
+                // Fetch the storage slot from the trie.
+                let hashed_slot_key = keccak256(index.to_be_bytes::<32>().as_slice());
+                match storage_root.open(&Nibbles::unpack(hashed_slot_key), &self.fetcher)? {
+                    Some(slot_value) => {
+                        // Decode the storage slot value.
+                        let int_slot = U256::decode(&mut slot_value.as_ref())
+                            .map_err(|e| anyhow!("Failed to decode storage slot value: {e}"))?;
+                        Ok(int_slot)
+                    }
+                    None => {
+                        // If the storage slot does not exist, return zero.
+                        Ok(U256::ZERO)
+                    }
+                }
+            }
+        }
     }
 
     fn block_hash(&mut self, block_number: U256) -> Result<B256, Self::Error> {
@@ -320,7 +348,7 @@ where
         if u64_block_number > header.number ||
             header.number.saturating_sub(u64_block_number) > BLOCK_HASH_HISTORY as u64
         {
-            anyhow::bail!("Block number out of range");
+            return Ok(B256::default());
         }
 
         // Walk back the block headers to the desired block number.
