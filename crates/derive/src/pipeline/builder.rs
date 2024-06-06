@@ -1,18 +1,19 @@
 //! Contains the `PipelineBuilder` object that is used to build a `DerivationPipeline`.
 
-use super::{DerivationPipeline, NextAttributes, OriginAdvancer, ResetProvider, ResettableStage};
+use super::{DerivationPipeline, NextAttributes, AttributesBuilder, OriginAdvancer, ResetProvider, ResettableStage};
 use alloc::collections::VecDeque;
 use core::fmt::Debug;
 use kona_primitives::L2BlockInfo;
 
 /// The PipelineBuilder constructs a [DerivationPipeline].
 #[derive(Debug)]
-pub struct PipelineBuilder<S, R>
+pub struct PipelineBuilder<S, R, B>
 where
     S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send,
     R: ResetProvider + Send,
+    B: AttributesBuilder + Debug,
 {
-    attributes: Option<S>,
+    rollup_config: Option<Arc<RollupConfig>>,
     reset: Option<R>,
     start_cursor: Option<L2BlockInfo>,
 }
@@ -52,6 +53,16 @@ where
     R: ResetProvider + Send,
 {
     fn from(builder: PipelineBuilder<S, R>) -> Self {
+        // Instantiates and link all the stages.
+        let chain_provider = ExExChainProvider::new(Arc::clone(&self.chain_provider));
+        let l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
+        let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
+        let frame_queue = FrameQueue::new(l1_retrieval);
+        let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);
+        let channel_reader = ChannelReader::new(channel_bank, Arc::clone(&rollup_config));
+        let batch_queue = BatchQueue::new(rollup_config.clone(), channel_reader, l2_chain_provider);
+        let queue = AttributesQueue::new(*rollup_config, batch_queue, builder);
+
         let attributes = builder.attributes.expect("attributes must be set");
         let reset = builder.reset.expect("reset must be set");
         let start_cursor = builder.start_cursor.expect("start_cursor must be set");
