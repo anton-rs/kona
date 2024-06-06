@@ -1,26 +1,19 @@
 //! EIP4844 Blob Type
 
 use alloc::vec::Vec;
-use alloy_primitives::{Bytes, FixedBytes, B256};
+use alloy_primitives::{Bytes, B256};
 use anyhow::Result;
+
+use super::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 
 /// The blob encoding version
 pub(crate) const BLOB_ENCODING_VERSION: u8 = 0;
-
-/// The version offset in the blob
-pub(crate) const BLOB_VERSION_OFFSET: usize = 1;
-
-/// How many bytes are in a blob
-pub(crate) const BLOB_BYTES_SIZE: usize = 4096 * 32; // 131072
 
 /// Maximum blob data size
 pub(crate) const BLOB_MAX_DATA_SIZE: usize = (4 * 31 + 3) * 1024 - 4; // 130044
 
 /// Blob Encoding/Decoding Rounds
 pub(crate) const BLOB_ENCODING_ROUNDS: usize = 1024;
-
-/// A Blob serialized as 0x-prefixed hex string
-pub type Blob = FixedBytes<BLOB_BYTES_SIZE>;
 
 /// A Blob hash
 #[derive(Default, Clone, Debug)]
@@ -67,7 +60,7 @@ impl BlobData {
         let data = self.data.as_ref().ok_or(BlobDecodingError::MissingData)?;
 
         // Validate the blob encoding version
-        if data[BLOB_VERSION_OFFSET] != BLOB_ENCODING_VERSION {
+        if data[VERSIONED_HASH_VERSION_KZG as usize] != BLOB_ENCODING_VERSION {
             return Err(BlobDecodingError::InvalidEncodingVersion);
         }
 
@@ -128,7 +121,7 @@ impl BlobData {
 
         // Validate the remaining bytes
         output.truncate(length);
-        for i in input_pos..BLOB_BYTES_SIZE {
+        for i in input_pos..BYTES_PER_BLOB {
             if data[i] != 0 {
                 return Err(BlobDecodingError::InvalidFieldElement);
             }
