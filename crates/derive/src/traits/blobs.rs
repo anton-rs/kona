@@ -2,7 +2,7 @@
 
 use crate::types::{Blob, BlobProviderError, BlockInfo, IndexedBlobHash};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use alloy_primitives::{FixedBytes, B256};
+use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
 use hashbrown::HashMap;
@@ -69,12 +69,7 @@ impl BlobProvider for WrappedBlobProvider {
         let mut blobs = Vec::new();
         for _blob_hash in blob_hashes {
             for blob in blobs_for_block {
-                // TODO: update kona-derive to use the alloy_eips Blob type
-                // if blob_hash.hash == blob.hash {
-                //     blobs.push(*blob.clone());
-                //     break;
-                // }
-                blobs.push(FixedBytes(**blob));
+                blobs.push(*blob);
             }
         }
         Ok(blobs)
