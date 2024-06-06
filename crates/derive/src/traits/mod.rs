@@ -7,8 +7,11 @@ pub use pipeline::Pipeline;
 mod attributes;
 pub use attributes::NextAttributes;
 
+mod blobs;
+pub use blobs::{BlobProvider, InMemoryBlobStore, WrappedBlobProvider};
+
 mod data_sources;
-pub use data_sources::{AsyncIterator, BlobProvider, DataAvailabilityProvider};
+pub use data_sources::{AsyncIterator, DataAvailabilityProvider};
 
 mod reset;
 pub use reset::{ResetProvider, TipState, WrappedTipState};
