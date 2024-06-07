@@ -349,11 +349,13 @@ impl TrieNode {
                 let shared_nibbles = remaining_nibbles.common_prefix_length(prefix);
                 if shared_nibbles < prefix.len() {
                     anyhow::bail!("Key does not exist in trie (extension node mismatch)")
+                } else if shared_nibbles == remaining_nibbles.len() {
+                    *self = TrieNode::Empty;
+                    return Ok(());
                 }
 
                 if remaining_nibbles.starts_with(prefix) {
-                    let nibble_offset = nibble_offset + prefix.len();
-                    node.delete_inner(path, nibble_offset, fetcher)?;
+                    node.delete_inner(path, nibble_offset + prefix.len(), fetcher)?;
 
                     // Simplify extension if possible after the deletion
                     self.collapse_if_possible(fetcher)
