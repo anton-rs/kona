@@ -154,7 +154,7 @@ impl ChainProvider for AlloyChainProvider {
 /// **Note**:
 /// This provider fetches data using the `debug_getRawBlock` method. The RPC must support this
 /// namespace.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AlloyL2ChainProvider {
     /// The inner Ethereum JSON-RPC provider.
     inner: ReqwestClient,
