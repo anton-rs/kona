@@ -9,25 +9,18 @@ use crate::{
     types::RollupConfig,
 };
 use alloc::sync::Arc;
-use alloy_provider::ReqwestProvider;
 use core::fmt::Debug;
 
 /// An `online` payload attributes builder for the `AttributesQueue` stage of the derivation
 /// pipeline.
-pub type OnlineAttributesBuilder = StatefulAttributesBuilder<
-    AlloyChainProvider<ReqwestProvider>,
-    AlloyL2ChainProvider<ReqwestProvider>,
->;
+pub type OnlineAttributesBuilder =
+    StatefulAttributesBuilder<AlloyChainProvider, AlloyL2ChainProvider>;
 
 /// An `online` attributes queue for the derivation pipeline.
 pub type OnlineAttributesQueue<DAP> = AttributesQueue<
     BatchQueue<
-        ChannelReader<
-            ChannelBank<
-                FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider<ReqwestProvider>>>>,
-            >,
-        >,
-        AlloyL2ChainProvider<ReqwestProvider>,
+        ChannelReader<ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider>>>>>,
+        AlloyL2ChainProvider,
     >,
     OnlineAttributesBuilder,
 >;
@@ -35,9 +28,9 @@ pub type OnlineAttributesQueue<DAP> = AttributesQueue<
 /// Creates a new online stack.
 pub fn new_online_stack<DAP>(
     rollup_config: Arc<RollupConfig>,
-    chain_provider: AlloyChainProvider<ReqwestProvider>,
+    chain_provider: AlloyChainProvider,
     dap_source: DAP,
-    fetcher: AlloyL2ChainProvider<ReqwestProvider>,
+    fetcher: AlloyL2ChainProvider,
     builder: OnlineAttributesBuilder,
 ) -> OnlineAttributesQueue<DAP>
 where
@@ -59,7 +52,7 @@ mod beacon_client;
 pub use beacon_client::{BeaconClient, OnlineBeaconClient};
 
 mod alloy_providers;
-pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider};
+pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider, ReqwestClient};
 
 mod blob_provider;
 pub use blob_provider::{OnlineBlobProvider, SimpleSlotDerivation};
