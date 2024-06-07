@@ -16,12 +16,17 @@ exclude = ["**/target", "benches/", "tests"]
 anyhow = { version = "1.0.79", default-features = false }
 tracing = { version = "0.1.40", default-features = false }
 cfg-if = "1.0.0"
+spin = { version = "0.9", features = ["mutex"] }
+lru = "0.12.3"
+async-trait = "0.1"
 
 # Ethereum
-alloy-primitives = { version = "0.7.5", default-features = false }
-alloy-rlp = { version = "0.3.5", default-features = false }
+alloy-primitives = { version = "0.7.1", default-features = false }
+alloy-rlp = { version = "0.3.4", default-features = false }
 alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-revm = { git = "https://github.com/bluealloy/revm", rev = "bdd1b8e", default-features = false }
+op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
+revm = { git = "https://github.com/bluealloy/revm", rev = "a832a4e", default-features = false }
 
 [profile.dev]
 opt-level = 1

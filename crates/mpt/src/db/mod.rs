@@ -176,9 +176,7 @@ where
             let account_path = Nibbles::unpack(keccak256(address.as_slice()));
 
             // If the account was destroyed, delete it from the trie.
-            if bundle_account.was_destroyed()
-                || bundle_account.account_info().map(|a| a.is_empty()).unwrap_or_default()
-            {
+            if bundle_account.was_destroyed() {
                 self.root_node.delete(&account_path, &self.fetcher)?;
                 self.storage_roots.remove(address);
                 continue;
@@ -250,10 +248,7 @@ where
         // Insert or update the storage slot in the trie.
         let hashed_slot_key = Nibbles::unpack(keccak256(index.to_be_bytes::<32>().as_slice()));
         if let Some(storage_slot_rlp) = storage_root.open(&hashed_slot_key, fetcher)? {
-            let storage_slot_value = U256::decode(&mut storage_slot_rlp.as_ref())
-                .map_err(|e| anyhow!("Failed to decode storage slot value: {e}"))?;
-
-            if !storage_slot_value.is_zero() && value.is_zero() {
+            if value.is_zero() {
                 // If the storage slot is being set to zero, prune it from the trie.
                 storage_root.delete(&hashed_slot_key, fetcher)?;
             } else {
@@ -345,8 +340,8 @@ where
         let mut header = self.fetcher.header_by_hash(block_hash)?;
 
         // Check if the block number is in range. If not, we can fail early.
-        if u64_block_number > header.number
-            || header.number.saturating_sub(u64_block_number) > BLOCK_HASH_HISTORY as u64
+        if u64_block_number > header.number ||
+            header.number.saturating_sub(u64_block_number) > BLOCK_HASH_HISTORY as u64
         {
             return Ok(B256::default());
         }

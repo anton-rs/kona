@@ -531,17 +531,12 @@ where
 #[cfg(test)]
 mod test {
     extern crate std;
-    use std::{collections::HashMap, format};
 
     use super::*;
-    use alloc::string::{String, ToString};
-    use alloy_primitives::{address, b256, hex, keccak256};
-    use alloy_provider::{Provider, ProviderBuilder};
+    use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
-    use kona_mpt::TrieNode;
-    use nybbles::Nibbles;
-    use reqwest::Url;
     use serde::Deserialize;
+    use std::{collections::HashMap, format};
 
     /// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from the local
     /// testdata folder.
@@ -552,7 +547,7 @@ mod test {
 
     impl TestdataTrieDBFetcher {
         /// Constructs a new [TestdataTrieDBFetcher] with the given testdata folder.
-        pub fn new(testdata_folder: &str) -> Self {
+        pub(crate) fn new(testdata_folder: &str) -> Self {
             let file_name = format!("testdata/{}/output.json", testdata_folder);
             let preimages = serde_json::from_str::<HashMap<B256, Bytes>>(
                 &std::fs::read_to_string(&file_name).unwrap(),
@@ -566,14 +561,14 @@ mod test {
         fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
             self.preimages
                 .get(&key)
-                .map(|v| v.clone())
+                .cloned()
                 .ok_or_else(|| anyhow!("Preimage not found for key: {}", key))
         }
 
         fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes> {
             self.preimages
                 .get(&code_hash)
-                .map(|v| v.clone())
+                .cloned()
                 .ok_or_else(|| anyhow!("Bytecode not found for hash: {}", code_hash))
         }
 
@@ -853,95 +848,5 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
-    }
-
-    /// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from a remote source.
-    struct RemoteTrieDBFetcher {
-        persist_folder: String,
-        provider: alloy_provider::ReqwestProvider,
-    }
-
-    impl TrieDBFetcher for RemoteTrieDBFetcher {
-        fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
-            let preimage = tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-                    std::dbg!(alloc::format!("node hash: {}", alloy_primitives::hex::encode(&key)));
-                    let preimage = self
-                        .provider
-                        .client()
-                        .request::<&[B256; 1], Bytes>("debug_dbGet", &[key])
-                        .await
-                        .unwrap();
-                    std::fs::write(
-                        alloc::format!("testdata/{}/{}.bin", self.persist_folder, hex::encode(key)),
-                        preimage.as_ref(),
-                    )
-                    .unwrap_or_default();
-                    preimage
-                });
-            Ok(preimage)
-        }
-
-        fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes> {
-            let preimage =
-                tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(
-                    async {
-                        const CODE_PREFIX: u8 = b'c';
-                        let code_hash = [&[CODE_PREFIX], hash.as_slice()].concat();
-                        let code = self
-                            .provider
-                            .client()
-                            .request::<&[Bytes; 1], Bytes>("debug_dbGet", &[code_hash.into()])
-                            .await;
-                        match code {
-                            Ok(code) => {
-                                std::fs::write(
-                                    alloc::format!(
-                                        "testdata/{}/{}.bin",
-                                        self.persist_folder,
-                                        hex::encode(hash)
-                                    ),
-                                    code.as_ref(),
-                                )
-                                .unwrap_or_default();
-                                code
-                            }
-                            Err(_) => self
-                                .provider
-                                .client()
-                                .request::<&[B256; 1], Bytes>("debug_dbGet", &[hash])
-                                .await
-                                .unwrap(),
-                        }
-                    },
-                );
-            Ok(preimage)
-        }
-
-        fn header_by_hash(&self, hash: B256) -> Result<Header> {
-            let preimage =
-                tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(
-                    async {
-                        std::dbg!(alloc::format!(
-                            "node hash: {}",
-                            alloy_primitives::hex::encode(&hash)
-                        ));
-                        self.provider
-                            .client()
-                            .request::<&[B256; 1], Bytes>("debug_dbGet", &[hash])
-                            .await
-                            .unwrap()
-                    },
-                );
-            std::fs::write(
-                alloc::format!("testdata/{}/{}.bin", self.persist_folder, hex::encode(hash)),
-                preimage.as_ref(),
-            )
-            .unwrap_or_default();
-            Header::decode(&mut preimage.as_ref()).map_err(|e| anyhow!(e))
-        }
     }
 }

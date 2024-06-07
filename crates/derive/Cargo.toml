@@ -15,21 +15,21 @@ tracing.workspace = true
 alloy-consensus.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp = { workspace = true, features = ["derive"] }
+alloy-eips.workspace = true
+op-alloy-consensus.workspace = true
+revm = { workspace = true, optional = true }
+spin.workspace = true
+lru.workspace = true
+async-trait.workspace = true
 
 # Local
 kona-primitives = { path = "../primitives", version = "0.0.1" }
 
 # External
 alloy-sol-types = { version = "0.7.1", default-features = false }
-op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
-alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-async-trait = "0.1.80"
 hashbrown = "0.14.3"
 unsigned-varint = "0.8.0"
 miniz_oxide = { version = "0.7.2" }
-lru = "0.12.3"
-spin = { version = "0.9.8", features = ["mutex"] }
-revm-primitives = { version = "4.0.0", default-features = false, optional = true }
 
 # `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
@@ -65,7 +65,7 @@ serde = [
 ]
 k256 = ["alloy-primitives/k256", "alloy-consensus/k256", "op-alloy-consensus/k256"]
 online = [
-  "dep:revm-primitives",
+  "dep:revm",
   "dep:c-kzg",
   "dep:sha2",
   "dep:alloy-provider",
@@ -76,7 +76,7 @@ online = [
   "alloy-transport-http/reqwest",
   "alloy-consensus/serde",
   "c-kzg/serde",
-  "revm-primitives/serde",
-  "revm-primitives/c-kzg",
+  "revm/serde",
+  "revm/c-kzg",
 ]
 test-utils = ["dep:alloy-node-bindings", "dep:tracing-subscriber", "dep:alloy-rpc-client"]

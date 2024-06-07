@@ -13,6 +13,8 @@ anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
+alloy-eips.workspace = true
+alloy-consensus.workspace = true
 
 # local
 kona-client = { path = "../programs/client", version = "0.1.0" }
@@ -25,8 +27,6 @@ alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
 alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
-alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
 reqwest = "0.12"
 tokio = { version = "1.37.0", features = ["full"] }
 futures = "0.3"

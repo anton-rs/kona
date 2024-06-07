@@ -1,10 +1,13 @@
 //! This module contains the [TrieNode] type, which represents a node within a standard Merkle
 //! Patricia Trie.
 
-use crate::TrieDBFetcher;
+use crate::{
+    util::{rlp_list_element_length, unpack_path_to_nibbles},
+    TrieDBFetcher,
+};
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{keccak256, Bytes, B256};
-use alloy_rlp::{length_of_length, Buf, BufMut, Decodable, Encodable, Header, EMPTY_STRING_CODE};
+use alloy_rlp::{length_of_length, Buf, Decodable, Encodable, Header, EMPTY_STRING_CODE};
 use alloy_trie::Nibbles;
 use anyhow::{anyhow, Result};
 
@@ -515,7 +518,7 @@ impl TrieNode {
                 if encoded_key_len != 1 {
                     encoded_key_len += length_of_length(encoded_key_len);
                 }
-                encoded_key_len + blinded_length(node)
+                encoded_key_len + node.blinded_length()
             }
             TrieNode::Branch { stack } => {
                 // In branch nodes, if an element is longer than an encoded 32 byte string, it is
@@ -523,10 +526,25 @@ impl TrieNode {
                 // elements that are longer than an encoded 32 byte string
                 // in length.
                 stack.iter().fold(0, |mut acc, node| {
-                    acc += blinded_length(node);
+                    acc += node.blinded_length();
                     acc
                 })
             }
+        }
+    }
+
+    /// Returns the encoded length of the trie node, blinding it if it is longer than an encoded
+    /// [B256] string in length.
+    ///
+    /// ## Returns
+    /// - `usize` - The encoded length of the value, blinded if the raw encoded length is longer
+    ///   than a [B256].
+    fn blinded_length(&self) -> usize {
+        let encoded_len = self.length();
+        if encoded_len >= 32 && !matches!(self, TrieNode::Blinded { .. }) {
+            B256::ZERO.length()
+        } else {
+            encoded_len
         }
     }
 }
@@ -625,61 +643,6 @@ impl Decodable for TrieNode {
             }
         }
     }
-}
-
-/// Returns the encoded length of an [Encodable] value, blinding it if it is longer than an encoded
-/// [B256] string in length.
-///
-/// ## Takes
-/// - `value` - The value to encode
-///
-/// ## Returns
-/// - `usize` - The encoded length of the value
-fn blinded_length(value: &TrieNode) -> usize {
-    if value.length() >= 32 && !matches!(value, TrieNode::Blinded { .. }) {
-        B256::ZERO.length()
-    } else {
-        value.length()
-    }
-}
-
-/// Walks through a RLP list's elements and returns the total number of elements in the list.
-/// Returns [alloy_rlp::Error::UnexpectedString] if the RLP stream is not a list.
-///
-/// ## Takes
-/// - `buf` - The RLP stream to walk through
-///
-/// ## Returns
-/// - `Ok(usize)` - The total number of elements in the list
-/// - `Err(_)` - The RLP stream is not a list
-fn rlp_list_element_length(buf: &mut &[u8]) -> alloy_rlp::Result<usize> {
-    let header = Header::decode(buf)?;
-    if !header.list {
-        return Err(alloy_rlp::Error::UnexpectedString);
-    }
-    let len_after_consume = buf.len() - header.payload_length;
-
-    let mut list_element_length = 0;
-    while buf.len() > len_after_consume {
-        let header = Header::decode(buf)?;
-        buf.advance(header.payload_length);
-        list_element_length += 1;
-    }
-    Ok(list_element_length)
-}
-
-/// Unpack node path to nibbles.
-///
-/// ## Takes
-/// - `first` - first nibble of the path if it is odd. Must be <= 0x0F, or will create invalid
-///   nibbles.
-/// - `rest` - rest of the nibbles packed
-///
-/// ## Returns
-/// - `Nibbles` - unpacked nibbles
-fn unpack_path_to_nibbles(first: Option<u8>, rest: &[u8]) -> Nibbles {
-    let rest = Nibbles::unpack(rest);
-    Nibbles::from_vec_unchecked(first.into_iter().chain(rest.iter().copied()).collect::<Vec<u8>>())
 }
 
 #[cfg(test)]

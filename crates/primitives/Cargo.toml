@@ -13,11 +13,11 @@ anyhow.workspace = true
 alloy-consensus.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-primitives = { workspace = true, features = ["rlp"] }
+alloy-eips.workspace = true
+op-alloy-consensus.workspace = true
 
 # Alloy Types
 alloy-sol-types = { version = "0.7.1", default-features = false }
-alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-op-alloy-consensus = { git = "https://github.com/clabby/op-alloy", branch = "refcell/consensus-port", default-features = false }
 
 # `serde` feature dependencies
 serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }

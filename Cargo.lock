@@ -1547,10 +1547,7 @@ dependencies = [
  "alloy-consensus",
  "alloy-eips",
  "alloy-primitives",
- "alloy-provider",
  "alloy-rlp",
- "alloy-rpc-types",
- "alloy-transport-http",
  "anyhow",
  "async-trait",
  "cfg-if",
@@ -1560,14 +1557,11 @@ dependencies = [
  "kona-mpt",
  "kona-preimage",
  "lru",
- "nybbles",
  "op-alloy-consensus",
- "reqwest",
  "revm",
  "serde",
  "serde_json",
  "spin 0.9.8",
- "tokio",
 ]
 
 [[package]]
@@ -1614,7 +1608,7 @@ dependencies = [
  "op-alloy-consensus",
  "proptest",
  "reqwest",
- "revm-primitives 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "revm",
  "serde",
  "serde_json",
  "sha2",
@@ -1668,9 +1662,6 @@ dependencies = [
  "futures",
  "reqwest",
  "revm",
- "serde",
- "serde_json",
- "smallvec",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -1953,10 +1944,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95f06be0417d97f81fe4e5c86d7d01b392655a9cac9c19a848aa033e18937b23"
 dependencies = [
- "alloy-rlp",
  "const-hex",
- "proptest",
- "serde",
  "smallvec",
 ]
 
@@ -2378,7 +2366,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "9.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=bdd1b8e#bdd1b8e666226ec658c45f36768e9399c4971b97"
+source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -2392,16 +2380,16 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "5.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=bdd1b8e#bdd1b8e666226ec658c45f36768e9399c4971b97"
+source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
 dependencies = [
- "revm-primitives 4.0.0 (git+https://github.com/bluealloy/revm?rev=bdd1b8e)",
+ "revm-primitives",
  "serde",
 ]
 
 [[package]]
 name = "revm-precompile"
 version = "7.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=bdd1b8e#bdd1b8e666226ec658c45f36768e9399c4971b97"
+source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -2409,7 +2397,7 @@ dependencies = [
  "k256",
  "once_cell",
  "p256",
- "revm-primitives 4.0.0 (git+https://github.com/bluealloy/revm?rev=bdd1b8e)",
+ "revm-primitives",
  "ripemd",
  "secp256k1",
  "sha2",
@@ -2419,28 +2407,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "4.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9bf5d465e64b697da6a111cb19e798b5b2ebb18e5faf2ad48e9e8d47c64add2"
-dependencies = [
- "alloy-primitives",
- "auto_impl",
- "bitflags 2.5.0",
- "bitvec",
- "c-kzg",
- "cfg-if",
- "derive_more",
- "dyn-clone",
- "enumn",
- "hashbrown",
- "hex",
- "once_cell",
- "serde",
-]
-
-[[package]]
-name = "revm-primitives"
-version = "4.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=bdd1b8e#bdd1b8e666226ec658c45f36768e9399c4971b97"
+source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
 dependencies = [
  "alloy-primitives",
  "auto_impl",
@@ -3269,9 +3236,9 @@ dependencies = [
 
 [[package]]
 name = "utf8parse"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "valuable"
