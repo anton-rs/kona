@@ -176,8 +176,8 @@ where
             let account_path = Nibbles::unpack(keccak256(address.as_slice()));
 
             // If the account was destroyed, delete it from the trie.
-            if bundle_account.was_destroyed() ||
-                bundle_account.account_info().map(|a| a.is_empty()).unwrap_or_default()
+            if bundle_account.was_destroyed()
+                || bundle_account.account_info().map(|a| a.is_empty()).unwrap_or_default()
             {
                 self.root_node.delete(&account_path, &self.fetcher)?;
                 self.storage_roots.remove(address);
@@ -345,8 +345,8 @@ where
         let mut header = self.fetcher.header_by_hash(block_hash)?;
 
         // Check if the block number is in range. If not, we can fail early.
-        if u64_block_number > header.number ||
-            header.number.saturating_sub(u64_block_number) > BLOCK_HASH_HISTORY as u64
+        if u64_block_number > header.number
+            || header.number.saturating_sub(u64_block_number) > BLOCK_HASH_HISTORY as u64
         {
             return Ok(B256::default());
         }

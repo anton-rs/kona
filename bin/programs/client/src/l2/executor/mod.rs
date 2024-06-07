@@ -535,8 +535,12 @@ mod test {
 
     use super::*;
     use alloc::string::{String, ToString};
-    use alloy_primitives::{address, b256, hex};
+    use alloy_primitives::{address, b256, hex, keccak256};
+    use alloy_provider::{Provider, ProviderBuilder};
     use alloy_rlp::Decodable;
+    use kona_mpt::TrieNode;
+    use nybbles::Nibbles;
+    use reqwest::Url;
     use serde::Deserialize;
 
     /// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from the local
@@ -791,7 +795,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_l2_block_executor_big_block() {
         // Static for the execution of block #121065789 on OP mainnet.
         // https://optimistic.etherscan.io/block/121065789
@@ -850,5 +853,95 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+    }
+
+    /// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from a remote source.
+    struct RemoteTrieDBFetcher {
+        persist_folder: String,
+        provider: alloy_provider::ReqwestProvider,
+    }
+
+    impl TrieDBFetcher for RemoteTrieDBFetcher {
+        fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
+            let preimage = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    std::dbg!(alloc::format!("node hash: {}", alloy_primitives::hex::encode(&key)));
+                    let preimage = self
+                        .provider
+                        .client()
+                        .request::<&[B256; 1], Bytes>("debug_dbGet", &[key])
+                        .await
+                        .unwrap();
+                    std::fs::write(
+                        alloc::format!("testdata/{}/{}.bin", self.persist_folder, hex::encode(key)),
+                        preimage.as_ref(),
+                    )
+                    .unwrap_or_default();
+                    preimage
+                });
+            Ok(preimage)
+        }
+
+        fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes> {
+            let preimage =
+                tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(
+                    async {
+                        const CODE_PREFIX: u8 = b'c';
+                        let code_hash = [&[CODE_PREFIX], hash.as_slice()].concat();
+                        let code = self
+                            .provider
+                            .client()
+                            .request::<&[Bytes; 1], Bytes>("debug_dbGet", &[code_hash.into()])
+                            .await;
+                        match code {
+                            Ok(code) => {
+                                std::fs::write(
+                                    alloc::format!(
+                                        "testdata/{}/{}.bin",
+                                        self.persist_folder,
+                                        hex::encode(hash)
+                                    ),
+                                    code.as_ref(),
+                                )
+                                .unwrap_or_default();
+                                code
+                            }
+                            Err(_) => self
+                                .provider
+                                .client()
+                                .request::<&[B256; 1], Bytes>("debug_dbGet", &[hash])
+                                .await
+                                .unwrap(),
+                        }
+                    },
+                );
+            Ok(preimage)
+        }
+
+        fn header_by_hash(&self, hash: B256) -> Result<Header> {
+            let preimage =
+                tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(
+                    async {
+                        std::dbg!(alloc::format!(
+                            "node hash: {}",
+                            alloy_primitives::hex::encode(&hash)
+                        ));
+                        self.provider
+                            .client()
+                            .request::<&[B256; 1], Bytes>("debug_dbGet", &[hash])
+                            .await
+                            .unwrap()
+                    },
+                );
+            std::fs::write(
+                alloc::format!("testdata/{}/{}.bin", self.persist_folder, hex::encode(hash)),
+                preimage.as_ref(),
+            )
+            .unwrap_or_default();
+            Header::decode(&mut preimage.as_ref()).map_err(|e| anyhow!(e))
+        }
     }
 }

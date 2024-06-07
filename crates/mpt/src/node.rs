@@ -4,7 +4,7 @@
 use crate::TrieDBFetcher;
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{keccak256, Bytes, B256};
-use alloy_rlp::{Buf, BufMut, Decodable, Encodable, Header, EMPTY_STRING_CODE};
+use alloy_rlp::{length_of_length, Buf, BufMut, Decodable, Encodable, Header, EMPTY_STRING_CODE};
 use alloy_trie::Nibbles;
 use anyhow::{anyhow, Result};
 
@@ -108,10 +108,10 @@ impl TrieNode {
     }
 
     /// Blinds the [TrieNode] if its encoded length is longer than an encoded [B256] string in
-    /// length. Alternatively, if the [TrieNode] is a [TrieNode::Leaf], it is blinded by this
-    /// function.
+    /// length. Alternatively, if the [TrieNode] is a [TrieNode::Blinded] node already, it
+    /// is left as-is.
     pub fn blind(&mut self) {
-        if self.length() > B256::ZERO.length() || matches!(self, TrieNode::Leaf { .. }) {
+        if self.length() >= 32 && !matches!(self, TrieNode::Blinded { .. }) {
             let mut rlp_buf = Vec::with_capacity(self.length());
             self.encode(&mut rlp_buf);
             *self = TrieNode::Blinded { commitment: keccak256(rlp_buf) }
@@ -226,6 +226,12 @@ impl TrieNode {
             TrieNode::Leaf { prefix, value: leaf_value } => {
                 let shared_extension_nibbles = remaining_nibbles.common_prefix_length(prefix);
 
+                // If all nibbles are shared, update the leaf node with the new value.
+                if remaining_nibbles.as_slice() == prefix.as_slice() {
+                    *self = TrieNode::Leaf { prefix: prefix.clone(), value };
+                    return Ok(());
+                }
+
                 // Create a branch node stack containing the leaf node and the new value.
                 let mut stack = vec![TrieNode::Empty; BRANCH_LIST_LENGTH];
 
@@ -259,7 +265,6 @@ impl TrieNode {
             }
             TrieNode::Extension { prefix, node } => {
                 let shared_extension_nibbles = remaining_nibbles.common_prefix_length(prefix);
-
                 if shared_extension_nibbles == prefix.len() {
                     nibble_offset += shared_extension_nibbles;
                     node.insert_inner(path, value, nibble_offset, fetcher)?;
@@ -277,7 +282,7 @@ impl TrieNode {
                 };
 
                 // Insert the new value into the branch stack.
-                let branch_nibble_new = remaining_nibbles[0] as usize;
+                let branch_nibble_new = remaining_nibbles[shared_extension_nibbles] as usize;
                 stack[branch_nibble_new] = TrieNode::Leaf {
                     prefix: remaining_nibbles
                         .slice(shared_extension_nibbles + BRANCH_NODE_NIBBLES..),
@@ -289,9 +294,9 @@ impl TrieNode {
                 if shared_extension_nibbles == 0 {
                     *self = TrieNode::Branch { stack };
                 } else {
-                    let raw_ext_nibbles = remaining_nibbles.slice(..shared_extension_nibbles);
+                    let extension = remaining_nibbles.slice(..shared_extension_nibbles);
                     *self = TrieNode::Extension {
-                        prefix: raw_ext_nibbles,
+                        prefix: extension,
                         node: Box::new(TrieNode::Branch { stack }),
                     };
                 }
@@ -506,7 +511,10 @@ impl TrieNode {
                 encoded_key_len + value.length()
             }
             TrieNode::Extension { prefix, node } => {
-                let encoded_key_len = prefix.length() / 2 + 1;
+                let mut encoded_key_len = prefix.length() / 2 + 1;
+                if encoded_key_len != 1 {
+                    encoded_key_len += length_of_length(encoded_key_len);
+                }
                 encoded_key_len + blinded_length(node)
             }
             TrieNode::Branch { stack } => {
@@ -538,7 +546,9 @@ impl Encodable for TrieNode {
                 // Encode the extension node's header, prefix, and pointer node.
                 Header { list: true, payload_length: self.payload_length() }.encode(out);
                 prefix.encode_path_leaf(false).as_slice().encode(out);
-                encode_blinded(node.as_ref(), out);
+                let mut blinded = node.clone();
+                blinded.blind();
+                blinded.encode(out);
             }
             Self::Branch { stack } => {
                 // In branch nodes, if an element is longer than 32 bytes in length, it is blinded.
@@ -607,14 +617,11 @@ impl Decodable for TrieNode {
                     buf.advance(header.length());
                     Ok(Self::Empty)
                 }
-                _ => {
-                    if header.payload_length != B256::len_bytes() {
-                        return Err(alloy_rlp::Error::UnexpectedLength);
-                    }
+                32 => {
                     let commitment = B256::decode(buf)?;
-
                     Ok(Self::new_blinded(commitment))
                 }
+                _ => Err(alloy_rlp::Error::UnexpectedLength),
             }
         }
     }
@@ -629,26 +636,10 @@ impl Decodable for TrieNode {
 /// ## Returns
 /// - `usize` - The encoded length of the value
 fn blinded_length(value: &TrieNode) -> usize {
-    if value.length() > B256::ZERO.length() || matches!(value, TrieNode::Leaf { .. }) {
+    if value.length() >= 32 && !matches!(value, TrieNode::Blinded { .. }) {
         B256::ZERO.length()
     } else {
         value.length()
-    }
-}
-
-/// Encodes a value into an RLP stream, blidning it with a [keccak256] commitment if it is longer
-/// than an encoded [B256] string in length.
-///
-/// ## Takes
-/// - `value` - The value to encode
-/// - `out` - The RLP stream to write the encoded value to
-fn encode_blinded<T: Encodable>(value: T, out: &mut dyn BufMut) {
-    if value.length() > B256::ZERO.length() {
-        let mut rlp_buf = Vec::with_capacity(value.length());
-        value.encode(&mut rlp_buf);
-        TrieNode::new_blinded(keccak256(rlp_buf)).encode(out);
-    } else {
-        value.encode(out);
     }
 }
 

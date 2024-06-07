@@ -21,6 +21,9 @@ revm.workspace = true
 alloy-trie = { version = "0.4.1", default-features = false }
 smallvec = "1.13"
 
+serde = "1.0"
+serde_json = "1.0"
+
 [dev-dependencies]
 alloy-consensus.workspace = true
 tokio = { version = "1.36.0", features = ["full"] }
