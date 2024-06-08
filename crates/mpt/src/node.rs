@@ -114,7 +114,7 @@ impl TrieNode {
     /// length. Alternatively, if the [TrieNode] is a [TrieNode::Blinded] node already, it
     /// is left as-is.
     pub fn blind(&mut self) {
-        if self.length() >= 32 && !matches!(self, TrieNode::Blinded { .. }) {
+        if self.length() >= B256::ZERO.len() && !matches!(self, TrieNode::Blinded { .. }) {
             let mut rlp_buf = Vec::with_capacity(self.length());
             self.encode(&mut rlp_buf);
             *self = TrieNode::Blinded { commitment: keccak256(rlp_buf) }
@@ -362,14 +362,10 @@ impl TrieNode {
                     return Ok(());
                 }
 
-                if remaining_nibbles.starts_with(prefix) {
-                    node.delete_inner(path, nibble_offset + prefix.len(), fetcher)?;
+                node.delete_inner(path, nibble_offset + prefix.len(), fetcher)?;
 
-                    // Simplify extension if possible after the deletion
-                    self.collapse_if_possible(fetcher)
-                } else {
-                    anyhow::bail!("Key does not exist in trie (extension node mismatch)")
-                }
+                // Simplify extension if possible after the deletion
+                self.collapse_if_possible(fetcher)
             }
             TrieNode::Branch { stack } => {
                 let branch_nibble = remaining_nibbles[0] as usize;
@@ -454,9 +450,6 @@ impl TrieNode {
                         }
                         _ => {}
                     };
-                } else if non_empty_children.is_empty() {
-                    // If all children are empty, convert the branch into an empty node.
-                    *self = TrieNode::Empty;
                 }
             }
             _ => {}
@@ -541,7 +534,7 @@ impl TrieNode {
     ///   than a [B256].
     fn blinded_length(&self) -> usize {
         let encoded_len = self.length();
-        if encoded_len >= 32 && !matches!(self, TrieNode::Blinded { .. }) {
+        if encoded_len >= B256::ZERO.len() && !matches!(self, TrieNode::Blinded { .. }) {
             B256::ZERO.length()
         } else {
             encoded_len
@@ -572,15 +565,12 @@ impl Encodable for TrieNode {
                 // In branch nodes, if an element is longer than 32 bytes in length, it is blinded.
                 // Assuming we have an open trie node, we must re-hash the elements
                 // that are longer than 32 bytes in length.
-                let blinded_nodes = stack
-                    .iter()
-                    .cloned()
-                    .map(|mut node| {
-                        node.blind();
-                        node
-                    })
-                    .collect::<Vec<TrieNode>>();
-                blinded_nodes.encode(out);
+                Header { list: true, payload_length: self.payload_length() }.encode(out);
+                stack.iter().for_each(|node| {
+                    let mut blinded = node.clone();
+                    blinded.blind();
+                    blinded.encode(out);
+                });
             }
         }
     }

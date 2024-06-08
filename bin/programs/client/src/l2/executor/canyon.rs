@@ -1,5 +1,6 @@
 //! Contains logic specific to Canyon hardfork activation.
 
+use alloy_consensus::Header;
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
 use kona_derive::types::RollupConfig;
 use revm::{
@@ -24,14 +25,14 @@ pub(crate) fn ensure_create2_deployer_canyon<DB>(
     db: &mut State<DB>,
     config: &RollupConfig,
     timestamp: u64,
+    parent_header: &Header,
 ) -> Result<(), DB::Error>
 where
     DB: revm::Database,
 {
     // If the canyon hardfork is active at the current timestamp, and it was not active at the
-    // previous block timestamp (heuristically, block time is not perfectly constant at 2s), and the
-    // chain is an optimism chain, then we need to force-deploy the create2 deployer contract.
-    if config.is_canyon_active(timestamp) && !config.is_canyon_active(timestamp.saturating_sub(2)) {
+    // previous block timestamp, then we need to force-deploy the create2 deployer contract.
+    if config.is_canyon_active(timestamp) && !config.is_canyon_active(parent_header.timestamp) {
         // Load the create2 deployer account from the cache.
         let acc = db.load_cache_account(CREATE_2_DEPLOYER_ADDR)?;
 

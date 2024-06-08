@@ -30,6 +30,8 @@ pub(crate) use canyon::ensure_create2_deployer_canyon;
 mod util;
 pub(crate) use util::{logs_bloom, wrap_receipt_with_bloom};
 
+use self::util::{extract_tx_gas_limit, is_system_transaction};
+
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
@@ -103,8 +105,12 @@ where
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        // TODO(clabby): Pass parent header
-        ensure_create2_deployer_canyon(&mut self.state, self.config.as_ref(), payload.timestamp)?;
+        ensure_create2_deployer_canyon(
+            &mut self.state,
+            self.config.as_ref(),
+            payload.timestamp,
+            &self.parent_header,
+        )?;
 
         // Construct the EVM with the given configuration.
         // TODO(clabby): Accelerate precompiles w/ custom precompile handler.
@@ -125,11 +131,12 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             // let block_available_gas = gas_limit - cumulative_gas_used;
-            // if transaction.gas_limit() > block_available_gas
-            //     && (is_regolith || !transaction.is_system_transaction())
-            // {
-            //     anyhow::bail!("Transaction gas limit exceeds block gas limit")
-            // }
+            let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
+            if extract_tx_gas_limit(&transaction) > block_available_gas &&
+                (is_regolith || !is_system_transaction(&transaction))
+            {
+                anyhow::bail!("Transaction gas limit exceeds block gas limit")
+            }
 
             // Reject any EIP-4844 transactions.
             if matches!(transaction, OpTxEnvelope::Eip4844(_)) {
@@ -277,8 +284,7 @@ where
     /// The active [SpecId] for the executor.
     fn revm_spec_id(&self, timestamp: u64) -> SpecId {
         if self.config.is_fjord_active(timestamp) {
-            // TODO(clabby): Replace w/ Fjord Spec ID, once in a revm release.
-            SpecId::ECOTONE
+            SpecId::FJORD
         } else if self.config.is_ecotone_active(timestamp) {
             SpecId::ECOTONE
         } else if self.config.is_canyon_active(timestamp) {

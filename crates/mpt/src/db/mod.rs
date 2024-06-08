@@ -213,13 +213,7 @@ where
             trie_account.encode(&mut account_buf);
 
             // Insert or update the account in the trie.
-            if let Some(account_rlp_ref) = self.root_node.open(&account_path, &self.fetcher)? {
-                // Update the existing account in the trie.
-                *account_rlp_ref = account_buf.into();
-            } else {
-                // Insert the new account into the trie.
-                self.root_node.insert(&account_path, account_buf.into(), &self.fetcher)?;
-            }
+            self.root_node.insert(&account_path, account_buf.into(), &self.fetcher)?;
         }
 
         Ok(())
@@ -247,16 +241,11 @@ where
 
         // Insert or update the storage slot in the trie.
         let hashed_slot_key = Nibbles::unpack(keccak256(index.to_be_bytes::<32>().as_slice()));
-        if let Some(storage_slot_rlp) = storage_root.open(&hashed_slot_key, fetcher)? {
-            if value.is_zero() {
-                // If the storage slot is being set to zero, prune it from the trie.
-                storage_root.delete(&hashed_slot_key, fetcher)?;
-            } else {
-                // Otherwise, update the storage slot.
-                *storage_slot_rlp = rlp_buf.into();
-            }
+        if value.is_zero() {
+            // If the storage slot is being set to zero, prune it from the trie.
+            storage_root.delete(&hashed_slot_key, fetcher)?;
         } else {
-            // If the storage slot does not exist, insert it.
+            // Otherwise, update the storage slot.
             storage_root.insert(&hashed_slot_key, rlp_buf.into(), fetcher)?;
         }
 
