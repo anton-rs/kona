@@ -72,6 +72,8 @@ online = [
   "dep:alloy-transport-http",
   "dep:reqwest",
   "alloy-provider/reqwest",
+  "alloy-rpc-client/reqwest",
+  "alloy-transport-http/reqwest",
   "alloy-consensus/serde",
   "c-kzg/serde",
   "revm-primitives/serde",
