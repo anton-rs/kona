@@ -9,5 +9,5 @@ extern crate alloc;
 #[client_entry(0xFFFFFFF)]
 fn main() -> Result<()> {
     io::print("Hello, world!\n");
-    Ok(())
+    Ok::<(), anyhow::Error>(())
 }

@@ -33,7 +33,13 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
         use anyhow::Result as AnyhowResult;
 
         fn #fn_name() -> AnyhowResult<()> {
-            #fn_body
+            match #fn_body {
+                Ok(_) => kona_common::io::exit(0),
+                Err(e) => {
+                    kona_common::io::print_err(alloc::format!("Program encountered fatal error: {:?}\n", e).as_ref());
+                    kona_common::io::exit(1);
+                }
+            }
         }
 
         cfg_if::cfg_if! {
@@ -43,8 +49,7 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
                 #[no_mangle]
                 pub extern "C" fn _start() {
                     kona_common::alloc_heap!(HEAP_SIZE);
-                    #fn_name().unwrap();
-                    kona_common::io::exit(0);
+                    let _ = #fn_name();
                 }
 
                 #[panic_handler]
