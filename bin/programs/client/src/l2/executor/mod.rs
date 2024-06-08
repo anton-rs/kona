@@ -4,7 +4,7 @@
 use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Sealable, Sealed, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
-use alloy_primitives::{address, Bytes, TxKind, B256, U256};
+use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_derive::types::{L2PayloadAttributes, RawTransaction, RollupConfig};
 use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher};
@@ -273,6 +273,49 @@ where
         self.parent_header = header;
 
         Ok(&self.parent_header)
+    }
+
+    /// Computes the current output root of the executor, based on the parent header and the
+    /// state's underlying trie.
+    ///
+    /// **CONSTRUCTION:**
+    /// ```text
+    /// output_root = keccak256(version_byte .. payload)
+    /// payload = state_root .. withdrawal_storage_root .. latest_block_hash
+    /// ```
+    ///
+    /// ## Returns
+    /// - `Ok(output_root)`: The computed output root.
+    /// - `Err(_)`: If an error occurred while computing the output root.
+    pub fn compute_output_root(&mut self) -> Result<B256> {
+        const OUTPUT_ROOT_VERSION: u8 = 0;
+        const L2_TO_L1_MESSAGE_PASSER_ADDRESS: Address =
+            address!("4200000000000000000000000000000000000016");
+
+        // Fetch the L2 to L1 message passer account from the cache or underlying trie.
+        let storage_root =
+            match self.state.database.storage_roots().get(&L2_TO_L1_MESSAGE_PASSER_ADDRESS) {
+                Some(storage_root) => storage_root
+                    .blinded_commitment()
+                    .ok_or(anyhow!("Account storage root is unblinded"))?,
+                None => {
+                    self.state
+                        .database
+                        .get_trie_account(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)?
+                        .ok_or(anyhow!("L2 to L1 message passer account not found in trie"))?
+                        .storage_root
+                }
+            };
+
+        // Construct the raw output.
+        let mut raw_output = [0u8; 97];
+        raw_output[0] = OUTPUT_ROOT_VERSION;
+        raw_output[1..33].copy_from_slice(self.parent_header.state_root.as_ref());
+        raw_output[33..65].copy_from_slice(storage_root.as_ref());
+        raw_output[65..97].copy_from_slice(self.parent_header.seal().as_ref());
+
+        // Hash the output and return
+        Ok(keccak256(raw_output))
     }
 
     /// Returns the active [SpecId] for the executor.
