@@ -11,16 +11,13 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{Bytes, B256, U64};
+use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
-use alloy_rpc_client::RpcClient;
+use alloy_transport::TransportResult;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use core::num::NonZeroUsize;
 use lru::LruCache;
-
-// todo: once alloy revision is bumped, use defined ReqwestClient type.
-/// A client using a [`reqwest`] HTTP transport.
-pub type ReqwestClient = RpcClient<alloy_transport_http::Http<reqwest::Client>>;
 
 const CACHE_SIZE: usize = 16;
 
@@ -33,7 +30,7 @@ const CACHE_SIZE: usize = 16;
 #[derive(Debug, Clone)]
 pub struct AlloyChainProvider {
     /// The inner Ethereum JSON-RPC provider.
-    inner: ReqwestClient,
+    inner: ReqwestProvider,
     /// `header_by_hash` LRU cache.
     header_by_hash_cache: LruCache<B256, Header>,
     /// `block_info_by_number` LRU cache.
@@ -46,7 +43,7 @@ pub struct AlloyChainProvider {
 
 impl AlloyChainProvider {
     /// Creates a new [AlloyChainProvider] with the given alloy provider.
-    pub fn new(inner: ReqwestClient) -> Self {
+    pub fn new(inner: ReqwestProvider) -> Self {
         Self {
             inner,
             header_by_hash_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
@@ -60,7 +57,7 @@ impl AlloyChainProvider {
 
     /// Creates a new [AlloyChainProvider] from the provided [reqwest::Url].
     pub fn new_http(url: reqwest::Url) -> Self {
-        let inner = ReqwestClient::new_http(url);
+        let inner = ReqwestProvider::new_http(url);
         Self::new(inner)
     }
 }
@@ -72,8 +69,9 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(header.clone());
         }
 
-        let raw_header: Bytes =
-            self.inner.request("debug_getRawHeader", [hash]).await.map_err(|e| anyhow!(e))?;
+        let raw_header: TransportResult<Bytes> =
+            self.inner.raw_request("debug_getRawHeader".into(), [hash]).await;
+        let raw_header: Bytes = raw_header.map_err(|e| anyhow!(e))?;
         Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e))
     }
 
@@ -82,11 +80,9 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(*block_info);
         }
 
-        let raw_header: Bytes = self
-            .inner
-            .request("debug_getRawHeader", [U64::from(number)])
-            .await
-            .map_err(|e| anyhow!(e))?;
+        let raw_header: TransportResult<Bytes> =
+            self.inner.raw_request("debug_getRawHeader".into(), [U64::from(number)]).await;
+        let raw_header: Bytes = raw_header.map_err(|e| anyhow!(e))?;
         let header = Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e))?;
 
         let block_info = BlockInfo {
@@ -104,8 +100,9 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(receipts.clone());
         }
 
-        let raw_receipts: Vec<Bytes> =
-            self.inner.request("debug_getRawReceipts", [hash]).await.map_err(|e| anyhow!(e))?;
+        let raw_receipts: TransportResult<Vec<Bytes>> =
+            self.inner.raw_request("debug_getRawReceipts".into(), [hash]).await;
+        let raw_receipts: Vec<Bytes> = raw_receipts.map_err(|e| anyhow!(e))?;
 
         let receipts = raw_receipts
             .iter()
@@ -133,8 +130,9 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(block_info_and_txs.clone());
         }
 
-        let raw_block: Bytes =
-            self.inner.request("debug_getRawBlock", [hash]).await.map_err(|e| anyhow!(e))?;
+        let raw_block: TransportResult<Bytes> =
+            self.inner.raw_request("debug_getRawBlock".into(), [hash]).await;
+        let raw_block: Bytes = raw_block.map_err(|e| anyhow!(e))?;
         let block = Block::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
 
         let block_info = BlockInfo {
@@ -157,7 +155,7 @@ impl ChainProvider for AlloyChainProvider {
 #[derive(Debug, Clone)]
 pub struct AlloyL2ChainProvider {
     /// The inner Ethereum JSON-RPC provider.
-    inner: ReqwestClient,
+    inner: ReqwestProvider,
     /// The rollup configuration.
     rollup_config: Arc<RollupConfig>,
     /// `payload_by_number` LRU cache.
@@ -170,7 +168,7 @@ pub struct AlloyL2ChainProvider {
 
 impl AlloyL2ChainProvider {
     /// Creates a new [AlloyL2ChainProvider] with the given alloy provider and [RollupConfig].
-    pub fn new(inner: ReqwestClient, rollup_config: Arc<RollupConfig>) -> Self {
+    pub fn new(inner: ReqwestProvider, rollup_config: Arc<RollupConfig>) -> Self {
         Self {
             inner,
             rollup_config,
@@ -182,7 +180,7 @@ impl AlloyL2ChainProvider {
 
     /// Creates a new [AlloyL2ChainProvider] from the provided [reqwest::Url].
     pub fn new_http(url: reqwest::Url, rollup_config: Arc<RollupConfig>) -> Self {
-        let inner = ReqwestClient::new_http(url);
+        let inner = ReqwestProvider::new_http(url);
         Self::new(inner, rollup_config)
     }
 }
@@ -205,11 +203,9 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             return Ok(payload.clone());
         }
 
-        let raw_block: Bytes = self
-            .inner
-            .request("debug_getRawBlock", [U64::from(number)])
-            .await
-            .map_err(|e| anyhow!(e))?;
+        let raw_block: TransportResult<Bytes> =
+            self.inner.raw_request("debug_getRawBlock".into(), [U64::from(number)]).await;
+        let raw_block: Bytes = raw_block.map_err(|e| anyhow!(e))?;
         let block = OpBlock::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
         let payload_envelope: L2ExecutionPayloadEnvelope = block.into();
 
