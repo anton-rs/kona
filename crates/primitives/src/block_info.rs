@@ -145,7 +145,7 @@ impl L1BlockInfoTx {
             Ok(Self::Ecotone(L1BlockInfoEcotone {
                 number: l1_header.number,
                 time: l1_header.timestamp,
-                base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
+                base_fee: l1_header.base_fee_per_gas.unwrap_or(0) as u64,
                 block_hash: l1_header.hash_slow(),
                 sequence_number,
                 batcher_address: system_config.batcher_addr,
@@ -157,7 +157,7 @@ impl L1BlockInfoTx {
             Ok(Self::Bedrock(L1BlockInfoBedrock {
                 number: l1_header.number,
                 time: l1_header.timestamp,
-                base_fee: l1_header.base_fee_per_gas.unwrap_or(0),
+                base_fee: l1_header.base_fee_per_gas.unwrap_or(0) as u64,
                 block_hash: l1_header.hash_slow(),
                 sequence_number,
                 batcher_address: system_config.batcher_addr,
@@ -469,7 +469,7 @@ mod test {
 
         assert_eq!(l1_info.number, l1_header.number);
         assert_eq!(l1_info.time, l1_header.timestamp);
-        assert_eq!(l1_info.base_fee, l1_header.base_fee_per_gas.unwrap_or(0));
+        assert_eq!(l1_info.base_fee, l1_header.base_fee_per_gas.unwrap_or(0) as u64);
         assert_eq!(l1_info.block_hash, l1_header.hash_slow());
         assert_eq!(l1_info.sequence_number, sequence_number);
         assert_eq!(l1_info.batcher_address, system_config.batcher_addr);
@@ -500,7 +500,7 @@ mod test {
 
         assert_eq!(l1_info.number, l1_header.number);
         assert_eq!(l1_info.time, l1_header.timestamp);
-        assert_eq!(l1_info.base_fee, l1_header.base_fee_per_gas.unwrap_or(0));
+        assert_eq!(l1_info.base_fee, l1_header.base_fee_per_gas.unwrap_or(0) as u64);
         assert_eq!(l1_info.block_hash, l1_header.hash_slow());
         assert_eq!(l1_info.sequence_number, sequence_number);
         assert_eq!(l1_info.batcher_address, system_config.batcher_addr);

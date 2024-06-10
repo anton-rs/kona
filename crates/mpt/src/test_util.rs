@@ -2,7 +2,7 @@
 
 extern crate std;
 
-use crate::ordered_trie_with_encoder;
+use crate::{ordered_trie_with_encoder, TrieDBFetcher};
 use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{keccak256, Bytes, Log, B256};
@@ -117,4 +117,35 @@ pub(crate) async fn get_live_derivable_transactions_list(
         });
 
     Ok((root, preimages, consensus_txs))
+}
+
+/// A mock [TrieDBFetcher] for testing that serves in-memory preimages.
+pub(crate) struct TrieNodeProvider {
+    preimages: BTreeMap<B256, Bytes>,
+    bytecode: BTreeMap<B256, Bytes>,
+    headers: BTreeMap<B256, alloy_consensus::Header>,
+}
+
+impl TrieNodeProvider {
+    pub(crate) fn new(
+        preimages: BTreeMap<B256, Bytes>,
+        bytecode: BTreeMap<B256, Bytes>,
+        headers: BTreeMap<B256, alloy_consensus::Header>,
+    ) -> Self {
+        Self { preimages, bytecode, headers }
+    }
+}
+
+impl TrieDBFetcher for TrieNodeProvider {
+    fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
+        self.preimages.get(&key).cloned().ok_or_else(|| anyhow!("Key not found"))
+    }
+
+    fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes> {
+        self.bytecode.get(&hash).cloned().ok_or_else(|| anyhow!("Key not found"))
+    }
+
+    fn header_by_hash(&self, hash: B256) -> Result<alloy_consensus::Header> {
+        self.headers.get(&hash).cloned().ok_or_else(|| anyhow!("Key not found"))
+    }
 }
