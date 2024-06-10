@@ -184,9 +184,72 @@ where
             }
             HintType::L2BlockHeader => todo!(),
             HintType::L2Transactions => todo!(),
-            HintType::L2StateNode => todo!(),
             HintType::L2Code => todo!(),
             HintType::L2Output => todo!(),
+            HintType::L2StateNode => todo!(),
+            HintType::L2AccountProof => {
+                if hint_data.len() != 8 + 20 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                let block_number = u64::from_be_bytes(
+                    hint_data.as_ref()[..8]
+                        .try_into()
+                        .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
+                );
+                let address = Address::from_slice(&hint_data.as_ref()[8..]);
+
+                let proof_response = self
+                    .l2_provider
+                    .get_proof(address, Default::default(), block_number.into())
+                    .await
+                    .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
+
+                let mut kv_write_lock = self.kv_store.write().await;
+
+                // Write the account proof nodes to the key-value store.
+                proof_response.account_proof.into_iter().for_each(|node| {
+                    let node_hash = keccak256(node.as_ref());
+                    let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
+                    kv_write_lock.set(key.into(), node.into());
+                });
+            }
+            HintType::L2AccountStorageProof => {
+                if hint_data.len() != 8 + 20 + 32 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                let block_number = u64::from_be_bytes(
+                    hint_data.as_ref()[..8]
+                        .try_into()
+                        .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
+                );
+                let address = Address::from_slice(&hint_data.as_ref()[8..]);
+                let slot = B256::from_slice(&hint_data.as_ref()[28..]);
+
+                let mut proof_response = self
+                    .l2_provider
+                    .get_proof(address, vec![slot], block_number.into())
+                    .await
+                    .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
+
+                let mut kv_write_lock = self.kv_store.write().await;
+
+                // Write the account proof nodes to the key-value store.
+                proof_response.account_proof.into_iter().for_each(|node| {
+                    let node_hash = keccak256(node.as_ref());
+                    let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
+                    kv_write_lock.set(key.into(), node.into());
+                });
+
+                // Write the storage proof nodes to the key-value store.
+                let storage_proof = proof_response.storage_proof.remove(0);
+                storage_proof.proof.into_iter().for_each(|node| {
+                    let node_hash = keccak256(node.as_ref());
+                    let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
+                    kv_write_lock.set(key.into(), node.into());
+                });
+            }
         }
 
         Ok(())

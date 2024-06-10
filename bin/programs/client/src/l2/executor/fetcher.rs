@@ -2,13 +2,13 @@
 //!
 //! [TrieDB]: kona_mpt::TrieDB
 
-use crate::CachingOracle;
+use crate::{CachingOracle, HINT_WRITER};
 use alloy_consensus::Header;
-use alloy_primitives::{Bytes, B256};
+use alloy_primitives::{hex, Address, Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
-use kona_mpt::TrieDBFetcher;
-use kona_preimage::{PreimageKey, PreimageKeyType, PreimageOracleClient};
+use kona_mpt::{TrieDBFetcher, TrieDBHinter};
+use kona_preimage::{HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient};
 
 /// The [TrieDBFetcher] implementation for the block executor's [TrieDB].
 ///
@@ -53,6 +53,52 @@ impl<'a, const N: usize> TrieDBFetcher for TrieDBProvider<'a, N> {
                 .await?;
             Header::decode(&mut header_bytes.as_slice())
                 .map_err(|e| anyhow!("Failed to RLP decode Header: {e}"))
+        })
+    }
+}
+
+/// The [TrieDBHinter] implementation for the block executor's [TrieDB].
+///
+/// [TrieDB]: kona_mpt::TrieDB
+#[derive(Debug)]
+pub struct TrieDBHintWriter;
+
+impl TrieDBHinter for TrieDBHintWriter {
+    fn hint_trie_node(&self, hash: B256) -> Result<()> {
+        kona_common::block_on(async move {
+            HINT_WRITER
+                .write(&alloc::format!("l2-state-node {}", hex::encode(hash.as_slice())))
+                .await
+        })
+    }
+
+    fn hint_account_proof(&self, address: Address, block_number: u64) -> Result<()> {
+        kona_common::block_on(async move {
+            HINT_WRITER
+                .write(&alloc::format!(
+                    "l2-account-proof {}{}",
+                    hex::encode(block_number.to_be_bytes()),
+                    hex::encode(address.as_slice())
+                ))
+                .await
+        })
+    }
+
+    fn hint_storage_proof(
+        &self,
+        address: alloy_primitives::Address,
+        slot: alloy_primitives::U256,
+        block_number: u64,
+    ) -> Result<()> {
+        kona_common::block_on(async move {
+            HINT_WRITER
+                .write(&alloc::format!(
+                    "l2-account-storage-proof {}{}{}",
+                    hex::encode(block_number.to_be_bytes()),
+                    hex::encode(address.as_slice()),
+                    hex::encode(slot.to_be_bytes::<32>())
+                ))
+                .await
         })
     }
 }

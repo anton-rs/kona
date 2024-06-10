@@ -19,12 +19,17 @@ pub enum HintType {
     L2BlockHeader,
     /// A hint that specifies the transactions of a layer 2 block.
     L2Transactions,
-    /// A hint that specifies the state node in the L2 state trie.
-    L2StateNode,
     /// A hint that specifies the code of a contract on layer 2.
     L2Code,
     /// A hint that specifies the output root of a block on layer 2.
     L2Output,
+    /// A hint that specifies the state node in the L2 state trie.
+    L2StateNode,
+    /// A hint that specifies the proof on the path to an account in the L2 state trie.
+    L2AccountProof,
+    /// A hint that specifies the proof on the path to a storage slot in an account within in the
+    /// L2 state trie.
+    L2AccountStorageProof,
 }
 
 impl TryFrom<&str> for HintType {
@@ -39,9 +44,11 @@ impl TryFrom<&str> for HintType {
             "l1-precompile" => Ok(HintType::L1Precompile),
             "l2-block-header" => Ok(HintType::L2BlockHeader),
             "l2-transactions" => Ok(HintType::L2Transactions),
-            "l2-state-node" => Ok(HintType::L2StateNode),
             "l2-code" => Ok(HintType::L2Code),
             "l2-output" => Ok(HintType::L2Output),
+            "l2-state-node" => Ok(HintType::L2StateNode),
+            "l2-account-proof" => Ok(HintType::L2AccountProof),
+            "l2-account-storage-proof" => Ok(HintType::L2AccountStorageProof),
             _ => anyhow::bail!("Invalid hint type: {value}"),
         }
     }
@@ -57,9 +64,11 @@ impl From<HintType> for &str {
             HintType::L1Precompile => "l1-precompile",
             HintType::L2BlockHeader => "l2-block-header",
             HintType::L2Transactions => "l2-transactions",
-            HintType::L2StateNode => "l2-state-node",
             HintType::L2Code => "l2-code",
             HintType::L2Output => "l2-output",
+            HintType::L2StateNode => "l2-state-node",
+            HintType::L2AccountProof => "l2-account-proof",
+            HintType::L2AccountStorageProof => "l2-account-storage-proof",
         }
     }
 }

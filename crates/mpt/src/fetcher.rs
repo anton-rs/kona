@@ -2,7 +2,7 @@
 //! headers.
 
 use alloy_consensus::Header;
-use alloy_primitives::{Bytes, B256};
+use alloy_primitives::{Address, Bytes, B256, U256};
 use anyhow::Result;
 
 /// The [TrieDBFetcher] trait defines the synchronous interface for fetching trie node preimages and
@@ -45,6 +45,43 @@ pub trait TrieDBFetcher {
     fn header_by_hash(&self, hash: B256) -> Result<Header>;
 }
 
+/// The [TrieDBHinter] trait defines the synchronous interface for hinting the host to fetch trie
+/// node preimages.
+pub trait TrieDBHinter {
+    /// Hints the host to fetch the trie node preimage by hash.
+    ///
+    /// ## Takes
+    /// - `hash`: The hash of the trie node to hint.
+    ///
+    /// ## Returns
+    /// - Ok(()): If the hint was successful.
+    fn hint_trie_node(&self, hash: B256) -> Result<()>;
+
+    /// Hints the host to fetch the trie node preimages on the path to the given address.
+    ///
+    /// ## Takes
+    /// - `address` - The address of the contract whose trie node preimages are to be fetched.
+    /// - `block_number` - The block number at which the trie node preimages are to be fetched.
+    ///
+    /// ## Returns
+    /// - Ok(()): If the hint was successful.
+    /// - Err(anyhow::Error): If the hint was unsuccessful.
+    fn hint_account_proof(&self, address: Address, block_number: u64) -> Result<()>;
+
+    /// Hints the host to fetch the trie node preimages on the path to the storage slot within the
+    /// given account's storage trie.
+    ///
+    /// ## Takes
+    /// - `address` - The address of the contract whose trie node preimages are to be fetched.
+    /// - `slot` - The storage slot whose trie node preimages are to be fetched.
+    /// - `block_number` - The block number at which the trie node preimages are to be fetched.
+    ///
+    /// ## Returns
+    /// - Ok(()): If the hint was successful.
+    /// - Err(anyhow::Error): If the hint was unsuccessful.
+    fn hint_storage_proof(&self, address: Address, slot: U256, block_number: u64) -> Result<()>;
+}
+
 /// The default, no-op implementation of the [TrieDBFetcher] trait, used for testing.
 #[derive(Debug, Clone, Copy)]
 pub struct NoopTrieDBFetcher;
@@ -60,5 +97,23 @@ impl TrieDBFetcher for NoopTrieDBFetcher {
 
     fn header_by_hash(&self, _hash: B256) -> Result<Header> {
         Ok(Header::default())
+    }
+}
+
+/// The default, no-op implementation of the [TrieDBHinter] trait, used for testing.
+#[derive(Debug, Clone, Copy)]
+pub struct NoopTrieDBHinter;
+
+impl TrieDBHinter for NoopTrieDBHinter {
+    fn hint_trie_node(&self, _hash: B256) -> Result<()> {
+        Ok(())
+    }
+
+    fn hint_account_proof(&self, _address: Address, _block_number: u64) -> Result<()> {
+        Ok(())
+    }
+
+    fn hint_storage_proof(&self, _address: Address, _slot: U256, _block_number: u64) -> Result<()> {
+        Ok(())
     }
 }

@@ -3,7 +3,7 @@
 
 use crate::{
     util::{rlp_list_element_length, unpack_path_to_nibbles},
-    TrieDBFetcher,
+    TrieDBFetcher, TrieDBHinter,
 };
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{keccak256, Bytes, B256};
@@ -329,16 +329,22 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not delete the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully deleted at the given path.
-    pub fn delete<F: TrieDBFetcher>(&mut self, path: &Nibbles, fetcher: &F) -> Result<()> {
-        self.delete_inner(path, 0, fetcher)
+    pub fn delete<F: TrieDBFetcher, H: TrieDBHinter>(
+        &mut self,
+        path: &Nibbles,
+        fetcher: &F,
+        hinter: &H,
+    ) -> Result<()> {
+        self.delete_inner(path, 0, fetcher, hinter)
     }
 
     /// Inner alias for `delete` that keeps track of the nibble offset.
-    fn delete_inner<F: TrieDBFetcher>(
+    fn delete_inner<F: TrieDBFetcher, H: TrieDBHinter>(
         &mut self,
         path: &Nibbles,
         nibble_offset: usize,
         fetcher: &F,
+        hinter: &H,
     ) -> Result<()> {
         let remaining_nibbles = path.slice(nibble_offset..);
         match self {
@@ -362,23 +368,23 @@ impl TrieNode {
                     return Ok(());
                 }
 
-                node.delete_inner(path, nibble_offset + prefix.len(), fetcher)?;
+                node.delete_inner(path, nibble_offset + prefix.len(), fetcher, hinter)?;
 
                 // Simplify extension if possible after the deletion
-                self.collapse_if_possible(fetcher)
+                self.collapse_if_possible(fetcher, hinter)
             }
             TrieNode::Branch { stack } => {
                 let branch_nibble = remaining_nibbles[0] as usize;
                 let nibble_offset = nibble_offset + BRANCH_NODE_NIBBLES;
 
-                stack[branch_nibble].delete_inner(path, nibble_offset, fetcher)?;
+                stack[branch_nibble].delete_inner(path, nibble_offset, fetcher, hinter)?;
 
                 // Simplify the branch if possible after the deletion
-                self.collapse_if_possible(fetcher)
+                self.collapse_if_possible(fetcher, hinter)
             }
             TrieNode::Blinded { .. } => {
                 self.unblind(fetcher)?;
-                self.delete_inner(path, nibble_offset, fetcher)
+                self.delete_inner(path, nibble_offset, fetcher, hinter)
             }
         }
     }
@@ -391,7 +397,11 @@ impl TrieNode {
     /// ## Returns
     /// - `Ok(())` - The node was successfully collapsed
     /// - `Err(_)` - Could not collapse the node
-    fn collapse_if_possible<F: TrieDBFetcher>(&mut self, fetcher: &F) -> Result<()> {
+    fn collapse_if_possible<F: TrieDBFetcher, H: TrieDBHinter>(
+        &mut self,
+        fetcher: &F,
+        hinter: &H,
+    ) -> Result<()> {
         match self {
             TrieNode::Extension { prefix, node } => match node.as_mut() {
                 TrieNode::Extension { prefix: child_prefix, node: child_node } => {
@@ -415,7 +425,7 @@ impl TrieNode {
                 }
                 TrieNode::Blinded { .. } => {
                     node.unblind(fetcher)?;
-                    self.collapse_if_possible(fetcher)?;
+                    self.collapse_if_possible(fetcher, hinter)?;
                 }
                 _ => {}
             },
@@ -444,9 +454,14 @@ impl TrieNode {
                             );
                             *self = TrieNode::Extension { prefix: new_prefix, node: node.clone() };
                         }
-                        TrieNode::Blinded { .. } => {
+                        TrieNode::Blinded { commitment } => {
+                            // In this special case, we need to send a hint to fetch the preimage of
+                            // the blinded node, since it is outside of the paths that have been
+                            // traversed so far.
+                            hinter.hint_trie_node(*commitment)?;
+
                             non_empty_node.unblind(fetcher)?;
-                            self.collapse_if_possible(fetcher)?;
+                            self.collapse_if_possible(fetcher, hinter)?;
                         }
                         _ => {}
                     };

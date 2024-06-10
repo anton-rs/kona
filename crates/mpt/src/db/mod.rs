@@ -1,9 +1,9 @@
 //! This module contains an implementation of an in-memory Trie DB for [revm], that allows for
 //! incremental updates through fetching node preimages on the fly during execution.
 
-use crate::{TrieDBFetcher, TrieNode};
+use crate::{TrieDBFetcher, TrieDBHinter, TrieNode};
 use alloc::vec::Vec;
-use alloy_consensus::EMPTY_ROOT_HASH;
+use alloy_consensus::{Header, Sealed, EMPTY_ROOT_HASH};
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
 use alloy_trie::Nibbles;
@@ -44,16 +44,21 @@ pub use account::TrieAccount;
 ///
 /// **Example Construction**:
 /// ```rust
-/// use alloy_consensus::Header;
+/// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
 /// use anyhow::Result;
-/// use kona_mpt::{NoopTrieDBFetcher, TrieDB};
+/// use kona_mpt::{NoopTrieDBFetcher, NoopTrieDBHinter, TrieDB};
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
 ///
 /// let mock_starting_root = B256::default();
-/// let mock_parent_block_hash = B256::default();
+/// let mock_parent_block_header = Header::default();
 ///
-/// let trie_db = TrieDB::new(mock_starting_root, mock_parent_block_hash, NoopTrieDBFetcher);
+/// let trie_db = TrieDB::new(
+///     mock_starting_root,
+///     mock_parent_block_header.seal_slow(),
+///     NoopTrieDBFetcher,
+///     NoopTrieDBHinter,
+/// );
 /// let mut state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
 /// let evm = EvmBuilder::default().with_db(&mut state).build();
 ///
@@ -69,31 +74,36 @@ pub use account::TrieAccount;
 ///
 /// [State]: revm::State
 #[derive(Debug, Clone)]
-pub struct TrieDB<F>
+pub struct TrieDB<F, H>
 where
     F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     /// The [TrieNode] representation of the root node.
     root_node: TrieNode,
     /// Storage roots of accounts within the trie.
     storage_roots: HashMap<Address, TrieNode>,
     /// The parent block hash of the current block.
-    parent_block_hash: B256,
+    parent_block_header: Sealed<Header>,
     /// The [TrieDBFetcher]
     fetcher: F,
+    /// The [TrieDBHinter]
+    hinter: H,
 }
 
-impl<F> TrieDB<F>
+impl<F, H> TrieDB<F, H>
 where
     F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     /// Creates a new [TrieDB] with the given root node.
-    pub fn new(root: B256, parent_block_hash: B256, fetcher: F) -> Self {
+    pub fn new(root: B256, parent_block_header: Sealed<Header>, fetcher: F, hinter: H) -> Self {
         Self {
             root_node: TrieNode::new_blinded(root),
             storage_roots: Default::default(),
-            parent_block_hash,
+            parent_block_header,
             fetcher,
+            hinter,
         }
     }
 
@@ -153,13 +163,18 @@ where
         self.root_node.blinded_commitment().ok_or(anyhow!("State root node is not a blinded node"))
     }
 
-    /// Sets the parent block hash of the trie DB. Should be called after a block has been executed
-    /// and the Header has been created.
+    /// Returns a reference to the current parent block header of the trie DB.
+    pub fn parent_block_header(&self) -> &Sealed<Header> {
+        &self.parent_block_header
+    }
+
+    /// Sets the parent block header of the trie DB. Should be called after a block has been
+    /// executed and the Header has been created.
     ///
     /// ## Takes
-    /// - `parent_block_hash`: The parent block hash of the current block.
-    pub fn set_parent_block_hash(&mut self, parent_block_hash: B256) {
-        self.parent_block_hash = parent_block_hash;
+    /// - `parent_block_header`: The parent block header of the current block.
+    pub fn set_parent_block_header(&mut self, parent_block_header: Sealed<Header>) {
+        self.parent_block_header = parent_block_header;
     }
 
     /// Fetches the [TrieAccount] of an account from the trie DB.
@@ -172,6 +187,9 @@ where
     /// - `Ok(None)`: If the account does not exist in the trie.
     /// - `Err(_)`: If the account could not be fetched.
     pub fn get_trie_account(&mut self, address: &Address) -> Result<Option<TrieAccount>> {
+        // Send a hint to the host to fetch the account proof.
+        self.hinter.hint_account_proof(*address, self.parent_block_header.number)?;
+
         // Fetch the account from the trie.
         let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
         let Some(trie_account_rlp) = self.root_node.open(&hashed_address_nibbles, &self.fetcher)?
@@ -200,7 +218,7 @@ where
 
             // If the account was destroyed, delete it from the trie.
             if bundle_account.was_destroyed() {
-                self.root_node.delete(&account_path, &self.fetcher)?;
+                self.root_node.delete(&account_path, &self.fetcher, &self.hinter)?;
                 self.storage_roots.remove(address);
                 continue;
             }
@@ -220,7 +238,13 @@ where
                 .entry(*address)
                 .or_insert_with(|| TrieNode::new_blinded(EMPTY_ROOT_HASH));
             bundle_account.storage.iter().try_for_each(|(index, value)| {
-                Self::change_storage(acc_storage_root, *index, value.present_value, &self.fetcher)
+                Self::change_storage(
+                    acc_storage_root,
+                    *index,
+                    value.present_value,
+                    &self.fetcher,
+                    &self.hinter,
+                )
             })?;
 
             // Recompute the account storage root.
@@ -257,6 +281,7 @@ where
         index: U256,
         value: U256,
         fetcher: &F,
+        hinter: &H,
     ) -> Result<()> {
         // RLP encode the storage slot value.
         let mut rlp_buf = Vec::with_capacity(value.length());
@@ -266,7 +291,7 @@ where
         let hashed_slot_key = Nibbles::unpack(keccak256(index.to_be_bytes::<32>().as_slice()));
         if value.is_zero() {
             // If the storage slot is being set to zero, prune it from the trie.
-            storage_root.delete(&hashed_slot_key, fetcher)?;
+            storage_root.delete(&hashed_slot_key, fetcher, hinter)?;
         } else {
             // Otherwise, update the storage slot.
             storage_root.insert(&hashed_slot_key, rlp_buf.into(), fetcher)?;
@@ -276,9 +301,10 @@ where
     }
 }
 
-impl<F> Database for TrieDB<F>
+impl<F, H> Database for TrieDB<F, H>
 where
     F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     type Error = anyhow::Error;
 
@@ -310,6 +336,9 @@ where
     }
 
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+        // Send a hint to the host to fetch the storage proof.
+        self.hinter.hint_storage_proof(address, index, self.parent_block_header.number)?;
+
         // Fetch the account's storage root from the cache. If storage is being accessed, the
         // account should have been loaded into the cache by the `basic` method. If the account was
         // non-existing, the storage root will not be present.
@@ -341,9 +370,8 @@ where
         // The block number is guaranteed to be within the range of a u64.
         let u64_block_number: u64 = block_number.to();
 
-        // Fetch the block header from the preimage fetcher.
-        let mut block_hash = self.parent_block_hash;
-        let mut header = self.fetcher.header_by_hash(block_hash)?;
+        // Copy the current header
+        let mut header = self.parent_block_header.inner().clone();
 
         // Check if the block number is in range. If not, we can fail early.
         if u64_block_number > header.number ||
@@ -354,10 +382,9 @@ where
 
         // Walk back the block headers to the desired block number.
         while header.number > u64_block_number {
-            block_hash = header.parent_hash;
-            header = self.fetcher.header_by_hash(block_hash)?;
+            header = self.fetcher.header_by_hash(header.parent_hash)?;
         }
 
-        Ok(block_hash)
+        Ok(header.hash_slow())
     }
 }
