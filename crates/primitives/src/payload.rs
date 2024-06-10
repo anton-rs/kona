@@ -1,7 +1,7 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
-use alloy_eips::eip2718::Decodable2718;
+use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
@@ -245,7 +245,7 @@ impl From<OpBlock> for L2ExecutionPayloadEnvelope {
                     .into_iter()
                     .map(|tx| {
                         let mut buf = Vec::with_capacity(tx.length());
-                        tx.encode(&mut buf);
+                        tx.encode_2718(&mut buf);
                         buf.into()
                     })
                     .collect(),
