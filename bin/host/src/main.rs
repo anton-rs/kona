@@ -62,7 +62,7 @@ async fn start_server(cfg: HostCli) -> Result<()> {
     let fetcher = (!cfg.is_offline()).then(|| {
         let l1_provider = util::http_provider(&cfg.l1_node_address.expect("Provider must be set"));
         let l2_provider = util::http_provider(&cfg.l2_node_address.expect("Provider must be set"));
-        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider)))
+        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider, cfg.l2_head)))
     });
 
     // Start the server and wait for it to complete.
@@ -85,7 +85,7 @@ async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
             util::http_provider(cfg.l1_node_address.as_ref().expect("Provider must be set"));
         let l2_provider =
             util::http_provider(cfg.l2_node_address.as_ref().expect("Provider must be set"));
-        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider)))
+        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider, cfg.l2_head)))
     });
 
     // Create the server and start it.
