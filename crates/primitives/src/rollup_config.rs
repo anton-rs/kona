@@ -2,7 +2,7 @@
 
 use crate::genesis::Genesis;
 use alloy_eips::eip1559::BaseFeeParams;
-use alloy_primitives::Address;
+use alloy_primitives::{address, Address};
 
 /// Base fee max change denominator for Optimism Mainnet as defined in the Optimism
 /// [transaction costs](https://community.optimism.io/docs/developers/build/differences/#transaction-costs) doc.
@@ -195,6 +195,33 @@ impl RollupConfig {
                 // ignore the event if it's an unknown scalar format
                 Err("Unrecognized scalar version")
             }
+        }
+    }
+}
+
+impl RollupConfig {
+    /// Returns the Rollup Configuration for OP Mainnet.
+    pub fn op_mainnet() -> Self {
+        Self {
+            genesis: Genesis::op_mainnet(),
+            block_time: 2_u64,
+            max_sequencer_drift: 600_u64,
+            seq_window_size: 3600_u64,
+            channel_timeout: 300_u64,
+            l1_chain_id: 1_u64,
+            l2_chain_id: 10_u64,
+            regolith_time: Some(0_u64),
+            canyon_time: Some(1_704_992_401_u64),
+            delta_time: Some(1_708_560_000_u64),
+            ecotone_time: Some(1_710_374_401_u64),
+            fjord_time: Some(1_720_627_201_u64),
+            interop_time: None,
+            batch_inbox_address: address!("ff00000000000000000000000000000000000010"),
+            deposit_contract_address: address!("beb5fc579115071764c7423a4f12edde41f106ed"),
+            l1_system_config_address: address!("229047fed2591dbec1ef1118d64f7af3db9eb290"),
+            protocol_versions_address: address!("8062abc286f5e7d9428a0ccb9abd71e50d93b935"),
+            da_challenge_address: Some(address!("0000000000000000000000000000000000000000")),
+            blobs_enabled_l1_timestamp: None,
         }
     }
 }
