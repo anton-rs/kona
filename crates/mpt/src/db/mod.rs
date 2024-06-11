@@ -162,6 +162,29 @@ where
         self.parent_block_hash = parent_block_hash;
     }
 
+    /// Fetches the [TrieAccount] of an account from the trie DB.
+    ///
+    /// ## Takes
+    /// - `address`: The address of the account.
+    ///
+    /// ## Returns
+    /// - `Ok(Some(TrieAccount))`: The [TrieAccount] of the account.
+    /// - `Ok(None)`: If the account does not exist in the trie.
+    /// - `Err(_)`: If the account could not be fetched.
+    pub fn get_trie_account(&mut self, address: &Address) -> Result<Option<TrieAccount>> {
+        // Fetch the account from the trie.
+        let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
+        let Some(trie_account_rlp) = self.root_node.open(&hashed_address_nibbles, &self.fetcher)?
+        else {
+            return Ok(None);
+        };
+
+        // Decode the trie account from the RLP bytes.
+        TrieAccount::decode(&mut trie_account_rlp.as_ref())
+            .map_err(|e| anyhow!("Error decoding trie account: {e}"))
+            .map(Some)
+    }
+
     /// Modifies the accounts in the storage trie with the given [BundleState] changeset.
     ///
     /// ## Takes
@@ -261,16 +284,10 @@ where
 
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
         // Fetch the account from the trie.
-        let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
-        let Some(trie_account_rlp) = self.root_node.open(&hashed_address_nibbles, &self.fetcher)?
-        else {
+        let Some(trie_account) = self.get_trie_account(&address)? else {
             // If the account does not exist in the trie, return `Ok(None)`.
             return Ok(None);
         };
-
-        // Decode the trie account from the RLP bytes.
-        let trie_account = TrieAccount::decode(&mut trie_account_rlp.as_ref())
-            .map_err(|e| anyhow!("Error decoding trie account: {e}"))?;
 
         // Insert the account's storage root into the cache.
         self.storage_roots.insert(address, TrieNode::new_blinded(trie_account.storage_root));
