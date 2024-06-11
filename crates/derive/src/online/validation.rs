@@ -1,12 +1,13 @@
 //! Contains logic to validate derivation pipeline outputs.
 
 use crate::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
-use alloc::{boxed::Box, vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{Block, BlockNumberOrTag, BlockTransactions};
+use alloy_rpc_types::{Block, BlockNumberOrTag, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
 use async_trait::async_trait;
+use tracing::warn;
 
 /// Validator
 ///
@@ -39,44 +40,45 @@ impl OnlineValidator {
         Self::new(inner)
     }
 
-    /// Fetches Transactions from the L2 provider.
-    pub(crate) async fn get_block(&self, tag: BlockNumberOrTag) -> Result<Block> {
-        let method = alloc::borrow::Cow::Borrowed("eth_getBlockByNumber");
-        let block: TransportResult<Block> = self.provider.raw_request(method, (tag, true)).await;
+    /// Fetches a block [Header] and a list of raw RLP encoded transactions from the L2 provider.
+    ///
+    /// This method needs to fetch the non-hydrated block and then
+    /// fetch the raw transactions using the `debug_*` namespace.
+    pub(crate) async fn get_block(
+        &self,
+        tag: BlockNumberOrTag,
+    ) -> Result<(Header, Vec<RawTransaction>)> {
+        // Don't hydrate the block so we only get a list of transaction hashes.
+        let block: TransportResult<Block> =
+            self.provider.raw_request("eth_getBlockByNumber".into(), (tag, false)).await;
         let block = block.map_err(|e| anyhow::anyhow!(e))?;
-        Ok(block)
+        // For each transaction hash, fetch the raw transaction RLP.
+        let mut txs = vec![];
+        for tx in block.transactions.hashes() {
+            let tx: TransportResult<RawTransaction> =
+                self.provider.raw_request("debug_getRawTransaction".into(), tx).await;
+            if let Ok(tx) = tx {
+                txs.push(tx);
+            } else {
+                warn!("Failed to fetch transaction: {:?}", tx);
+            }
+        }
+        Ok((block.header, txs))
     }
 
     /// Gets the payload for the specified [BlockNumberOrTag].
     pub(crate) async fn get_payload(&self, tag: BlockNumberOrTag) -> Result<L2PayloadAttributes> {
-        // TODO: we can't use the provider's get_block_by_number here because
-        // upstream alloy will return Mainnet Ethereum transactions and not work for Optimism
-        // Deposit Transactions.
-        let block = self.get_block(tag).await?;
-        let transactions = match block.transactions {
-            BlockTransactions::Full(txns) => txns,
-            _ => {
-                return Err(anyhow::anyhow!("Block {tag} missing full transactions"));
-            }
-        };
-        let transactions = transactions
-            .iter()
-            .map(|tx| {
-                serde_json::to_vec(&tx)
-                    .map_err(|e| anyhow::anyhow!("Failed to serialize transaction: {:?}", e))
-                    .map(RawTransaction::from)
-            })
-            .collect::<Result<alloc::vec::Vec<RawTransaction>>>()?;
+        let (header, transactions) = self.get_block(tag).await?;
         Ok(L2PayloadAttributes {
-            timestamp: block.header.timestamp,
-            prev_randao: block.header.mix_hash.unwrap_or_default(),
-            fee_recipient: block.header.miner,
+            timestamp: header.timestamp,
+            prev_randao: header.mix_hash.unwrap_or_default(),
+            fee_recipient: header.miner,
             // Withdrawals on optimism are always empty
-            withdrawals: Some(vec![]),
-            parent_beacon_block_root: Some(block.header.parent_hash),
+            withdrawals: Default::default(),
+            parent_beacon_block_root: Some(header.parent_hash),
             transactions,
             no_tx_pool: false,
-            gas_limit: Some(block.header.gas_limit as u64),
+            gas_limit: Some(header.gas_limit as u64),
         })
     }
 }

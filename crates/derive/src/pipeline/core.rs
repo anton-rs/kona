@@ -1,14 +1,20 @@
 //! Contains the core derivation pipeline.
 
-use super::{NextAttributes, OriginAdvancer, Pipeline, ResettableStage, StageError};
-use alloc::{boxed::Box, collections::VecDeque};
+use super::{
+    L2ChainProvider, NextAttributes, OriginAdvancer, Pipeline, ResettableStage, StageError,
+};
+use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, SystemConfig};
+use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, RollupConfig};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
-pub struct DerivationPipeline<S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send> {
+pub struct DerivationPipeline<S, P>
+where
+    S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send,
+    P: L2ChainProvider + Send + Sync + Debug,
+{
     /// A handle to the next attributes.
     pub attributes: S,
     /// Reset provider for the pipeline.
@@ -18,29 +24,41 @@ pub struct DerivationPipeline<S: NextAttributes + ResettableStage + OriginAdvanc
     pub cursor: L2BlockInfo,
     /// L1 Origin Tip
     pub tip: BlockInfo,
-    /// The [SystemConfig].
-    pub system_config: SystemConfig,
+    /// The rollup config.
+    pub rollup_config: Arc<RollupConfig>,
+    /// The L2 Chain Provider used to fetch the system config on reset.
+    pub l2_chain_provider: P,
 }
 
-impl<S> DerivationPipeline<S>
+impl<S, P> DerivationPipeline<S, P>
 where
     S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send,
+    P: L2ChainProvider + Send + Sync + Debug,
 {
     /// Creates a new instance of the [DerivationPipeline].
     pub fn new(
         attributes: S,
         tip: BlockInfo,
-        system_config: SystemConfig,
         cursor: L2BlockInfo,
+        rollup_config: Arc<RollupConfig>,
+        l2_chain_provider: P,
     ) -> Self {
-        Self { attributes, prepared: VecDeque::new(), tip, system_config, cursor }
+        Self {
+            attributes,
+            prepared: VecDeque::new(),
+            rollup_config,
+            tip,
+            cursor,
+            l2_chain_provider,
+        }
     }
 }
 
 #[async_trait]
-impl<S> Pipeline for DerivationPipeline<S>
+impl<S, P> Pipeline for DerivationPipeline<S, P>
 where
     S: NextAttributes + ResettableStage + OriginAdvancer + Debug + Send,
+    P: L2ChainProvider + Send + Sync + Debug,
 {
     /// Pops the next prepared [L2AttributesWithParent] from the pipeline.
     fn pop(&mut self) -> Option<L2AttributesWithParent> {
@@ -62,7 +80,11 @@ where
     /// This will bubble down the stages all the way to the `L1Traversal` stage.
     async fn reset(&mut self, block_info: BlockInfo) -> anyhow::Result<()> {
         self.tip = block_info;
-        match self.attributes.reset(self.tip, &self.system_config).await {
+        let system_config = self
+            .l2_chain_provider
+            .system_config_by_number(self.tip.number, Arc::clone(&self.rollup_config))
+            .await?;
+        match self.attributes.reset(self.tip, &system_config).await {
             Ok(()) => tracing::info!("Stages reset"),
             Err(StageError::Eof) => tracing::info!("Stages reset with EOF"),
             Err(err) => {

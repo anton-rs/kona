@@ -8,7 +8,7 @@ use crate::stages::{
 };
 use alloc::{collections::VecDeque, sync::Arc};
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig, SystemConfig};
+use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig};
 
 type L1TraversalStage<P> = L1Traversal<P>;
 type L1RetrievalStage<DAP, P> = L1Retrieval<DAP, L1TraversalStage<P>>;
@@ -25,7 +25,7 @@ pub struct PipelineBuilder<B, P, T, D>
 where
     B: AttributesBuilder + Send + Debug,
     P: ChainProvider + Send + Sync + Debug,
-    T: L2ChainProvider + Send + Sync + Debug,
+    T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
 {
     l2_chain_provider: Option<T>,
@@ -35,14 +35,13 @@ where
     rollup_config: Option<Arc<RollupConfig>>,
     start_cursor: Option<L2BlockInfo>,
     tip: Option<BlockInfo>,
-    system_config: Option<SystemConfig>,
 }
 
 impl<B, P, T, D> Default for PipelineBuilder<B, P, T, D>
 where
     B: AttributesBuilder + Send + Debug,
     P: ChainProvider + Send + Sync + Debug,
-    T: L2ChainProvider + Send + Sync + Debug,
+    T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
 {
     fn default() -> Self {
@@ -52,7 +51,6 @@ where
             chain_provider: None,
             builder: None,
             tip: None,
-            system_config: None,
             rollup_config: None,
             start_cursor: None,
         }
@@ -63,7 +61,7 @@ impl<B, P, T, D> PipelineBuilder<B, P, T, D>
 where
     B: AttributesBuilder + Send + Debug,
     P: ChainProvider + Send + Sync + Debug,
-    T: L2ChainProvider + Send + Sync + Debug,
+    T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
 {
     /// Creates a new pipeline builder.
@@ -80,12 +78,6 @@ where
     /// Sets the tip for the pipeline.
     pub fn tip(mut self, tip: BlockInfo) -> Self {
         self.tip = Some(tip);
-        self
-    }
-
-    /// Sets the starting [SystemConfig] for the pipeline.
-    pub fn system_config(mut self, system_config: SystemConfig) -> Self {
-        self.system_config = Some(system_config);
         self
     }
 
@@ -120,17 +112,17 @@ where
     }
 
     /// Builds the pipeline.
-    pub fn build(self) -> DerivationPipeline<AttributesQueueStage<D, P, T, B>> {
+    pub fn build(self) -> DerivationPipeline<AttributesQueueStage<D, P, T, B>, T> {
         self.into()
     }
 }
 
 impl<B, P, T, D> From<PipelineBuilder<B, P, T, D>>
-    for DerivationPipeline<AttributesQueueStage<D, P, T, B>>
+    for DerivationPipeline<AttributesQueueStage<D, P, T, B>, T>
 where
     B: AttributesBuilder + Send + Debug,
     P: ChainProvider + Send + Sync + Debug,
-    T: L2ChainProvider + Send + Sync + Debug,
+    T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
 {
     fn from(builder: PipelineBuilder<B, P, T, D>) -> Self {
@@ -147,16 +139,18 @@ where
         let frame_queue = FrameQueue::new(l1_retrieval);
         let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);
         let channel_reader = ChannelReader::new(channel_bank, Arc::clone(&rollup_config));
-        let batch_queue = BatchQueue::new(rollup_config.clone(), channel_reader, l2_chain_provider);
+        let batch_queue =
+            BatchQueue::new(rollup_config.clone(), channel_reader, l2_chain_provider.clone());
         let attributes = AttributesQueue::new(*rollup_config, batch_queue, attributes_builder);
 
         // Create the pipeline.
         DerivationPipeline {
             attributes,
             tip: builder.tip.unwrap_or_default(),
-            system_config: builder.system_config.unwrap_or_default(),
             prepared: VecDeque::new(),
             cursor: builder.start_cursor.unwrap_or_default(),
+            rollup_config,
+            l2_chain_provider,
         }
     }
 }
