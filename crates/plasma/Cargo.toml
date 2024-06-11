@@ -21,13 +21,13 @@ kona-primitives = { path = "../primitives" }
 kona-derive = { path = "../derive" }
 
 # `serde` feature dependencies
-serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
+serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
 kona-derive = { path = "../derive", features = ["test-utils"] }
 tracing-subscriber = "0.3.18"
-serde_json = { version = "1.0.68", default-features = false }
-tokio = { version = "1.37", features = ["full"] }
+serde_json = { version = "1.0.117", default-features = false }
+tokio = { version = "1.38", features = ["full"] }
 
 [features]
 default = ["serde"]
