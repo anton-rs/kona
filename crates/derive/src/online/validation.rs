@@ -77,7 +77,7 @@ impl OnlineValidator {
             withdrawals: Default::default(),
             parent_beacon_block_root: Some(header.parent_hash),
             transactions,
-            no_tx_pool: false,
+            no_tx_pool: true,
             gas_limit: Some(header.gas_limit as u64),
         })
     }
