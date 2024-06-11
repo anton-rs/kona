@@ -21,5 +21,3 @@ pub mod types;
 
 #[cfg(feature = "online")]
 pub mod online;
-#[cfg(feature = "online")]
-pub use online::new_online_stack;
