@@ -22,10 +22,10 @@ alloy-trie = { version = "0.4.1", default-features = false }
 
 [dev-dependencies]
 alloy-consensus.workspace = true
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.38.0", features = ["full"] }
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" }
-reqwest = "0.12"
+reqwest = "0.12.4"
 tracing-subscriber = "0.3.18"
 futures = { version = "0.3.30", default-features = false }
