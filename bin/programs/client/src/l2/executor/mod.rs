@@ -7,7 +7,7 @@ use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_derive::types::{L2PayloadAttributes, RawTransaction, RollupConfig};
-use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher};
+use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
 use op_alloy_consensus::{OpReceipt, OpReceiptEnvelope, OpReceiptWithBloom, OpTxEnvelope};
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
@@ -19,7 +19,7 @@ use revm::{
 };
 
 mod fetcher;
-pub use fetcher::TrieDBProvider;
+pub use fetcher::{TrieDBHintWriter, TrieDBProvider};
 
 mod eip4788;
 pub(crate) use eip4788::pre_block_beacon_root_contract_call;
@@ -35,34 +35,40 @@ use self::util::{extract_tx_gas_limit, is_system_transaction};
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<F>
+pub struct StatelessL2BlockExecutor<F, H>
 where
     F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     /// The [RollupConfig].
     config: Arc<RollupConfig>,
-    /// The parent header
-    parent_header: Sealed<Header>,
     /// The inner state database component.
-    state: State<TrieDB<F>>,
+    state: State<TrieDB<F, H>>,
 }
 
-impl<F> StatelessL2BlockExecutor<F>
+impl<F, H> StatelessL2BlockExecutor<F, H>
 where
     F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     /// Constructs a new [StatelessL2BlockExecutor] with the given starting state root, parent hash,
     /// and [TrieDBFetcher].
-    pub fn new(config: Arc<RollupConfig>, parent_header: Sealed<Header>, fetcher: F) -> Self {
-        let trie_db = TrieDB::new(parent_header.state_root, parent_header.seal(), fetcher);
+    pub fn new(
+        config: Arc<RollupConfig>,
+        parent_header: Sealed<Header>,
+        fetcher: F,
+        hinter: H,
+    ) -> Self {
+        let trie_db = TrieDB::new(parent_header.state_root, parent_header, fetcher, hinter);
         let state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
-        Self { config, parent_header, state }
+        Self { config, state }
     }
 }
 
-impl<F> StatelessL2BlockExecutor<F>
+impl<F, H> StatelessL2BlockExecutor<F, H>
 where
     F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     /// Executes the given block, returning the resulting state root.
     ///
@@ -85,7 +91,7 @@ where
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.timestamp),
             self.config.as_ref(),
-            &self.parent_header,
+            self.state.database.parent_block_header(),
             &payload,
         );
         let initialized_cfg = self.evm_cfg_env(payload.timestamp);
@@ -105,12 +111,7 @@ where
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        ensure_create2_deployer_canyon(
-            &mut self.state,
-            self.config.as_ref(),
-            payload.timestamp,
-            &self.parent_header,
-        )?;
+        ensure_create2_deployer_canyon(&mut self.state, self.config.as_ref(), payload.timestamp)?;
 
         // Construct the EVM with the given configuration.
         // TODO(clabby): Accelerate precompiles w/ custom precompile handler.
@@ -130,7 +131,6 @@ where
         for (transaction, raw_transaction) in transactions {
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
-            // let block_available_gas = gas_limit - cumulative_gas_used;
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
             if extract_tx_gas_limit(&transaction) > block_available_gas &&
                 (is_regolith || !is_system_transaction(&transaction))
@@ -225,11 +225,10 @@ where
             .config
             .is_ecotone_active(payload.timestamp)
             .then(|| {
-                let excess_blob_gas = if self.config.is_ecotone_active(self.parent_header.timestamp)
-                {
-                    let parent_excess_blob_gas =
-                        self.parent_header.excess_blob_gas.unwrap_or_default();
-                    let parent_blob_gas_used = self.parent_header.blob_gas_used.unwrap_or_default();
+                let parent_header = self.state.database.parent_block_header();
+                let excess_blob_gas = if self.config.is_ecotone_active(parent_header.timestamp) {
+                    let parent_excess_blob_gas = parent_header.excess_blob_gas.unwrap_or_default();
+                    let parent_blob_gas_used = parent_header.blob_gas_used.unwrap_or_default();
                     calc_excess_blob_gas(parent_excess_blob_gas as u64, parent_blob_gas_used as u64)
                 } else {
                     // For the first post-fork block, both blob gas fields are evaluated to 0.
@@ -242,7 +241,7 @@ where
 
         // Construct the new header.
         let header = Header {
-            parent_hash: self.parent_header.seal(),
+            parent_hash: self.state.database.parent_block_header().seal(),
             ommers_hash: EMPTY_OMMER_ROOT_HASH,
             beneficiary: payload.fee_recipient,
             state_root,
@@ -267,12 +266,9 @@ where
         .seal_slow();
 
         // Update the parent block hash in the state database.
-        self.state.database.set_parent_block_hash(header.seal());
+        self.state.database.set_parent_block_header(header);
 
-        // Update the parent header in the executor.
-        self.parent_header = header;
-
-        Ok(&self.parent_header)
+        Ok(self.state.database.parent_block_header())
     }
 
     /// Computes the current output root of the executor, based on the parent header and the
@@ -308,11 +304,12 @@ where
             };
 
         // Construct the raw output.
+        let parent_header = self.state.database.parent_block_header();
         let mut raw_output = [0u8; 97];
         raw_output[0] = OUTPUT_ROOT_VERSION;
-        raw_output[1..33].copy_from_slice(self.parent_header.state_root.as_ref());
+        raw_output[1..33].copy_from_slice(parent_header.state_root.as_ref());
         raw_output[33..65].copy_from_slice(storage_root.as_ref());
-        raw_output[65..97].copy_from_slice(self.parent_header.seal().as_ref());
+        raw_output[65..97].copy_from_slice(parent_header.seal().as_ref());
 
         // Hash the output and return
         Ok(keccak256(raw_output))
@@ -584,6 +581,7 @@ mod test {
     use super::*;
     use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
+    use kona_mpt::NoopTrieDBHinter;
     use serde::Deserialize;
     use std::{collections::HashMap, format};
 
@@ -656,6 +654,7 @@ mod test {
             Arc::new(rollup_config),
             header.seal_slow(),
             TestdataTrieDBFetcher::new("block_120794432_exec"),
+            NoopTrieDBHinter,
         );
 
         let raw_tx = hex!("7ef8f8a003b511b9b71520cd62cad3b5fd5b1b8eaebd658447723c31c7f1eba87cfe98c894deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000300000000665a33a70000000001310e960000000000000000000000000000000000000000000000000000000214d2697300000000000000000000000000000000000000000000000000000000000000015346d208a396843018a2e666c8e7832067358433fb87ca421273c6a4e69f78d50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985");
@@ -674,7 +673,10 @@ mod test {
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
         assert_eq!(produced_header, expected_header);
-        assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+        assert_eq!(
+            l2_block_executor.state.database.parent_block_header().seal(),
+            expected_header.hash_slow()
+        );
     }
 
     #[test]
@@ -703,6 +705,7 @@ mod test {
             Arc::new(rollup_config),
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121049889_exec"),
+            NoopTrieDBHinter,
         );
 
         let raw_txs = alloc::vec![
@@ -725,7 +728,10 @@ mod test {
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
         assert_eq!(produced_header, expected_header);
-        assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+        assert_eq!(
+            l2_block_executor.state.database.parent_block_header().seal(),
+            expected_header.hash_slow()
+        );
     }
 
     #[test]
@@ -754,6 +760,7 @@ mod test {
             Arc::new(rollup_config),
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121003241_exec"),
+            NoopTrieDBHinter,
         );
 
         let raw_txs = alloc::vec![
@@ -783,7 +790,10 @@ mod test {
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
         assert_eq!(produced_header, expected_header);
-        assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+        assert_eq!(
+            l2_block_executor.state.database.parent_block_header().seal(),
+            expected_header.hash_slow()
+        );
     }
 
     #[test]
@@ -812,6 +822,7 @@ mod test {
             Arc::new(rollup_config),
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121057303_exec"),
+            NoopTrieDBHinter,
         );
 
         let raw_txs = alloc::vec![
@@ -835,7 +846,10 @@ mod test {
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
         assert_eq!(produced_header, expected_header);
-        assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+        assert_eq!(
+            l2_block_executor.state.database.parent_block_header().seal(),
+            expected_header.hash_slow()
+        );
     }
 
     #[test]
@@ -864,6 +878,7 @@ mod test {
             Arc::new(rollup_config),
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121065789_exec"),
+            NoopTrieDBHinter,
         );
 
         let raw_txs = alloc::vec![
@@ -896,7 +911,10 @@ mod test {
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
         assert_eq!(produced_header, expected_header);
-        assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+        assert_eq!(
+            l2_block_executor.state.database.parent_block_header().seal(),
+            expected_header.hash_slow()
+        );
     }
 
     #[test]
@@ -925,6 +943,7 @@ mod test {
             Arc::new(rollup_config),
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121135704_exec"),
+            NoopTrieDBHinter,
         );
 
         let raw_txs = alloc::vec![
@@ -962,6 +981,9 @@ mod test {
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
         assert_eq!(produced_header, expected_header);
-        assert_eq!(l2_block_executor.parent_header.seal(), expected_header.hash_slow());
+        assert_eq!(
+            l2_block_executor.state.database.parent_block_header().seal(),
+            expected_header.hash_slow()
+        );
     }
 }

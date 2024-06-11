@@ -2,4 +2,4 @@
 //! [StatelessL2BlockExecutor]
 
 mod executor;
-pub use executor::{StatelessL2BlockExecutor, TrieDBProvider};
+pub use executor::{StatelessL2BlockExecutor, TrieDBHintWriter, TrieDBProvider};

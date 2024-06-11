@@ -10,7 +10,7 @@ mod db;
 pub use db::{TrieAccount, TrieDB};
 
 mod fetcher;
-pub use fetcher::{NoopTrieDBFetcher, TrieDBFetcher};
+pub use fetcher::{NoopTrieDBFetcher, NoopTrieDBHinter, TrieDBFetcher, TrieDBHinter};
 
 mod node;
 pub use node::TrieNode;

@@ -1,8 +1,9 @@
 //! Contains logic specific to Canyon hardfork activation.
 
-use alloy_consensus::Header;
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
+use anyhow::Result;
 use kona_derive::types::RollupConfig;
+use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
 use revm::{
     primitives::{Account, Bytecode, HashMap},
     DatabaseCommit, State,
@@ -21,18 +22,20 @@ const CREATE_2_DEPLOYER_BYTECODE: [u8; 1584] = hex!("608060405260043610610043576
 /// The Canyon hardfork issues an irregular state transition that force-deploys the create2
 /// deployer contract. This is done by directly setting the code of the create2 deployer account
 /// prior to executing any transactions on the timestamp activation of the fork.
-pub(crate) fn ensure_create2_deployer_canyon<DB>(
-    db: &mut State<DB>,
+pub(crate) fn ensure_create2_deployer_canyon<F, H>(
+    db: &mut State<TrieDB<F, H>>,
     config: &RollupConfig,
     timestamp: u64,
-    parent_header: &Header,
-) -> Result<(), DB::Error>
+) -> Result<()>
 where
-    DB: revm::Database,
+    F: TrieDBFetcher,
+    H: TrieDBHinter,
 {
     // If the canyon hardfork is active at the current timestamp, and it was not active at the
     // previous block timestamp, then we need to force-deploy the create2 deployer contract.
-    if config.is_canyon_active(timestamp) && !config.is_canyon_active(parent_header.timestamp) {
+    if config.is_canyon_active(timestamp) &&
+        !config.is_canyon_active(db.database.parent_block_header().timestamp)
+    {
         // Load the create2 deployer account from the cache.
         let acc = db.load_cache_account(CREATE_2_DEPLOYER_ADDR)?;
 
