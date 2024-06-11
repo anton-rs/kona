@@ -17,18 +17,36 @@ alloy-primitives = { workspace = true, features = ["rlp"] }
 async-trait.workspace = true
 
 # Local
-kona-primitives = { path = "../primitives" }
-kona-derive = { path = "../derive" }
+kona-primitives = { path = "../primitives", version = "0.0.1" }
+kona-derive = { path = "../derive", version = "0.0.1" }
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
 
+# `online` feature dependencies
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", optional = true } 
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
+reqwest = { version = "0.12", default-features = false, optional = true }
+
 [dev-dependencies]
 kona-derive = { path = "../derive", features = ["test-utils"] }
-tracing-subscriber = "0.3.18"
 serde_json = { version = "1.0.117", default-features = false }
 tokio = { version = "1.38", features = ["full"] }
+tracing-subscriber = "0.3.18"
 
 [features]
 default = ["serde"]
-serde = ["dep:serde", "kona-primitives/serde"]
+serde = [
+  "dep:serde",
+  "kona-primitives/serde",
+  "alloy-primitives/serde",
+  "alloy-consensus/serde",
+  "kona-derive/serde",
+]
+online = [
+  "dep:alloy-provider",
+  "dep:alloy-transport-http",
+  "dep:reqwest",
+  "alloy-provider/reqwest",
+  "alloy-consensus/serde",
+]
