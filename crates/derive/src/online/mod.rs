@@ -5,6 +5,7 @@ pub use crate::{
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::StatefulAttributesBuilder,
+    traits::Pipeline,
     types::RollupConfig,
 };
 
