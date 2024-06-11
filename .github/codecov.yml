@@ -1,0 +1,25 @@
+# ref: https://docs.codecov.com/docs/codecovyml-reference
+coverage:
+  # TODO: Raise coverage requirements
+  range: 25..100
+  round: down
+  precision: 1
+  status:
+    # ref: https://docs.codecov.com/docs/commit-status
+    project:
+      default:
+        # Avoid false negatives
+        threshold: 1%
+
+ignore:
+  - "tests"
+  - "test_util*"
+  - "test_utils"
+  - "bin/programs/minimal"
+  - "bin/programs/simple-revm"
+
+# Make comments less noisy
+comment:
+  layout: "condensed_header, condensed_files, condensed_footer"
+  require_changes: true
+  hide_project_coverage: false
