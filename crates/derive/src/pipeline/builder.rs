@@ -134,7 +134,8 @@ where
         let attributes_builder = builder.builder.expect("builder must be set");
 
         // Compose the stage stack.
-        let l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
+        let mut l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
+        l1_traversal.block = builder.tip;
         let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
         let frame_queue = FrameQueue::new(l1_retrieval);
         let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);
