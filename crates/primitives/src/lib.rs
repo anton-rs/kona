@@ -4,8 +4,13 @@
 
 extern crate alloc;
 
+/// Re-export the [Withdrawal] type from the [alloy_eips] crate.
+///
+/// [Withdrawal]: alloy_eips::eip4895::Withdrawal
+pub use alloy_eips::eip4895::Withdrawal;
+
 pub mod block;
-pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock, Withdrawal};
+pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock};
 
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};

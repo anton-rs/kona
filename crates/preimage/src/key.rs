@@ -1,7 +1,7 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
 //! the preimage oracle.
 
-use alloy_primitives::B256;
+use alloy_primitives::{B256, U256};
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
@@ -23,6 +23,10 @@ pub enum PreimageKeyType {
     /// `keccak256(commitment ++ z)`, and then the high-order byte of the digest is set to the
     /// type byte.
     Blob = 5,
+    /// Precompile key types are global and context independent. Precompile keys are constructed as
+    /// `keccak256(precompile_addr ++ input)`, and then the high-order byte of the digest is set to
+    /// the type byte.
+    Precompile = 6,
 }
 
 impl TryFrom<u8> for PreimageKeyType {
@@ -35,6 +39,7 @@ impl TryFrom<u8> for PreimageKeyType {
             3 => PreimageKeyType::GlobalGeneric,
             4 => PreimageKeyType::Sha256,
             5 => PreimageKeyType::Blob,
+            6 => PreimageKeyType::Precompile,
             _ => anyhow::bail!("Invalid preimage key type"),
         })
     }
@@ -75,6 +80,11 @@ impl PreimageKey {
     pub fn key_type(&self) -> PreimageKeyType {
         self.key_type
     }
+
+    /// Returns the value of the [PreimageKey] as a [U256].
+    pub fn key_value(&self) -> U256 {
+        U256::from_be_slice(self.data.as_slice())
+    }
 }
 
 impl From<PreimageKey> for [u8; 32] {
@@ -83,6 +93,13 @@ impl From<PreimageKey> for [u8; 32] {
         rendered_key[0] = key.key_type as u8;
         rendered_key[1..].copy_from_slice(&key.data);
         rendered_key
+    }
+}
+
+impl From<PreimageKey> for B256 {
+    fn from(value: PreimageKey) -> Self {
+        let raw: [u8; 32] = value.into();
+        B256::from(raw)
     }
 }
 
@@ -108,7 +125,14 @@ mod test {
 
     #[test]
     fn test_preimage_keys() {
-        let types = [PreimageKeyType::Local, PreimageKeyType::Keccak256];
+        let types = [
+            PreimageKeyType::Local,
+            PreimageKeyType::Keccak256,
+            PreimageKeyType::GlobalGeneric,
+            PreimageKeyType::Sha256,
+            PreimageKeyType::Blob,
+            PreimageKeyType::Precompile,
+        ];
 
         for key_type in types {
             let key = PreimageKey::new([0xFFu8; 32], key_type);

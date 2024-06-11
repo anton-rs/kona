@@ -1,0 +1,98 @@
+name: Rust CI
+on:
+  push:
+    branches: [main]
+  merge_group:
+  pull_request:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  cargo-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - uses: taiki-e/install-action@nextest
+      - name: cargo test
+        run: cargo nextest run --release --workspace --all --locked
+  cargo-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        target: ["native", "cannon", "asterisc"]
+    name: lint-${{ matrix.target }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Install Rust nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          prefix-key: ${{ matrix.target }}
+      - name: Log into ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: fmt + lint
+        run: just lint-${{ matrix.target }}
+      - name: chown target
+        run: |
+          sudo chown -R $(id -u):$(id -g) ./target
+  cargo-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        target: ["native", "cannon", "asterisc"]
+    name: build-${{ matrix.target }}
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          prefix-key: ${{ matrix.target }}
+      - name: Log into ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build
+        run: just build-${{ matrix.target }}
+      - name: chown target
+        run: |
+          sudo chown -R $(id -u):$(id -g) ./target
+  cargo-doc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: doclint
+        run: just lint-docs
+      - name: doctest
+        run: just test-docs

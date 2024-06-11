@@ -1,0 +1,106 @@
+name: FPVM
+on:
+  push:
+    branches: [main]
+  merge_group:
+  pull_request:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build-example-programs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        fpvm: ["cannon", "asterisc"]
+    name: build-${{ matrix.fpvm }}-examples
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          prefix-key: ${{ matrix.fpvm }}
+          cache-directories: |
+            target/
+      - uses: taiki-e/install-action@just
+      - name: Log into ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build ${{ matrix.fpvm }} examples
+        working-directory: ./fpvm-tests
+        run: just build-${{ matrix.fpvm }}-examples
+      - uses: actions/upload-artifact@v4
+        with:
+          name: images-${{ matrix.fpvm }}
+          path: |
+            target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release-client-lto/minimal
+            target/${{ matrix.fpvm == 'cannon' && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}/release-client-lto/simple-revm
+  fpvm-example-tests:
+    needs: build-example-programs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        fpvm: ["cannon-go", "cannon-rs", "asterisc"]
+    name: ${{ matrix.fpvm }}-tests
+    env:
+      TARGET_NAME: ${{ contains(matrix.fpvm, 'cannon') && 'mips-unknown-none' || 'riscv64gc-unknown-none-elf' }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Install Rust nightly toolchain
+        if: contains(matrix.fpvm, 'cannon-rs')
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install xsltproc
+        if: contains(matrix.fpvm, 'cannon-rs')
+        run: sudo apt-get install xsltproc
+      - uses: Swatinem/rust-cache@v2
+        if: contains(matrix.fpvm, 'cannon-rs')
+        with:
+          cache-on-failure: true
+          prefix-key: ${{ matrix.fpvm }}
+          cache-directories: |
+            fpvm-tests/cannon-rs-tests/target
+      - name: Setup Go toolchain
+        if: "!contains(matrix.fpvm, 'cannon-rs')"
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.6"
+          # Doesn't support key prefixes, L.
+          cache: false
+      - id: go-cache-paths
+        if: "!contains(matrix.fpvm, 'cannon-rs')"
+        run: |
+          echo "::set-output name=go-build::$(go env GOCACHE)"
+          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+      - name: Cache Golang Builds
+        if: "!contains(matrix.fpvm, 'cannon-rs')"
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-build }}
+          key: ${{ matrix.fpvm }}-fpvm-test-go-build-cache-${{ hashFiles(format('fpvm-tests/{0}-tests/go.sum', matrix.fpvm)) }}
+      - name: Cache Golang Modules
+        if: "!contains(matrix.fpvm, 'cannon-rs')"
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-mod }}
+          key: ${{ matrix.fpvm }}-fpvm-test-go-mod-cache-${{ hashFiles(format('fpvm-tests/{0}-tests/go.sum', matrix.fpvm)) }}
+      - name: Download Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: images-${{ contains(matrix.fpvm, 'cannon') && 'cannon' || 'asterisc' }}
+      - name: Restore Targets
+        run: |
+          mkdir -p target/$TARGET_NAME/release-client-lto/
+          mv minimal target/$TARGET_NAME/release-client-lto
+          mv simple-revm target/$TARGET_NAME/release-client-lto
+      - name: Run FPVM tests
+        working-directory: ./fpvm-tests
+        run: just test-${{ matrix.fpvm }}

@@ -136,7 +136,7 @@ impl Channel {
         (0..=self.last_frame_number).try_for_each(|i| {
             let frame = self.inputs.get(&i).ok_or_else(|| anyhow!("Frame not found"))?;
             data.extend_from_slice(&frame.data);
-            Ok(())
+            Ok::<(), anyhow::Error>(())
         })?;
         Ok(data.into())
     }

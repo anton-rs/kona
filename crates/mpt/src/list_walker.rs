@@ -1,7 +1,7 @@
 //! This module contains the [OrderedListWalker] struct, which allows for traversing an MPT root of
 //! a derivable ordered list.
 
-use crate::TrieNode;
+use crate::{TrieDBFetcher, TrieNode};
 use alloc::{collections::VecDeque, vec};
 use alloy_primitives::{Bytes, B256};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
@@ -14,19 +14,19 @@ use core::marker::PhantomData;
 /// Once it has ben hydrated with [Self::hydrate], the elements in the derivable list can be
 /// iterated over using the [Iterator] implementation.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct OrderedListWalker<PreimageFetcher> {
+pub struct OrderedListWalker<F: TrieDBFetcher> {
     /// The Merkle Patricia Trie root.
     root: B256,
     /// The leaf nodes of the derived list, in order. [None] if the tree has yet to be fully
     /// traversed with [Self::hydrate].
     inner: Option<VecDeque<(Bytes, Bytes)>>,
     /// Phantom data
-    _phantom: PhantomData<PreimageFetcher>,
+    _phantom: PhantomData<F>,
 }
 
-impl<PreimageFetcher> OrderedListWalker<PreimageFetcher>
+impl<F> OrderedListWalker<F>
 where
-    PreimageFetcher: Fn(B256) -> Result<Bytes> + Copy,
+    F: TrieDBFetcher,
 {
     /// Creates a new [OrderedListWalker], yet to be hydrated.
     pub fn new(root: B256) -> Self {
@@ -35,7 +35,7 @@ where
 
     /// Creates a new [OrderedListWalker] and hydrates it with [Self::hydrate] and the given fetcher
     /// immediately.
-    pub fn try_new_hydrated(root: B256, fetcher: PreimageFetcher) -> Result<Self> {
+    pub fn try_new_hydrated(root: B256, fetcher: &F) -> Result<Self> {
         let mut walker = Self { root, inner: None, _phantom: PhantomData };
         walker.hydrate(fetcher)?;
         Ok(walker)
@@ -43,7 +43,7 @@ where
 
     /// Hydrates the [OrderedListWalker]'s iterator with the leaves of the derivable list. If
     /// `Self::inner` is [Some], this function will fail fast.
-    pub fn hydrate(&mut self, fetcher: PreimageFetcher) -> Result<()> {
+    pub fn hydrate(&mut self, fetcher: &F) -> Result<()> {
         // Do not allow for re-hydration if `inner` is `Some` and still contains elements.
         if self.inner.is_some() && self.inner.as_ref().map(|s| s.len()).unwrap_or_default() > 0 {
             anyhow::bail!("Iterator is already hydrated, and has not been consumed entirely.")
@@ -81,10 +81,7 @@ where
     }
 
     /// Traverses a [TrieNode], returning all values of child [TrieNode::Leaf] variants.
-    fn fetch_leaves(
-        trie_node: &TrieNode,
-        fetcher: PreimageFetcher,
-    ) -> Result<VecDeque<(Bytes, Bytes)>> {
+    fn fetch_leaves(trie_node: &TrieNode, fetcher: &F) -> Result<VecDeque<(Bytes, Bytes)>> {
         match trie_node {
             TrieNode::Branch { stack } => {
                 let mut leaf_values = VecDeque::with_capacity(stack.len());
@@ -106,7 +103,9 @@ where
                 }
                 Ok(leaf_values)
             }
-            TrieNode::Leaf { key, value } => Ok(vec![(key.clone(), value.clone())].into()),
+            TrieNode::Leaf { prefix, value } => {
+                Ok(vec![(prefix.to_vec().into(), value.clone())].into())
+            }
             TrieNode::Extension { node, .. } => {
                 // If the node is a hash, we need to grab the preimage for it and continue
                 // recursing. If it is already retrieved, recurse on it.
@@ -124,16 +123,19 @@ where
 
     /// Grabs the preimage of `hash` using `fetcher`, and attempts to decode the preimage data into
     /// a [TrieNode]. Will error if the conversion of `T` into [B256] fails.
-    fn get_trie_node<T>(hash: T, fetcher: PreimageFetcher) -> Result<TrieNode>
+    fn get_trie_node<T>(hash: T, fetcher: &F) -> Result<TrieNode>
     where
         T: Into<B256>,
     {
-        let preimage = fetcher(hash.into())?;
+        let preimage = fetcher.trie_node_preimage(hash.into())?;
         TrieNode::decode(&mut preimage.as_ref()).map_err(|e| anyhow!(e))
     }
 }
 
-impl<PreimageFetcher> Iterator for OrderedListWalker<PreimageFetcher> {
+impl<F> Iterator for OrderedListWalker<F>
+where
+    F: TrieDBFetcher,
+{
     type Item = (Bytes, Bytes);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -147,9 +149,12 @@ impl<PreimageFetcher> Iterator for OrderedListWalker<PreimageFetcher> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_util::{
-        get_live_derivable_receipts_list, get_live_derivable_transactions_list,
+    use crate::{
         ordered_trie_with_encoder,
+        test_util::{
+            get_live_derivable_receipts_list, get_live_derivable_transactions_list,
+            TrieNodeProvider,
+        },
     };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};
@@ -160,9 +165,8 @@ mod test {
     #[tokio::test]
     async fn test_list_walker_online_receipts() {
         let (root, preimages, envelopes) = get_live_derivable_receipts_list().await.unwrap();
-        let list =
-            OrderedListWalker::try_new_hydrated(root, |f| Ok(preimages.get(&f).unwrap().clone()))
-                .unwrap();
+        let fetcher = TrieNodeProvider::new(preimages, BTreeMap::default(), BTreeMap::default());
+        let list = OrderedListWalker::try_new_hydrated(root, &fetcher).unwrap();
 
         assert_eq!(
             list.into_iter()
@@ -175,9 +179,8 @@ mod test {
     #[tokio::test]
     async fn test_list_walker_online_transactions() {
         let (root, preimages, envelopes) = get_live_derivable_transactions_list().await.unwrap();
-        let list =
-            OrderedListWalker::try_new_hydrated(root, |f| Ok(preimages.get(&f).unwrap().clone()))
-                .unwrap();
+        let fetcher = TrieNodeProvider::new(preimages, BTreeMap::default(), BTreeMap::default());
+        let list = OrderedListWalker::try_new_hydrated(root, &fetcher).unwrap();
 
         assert_eq!(
             list.into_iter()
@@ -200,9 +203,8 @@ mod test {
                 acc
             });
 
-        let list =
-            OrderedListWalker::try_new_hydrated(root, |f| Ok(preimages.get(&f).unwrap().clone()))
-                .unwrap();
+        let fetcher = TrieNodeProvider::new(preimages, BTreeMap::default(), BTreeMap::default());
+        let list = OrderedListWalker::try_new_hydrated(root, &fetcher).unwrap();
 
         assert_eq!(
             list.inner

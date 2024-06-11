@@ -13,7 +13,7 @@ import (
 )
 
 func TestMinimal(t *testing.T) {
-	elfProgram, err := elf.Open("../../examples/minimal/target/mips-unknown-none/release/minimal")
+	elfProgram, err := elf.Open("../../target/mips-unknown-none/release-client-lto/minimal")
 	require.NoError(t, err, "open ELF file")
 
 	state, err := mipsevm.LoadELF(elfProgram)

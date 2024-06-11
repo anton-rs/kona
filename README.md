@@ -7,8 +7,8 @@
 </h4>
 
 <p align="center">
-  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/ci.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/ci.yaml/badge.svg?label=ci" alt="CI"></a>
-  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm-tests.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm-tests.yaml/badge.svg?label=FPVM Tests" alt="FPVM Tests"></a>
+  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
+  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm_tests.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm_tests.yaml/badge.svg?label=FPVM Tests" alt="FPVM Tests"></a>
   <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license" alt="License">
   <a href="https://ethereum-optimism.github.io/kona"><img src="https://img.shields.io/badge/Contributor%20Book-grey?logo=mdBook" alt="Book"></a>
   <a href="https://github.com/ethereum-optimism/monorepo"><img src="https://img.shields.io/badge/OP%20Stack-monorepo-red" alt="OP Stack"></a>
@@ -34,7 +34,7 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 
 **`kona`**
 
-- [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
+- [`client`](./bin/programs/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
 - [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
 **Build Pipelines**
@@ -45,9 +45,12 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 **`client` / `host` SDK**
 
 - [`common`](./crates/common): A suite of utilities for developing `client` programs to be ran on top of Fault Proof VMs.
+- [`common-proc`](./crates/common-proc): Proc macro for the `client` program entrypoint.
+- [`primitives`](./crates/primitives): Primitive types for use in `kona` crates.
 - [`preimage`](./crates/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
 - [`mpt`](./crrates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
+  - [`plasma`](./crates/plasma/): Plasma extension to `kona-derive`
 
 ## Book
 

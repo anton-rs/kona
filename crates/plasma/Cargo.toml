@@ -15,24 +15,22 @@ workspace = true
 # Workspace
 anyhow.workspace = true
 tracing.workspace = true
+alloy-consensus.workspace = true
+alloy-primitives = { workspace = true, features = ["rlp"] }
+async-trait.workspace = true
 
 # Local
 kona-primitives = { path = "../primitives" }
 kona-derive = { path = "../derive" }
 
-# External
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "e3f2f07", default-features = false }
-alloy-primitives = { workspace = true, features = ["rlp"] }
-async-trait = "0.1.77"
-
 # `serde` feature dependencies
-serde = { version = "1.0.197", default-features = false, features = ["derive"], optional = true }
+serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
 kona-derive = { path = "../derive", features = ["test-utils"] }
 tracing-subscriber = "0.3.18"
-serde_json = { version = "1.0.68", default-features = false }
-tokio = { version = "1.37", features = ["full"] }
+serde_json = { version = "1.0.117", default-features = false }
+tokio = { version = "1.38", features = ["full"] }
 
 [features]
 default = ["serde"]

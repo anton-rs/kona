@@ -57,7 +57,7 @@ func rustTestOracle(t *testing.T) (po PreimageOracle, stdOut string, stdErr stri
 }
 
 func TestSimpleRevm(t *testing.T) {
-	programELF, err := elf.Open("../../examples/simple-revm/target/riscv64gc-unknown-none-elf/release/simple-revm")
+	programELF, err := elf.Open("../../target/riscv64gc-unknown-none-elf/release-client-lto/simple-revm")
 	require.NoError(t, err)
 	defer programELF.Close()
 

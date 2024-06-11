@@ -8,7 +8,7 @@ use std::io::BufWriter;
 #[test]
 fn test_minimal() {
     let elf_bytes =
-        include_bytes!("../../../examples/minimal/target/mips-unknown-none/release/minimal");
+        include_bytes!("../../../target/mips-unknown-none/release-client-lto/minimal");
     let mut state = load_elf(elf_bytes).unwrap();
     patch_stack(&mut state).unwrap();
 

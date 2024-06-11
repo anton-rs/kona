@@ -33,8 +33,7 @@ pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
 mod attributes_queue;
 pub use attributes_queue::{
-    AttributesBuilder, AttributesProvider, AttributesQueue, NextAttributes,
-    StatefulAttributesBuilder,
+    AttributesBuilder, AttributesProvider, AttributesQueue, StatefulAttributesBuilder,
 };
 
 #[cfg(any(test, feature = "test-utils"))]
