@@ -1753,6 +1753,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-deriver"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "kona-derive",
+ "reqwest",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "kona-host"
 version = "0.1.0"
 dependencies = [

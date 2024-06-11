@@ -1,0 +1,18 @@
+[package]
+name = "kona-deriver"
+version = "0.1.0"
+description = "Derives Payloads"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+tracing.workspace = true
+alloy-primitives = { workspace = true, features = ["serde"] }
+kona-derive = { path = "../../crates/derive", version = "0.0.1", features = ["serde", "k256", "online"] }
+tokio = { version = "1.37.0", features = ["full"] }
+tracing-subscriber = "0.3.18"
+reqwest = "0.12"

@@ -110,7 +110,7 @@ where
                 return Ok(());
             }
             Err(StageError::Eof) => {
-                tracing::info!("attributes queue stage complete");
+                tracing::info!("Pipeline advancing origin");
                 self.attributes.advance_origin().await.map_err(|e| anyhow::anyhow!(e))?;
             }
             // TODO: match on the EngineELSyncing error here and log
