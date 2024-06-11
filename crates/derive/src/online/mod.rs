@@ -1,5 +1,13 @@
 //! Contains "online" implementations for providers.
 
+// Re-export types for the online pipeline construction.
+pub use crate::{
+    pipeline::{DerivationPipeline, PipelineBuilder},
+    sources::EthereumDataSource,
+    stages::StatefulAttributesBuilder,
+    types::RollupConfig,
+};
+
 mod pipeline;
 pub use pipeline::{
     new_online_pipeline, OnlineAttributesBuilder, OnlineAttributesQueue, OnlineDataProvider,
