@@ -205,7 +205,7 @@ mod test {
                             .lock()
                             .await
                             .get(&key)
-                            .ok_or(anyhow::anyhow!("Preimage not available"))
+                            .ok_or_else(|| anyhow::anyhow!("Preimage not available"))
                             .cloned()
                     })
                 };

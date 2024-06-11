@@ -160,7 +160,9 @@ where
         self.root_node.blind();
 
         // Extract the new state root from the root node.
-        self.root_node.blinded_commitment().ok_or(anyhow!("State root node is not a blinded node"))
+        self.root_node
+            .blinded_commitment()
+            .ok_or_else(|| anyhow!("State root node is not a blinded node"))
     }
 
     /// Returns a reference to the current parent block header of the trie DB.
@@ -224,7 +226,7 @@ where
             }
 
             let account_info =
-                bundle_account.account_info().ok_or(anyhow!("Account info not found"))?;
+                bundle_account.account_info().ok_or_else(|| anyhow!("Account info not found"))?;
             let mut trie_account = TrieAccount {
                 balance: account_info.balance,
                 nonce: account_info.nonce,
@@ -252,7 +254,7 @@ where
 
             let commitment = acc_storage_root
                 .blinded_commitment()
-                .ok_or(anyhow!("Storage root node is not a blinded node"))?;
+                .ok_or_else(|| anyhow!("Storage root node is not a blinded node"))?;
             trie_account.storage_root = commitment;
 
             // RLP encode the trie account for insertion.
