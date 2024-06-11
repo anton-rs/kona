@@ -12,7 +12,7 @@ pub mod traits;
 pub mod types;
 
 #[cfg(feature = "online")]
-pub mod online;
+mod online;
 #[cfg(feature = "online")]
 pub use online::OnlinePlasmaInputFetcher;
 
