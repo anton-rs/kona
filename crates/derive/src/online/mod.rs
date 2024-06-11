@@ -48,6 +48,9 @@ where
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
 
+mod validation;
+pub use validation::{OnlineValidator, Validator};
+
 mod beacon_client;
 pub use beacon_client::{BeaconClient, OnlineBeaconClient};
 
