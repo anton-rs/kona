@@ -9,18 +9,20 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# Workspace
-anyhow.workspace = true
-tracing.workspace = true
+# Workspace Alloy Dependencies
 alloy-consensus.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-eips.workspace = true
 op-alloy-consensus.workspace = true
-revm = { workspace = true, optional = true }
-spin.workspace = true
+
+# Other Workspace Dependencies
 lru.workspace = true
+spin.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
 async-trait.workspace = true
+revm = { workspace = true, optional = true }
 
 # Local
 kona-primitives = { path = "../primitives", version = "0.0.1" }
@@ -37,7 +39,8 @@ serde = { version = "1.0.203", default-features = false, features = ["derive"], 
 # `online` feature dependencies
 c-kzg = { version = "1.0.2", default-features = false, optional = true }
 sha2 = { version = "0.10.8", default-features = false, optional = true }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", optional = true} 
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", optional = true } 
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
 serde_json = { version = "1.0.94", default-features = false, optional = true }
@@ -47,7 +50,6 @@ reqwest = { version = "0.12.4", default-features = false, optional = true }
 alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
 tracing-subscriber = { version = "0.3.18", optional = true }
 alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.38", features = ["full"] }

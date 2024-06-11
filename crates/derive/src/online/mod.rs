@@ -55,7 +55,7 @@ mod beacon_client;
 pub use beacon_client::{BeaconClient, OnlineBeaconClient};
 
 mod alloy_providers;
-pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider, ReqwestClient};
+pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider};
 
 mod blob_provider;
 pub use blob_provider::{OnlineBlobProvider, SimpleSlotDerivation};

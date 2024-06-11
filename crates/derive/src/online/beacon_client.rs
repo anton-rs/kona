@@ -1,10 +1,11 @@
 //! Contains an online implementation of the [BeaconClient] trait.
 
-use crate::{
-    online::ReqwestClient,
-    types::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse, IndexedBlobHash},
+use crate::types::{
+    APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse, IndexedBlobHash,
 };
 use alloc::{boxed::Box, string::String};
+use alloy_provider::{Provider, ReqwestProvider};
+use alloy_transport::TransportResult;
 use async_trait::async_trait;
 
 /// The node version engine api method.
@@ -46,18 +47,18 @@ pub trait BeaconClient {
 #[derive(Debug, Clone)]
 pub struct OnlineBeaconClient {
     /// The inner Ethereum JSON-RPC provider.
-    inner: ReqwestClient,
+    inner: ReqwestProvider,
 }
 
 impl OnlineBeaconClient {
     /// Creates a new instance of the [OnlineBeaconClient].
-    pub fn new(inner: ReqwestClient) -> Self {
+    pub fn new(inner: ReqwestProvider) -> Self {
         Self { inner }
     }
 
     /// Creates a new [OnlineBeaconClient] from the provided [reqwest::Url].
     pub fn new_http(url: reqwest::Url) -> Self {
-        let inner = ReqwestClient::new_http(url);
+        let inner = ReqwestProvider::new_http(url);
         Self::new(inner)
     }
 }
@@ -65,15 +66,20 @@ impl OnlineBeaconClient {
 #[async_trait]
 impl BeaconClient for OnlineBeaconClient {
     async fn node_version(&self) -> anyhow::Result<String> {
-        self.inner.request(VERSION_METHOD, ()).await.map_err(|e| anyhow::anyhow!(e))
+        let res: TransportResult<String> = self.inner.raw_request(VERSION_METHOD.into(), ()).await;
+        res.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn config_spec(&self) -> anyhow::Result<APIConfigResponse> {
-        self.inner.request(SPEC_METHOD, ()).await.map_err(|e| anyhow::anyhow!(e))
+        let res: TransportResult<APIConfigResponse> =
+            self.inner.raw_request(SPEC_METHOD.into(), ()).await;
+        res.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn beacon_genesis(&self) -> anyhow::Result<APIGenesisResponse> {
-        self.inner.request(GENESIS_METHOD, ()).await.map_err(|e| anyhow::anyhow!(e))
+        let res: TransportResult<APIGenesisResponse> =
+            self.inner.raw_request(GENESIS_METHOD.into(), ()).await;
+        res.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn beacon_blob_side_cars(
@@ -83,9 +89,8 @@ impl BeaconClient for OnlineBeaconClient {
         hashes: &[IndexedBlobHash],
     ) -> anyhow::Result<APIGetBlobSidecarsResponse> {
         let method = alloc::format!("{}{}", SIDECARS_METHOD_PREFIX, slot);
-        self.inner
-            .request(method, (fetch_all_sidecars, hashes))
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
+        let res: TransportResult<APIGetBlobSidecarsResponse> =
+            self.inner.raw_request(method.into(), (fetch_all_sidecars, hashes)).await;
+        res.map_err(|e| anyhow::anyhow!(e))
     }
 }
