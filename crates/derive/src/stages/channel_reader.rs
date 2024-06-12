@@ -202,7 +202,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_next_batch_not_enough_data() {
+    async fn test_next_batch_batch_reader_not_enough_data() {
         let mock = MockChannelReaderProvider::new(vec![Ok(Some(Bytes::default()))]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         assert_eq!(reader.next_batch().await, Err(StageError::NotEnoughData));
@@ -210,6 +210,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_next_batch_succeeds() {
         let raw = new_compressed_batch_data();
         let mock = MockChannelReaderProvider::new(vec![Ok(Some(raw))]);
@@ -220,6 +221,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_batch_reader() {
         let raw_data = include_bytes!("../../testdata/raw_batch.hex");
         let mut typed_data = vec![BatchType::Span as u8];

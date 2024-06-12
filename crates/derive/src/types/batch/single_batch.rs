@@ -4,11 +4,11 @@ use super::validity::BatchValidity;
 use crate::types::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
-use alloy_rlp::{Decodable, Encodable, Header};
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, RlpDecodable, RlpEncodable, Clone, PartialEq, Eq)]
 pub struct SingleBatch {
     /// Block hash of the previous L2 block. `B256::ZERO` if it has not been set by the Batch
     /// Queue.
@@ -165,38 +165,38 @@ impl SingleBatch {
     }
 }
 
-impl Encodable for SingleBatch {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        self.parent_hash.encode(out);
-        self.epoch_num.encode(out);
-        self.epoch_hash.encode(out);
-        self.timestamp.encode(out);
-        self.transactions.encode(out);
-    }
-}
-
-impl Decodable for SingleBatch {
-    fn decode(rlp: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        let Header { list, payload_length } = Header::decode(rlp)?;
-
-        if !list {
-            return Err(alloy_rlp::Error::UnexpectedString);
-        }
-        let starting_length = rlp.len();
-
-        let parent_hash = BlockHash::decode(rlp)?;
-        let epoch_num = u64::decode(rlp)?;
-        let epoch_hash = BlockHash::decode(rlp)?;
-        let timestamp = u64::decode(rlp)?;
-        let transactions = Vec::<RawTransaction>::decode(rlp)?;
-
-        if rlp.len() + payload_length != starting_length {
-            return Err(alloy_rlp::Error::UnexpectedLength);
-        }
-
-        Ok(Self { parent_hash, epoch_num, epoch_hash, timestamp, transactions })
-    }
-}
+// impl Encodable for SingleBatch {
+//     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+//         self.parent_hash.encode(out);
+//         self.epoch_num.encode(out);
+//         self.epoch_hash.encode(out);
+//         self.timestamp.encode(out);
+//         self.transactions.encode(out);
+//     }
+// }
+//
+// impl Decodable for SingleBatch {
+//     fn decode(rlp: &mut &[u8]) -> alloy_rlp::Result<Self> {
+//         let Header { list, payload_length } = Header::decode(rlp)?;
+//
+//         if !list {
+//             return Err(alloy_rlp::Error::UnexpectedString);
+//         }
+//         let starting_length = rlp.len();
+//
+//         let parent_hash = BlockHash::decode(rlp)?;
+//         let epoch_num = u64::decode(rlp)?;
+//         let epoch_hash = BlockHash::decode(rlp)?;
+//         let timestamp = u64::decode(rlp)?;
+//         let transactions = Vec::<RawTransaction>::decode(rlp)?;
+//
+//         if rlp.len() + payload_length != starting_length {
+//             return Err(alloy_rlp::Error::UnexpectedLength);
+//         }
+//
+//         Ok(Self { parent_hash, epoch_num, epoch_hash, timestamp, transactions })
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
