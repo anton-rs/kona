@@ -26,6 +26,8 @@ where
     pub ecotone_timestamp: Option<u64>,
     /// The L1 Signer.
     pub signer: Address,
+    /// The batch inbox address.
+    pub batch_inbox_address: Address,
 }
 
 impl<C, B> EthereumDataSource<C, B>
@@ -40,6 +42,7 @@ where
             blob_provider: blobs,
             ecotone_timestamp: cfg.ecotone_time,
             signer: cfg.genesis.system_config.batcher_addr,
+            batch_inbox_address: cfg.batch_inbox_address,
         }
     }
 }
@@ -53,25 +56,21 @@ where
     type Item = Bytes;
     type DataIter = EthereumDataSourceVariant<C, B>;
 
-    async fn open_data(
-        &self,
-        block_ref: &BlockInfo,
-        batcher_address: Address,
-    ) -> Result<Self::DataIter> {
+    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
         let ecotone_enabled =
             self.ecotone_timestamp.map(|e| block_ref.timestamp >= e).unwrap_or(false);
         if ecotone_enabled {
             Ok(EthereumDataSourceVariant::Blob(BlobSource::new(
                 self.chain_provider.clone(),
                 self.blob_provider.clone(),
-                batcher_address,
+                self.batch_inbox_address,
                 *block_ref,
                 self.signer,
             )))
         } else {
             Ok(EthereumDataSourceVariant::Calldata(CalldataSource::new(
                 self.chain_provider.clone(),
-                batcher_address,
+                self.batch_inbox_address,
                 *block_ref,
                 self.signer,
             )))
@@ -83,7 +82,7 @@ where
 mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
-    use alloy_primitives::{address, Address};
+    use alloy_primitives::address;
     use kona_primitives::{BlockInfo, RollupConfig};
 
     use crate::{
@@ -99,25 +98,24 @@ mod tests {
         let chain = TestChainProvider::default();
         let blob = TestBlobProvider::default();
         let block_ref = BlockInfo::default();
-        let batcher_address = Address::default();
 
         // If the ecotone_timestamp is not set, a Calldata source should be returned.
         let cfg = RollupConfig { ecotone_time: None, ..Default::default() };
         let data_source = EthereumDataSource::new(chain.clone(), blob.clone(), &cfg);
-        let data_iter = data_source.open_data(&block_ref, batcher_address).await.unwrap();
+        let data_iter = data_source.open_data(&block_ref).await.unwrap();
         assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
 
         // If the ecotone_timestamp is set, and the block_ref timestamp is prior to the
         // ecotone_timestamp, a calldata source is created.
         let cfg = RollupConfig { ecotone_time: Some(100), ..Default::default() };
         let data_source = EthereumDataSource::new(chain, blob, &cfg);
-        let data_iter = data_source.open_data(&block_ref, batcher_address).await.unwrap();
+        let data_iter = data_source.open_data(&block_ref).await.unwrap();
         assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
 
         // If the ecotone_timestamp is set, and the block_ref timestamp is greater than
         // or equal to the ecotone_timestamp, a Blob source is created.
         let block_ref = BlockInfo { timestamp: 101, ..Default::default() };
-        let data_iter = data_source.open_data(&block_ref, batcher_address).await.unwrap();
+        let data_iter = data_source.open_data(&block_ref).await.unwrap();
         assert!(matches!(data_iter, EthereumDataSourceVariant::Blob(_)));
     }
 
@@ -131,6 +129,7 @@ mod tests {
 
         let mut cfg = RollupConfig::default();
         cfg.genesis.system_config.batcher_addr = batcher_address;
+        cfg.batch_inbox_address = batch_inbox;
 
         // load a test batcher transaction
         let raw_batcher_tx = include_bytes!("../../testdata/raw_batcher_tx.hex");
@@ -138,7 +137,7 @@ mod tests {
         chain.insert_block_with_transactions(10, block_ref, alloc::vec![tx]);
 
         let data_source = EthereumDataSource::new(chain, blob, &cfg);
-        let mut data_iter = data_source.open_data(&block_ref, batch_inbox).await.unwrap();
+        let mut data_iter = data_source.open_data(&block_ref).await.unwrap();
         assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
 
         // Should successfully retrieve a calldata batch from the block
