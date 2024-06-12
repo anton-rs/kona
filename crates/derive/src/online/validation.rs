@@ -59,7 +59,7 @@ impl OnlineValidator {
         let mut txs = vec![];
         for tx in block.transactions.hashes() {
             let tx: TransportResult<RawTransaction> =
-                self.provider.raw_request("debug_getRawTransaction".into(), &[tx]).await;
+                self.provider.raw_request("debug_getRawTransaction".into(), [tx]).await;
             if let Ok(tx) = tx {
                 txs.push(tx);
             } else {

@@ -52,7 +52,11 @@ impl SingleBatch {
         let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
         if self.timestamp > next_timestamp {
             info!("received out-of-order batch for future processing after next batch");
-            tracing::debug!("Next timestamp: {}, self timestamp {}", next_timestamp, self.timestamp);
+            tracing::debug!(
+                "Next timestamp: {}, self timestamp {}",
+                next_timestamp,
+                self.timestamp
+            );
             return BatchValidity::Future;
         }
         if self.timestamp < next_timestamp {
