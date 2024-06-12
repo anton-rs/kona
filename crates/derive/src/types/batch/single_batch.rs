@@ -4,7 +4,7 @@ use super::validity::BatchValidity;
 use crate::types::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
-use alloy_rlp::{Decodable, Encodable};
+use alloy_rlp::{Decodable, Encodable, Header};
 use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
@@ -172,11 +172,23 @@ impl Encodable for SingleBatch {
 
 impl Decodable for SingleBatch {
     fn decode(rlp: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        let Header { list, payload_length } = Header::decode(rlp)?;
+
+        if !list {
+            return Err(alloy_rlp::Error::UnexpectedString);
+        }
+        let starting_length = rlp.len();
+
         let parent_hash = BlockHash::decode(rlp)?;
         let epoch_num = u64::decode(rlp)?;
         let epoch_hash = BlockHash::decode(rlp)?;
         let timestamp = u64::decode(rlp)?;
         let transactions = Vec::<RawTransaction>::decode(rlp)?;
+
+        if rlp.len() + payload_length != starting_length {
+            return Err(alloy_rlp::Error::UnexpectedLength);
+        }
+
         Ok(Self { parent_hash, epoch_num, epoch_hash, timestamp, transactions })
     }
 }

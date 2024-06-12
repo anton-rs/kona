@@ -2,6 +2,7 @@
 
 use crate::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
 use alloc::{boxed::Box, vec, vec::Vec};
+use alloy_primitives::hex;
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{Block, BlockNumberOrTag, Header};
 use alloy_transport::TransportResult;
@@ -49,14 +50,17 @@ impl OnlineValidator {
         tag: BlockNumberOrTag,
     ) -> Result<(Header, Vec<RawTransaction>)> {
         // Don't hydrate the block so we only get a list of transaction hashes.
-        let block: TransportResult<Block> =
-            self.provider.raw_request("eth_getBlockByNumber".into(), (tag, false)).await;
-        let block = block.map_err(|e| anyhow::anyhow!(e))?;
+        let block = self
+            .provider
+            .get_block(tag.into(), false)
+            .await
+            .map_err(|e| anyhow::anyhow!(e))?
+            .ok_or(anyhow::anyhow!("Block not found"))?;
         // For each transaction hash, fetch the raw transaction RLP.
         let mut txs = vec![];
         for tx in block.transactions.hashes() {
             let tx: TransportResult<RawTransaction> =
-                self.provider.raw_request("debug_getRawTransaction".into(), tx).await;
+                self.provider.raw_request("debug_getRawTransaction".into(), &[tx]).await;
             if let Ok(tx) = tx {
                 txs.push(tx);
             } else {
