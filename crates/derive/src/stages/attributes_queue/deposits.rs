@@ -31,7 +31,8 @@ pub(crate) async fn derive_deposits(
             if l.address != deposit_contract {
                 continue;
             }
-            let decoded = decode_deposit(block_hash, curr_index, l).map_err(|e| anyhow::anyhow!(e))?;
+            let decoded =
+                decode_deposit(block_hash, curr_index, l).map_err(|e| anyhow::anyhow!(e))?;
             res.push(decoded);
         }
     }
@@ -43,7 +44,7 @@ mod tests {
     use super::*;
     use crate::types::DepositError;
     use alloc::vec;
-    use alloy_primitives::{address, Log, Bytes, LogData, U256, U64};
+    use alloy_primitives::{address, Bytes, Log, LogData, U256, U64};
 
     fn generate_valid_log() -> Log {
         let deposit_contract = address!("1111111111111111111111111111111111111111");
