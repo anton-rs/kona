@@ -79,7 +79,7 @@ impl OnlineValidator {
             fee_recipient: header.miner,
             // Withdrawals on optimism are always empty
             withdrawals: Default::default(),
-            parent_beacon_block_root: Some(header.parent_hash),
+            parent_beacon_block_root: header.parent_beacon_block_root,
             transactions,
             no_tx_pool: true,
             gas_limit: Some(header.gas_limit as u64),

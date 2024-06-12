@@ -2,9 +2,10 @@
 
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::{b256, keccak256, Address, Bytes, Log, TxKind, B256, U256, U64};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_rlp::Encodable;
 use core::fmt::Display;
-use op_alloy_consensus::TxDeposit;
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 use crate::RawTransaction;
 
@@ -386,8 +387,9 @@ pub fn decode_deposit(
     unmarshal_deposit_version0(&mut deposit_tx, to, opaque_data)?;
 
     // Re-encode the deposit transaction and return as a RawTransaction
-    let mut buffer = Vec::<u8>::new();
-    deposit_tx.encode(&mut buffer);
+    let deposit_envelope = OpTxEnvelope::Deposit(deposit_tx);
+    let mut buffer = Vec::with_capacity(deposit_envelope.length());
+    deposit_envelope.encode_2718(&mut buffer);
     Ok(RawTransaction::from(buffer))
 }
 

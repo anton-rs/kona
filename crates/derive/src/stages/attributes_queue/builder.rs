@@ -9,6 +9,7 @@ use crate::{
         L2PayloadAttributes, RawTransaction, RollupConfig,
     },
 };
+use alloy_eips::eip2718::Encodable2718;
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
@@ -134,7 +135,7 @@ where
             next_l2_time,
         )?;
         let mut encoded_l1_info_tx = Vec::with_capacity(l1_info_tx_envelope.length());
-        l1_info_tx_envelope.encode(&mut encoded_l1_info_tx);
+        l1_info_tx_envelope.encode_2718(&mut encoded_l1_info_tx);
 
         let mut txs =
             Vec::with_capacity(1 + deposit_transactions.len() + upgrade_transactions.len());
