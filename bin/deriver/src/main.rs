@@ -20,15 +20,16 @@ async fn main() -> Result<()> {
     // Construct the pipeline and payload validator.
     let cfg = Arc::new(new_op_mainnet_config());
     let l1_provider = AlloyChainProvider::new_http(new_req_url(L1_RPC_URL));
-    let l2_provider = AlloyL2ChainProvider::new_http(new_req_url(L2_RPC_URL), cfg.clone());
+    let mut l2_provider = AlloyL2ChainProvider::new_http(new_req_url(L2_RPC_URL), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
     let beacon_client = OnlineBeaconClient::new_http(new_req_url(BEACON_URL));
     let blob_provider =
         OnlineBlobProvider::<_, SimpleSlotDerivation>::new(true, beacon_client, None, None);
     let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
-    let mut pipeline = new_online_pipeline(cfg, l1_provider, dap, l2_provider, attributes).await;
+    let mut pipeline = new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes).await;
     let validator = OnlineValidator::new_http(new_req_url(L2_RPC_URL));
+    let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.
     loop {
@@ -40,8 +41,17 @@ async fn main() -> Result<()> {
         if let Some(attributes) = pipeline.pop() {
             if !validator.validate(&attributes).await {
                 error!(target: "loop", "Failed payload validation: {}", attributes.parent.block_info.hash);
-            } else {
-                info!(target: "loop", "Validated payload attributes");
+                continue;
+            }
+            derived_attributes_count += 1;
+            info!(target: "loop", "Validated payload attributes number {}", derived_attributes_count);
+            match l2_provider
+                .l2_block_info_by_number(pipeline.cursor.block_info.number + 1)
+                .await {
+                Ok(bi) => pipeline.update_cursor(bi),
+                Err(e) => {
+                    error!(target: "loop", "Failed to fetch next pending l2 safe head: {}, err: {:?}", pipeline.cursor.block_info.number + 1, e);
+                }
             }
             dbg!(attributes);
         } else {
