@@ -34,6 +34,8 @@ async fn main() -> Result<()> {
 
     // Continuously step on the pipeline and validate payloads.
     loop {
+        info!(target: "loop", "Validated payload attributes number {}", derived_attributes_count);
+        info!(target: "loop", "Pending l2 safe head num: {}", pipeline.cursor.block_info.number);
         match pipeline.step().await {
             Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
             Err(e) => warn!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
@@ -45,7 +47,6 @@ async fn main() -> Result<()> {
                 continue;
             }
             derived_attributes_count += 1;
-            info!(target: "loop", "Validated payload attributes number {}", derived_attributes_count);
             match l2_provider.l2_block_info_by_number(pipeline.cursor.block_info.number + 1).await {
                 Ok(bi) => pipeline.update_cursor(bi),
                 Err(e) => {
