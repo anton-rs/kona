@@ -18,7 +18,7 @@ where
     /// The chain provider to use for the calldata source.
     chain_provider: CP,
     /// The batch inbox address.
-    batcher_inbox_address: Address,
+    batch_inbox_address: Address,
     /// Block Ref
     block_ref: BlockInfo,
     /// The L1 Signer.
@@ -33,13 +33,13 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
     /// Creates a new calldata source.
     pub fn new(
         chain_provider: CP,
-        batcher_inbox_address: Address,
+        batch_inbox_address: Address,
         block_ref: BlockInfo,
         signer: Address,
     ) -> Self {
         Self {
             chain_provider,
-            batcher_inbox_address,
+            batch_inbox_address,
             block_ref,
             signer,
             calldata: VecDeque::new(),
@@ -67,9 +67,9 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                     _ => return None,
                 };
                 let TxKind::Call(to) = tx_kind else { return None };
-                tracing::debug!("tx with calldata to: {}", to);
 
-                if to != self.batcher_inbox_address {
+                tracing::debug!("tx with calldata to: {}, batch inbox: {}", to, self.batch_inbox_address);
+                if to != self.batch_inbox_address {
                     return None;
                 }
                 tracing::debug!("tx sent to batcher inbox");
