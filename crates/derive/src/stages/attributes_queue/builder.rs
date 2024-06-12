@@ -9,8 +9,8 @@ use crate::{
         L2PayloadAttributes, RawTransaction, RollupConfig,
     },
 };
-use alloy_eips::eip2718::Encodable2718;
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 

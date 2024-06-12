@@ -144,7 +144,11 @@ where
         let mut remaining = Vec::new();
         for i in 0..self.batches.len() {
             let batch = &self.batches[i];
-            tracing::debug!("Checking batch {} with parent timestamp {}", i, parent.block_info.timestamp);
+            tracing::debug!(
+                "Checking batch {} with parent timestamp {}",
+                i,
+                parent.block_info.timestamp
+            );
             let validity =
                 batch.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await;
             match validity {
