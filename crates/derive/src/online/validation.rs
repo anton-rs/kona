@@ -2,9 +2,8 @@
 
 use crate::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
 use alloc::{boxed::Box, vec, vec::Vec};
-use alloy_primitives::hex;
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{Block, BlockNumberOrTag, Header};
+use alloy_rpc_types::{BlockNumberOrTag, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -93,6 +92,7 @@ impl Validator for OnlineValidator {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
         let payload = self.get_payload(tag).await.unwrap();
+        tracing::debug!("Check payload against: {:?}", payload);
         attributes.attributes == payload
     }
 }

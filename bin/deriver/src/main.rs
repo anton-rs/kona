@@ -44,13 +44,10 @@ async fn main() -> Result<()> {
                 info!(target: "loop", "Validated payload attributes");
             }
             dbg!(attributes);
-            break
         } else {
             debug!(target: "loop", "No attributes to validate");
         }
     }
-
-    Ok(())
 }
 
 fn init_tracing_subscriber() -> Result<()> {
