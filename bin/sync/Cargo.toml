@@ -1,7 +1,7 @@
 [package]
-name = "kona-deriver"
+name = "kona-sync"
 version = "0.1.0"
-description = "Derives Payloads"
+description = "Derives and validates payloads to perform a derivation sync check"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -9,10 +9,15 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+# Workspace Dependencies
 anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["serde"] }
 kona-derive = { path = "../../crates/derive", version = "0.0.1", features = ["serde", "k256", "online"] }
+
+# Custom dependencies
+reqwest = "0.12"
 tokio = { version = "1.37.0", features = ["full"] }
 tracing-subscriber = "0.3.18"
-reqwest = "0.12"
+clap = { version = "4.5.4", features = ["derive", "env"] }
+serde = { version = "1.0.198", features = ["derive"] }
