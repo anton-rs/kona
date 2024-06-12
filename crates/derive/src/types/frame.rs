@@ -57,7 +57,7 @@ impl Frame {
         }
 
         let data = encoded[22..22 + data_len].to_vec();
-        let is_last = encoded[22 + data_len] != 0;
+        let is_last = encoded[22 + data_len] == 1;
         Ok((BASE_FRAME_LEN + data_len, Self { id, number, data, is_last }))
     }
 

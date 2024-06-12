@@ -23,7 +23,7 @@ impl From<u8> for BatchType {
         match val {
             SINGLE_BATCH_TYPE => BatchType::Single,
             SPAN_BATCH_TYPE => BatchType::Span,
-            _ => panic!("Invalid batch type"),
+            _ => panic!("Invalid batch type: {val}"),
         }
     }
 }

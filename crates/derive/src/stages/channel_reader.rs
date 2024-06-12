@@ -8,6 +8,7 @@ use crate::{
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
+use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
@@ -153,8 +154,9 @@ impl BatchReader {
         }
 
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
-        let mut decompressed_reader = self.decompressed.as_slice()[self.cursor..].as_ref();
-        let batch = Batch::decode(&mut decompressed_reader, cfg).ok()?;
+        let decompressed_reader = &mut self.decompressed.as_slice()[self.cursor..].as_ref();
+        let bytes = Bytes::decode(decompressed_reader).ok()?;
+        let batch = Batch::decode(&mut bytes.as_ref(), cfg).unwrap();
 
         // Advance the cursor on the reader.
         self.cursor = self.decompressed.len() - decompressed_reader.len();
