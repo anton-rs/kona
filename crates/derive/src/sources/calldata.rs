@@ -17,8 +17,8 @@ where
 {
     /// The chain provider to use for the calldata source.
     chain_provider: CP,
-    /// The address of the batcher contract.
-    batcher_address: Address,
+    /// The batch inbox address.
+    batcher_inbox_address: Address,
     /// Block Ref
     block_ref: BlockInfo,
     /// The L1 Signer.
@@ -33,13 +33,13 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
     /// Creates a new calldata source.
     pub fn new(
         chain_provider: CP,
-        batcher_address: Address,
+        batcher_inbox_address: Address,
         block_ref: BlockInfo,
         signer: Address,
     ) -> Self {
         Self {
             chain_provider,
-            batcher_address,
+            batcher_inbox_address,
             block_ref,
             signer,
             calldata: VecDeque::new(),
@@ -49,6 +49,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 
     /// Loads the calldata into the source if it is not open.
     async fn load_calldata(&mut self) -> anyhow::Result<()> {
+        tracing::debug!("Loading calldata for block {}", self.block_ref.hash);
         if self.open {
             return Ok(());
         }
@@ -66,13 +67,16 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                     _ => return None,
                 };
                 let TxKind::Call(to) = tx_kind else { return None };
+                tracing::debug!("tx with calldata to: {}", to);
 
-                if to != self.batcher_address {
+                if to != self.batcher_inbox_address {
                     return None;
                 }
+                tracing::debug!("tx sent to batcher inbox");
                 if tx.recover_public_key().ok()? != self.signer {
                     return None;
                 }
+                tracing::debug!("tx signed by correct signer");
                 Some(data.to_vec().into())
             })
             .collect::<VecDeque<_>>();

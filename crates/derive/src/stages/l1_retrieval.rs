@@ -90,7 +90,7 @@ where
                 .next_l1_block()
                 .await? // SAFETY: This question mark bubbles up the Eof error.
                 .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
-            self.data = Some(self.provider.open_data(&next, self.prev.batcher_addr()).await?);
+            self.data = Some(self.provider.open_data(&next).await?);
         }
 
         let data = self.data.as_mut().expect("Cannot be None").next().await.ok_or(StageError::Eof);
@@ -133,7 +133,7 @@ where
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
-        self.data = Some(self.provider.open_data(&base, cfg.batcher_addr).await?);
+        self.data = Some(self.provider.open_data(&base).await?);
         Ok(())
     }
 }
@@ -151,7 +151,7 @@ mod tests {
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![] };
+        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let retrieval = L1Retrieval::new(traversal, dap);
         let expected = BlockInfo::default();
         assert_eq!(retrieval.origin(), Some(&expected));
@@ -161,7 +161,7 @@ mod tests {
     async fn test_l1_retrieval_next_data() {
         let traversal = new_populated_test_traversal();
         let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
-        let dap = TestDAP { results };
+        let dap = TestDAP { results, batch_inbox_address: Address::default() };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         assert_eq!(retrieval.data, None);
         let data = retrieval.next_data().await.unwrap();
@@ -187,7 +187,7 @@ mod tests {
         // This would bubble up an error if the prev stage
         // (traversal) is called in the retrieval stage.
         let traversal = new_test_traversal(vec![], vec![]);
-        let dap = TestDAP { results: vec![] };
+        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
@@ -203,7 +203,7 @@ mod tests {
             results: vec![Err(StageError::Eof)],
         };
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![] };
+        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap_err();
         assert_eq!(data, StageError::Eof);
