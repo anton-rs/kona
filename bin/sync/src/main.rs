@@ -1,35 +1,64 @@
 use alloy_primitives::{address, b256, U256};
 use anyhow::{anyhow, Result};
+use clap::Parser;
 use kona_derive::{
     online::*,
     types::{BlockID, Genesis, RollupConfig, SystemConfig},
 };
+use reqwest::Url;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn, Level};
 
+mod cli;
+
 // Environment Variables
-const VERBOSITY: &str = "VERBOSITY_LEVEL";
 const L1_RPC_URL: &str = "L1_RPC_URL";
 const L2_RPC_URL: &str = "L2_RPC_URL";
 const BEACON_URL: &str = "BEACON_URL";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    init_tracing_subscriber()?;
+    let cfg = crate::cli::Cli::parse();
+    init_tracing_subscriber(cfg.v)?;
+    info!(target: "sync", "Initialized telemetry");
+
+    sync(cfg).await?;
+
+    Ok(())
+}
+
+async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
+    // Parse the CLI arguments and environment variables.
+    let l1_rpc_url: Url = cli_cfg
+        .l1_rpc_url
+        .unwrap_or_else(|| std::env::var(L1_RPC_URL).unwrap())
+        .parse()
+        .expect("valid l1 rpc url");
+    let l2_rpc_url: Url = cli_cfg
+        .l2_rpc_url
+        .unwrap_or_else(|| std::env::var(L2_RPC_URL).unwrap())
+        .parse()
+        .expect("valid l2 rpc url");
+    let beacon_url: Url = cli_cfg
+        .beacon_url
+        .unwrap_or_else(|| std::env::var(BEACON_URL).unwrap())
+        .parse()
+        .expect("valid beacon url");
 
     // Construct the pipeline and payload validator.
     let cfg = Arc::new(new_op_mainnet_config());
-    let l1_provider = AlloyChainProvider::new_http(new_req_url(L1_RPC_URL));
-    let mut l2_provider = AlloyL2ChainProvider::new_http(new_req_url(L2_RPC_URL), cfg.clone());
+    let start = cli_cfg.start_l2_block.unwrap_or(cfg.genesis.l2.number);
+    let l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
+    let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
-    let beacon_client = OnlineBeaconClient::new_http(new_req_url(BEACON_URL));
+    let beacon_client = OnlineBeaconClient::new_http(beacon_url);
     let blob_provider =
         OnlineBlobProvider::<_, SimpleSlotDerivation>::new(true, beacon_client, None, None);
     let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
     let mut pipeline =
-        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes).await;
-    let validator = OnlineValidator::new_http(new_req_url(L2_RPC_URL));
+        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, start).await;
+    let validator = OnlineValidator::new_http(l2_rpc_url);
     let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.
@@ -60,13 +89,9 @@ async fn main() -> Result<()> {
     }
 }
 
-fn init_tracing_subscriber() -> Result<()> {
-    let verbosity_level = std::env::var(VERBOSITY)
-        .unwrap_or_else(|_| "3".to_string())
-        .parse::<u8>()
-        .map_err(|e| anyhow!(e))?;
+fn init_tracing_subscriber(v: u8) -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
-        .with_max_level(match verbosity_level {
+        .with_max_level(match v {
             0 => Level::ERROR,
             1 => Level::WARN,
             2 => Level::INFO,
@@ -75,10 +100,6 @@ fn init_tracing_subscriber() -> Result<()> {
         })
         .finish();
     tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))
-}
-
-fn new_req_url(var: &str) -> reqwest::Url {
-    std::env::var(var).unwrap_or_else(|_| panic!("{var} must be set")).parse().unwrap()
 }
 
 fn new_op_mainnet_config() -> RollupConfig {

@@ -48,18 +48,16 @@ pub async fn new_online_pipeline(
     dap_source: OnlineDataProvider,
     mut l2_chain_provider: AlloyL2ChainProvider,
     builder: OnlineAttributesBuilder,
+    start_block: u64,
 ) -> OnlinePipeline {
-    // Fetch the block for the rollup config genesis hash.
-    let tip = chain_provider
-        .block_info_by_number(rollup_config.genesis.l1.number)
-        .await
-        .expect("Failed to fetch genesis L1 block info for pipeline tip");
-
-    // Fetch the block info for the cursor.
     let cursor = l2_chain_provider
-        .l2_block_info_by_number(rollup_config.genesis.l2.number)
+        .l2_block_info_by_number(start_block)
         .await
         .expect("Failed to fetch genesis L2 block info for pipeline cursor");
+    let tip = chain_provider
+        .block_info_by_number(cursor.l1_origin.number)
+        .await
+        .expect("Failed to fetch genesis L1 block info for pipeline tip");
     PipelineBuilder::new()
         .rollup_config(rollup_config)
         .dap_source(dap_source)
