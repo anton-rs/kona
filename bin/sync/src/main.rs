@@ -1,11 +1,11 @@
 use alloy_primitives::{address, b256, U256};
 use anyhow::{anyhow, Result};
+use clap::Parser;
 use kona_derive::{
     online::*,
     types::{BlockID, Genesis, RollupConfig, SystemConfig},
 };
 use reqwest::Url;
-use clap::Parser;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn, Level};
 
@@ -29,9 +29,21 @@ async fn main() -> Result<()> {
 
 async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     // Parse the CLI arguments and environment variables.
-    let l1_rpc_url: Url = cli_cfg.l1_rpc_url.unwrap_or_else(|| std::env::var(L1_RPC_URL).unwrap()).parse().expect("valid l1 rpc url");
-    let l2_rpc_url: Url = cli_cfg.l2_rpc_url.unwrap_or_else(|| std::env::var(L2_RPC_URL).unwrap()).parse().expect("valid l2 rpc url");
-    let beacon_url: Url = cli_cfg.beacon_url.unwrap_or_else(|| std::env::var(BEACON_URL).unwrap()).parse().expect("valid beacon url");
+    let l1_rpc_url: Url = cli_cfg
+        .l1_rpc_url
+        .unwrap_or_else(|| std::env::var(L1_RPC_URL).unwrap())
+        .parse()
+        .expect("valid l1 rpc url");
+    let l2_rpc_url: Url = cli_cfg
+        .l2_rpc_url
+        .unwrap_or_else(|| std::env::var(L2_RPC_URL).unwrap())
+        .parse()
+        .expect("valid l2 rpc url");
+    let beacon_url: Url = cli_cfg
+        .beacon_url
+        .unwrap_or_else(|| std::env::var(BEACON_URL).unwrap())
+        .parse()
+        .expect("valid beacon url");
 
     // Construct the pipeline and payload validator.
     let cfg = Arc::new(new_op_mainnet_config());
