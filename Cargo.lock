@@ -3028,7 +3028,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 [[package]]
 name = "superchain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=refcell/rust-primitives#f668b8be21bb759789d4a0ec5a2adae99fdc8430"
+source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=main#1f424d06db64eebfd265c0a411554843f5522222"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
