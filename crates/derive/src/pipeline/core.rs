@@ -115,7 +115,7 @@ where
             }
             // TODO: match on the EngineELSyncing error here and log
             Err(err) => {
-                tracing::error!("attributes queue step failed: {:?}", err);
+                tracing::warn!("attributes queue step failed: {:?}", err);
                 return Err(anyhow::anyhow!(err));
             }
         }

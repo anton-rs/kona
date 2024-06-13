@@ -12,7 +12,7 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use tracing::error;
+use tracing::warn;
 
 /// The [ChannelReader] provider trait.
 #[async_trait]
@@ -80,7 +80,7 @@ where
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
-            error!("Failed to set batch reader: {:?}", e);
+            warn!("Failed to set batch reader: {:?}", e);
             self.next_channel();
             return Err(e);
         }
