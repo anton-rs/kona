@@ -3,7 +3,7 @@
 /// Re-export trait arguments.
 pub use crate::traits::{
     ChainProvider, DataAvailabilityProvider, L2ChainProvider, NextAttributes, OriginAdvancer,
-    Pipeline, PreviousStage, ResetProvider, ResettableStage,
+    OriginProvider, Pipeline, PreviousStage, ResetProvider, ResettableStage,
 };
 
 /// Re-export stage types that are needed as inputs.

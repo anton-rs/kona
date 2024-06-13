@@ -24,7 +24,7 @@ pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
 #[async_trait]
 pub trait AttributesProvider {
     /// Returns the next valid batch upon the given safe head.
-    async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch>;
+    async fn next_batch(&mut self, parent: &L2BlockInfo) -> StageResult<SingleBatch>;
 
     /// Returns whether the current batch is the last in its span.
     fn is_last_in_span(&self) -> bool;
@@ -71,7 +71,7 @@ where
     }
 
     /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
-    pub async fn load_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
+    pub async fn load_batch(&mut self, parent: &L2BlockInfo) -> StageResult<SingleBatch> {
         if self.batch.is_none() {
             let batch = self.prev.next_batch(parent).await?;
             self.batch = Some(batch);
@@ -83,15 +83,18 @@ where
     /// Returns the next [L2AttributesWithParent] from the current batch.
     pub async fn next_attributes(
         &mut self,
-        parent: L2BlockInfo,
+        parent: &L2BlockInfo,
     ) -> StageResult<L2AttributesWithParent> {
         // Load the batch.
         let batch = self.load_batch(parent).await?;
 
         // Construct the payload attributes from the loaded batch.
         let attributes = self.create_next_attributes(batch, parent).await?;
-        let populated_attributes =
-            L2AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
+        let populated_attributes = L2AttributesWithParent {
+            attributes,
+            parent: *parent,
+            is_last_in_span: self.is_last_in_span,
+        };
 
         // Clear out the local state once payload attributes are prepared.
         self.batch = None;
@@ -104,7 +107,7 @@ where
     pub async fn create_next_attributes(
         &mut self,
         batch: SingleBatch,
-        parent: L2BlockInfo,
+        parent: &L2BlockInfo,
     ) -> StageResult<L2PayloadAttributes> {
         // Sanity check parent hash
         if batch.parent_hash != parent.block_info.hash {
@@ -124,7 +127,7 @@ where
         let tx_count = batch.transactions.len();
         let mut attributes = self
             .builder
-            .prepare_payload_attributes(parent, batch.epoch())
+            .prepare_payload_attributes(*parent, batch.epoch())
             .await
             .map_err(StageError::AttributesBuild)?;
         attributes.no_tx_pool = true;
@@ -168,7 +171,7 @@ where
 {
     async fn next_attributes(
         &mut self,
-        parent: L2BlockInfo,
+        parent: &L2BlockInfo,
     ) -> StageResult<L2AttributesWithParent> {
         self.next_attributes(parent).await
     }
@@ -233,7 +236,7 @@ mod tests {
     async fn test_load_batch_eof() {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
-        let result = attributes_queue.load_batch(parent).await.unwrap_err();
+        let result = attributes_queue.load_batch(&parent).await.unwrap_err();
         assert_eq!(result, StageError::Eof);
     }
 
@@ -241,7 +244,7 @@ mod tests {
     async fn test_load_batch_last_in_span() {
         let mut attributes_queue = new_attributes_queue(None, None, vec![Ok(Default::default())]);
         let parent = L2BlockInfo::default();
-        let result = attributes_queue.load_batch(parent).await.unwrap();
+        let result = attributes_queue.load_batch(&parent).await.unwrap();
         assert_eq!(result, Default::default());
         assert!(attributes_queue.is_last_in_span);
     }
@@ -255,7 +258,7 @@ mod tests {
             ..Default::default()
         };
         let batch = SingleBatch::default();
-        let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
+        let result = attributes_queue.create_next_attributes(batch, &parent).await.unwrap_err();
         assert_eq!(
             result,
             StageError::Reset(super::ResetError::BadParentHash(Default::default(), bad_hash))
@@ -267,7 +270,7 @@ mod tests {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
-        let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
+        let result = attributes_queue.create_next_attributes(batch, &parent).await.unwrap_err();
         assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 0)));
     }
 
@@ -279,7 +282,7 @@ mod tests {
             ..Default::default()
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
-        let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
+        let result = attributes_queue.create_next_attributes(batch, &parent).await.unwrap_err();
         assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
     }
 
@@ -292,7 +295,7 @@ mod tests {
             ..Default::default()
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
-        let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
+        let result = attributes_queue.create_next_attributes(batch, &parent).await.unwrap_err();
         assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
     }
 
@@ -301,7 +304,7 @@ mod tests {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
         let batch = SingleBatch::default();
-        let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
+        let result = attributes_queue.create_next_attributes(batch, &parent).await.unwrap_err();
         assert_eq!(
             result,
             StageError::AttributesBuild(BuilderError::Custom(anyhow::anyhow!(
@@ -321,7 +324,7 @@ mod tests {
         let parent = L2BlockInfo::default();
         let txs = vec![RawTransaction::default(), RawTransaction::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
-        let attributes = aq.create_next_attributes(batch, parent).await.unwrap();
+        let attributes = aq.create_next_attributes(batch, &parent).await.unwrap();
         // update the expected attributes
         payload_attributes.no_tx_pool = true;
         payload_attributes.transactions.extend(txs);
@@ -332,7 +335,7 @@ mod tests {
     async fn test_next_attributes_load_batch_eof() {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
-        let result = attributes_queue.next_attributes(parent).await.unwrap_err();
+        let result = attributes_queue.next_attributes(&parent).await.unwrap_err();
         assert_eq!(result, StageError::Eof);
     }
 
@@ -345,12 +348,12 @@ mod tests {
         let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
-        let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();
+        let _ = aq.load_batch(&L2BlockInfo::default()).await.unwrap();
         assert!(aq.is_last_in_span);
         assert!(aq.batch.is_some());
         // This should successfully construct the next payload attributes.
         // It should also reset the last in span flag and clear the batch.
-        let attributes = aq.next_attributes(L2BlockInfo::default()).await.unwrap();
+        let attributes = aq.next_attributes(&L2BlockInfo::default()).await.unwrap();
         pa.no_tx_pool = true;
         let populated_attributes = L2AttributesWithParent {
             attributes: pa,

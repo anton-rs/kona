@@ -39,7 +39,7 @@ impl SingleBatch {
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
-        l2_safe_head: L2BlockInfo,
+        l2_safe_head: &L2BlockInfo,
         inclusion_block: &BlockInfo,
     ) -> BatchValidity {
         // Sanity check input consistency
@@ -164,39 +164,6 @@ impl SingleBatch {
         BatchValidity::Accept
     }
 }
-
-// impl Encodable for SingleBatch {
-//     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-//         self.parent_hash.encode(out);
-//         self.epoch_num.encode(out);
-//         self.epoch_hash.encode(out);
-//         self.timestamp.encode(out);
-//         self.transactions.encode(out);
-//     }
-// }
-//
-// impl Decodable for SingleBatch {
-//     fn decode(rlp: &mut &[u8]) -> alloy_rlp::Result<Self> {
-//         let Header { list, payload_length } = Header::decode(rlp)?;
-//
-//         if !list {
-//             return Err(alloy_rlp::Error::UnexpectedString);
-//         }
-//         let starting_length = rlp.len();
-//
-//         let parent_hash = BlockHash::decode(rlp)?;
-//         let epoch_num = u64::decode(rlp)?;
-//         let epoch_hash = BlockHash::decode(rlp)?;
-//         let timestamp = u64::decode(rlp)?;
-//         let transactions = Vec::<RawTransaction>::decode(rlp)?;
-//
-//         if rlp.len() + payload_length != starting_length {
-//             return Err(alloy_rlp::Error::UnexpectedLength);
-//         }
-//
-//         Ok(Self { parent_hash, epoch_num, epoch_hash, timestamp, transactions })
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
