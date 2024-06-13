@@ -39,11 +39,8 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         .unwrap_or_else(|| std::env::var(L2_RPC_URL).unwrap())
         .parse()
         .expect("valid l2 rpc url");
-    let beacon_url: Url = cli_cfg
-        .beacon_url
-        .unwrap_or_else(|| std::env::var(BEACON_URL).unwrap())
-        .parse()
-        .expect("valid beacon url");
+    let beacon_url: String =
+        cli_cfg.beacon_url.unwrap_or_else(|| std::env::var(BEACON_URL).unwrap());
 
     // Construct the pipeline and payload validator.
     let cfg = Arc::new(new_op_mainnet_config());
@@ -54,7 +51,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
     let beacon_client = OnlineBeaconClient::new_http(beacon_url);
     let blob_provider =
-        OnlineBlobProvider::<_, SimpleSlotDerivation>::new(true, beacon_client, None, None);
+        OnlineBlobProvider::<_, SimpleSlotDerivation>::new(beacon_client, None, None);
     let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, start).await;

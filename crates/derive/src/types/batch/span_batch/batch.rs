@@ -136,11 +136,11 @@ impl SpanBatch {
                 }
             };
         }
-        if !self.check_parent_hash(parent_block.block_info.parent_hash) {
+        if !self.check_parent_hash(parent_block.block_info.hash) {
             warn!(
                 "parent block number mismatch, expected: {parent_num}, received: {}, parent hash: {}, self hash: {}",
                 parent_block.block_info.number,
-                parent_block.block_info.parent_hash,
+                parent_block.block_info.hash,
                 self.parent_check,
             );
             return BatchValidity::Drop;
@@ -155,8 +155,9 @@ impl SpanBatch {
         // Check the L1 origin of the batch
         if starting_epoch_num > parent_block.l1_origin.number + 1 {
             warn!(
-                "batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid, current_epoch: {}",
-                epoch.id()
+                "batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid. starting epoch: {} | next epoch: {}",
+                starting_epoch_num,
+                parent_block.l1_origin.number + 1
             );
             return BatchValidity::Drop;
         }
