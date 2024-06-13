@@ -80,9 +80,10 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
                 }
             }
             println!(
-                "Validated Payload Attributes {derived_attributes_count} [L2 Block Num: {}] [L2 Timestamp: {}]",
+                "Validated Payload Attributes {derived_attributes_count} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
                 attributes.parent.block_info.number + 1,
                 attributes.attributes.timestamp,
+                pipeline.origin().unwrap().number,
             );
             info!(target: "loop", "attributes: {:#?}", attributes);
         } else {
