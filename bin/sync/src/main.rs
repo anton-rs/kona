@@ -62,7 +62,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         if let Some(attributes) = pipeline.pop() {
             if !validator.validate(&attributes).await {
                 error!(target: "loop", "Failed payload validation: {}", attributes.parent.block_info.hash);
-                continue;
+                return Ok(());
             }
             derived_attributes_count += 1;
             match l2_provider.l2_block_info_by_number(pipeline.cursor.block_info.number + 1).await {
@@ -71,7 +71,11 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
                     error!(target: "loop", "Failed to fetch next pending l2 safe head: {}, err: {:?}", pipeline.cursor.block_info.number + 1, e);
                 }
             }
-            dbg!(attributes);
+            println!(
+                "Validated Payload Attributes {derived_attributes_count} [Block Num: {}]",
+                attributes.parent.block_info.number + 1
+            );
+            info!(target: "loop", "attributes: {:#?}", attributes);
         } else {
             debug!(target: "loop", "No attributes to validate");
         }
