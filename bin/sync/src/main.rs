@@ -37,7 +37,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     // Construct the pipeline and payload validator.
     let cfg = Arc::new(OP_MAINNET_CONFIG);
     let start = cli_cfg.start_l2_block.unwrap_or(cfg.genesis.l2.number);
-    let l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
+    let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
@@ -45,30 +45,38 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     let blob_provider =
         OnlineBlobProvider::<_, SimpleSlotDerivation>::new(beacon_client, None, None);
     let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
+    let mut cursor = l2_provider
+        .l2_block_info_by_number(start)
+        .await
+        .expect("Failed to fetch genesis L2 block info for pipeline cursor");
+    let tip = l1_provider
+        .block_info_by_number(cursor.l1_origin.number)
+        .await
+        .expect("Failed to fetch genesis L1 block info for pipeline tip");
     let mut pipeline =
-        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, start).await;
+        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip).await;
     let validator = OnlineValidator::new_http(l2_rpc_url);
     let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.
     loop {
         info!(target: "loop", "Validated payload attributes number {}", derived_attributes_count);
-        info!(target: "loop", "Pending l2 safe head num: {}", pipeline.cursor.block_info.number);
-        match pipeline.step().await {
+        info!(target: "loop", "Pending l2 safe head num: {}", cursor.block_info.number);
+        match pipeline.step(&cursor).await {
             Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
             Err(e) => warn!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
         }
 
-        if let Some(attributes) = pipeline.pop() {
+        if let Some(attributes) = pipeline.next_attributes() {
             if !validator.validate(&attributes).await {
                 error!(target: "loop", "Failed payload validation: {}", attributes.parent.block_info.hash);
                 return Ok(());
             }
             derived_attributes_count += 1;
-            match l2_provider.l2_block_info_by_number(pipeline.cursor.block_info.number + 1).await {
-                Ok(bi) => pipeline.update_cursor(bi),
+            match l2_provider.l2_block_info_by_number(cursor.block_info.number + 1).await {
+                Ok(bi) => cursor = bi,
                 Err(e) => {
-                    error!(target: "loop", "Failed to fetch next pending l2 safe head: {}, err: {:?}", pipeline.cursor.block_info.number + 1, e);
+                    error!(target: "loop", "Failed to fetch next pending l2 safe head: {}, err: {:?}", cursor.block_info.number + 1, e);
                 }
             }
             println!(

@@ -11,8 +11,7 @@ use crate::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{ChainProvider, L2ChainProvider},
-    types::RollupConfig,
+    types::{BlockInfo, RollupConfig},
 };
 use alloc::sync::Arc;
 
@@ -44,27 +43,18 @@ pub type OnlineAttributesQueue<DAP> = AttributesQueue<
 /// Internally, this uses the [PipelineBuilder] to construct the pipeline.
 pub async fn new_online_pipeline(
     rollup_config: Arc<RollupConfig>,
-    mut chain_provider: AlloyChainProvider,
+    chain_provider: AlloyChainProvider,
     dap_source: OnlineDataProvider,
-    mut l2_chain_provider: AlloyL2ChainProvider,
+    l2_chain_provider: AlloyL2ChainProvider,
     builder: OnlineAttributesBuilder,
-    start_block: u64,
+    origin: BlockInfo,
 ) -> OnlinePipeline {
-    let cursor = l2_chain_provider
-        .l2_block_info_by_number(start_block)
-        .await
-        .expect("Failed to fetch genesis L2 block info for pipeline cursor");
-    let tip = chain_provider
-        .block_info_by_number(cursor.l1_origin.number)
-        .await
-        .expect("Failed to fetch genesis L1 block info for pipeline tip");
     PipelineBuilder::new()
         .rollup_config(rollup_config)
         .dap_source(dap_source)
         .l2_chain_provider(l2_chain_provider)
         .chain_provider(chain_provider)
         .builder(builder)
-        .start_cursor(cursor)
-        .tip(tip)
+        .origin(origin)
         .build()
 }
