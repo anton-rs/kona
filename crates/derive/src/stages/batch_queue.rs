@@ -436,8 +436,8 @@ mod tests {
         },
         traits::test_utils::TestL2ChainProvider,
         types::{
-            BatchType, BlockID, Genesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
-            L2ExecutionPayloadEnvelope,
+            BatchType, BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx,
+            L2ExecutionPayload, L2ExecutionPayloadEnvelope,
         },
     };
     use alloc::vec;
@@ -518,7 +518,7 @@ mod tests {
             block_time: 100,
             max_sequencer_drift: 10000000,
             seq_window_size: 10000000,
-            genesis: Genesis {
+            genesis: ChainGenesis {
                 l2: BlockID { number: 8, hash: payload_block_hash },
                 l1: BlockID { number: 16988980031808077784, ..Default::default() },
                 ..Default::default()

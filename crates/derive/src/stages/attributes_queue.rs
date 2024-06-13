@@ -7,7 +7,7 @@ use crate::{
         RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
     },
 };
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use tracing::info;
@@ -49,7 +49,7 @@ where
     AB: AttributesBuilder + Debug,
 {
     /// The rollup config.
-    cfg: RollupConfig,
+    cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
     prev: P,
     /// Whether the current batch is the last in its span.
@@ -66,7 +66,7 @@ where
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
-    pub fn new(cfg: RollupConfig, prev: P, builder: AB) -> Self {
+    pub fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
         Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 
@@ -215,7 +215,7 @@ mod tests {
         },
         types::{BuilderError, RawTransaction},
     };
-    use alloc::{vec, vec::Vec};
+    use alloc::{sync::Arc, vec, vec::Vec};
     use alloy_primitives::b256;
 
     fn new_attributes_queue(
@@ -226,7 +226,7 @@ mod tests {
         let cfg = cfg.unwrap_or_default();
         let mock_batch_queue = new_attributes_provider(origin, batches);
         let mock_attributes_builder = MockAttributesBuilder::default();
-        AttributesQueue::new(cfg, mock_batch_queue, mock_attributes_builder)
+        AttributesQueue::new(Arc::new(cfg), mock_batch_queue, mock_attributes_builder)
     }
 
     #[tokio::test]
@@ -317,7 +317,7 @@ mod tests {
         let mut payload_attributes = L2PayloadAttributes::default();
         let mock_builder =
             MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
-        let mut aq = AttributesQueue::new(cfg, mock, mock_builder);
+        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         let parent = L2BlockInfo::default();
         let txs = vec![RawTransaction::default(), RawTransaction::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
@@ -342,7 +342,7 @@ mod tests {
         let mock = new_attributes_provider(None, vec![Ok(Default::default())]);
         let mut pa = L2PayloadAttributes::default();
         let mock_builder = MockAttributesBuilder { attributes: vec![Ok(pa.clone())] };
-        let mut aq = AttributesQueue::new(cfg, mock, mock_builder);
+        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
         let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();
