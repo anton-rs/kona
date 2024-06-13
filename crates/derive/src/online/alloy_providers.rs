@@ -219,7 +219,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
         if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
-            return Ok(*system_config);
+            return Ok(system_config.clone());
         }
 
         let envelope = self.payload_by_number(number).await?;

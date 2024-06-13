@@ -142,7 +142,8 @@ where
         let channel_reader = ChannelReader::new(channel_bank, Arc::clone(&rollup_config));
         let batch_queue =
             BatchQueue::new(rollup_config.clone(), channel_reader, l2_chain_provider.clone());
-        let attributes = AttributesQueue::new(*rollup_config, batch_queue, attributes_builder);
+        let attributes =
+            AttributesQueue::new(rollup_config.clone(), batch_queue, attributes_builder);
 
         // Create the pipeline.
         DerivationPipeline {

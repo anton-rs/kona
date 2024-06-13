@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
-use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
+use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
@@ -174,7 +174,11 @@ impl L2ExecutionPayloadEnvelope {
             if execution_payload.block_hash != rollup_config.genesis.l2.hash {
                 anyhow::bail!("Invalid genesis hash");
             }
-            return Ok(rollup_config.genesis.system_config);
+            return rollup_config
+                .genesis
+                .system_config
+                .clone()
+                .ok_or_else(|| anyhow::anyhow!("Missing system config in genesis block"));
         }
 
         if execution_payload.transactions.is_empty() {
@@ -215,9 +219,11 @@ impl L2ExecutionPayloadEnvelope {
 
         Ok(SystemConfig {
             batcher_addr: l1_info.batcher_address(),
-            l1_fee_overhead: l1_info.l1_fee_overhead(),
-            l1_fee_scalar,
-            gas_limit: U256::from(execution_payload.gas_limit),
+            overhead: l1_info.l1_fee_overhead(),
+            scalar: l1_fee_scalar,
+            gas_limit: execution_payload.gas_limit as u64,
+            base_fee_scalar: None,
+            blob_base_fee_scalar: None,
         })
     }
 }

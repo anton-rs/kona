@@ -1847,6 +1847,7 @@ dependencies = [
  "op-alloy-consensus",
  "serde",
  "serde_json",
+ "superchain-primitives",
 ]
 
 [[package]]
@@ -2845,6 +2846,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_repr"
+version = "0.1.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c64451ba24fc7a6a2d60fc75dd9c83c90903b19028d4eff35e88fc1e86564e9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.66",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3012,6 +3024,22 @@ name = "subtle"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
+
+[[package]]
+name = "superchain-primitives"
+version = "0.1.0"
+source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=refcell/rust-primitives#f668b8be21bb759789d4a0ec5a2adae99fdc8430"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-genesis",
+ "alloy-primitives",
+ "alloy-sol-types",
+ "anyhow",
+ "hashbrown",
+ "serde",
+ "serde_repr",
+]
 
 [[package]]
 name = "syn"

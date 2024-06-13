@@ -416,7 +416,9 @@ mod tests {
     use crate::{
         stages::test_utils::{CollectingLayer, TraceStorage},
         traits::test_utils::TestL2ChainProvider,
-        types::{BlockID, Genesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction},
+        types::{
+            BlockID, ChainGenesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction,
+        },
     };
     use alloc::vec;
     use alloy_primitives::{b256, Bytes, B256};
@@ -1444,7 +1446,7 @@ mod tests {
             seq_window_size: 100,
             delta_time: Some(0),
             block_time: 10,
-            genesis: Genesis {
+            genesis: ChainGenesis {
                 l2: BlockID { number: 41, hash: payload_block_hash },
                 ..Default::default()
             },
@@ -1514,7 +1516,7 @@ mod tests {
             seq_window_size: 100,
             delta_time: Some(0),
             block_time: 10,
-            genesis: Genesis {
+            genesis: ChainGenesis {
                 l2: BlockID { number: 41, hash: payload_block_hash },
                 l1: BlockID { number: 10, ..Default::default() },
                 ..Default::default()

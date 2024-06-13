@@ -16,6 +16,9 @@ alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-eips.workspace = true
 op-alloy-consensus.workspace = true
 
+# Superchain Registry
+superchain-primitives = { git = "https://github.com/ethereum-optimism/superchain-registry", branch = "refcell/rust-primitives", default-features = false }
+
 # Alloy Types
 alloy-sol-types = { version = "0.7.6", default-features = false }
 
@@ -27,4 +30,4 @@ serde_json = { version = "1.0.117", default-features = false }
 
 [features]
 default = ["serde"]
-serde = ["dep:serde"]
+serde = ["dep:serde", "superchain-primitives/serde"]

@@ -12,9 +12,8 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use kona_derive::{
     traits::{AsyncIterator, ChainProvider},
-    types::{ResetError, StageError, StageResult},
+    types::{BlockID, ResetError, StageError, StageResult},
 };
-use kona_primitives::block::BlockID;
 
 /// A plasma data iterator.
 #[derive(Debug, Clone)]

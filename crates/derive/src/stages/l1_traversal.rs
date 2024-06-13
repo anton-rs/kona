@@ -127,7 +127,7 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.block = Some(base);
         self.done = false;
-        self.system_config = *cfg;
+        self.system_config = cfg.clone();
         Err(StageError::Eof)
     }
 }

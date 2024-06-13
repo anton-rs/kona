@@ -41,7 +41,12 @@ where
             chain_provider: provider,
             blob_provider: blobs,
             ecotone_timestamp: cfg.ecotone_time,
-            signer: cfg.genesis.system_config.batcher_addr,
+            signer: cfg
+                .genesis
+                .system_config
+                .as_ref()
+                .map(|sc| sc.batcher_addr)
+                .unwrap_or_default(),
             batch_inbox_address: cfg.batch_inbox_address,
         }
     }
@@ -83,7 +88,7 @@ mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::address;
-    use kona_primitives::{BlockInfo, RollupConfig};
+    use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
 
     use crate::{
         sources::{EthereumDataSource, EthereumDataSourceVariant},
@@ -128,7 +133,8 @@ mod tests {
         let block_ref = BlockInfo { number: 10, ..Default::default() };
 
         let mut cfg = RollupConfig::default();
-        cfg.genesis.system_config.batcher_addr = batcher_address;
+        cfg.genesis.system_config =
+            Some(SystemConfig { batcher_addr: batcher_address, ..Default::default() });
         cfg.batch_inbox_address = batch_inbox;
 
         // load a test batcher transaction

@@ -126,7 +126,7 @@ impl L1BlockInfoTx {
         if rollup_config.is_ecotone_active(l2_block_time) &&
             rollup_config.ecotone_time.unwrap_or_default() != l2_block_time
         {
-            let scalar = system_config.l1_fee_scalar.to_be_bytes::<32>();
+            let scalar = system_config.scalar.to_be_bytes::<32>();
             let blob_base_fee_scalar = (scalar[0] == L1_SCALAR_ECOTONE)
                 .then(|| {
                     Ok::<u32, anyhow::Error>(u32::from_be_bytes(
@@ -161,8 +161,8 @@ impl L1BlockInfoTx {
                 block_hash: l1_header.hash_slow(),
                 sequence_number,
                 batcher_address: system_config.batcher_addr,
-                l1_fee_overhead: system_config.l1_fee_overhead,
-                l1_fee_scalar: system_config.l1_fee_scalar,
+                l1_fee_overhead: system_config.overhead,
+                l1_fee_scalar: system_config.scalar,
             }))
         }
     }
@@ -473,8 +473,8 @@ mod test {
         assert_eq!(l1_info.block_hash, l1_header.hash_slow());
         assert_eq!(l1_info.sequence_number, sequence_number);
         assert_eq!(l1_info.batcher_address, system_config.batcher_addr);
-        assert_eq!(l1_info.l1_fee_overhead, system_config.l1_fee_overhead);
-        assert_eq!(l1_info.l1_fee_scalar, system_config.l1_fee_scalar);
+        assert_eq!(l1_info.l1_fee_overhead, system_config.overhead);
+        assert_eq!(l1_info.l1_fee_scalar, system_config.scalar);
     }
 
     #[test]
@@ -506,7 +506,7 @@ mod test {
         assert_eq!(l1_info.batcher_address, system_config.batcher_addr);
         assert_eq!(l1_info.blob_base_fee, l1_header.blob_fee().unwrap_or(1));
 
-        let scalar = system_config.l1_fee_scalar.to_be_bytes::<32>();
+        let scalar = system_config.scalar.to_be_bytes::<32>();
         let blob_base_fee_scalar = (scalar[0] == L1_SCALAR_ECOTONE)
             .then(|| {
                 u32::from_be_bytes(
