@@ -199,7 +199,7 @@ where
                 );
                 let address = Address::from_slice(&hint_data.as_ref()[8..]);
 
-                let proof_response: alloy_rpc_types::EIP1186AccountProofResponse = self
+                let proof_response = self
                     .l2_provider
                     .get_proof(address, Default::default(), block_number.into())
                     .await
