@@ -76,8 +76,8 @@ impl OnlineValidator {
             timestamp: header.timestamp,
             prev_randao: header.mix_hash.unwrap_or_default(),
             fee_recipient: header.miner,
-            // Withdrawals on optimism are always empty
-            withdrawals: Default::default(),
+            // Withdrawals on optimism are always empty, *after* canyon (Shanghai) activation
+            withdrawals: (header.timestamp >= 1704992401).then_some(Vec::default()),
             parent_beacon_block_root: header.parent_beacon_block_root,
             transactions,
             no_tx_pool: true,
