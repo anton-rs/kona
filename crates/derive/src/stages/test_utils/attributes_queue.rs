@@ -44,8 +44,8 @@ pub struct MockAttributesProvider {
 }
 
 impl OriginProvider for MockAttributesProvider {
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.origin.as_ref()
+    fn origin(&self) -> Option<BlockInfo> {
+        self.origin
     }
 }
 
@@ -71,7 +71,7 @@ impl PreviousStage for MockAttributesProvider {
 
 #[async_trait]
 impl AttributesProvider for MockAttributesProvider {
-    async fn next_batch(&mut self, _parent: &L2BlockInfo) -> StageResult<SingleBatch> {
+    async fn next_batch(&mut self, _parent: L2BlockInfo) -> StageResult<SingleBatch> {
         self.batches.pop().ok_or(StageError::Eof)?
     }
 

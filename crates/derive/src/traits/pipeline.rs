@@ -15,5 +15,5 @@ pub trait Pipeline: OriginProvider {
     async fn reset(&mut self, origin: BlockInfo) -> anyhow::Result<()>;
 
     /// Attempts to progress the pipeline.
-    async fn step(&mut self, cursor: &L2BlockInfo) -> anyhow::Result<()>;
+    async fn step(&mut self, cursor: L2BlockInfo) -> anyhow::Result<()>;
 }

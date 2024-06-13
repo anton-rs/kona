@@ -39,7 +39,7 @@ impl SingleBatch {
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
-        l2_safe_head: &L2BlockInfo,
+        l2_safe_head: L2BlockInfo,
         inclusion_block: &BlockInfo,
     ) -> BatchValidity {
         // Sanity check input consistency

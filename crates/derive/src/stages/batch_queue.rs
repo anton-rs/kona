@@ -94,7 +94,7 @@ where
     /// Pops the next batch from the current queued up span-batch cache.
     /// The parent is used to set the parent hash of the batch.
     /// The parent is verified when the batch is later validated.
-    pub fn pop_next_batch(&mut self, parent: &L2BlockInfo) -> Option<SingleBatch> {
+    pub fn pop_next_batch(&mut self, parent: L2BlockInfo) -> Option<SingleBatch> {
         if self.next_spans.is_empty() {
             panic!("Invalid state: must have next spans to pop");
         }
@@ -110,7 +110,7 @@ where
     pub async fn derive_next_batch(
         &mut self,
         empty: bool,
-        parent: &L2BlockInfo,
+        parent: L2BlockInfo,
     ) -> StageResult<Batch> {
         // Cannot derive a batch if no origin was prepared.
         if self.l1_blocks.is_empty() {
@@ -226,7 +226,7 @@ where
     }
 
     /// Adds a batch to the queue.
-    pub async fn add_batch(&mut self, batch: Batch, parent: &L2BlockInfo) -> StageResult<()> {
+    pub async fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
             error!("Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
@@ -261,7 +261,7 @@ where
 {
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
-    async fn next_batch(&mut self, parent: &L2BlockInfo) -> StageResult<SingleBatch> {
+    async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
@@ -306,8 +306,8 @@ where
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
         // Batches prior to the l1 origin of the l2 safe head are not accepted.
-        if self.origin != self.prev.origin().copied() {
-            self.origin = self.prev.origin().cloned();
+        if self.origin != self.prev.origin() {
+            self.origin = self.prev.origin();
             if !origin_behind {
                 let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
                 self.l1_blocks.push(*origin);
@@ -388,7 +388,7 @@ where
     P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }
@@ -464,7 +464,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
-        let result = bq.derive_next_batch(false, &parent).await.unwrap_err();
+        let result = bq.derive_next_batch(false, parent).await.unwrap_err();
         assert_eq!(result, StageError::MissingOrigin);
     }
 
@@ -477,7 +477,7 @@ mod tests {
         let mock = MockBatchQueueProvider::new(vec![Ok(batch)]);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
-        let res = bq.next_batch(&L2BlockInfo::default()).await.unwrap_err();
+        let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
         assert_eq!(res, StageError::NotEnoughData);
         assert!(bq.is_last_in_span());
     }
@@ -499,7 +499,7 @@ mod tests {
             l1_origin: BlockID { number: 10, ..Default::default() },
             ..Default::default()
         };
-        let res = bq.next_batch(&parent).await.unwrap_err();
+        let res = bq.next_batch(parent).await.unwrap_err();
         assert_eq!(res, StageError::NotEnoughData);
     }
 
@@ -639,7 +639,7 @@ mod tests {
             l1_origin: BlockID { number: 16988980031808077784, hash: origin_check },
             ..Default::default()
         };
-        let res = bq.next_batch(&parent).await.unwrap_err();
+        let res = bq.next_batch(parent).await.unwrap_err();
         let logs = trace_store.get_by_level(Level::INFO);
         assert_eq!(logs.len(), 2);
         let str = alloc::format!("Advancing batch queue origin: {:?}", origin);
@@ -659,7 +659,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
-        let batch = bq.next_batch(&parent).await.unwrap();
+        let batch = bq.next_batch(parent).await.unwrap();
         assert_eq!(batch, SingleBatch::default());
     }
 }

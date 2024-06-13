@@ -110,7 +110,7 @@ where
     DAP: DataAvailabilityProvider,
     P: L1RetrievalProvider + PreviousStage,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }
@@ -154,7 +154,7 @@ mod tests {
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let retrieval = L1Retrieval::new(traversal, dap);
         let expected = BlockInfo::default();
-        assert_eq!(retrieval.origin(), Some(&expected));
+        assert_eq!(retrieval.origin(), Some(expected));
     }
 
     #[tokio::test]

@@ -43,7 +43,7 @@ where
     S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.attributes.origin()
     }
 }
@@ -83,7 +83,7 @@ where
     /// An error is expected when the underlying source closes.
     /// When [DerivationPipeline::step] returns [Ok(())], it should be called again, to continue the
     /// derivation process.
-    async fn step(&mut self, cursor: &L2BlockInfo) -> anyhow::Result<()> {
+    async fn step(&mut self, cursor: L2BlockInfo) -> anyhow::Result<()> {
         match self.attributes.next_attributes(cursor).await {
             Ok(a) => {
                 tracing::info!("attributes queue stage step returned l2 attributes");

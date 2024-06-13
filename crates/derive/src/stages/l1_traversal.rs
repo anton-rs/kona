@@ -111,8 +111,8 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
 }
 
 impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.block.as_ref()
+    fn origin(&self) -> Option<BlockInfo> {
+        self.block
     }
 }
 
