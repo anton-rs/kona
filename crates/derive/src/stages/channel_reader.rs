@@ -104,7 +104,7 @@ impl<P> OriginProvider for ChannelReader<P>
 where
     P: ChannelReaderProvider + PreviousStage + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }

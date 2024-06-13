@@ -25,8 +25,8 @@ impl MockChannelBankProvider {
 }
 
 impl OriginProvider for MockChannelBankProvider {
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.block_info.as_ref()
+    fn origin(&self) -> Option<BlockInfo> {
+        self.block_info
     }
 }
 

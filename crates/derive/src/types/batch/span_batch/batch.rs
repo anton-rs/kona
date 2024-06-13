@@ -60,7 +60,7 @@ impl SpanBatch {
         &self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
-        l2_safe_head: &L2BlockInfo,
+        l2_safe_head: L2BlockInfo,
         inclusion_block: &BlockInfo,
         fetcher: &mut BF,
     ) -> BatchValidity {
@@ -113,7 +113,7 @@ impl SpanBatch {
         // If the span batch does not overlap the current safe chain, parent block should be the L2
         // safe head.
         let mut parent_num = l2_safe_head.block_info.number;
-        let mut parent_block = *l2_safe_head;
+        let mut parent_block = l2_safe_head;
         if self.timestamp() < next_timestamp {
             if self.timestamp() > l2_safe_head.block_info.timestamp {
                 // Batch timestamp cannot be between safe head and next timestamp.
@@ -328,7 +328,7 @@ impl SpanBatch {
     pub fn get_singular_batches(
         &self,
         l1_origins: &[BlockInfo],
-        l2_safe_head: &L2BlockInfo,
+        l2_safe_head: L2BlockInfo,
     ) -> Result<Vec<SingleBatch>, SpanBatchError> {
         let mut single_batches = Vec::new();
         let mut origin_index = 0;
@@ -479,9 +479,7 @@ mod tests {
         let mut fetcher = TestL2ChainProvider::default();
         let batch = SpanBatch::default();
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Undecided
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -502,9 +500,7 @@ mod tests {
         let mut fetcher = TestL2ChainProvider::default();
         let batch = SpanBatch::default();
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Undecided
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -527,9 +523,7 @@ mod tests {
         let first = SpanBatchElement { epoch_num: 10, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Undecided
         );
         let logs = trace_store.get_by_level(Level::INFO);
@@ -556,9 +550,7 @@ mod tests {
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -589,9 +581,7 @@ mod tests {
         let first = SpanBatchElement { epoch_num: 10, timestamp: 21, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Future
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -619,9 +609,7 @@ mod tests {
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
         let batch = SpanBatch { batches: vec![first], ..Default::default() };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -648,9 +636,7 @@ mod tests {
         let second = SpanBatchElement { epoch_num: 11, timestamp: 21, ..Default::default() };
         let batch = SpanBatch { batches: vec![first, second], ..Default::default() };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -677,9 +663,7 @@ mod tests {
         let second = SpanBatchElement { epoch_num: 11, timestamp: 20, ..Default::default() };
         let batch = SpanBatch { batches: vec![first, second], ..Default::default() };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -707,9 +691,7 @@ mod tests {
         let batch = SpanBatch { batches: vec![first, second], ..Default::default() };
         // parent number = 41 - (10 - 10) / 10 - 1 = 40
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Undecided
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -749,9 +731,7 @@ mod tests {
         };
         // parent number = 41 - (10 - 10) / 10 - 1 = 40
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -793,9 +773,7 @@ mod tests {
         };
         // parent number = 41 - (10 - 10) / 10 - 1 = 40
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -844,9 +822,7 @@ mod tests {
         };
         // parent number = 41 - (10 - 10) / 10 - 1 = 40
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -903,9 +879,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -961,9 +935,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Undecided
         );
         let logs = trace_store.get_by_level(Level::INFO);
@@ -1015,9 +987,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1080,9 +1050,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::INFO);
@@ -1138,9 +1106,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Accept
         );
         let infos = trace_store.get_by_level(Level::INFO);
@@ -1210,9 +1176,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1276,9 +1240,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1344,9 +1306,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1398,9 +1358,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Undecided
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1464,9 +1422,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1540,9 +1496,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Drop
         );
         let logs = trace_store.get_by_level(Level::WARN);
@@ -1618,9 +1572,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            batch
-                .check_batch(&cfg, &l1_blocks, &l2_safe_head, &inclusion_block, &mut fetcher)
-                .await,
+            batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block, &mut fetcher).await,
             BatchValidity::Accept
         );
         assert!(trace_store.is_empty());

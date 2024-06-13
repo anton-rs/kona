@@ -62,7 +62,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     loop {
         info!(target: "loop", "Validated payload attributes number {}", derived_attributes_count);
         info!(target: "loop", "Pending l2 safe head num: {}", cursor.block_info.number);
-        match pipeline.step(&cursor).await {
+        match pipeline.step(cursor).await {
             Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
             Err(e) => warn!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
         }

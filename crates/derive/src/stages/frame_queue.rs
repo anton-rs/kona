@@ -99,7 +99,7 @@ impl<P> OriginProvider for FrameQueue<P>
 where
     P: FrameQueueProvider + PreviousStage + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }

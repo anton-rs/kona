@@ -14,7 +14,7 @@ pub trait ResettableStage {
 /// Provides a method for accessing the pipeline's current L1 origin.
 pub trait OriginProvider {
     /// Returns the optional L1 [BlockInfo] origin.
-    fn origin(&self) -> Option<&BlockInfo>;
+    fn origin(&self) -> Option<BlockInfo>;
 }
 
 /// Defines a trait for advancing the L1 origin of the pipeline.
