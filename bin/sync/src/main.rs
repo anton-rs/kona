@@ -72,8 +72,9 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
                 }
             }
             println!(
-                "Validated Payload Attributes {derived_attributes_count} [Block Num: {}]",
-                attributes.parent.block_info.number + 1
+                "Validated Payload Attributes {derived_attributes_count} [L2 Block Num: {}] [L2 Timestamp: {}]",
+                attributes.parent.block_info.number + 1,
+                attributes.attributes.timestamp,
             );
             info!(target: "loop", "attributes: {:#?}", attributes);
         } else {
