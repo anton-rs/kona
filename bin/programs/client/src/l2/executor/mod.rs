@@ -305,11 +305,11 @@ where
 
         // Construct the raw output.
         let parent_header = self.state.database.parent_block_header();
-        let mut raw_output = [0u8; 97];
-        raw_output[0] = OUTPUT_ROOT_VERSION;
-        raw_output[1..33].copy_from_slice(parent_header.state_root.as_ref());
-        raw_output[33..65].copy_from_slice(storage_root.as_ref());
-        raw_output[65..97].copy_from_slice(parent_header.seal().as_ref());
+        let mut raw_output = [0u8; 128];
+        raw_output[31] = OUTPUT_ROOT_VERSION;
+        raw_output[32..64].copy_from_slice(parent_header.state_root.as_ref());
+        raw_output[64..96].copy_from_slice(storage_root.as_ref());
+        raw_output[96..128].copy_from_slice(parent_header.seal().as_ref());
 
         // Hash the output and return
         Ok(keccak256(raw_output))
@@ -986,4 +986,10 @@ mod test {
             expected_header.hash_slow()
         );
     }
+
+    // TODO: Add a test that uses a block where the output root was confirmed on chain
+    // to test the `compute_output_root()` function.
+    // Example (verify at index 8833 on 0xdfe97868233d1aa22e815a266982f2cf17685a27):
+    // - Block: 121184863
+    // - Output Root: 0x3ea8b0e09b39e9daa1b1520fe59faef02de3656d230d876544952cbc44d6d71f
 }
