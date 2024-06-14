@@ -15,6 +15,7 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
+alloy-rlp.workspace = true
 
 # local
 kona-client = { path = "../programs/client", version = "0.1.0" }
