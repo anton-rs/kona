@@ -502,7 +502,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_next_batch_missing_origin() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
@@ -645,7 +644,7 @@ mod tests {
         assert!(logs[1].contains("Deriving next batch for epoch: 16988980031808077784"));
         let warns = trace_store.get_by_level(Level::WARN);
         assert_eq!(warns.len(), 1);
-        assert!(warns[0].contains("batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid"));
+        assert!(warns[0].contains("span batch has no new blocks after safe head"));
         assert_eq!(res, StageError::NotEnoughData);
     }
 
