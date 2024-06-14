@@ -95,7 +95,6 @@ where
                 tracing::info!("Pipeline advancing origin");
                 self.attributes.advance_origin().await.map_err(|e| anyhow::anyhow!(e))?;
             }
-            // TODO: match on the EngineELSyncing error here and log
             Err(err) => {
                 tracing::warn!("attributes queue step failed: {:?}", err);
                 return Err(anyhow::anyhow!(err));
