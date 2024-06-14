@@ -191,7 +191,7 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
-                // Fetch the raw header from the L1 chain provider.
+                // Fetch the raw header from the L2 chain provider.
                 let hash: B256 = hint_data
                     .as_ref()
                     .try_into()
@@ -209,7 +209,7 @@ where
                     PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
                     raw_header.into(),
                 );
-            }
+            },
             HintType::L2Transactions => todo!(),
             HintType::L2Code => {
                 // geth hashdb scheme code hash key prefix
