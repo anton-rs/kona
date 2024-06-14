@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info, warn, Level};
 
 mod cli;
+mod validation;
 
 // Environment Variables
 const L1_RPC_URL: &str = "L1_RPC_URL";
@@ -55,7 +56,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         .expect("Failed to fetch genesis L1 block info for pipeline tip");
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip).await;
-    let validator = OnlineValidator::new_http(l2_rpc_url);
+    let validator = validation::OnlineValidator::new_http(l2_rpc_url);
     let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.

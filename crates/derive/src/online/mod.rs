@@ -15,9 +15,6 @@ pub use pipeline::{
     OnlinePipeline,
 };
 
-mod validation;
-pub use validation::{OnlineValidator, Validator};
-
 mod beacon_client;
 pub use beacon_client::{BeaconClient, OnlineBeaconClient};
 

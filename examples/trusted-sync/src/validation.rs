@@ -1,22 +1,12 @@
 //! Contains logic to validate derivation pipeline outputs.
 
-use crate::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
-use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
-use async_trait::async_trait;
+use kona_derive::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
+use std::vec::Vec;
 use tracing::warn;
-
-/// Validator
-///
-/// The validator trait describes the interface for validating the derivation outputs.
-#[async_trait]
-pub trait Validator {
-    /// Validates the given [`L2AttributesWithParent`].
-    async fn validate(&self, attributes: &L2AttributesWithParent) -> bool;
-}
 
 /// OnlineValidator
 ///
@@ -84,11 +74,9 @@ impl OnlineValidator {
             gas_limit: Some(header.gas_limit as u64),
         })
     }
-}
 
-#[async_trait]
-impl Validator for OnlineValidator {
-    async fn validate(&self, attributes: &L2AttributesWithParent) -> bool {
+    /// Validates the given [`L2AttributesWithParent`].
+    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> bool {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
         let payload = self.get_payload(tag).await.unwrap();
