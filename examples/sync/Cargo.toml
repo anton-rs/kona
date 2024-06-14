@@ -1,6 +1,7 @@
 [package]
 name = "kona-sync"
 version = "0.1.0"
+publish = false
 description = "Derives and validates payloads to perform a derivation sync check"
 edition.workspace = true
 license.workspace = true

@@ -1,5 +1,6 @@
 [workspace]
-members = ["crates/*", "bin/host", "bin/programs/*", "bin/sync"]
+members = ["crates/*", "bin/host", "bin/programs/*", "examples/*"]
+default-members = ["bin/host", "bin/programs/*"]
 exclude = ["fpvm-tests/cannon-rs-tests"]
 resolver = "2"
 
