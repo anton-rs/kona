@@ -1,8 +1,7 @@
 //! This module contains the [SpanBatchSignature] type, which represents the ECDSA signature of a
 //! transaction within a span batch.
 
-use super::{convert_v_to_y_parity, SpanBatchError, SpanDecodingError};
-use alloy_consensus::TxType;
+use super::{SpanBatchError, SpanDecodingError};
 use alloy_primitives::{Signature, U256};
 
 /// The ECDSA signature of a transaction within a span batch.
@@ -23,7 +22,7 @@ impl TryFrom<SpanBatchSignature> for Signature {
     type Error = SpanBatchError;
 
     fn try_from(value: SpanBatchSignature) -> Result<Self, Self::Error> {
-        Self::from_rs_and_parity(value.r, value.s, convert_v_to_y_parity(value.v, TxType::Legacy)?)
+        Self::from_rs_and_parity(value.r, value.s, value.v)
             .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionSignature))
     }
 }

@@ -346,7 +346,7 @@ impl SpanBatch {
             let origin_epoch_hash = l1_origins[origin_index..l1_origins.len()]
                 .iter()
                 .enumerate()
-                .find(|(_, origin)| origin.timestamp == batch.timestamp)
+                .find(|(_, origin)| origin.number == batch.epoch_num)
                 .map(|(i, origin)| {
                     origin_index = i;
                     origin.hash

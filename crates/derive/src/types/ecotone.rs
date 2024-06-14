@@ -4,8 +4,8 @@
 
 use crate::types::{RawTransaction, UpgradeDepositSource};
 use alloc::{string::String, vec, vec::Vec};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
-use alloy_rlp::Encodable;
 use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 use spin::Lazy;
 
@@ -95,7 +95,7 @@ impl EcotoneTransactionBuilder {
             is_system_transaction: false,
             input: l1_block_deployment_bytecode,
         })
-        .encode(&mut buffer);
+        .encode_2718(&mut buffer);
         txs.push(RawTransaction::from(buffer));
 
         // Deploy the Gas Price Oracle
@@ -110,7 +110,7 @@ impl EcotoneTransactionBuilder {
             is_system_transaction: false,
             input: gas_price_oracle_deployment_bytecode,
         })
-        .encode(&mut buffer);
+        .encode_2718(&mut buffer);
         txs.push(RawTransaction::from(buffer));
 
         // Update the l1 block proxy
@@ -125,7 +125,7 @@ impl EcotoneTransactionBuilder {
             is_system_transaction: false,
             input: upgrade_to_calldata(NEW_L1_BLOCK_ADDRESS),
         })
-        .encode(&mut buffer);
+        .encode_2718(&mut buffer);
         txs.push(RawTransaction::from(buffer));
 
         // Update gas price oracle proxy
@@ -140,7 +140,7 @@ impl EcotoneTransactionBuilder {
             is_system_transaction: false,
             input: upgrade_to_calldata(GAS_PRICE_ORACLE_ADDRESS),
         })
-        .encode(&mut buffer);
+        .encode_2718(&mut buffer);
         txs.push(RawTransaction::from(buffer));
 
         // Enable ecotone
@@ -155,7 +155,7 @@ impl EcotoneTransactionBuilder {
             is_system_transaction: false,
             input: ENABLE_ECOTONE_INPUT.into(),
         })
-        .encode(&mut buffer);
+        .encode_2718(&mut buffer);
         txs.push(RawTransaction::from(buffer));
 
         // Deploy EIP4788
@@ -170,7 +170,7 @@ impl EcotoneTransactionBuilder {
             is_system_transaction: false,
             input: eip4788_creation_data,
         })
-        .encode(&mut buffer);
+        .encode_2718(&mut buffer);
         txs.push(RawTransaction::from(buffer));
 
         Ok(txs)

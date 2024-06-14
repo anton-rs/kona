@@ -121,7 +121,9 @@ where
         }
 
         let mut upgrade_transactions: Vec<RawTransaction> = vec![];
-        if self.rollup_cfg.is_ecotone_active(next_l2_time) {
+        if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
+            !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
+        {
             upgrade_transactions =
                 EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
         }
@@ -348,10 +350,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_payload_with_ecotone() {
-        let block_time = 10;
+        let block_time = 2;
         let timestamp = 100;
         let cfg =
-            Arc::new(RollupConfig { block_time, ecotone_time: Some(0), ..Default::default() });
+            Arc::new(RollupConfig { block_time, ecotone_time: Some(102), ..Default::default() });
         let l2_number = 1;
         let mut fetcher = MockSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());

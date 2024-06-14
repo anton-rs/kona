@@ -202,7 +202,7 @@ impl L2ExecutionPayloadEnvelope {
         let l1_fee_scalar = match l1_info {
             L1BlockInfoTx::Bedrock(L1BlockInfoBedrock { l1_fee_scalar, .. }) => l1_fee_scalar,
             L1BlockInfoTx::Ecotone(L1BlockInfoEcotone {
-                blob_base_fee,
+                base_fee_scalar,
                 blob_base_fee_scalar,
                 ..
             }) => {
@@ -212,7 +212,7 @@ impl L2ExecutionPayloadEnvelope {
                 let mut buf = B256::ZERO;
                 buf[0] = 0x01;
                 buf[24..28].copy_from_slice(blob_base_fee_scalar.to_be_bytes().as_ref());
-                buf[28..32].copy_from_slice(blob_base_fee.to_be_bytes().as_ref());
+                buf[28..32].copy_from_slice(base_fee_scalar.to_be_bytes().as_ref());
                 buf.into()
             }
         };
