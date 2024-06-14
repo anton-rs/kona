@@ -220,4 +220,13 @@ mod test {
         matches!(res, Batch::Span(_));
         assert!(reader.next_batch.is_some());
     }
+
+    #[test]
+    fn test_batch_reader() {
+        let raw = new_compressed_batch_data();
+        let decompressed_len = decompress_to_vec_zlib(&raw).unwrap().len();
+        let mut reader = BatchReader::from(raw);
+        reader.next_batch(&RollupConfig::default()).unwrap();
+        assert_eq!(reader.cursor, decompressed_len);
+    }
 }
