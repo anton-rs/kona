@@ -16,18 +16,20 @@ use tracing::warn;
 pub struct OnlineValidator {
     /// The L2 provider.
     provider: ReqwestProvider,
+    /// The canyon activation timestamp.
+    canyon_activation: u64,
 }
 
 impl OnlineValidator {
     /// Creates a new `OnlineValidator`.
-    pub fn new(provider: ReqwestProvider) -> Self {
-        Self { provider }
+    pub fn new(provider: ReqwestProvider, canyon: u64) -> Self {
+        Self { provider, canyon_activation: canyon }
     }
 
     /// Creates a new [OnlineValidator] from the provided [reqwest::Url].
-    pub fn new_http(url: reqwest::Url) -> Self {
+    pub fn new_http(url: reqwest::Url, canyon: u64) -> Self {
         let inner = ReqwestProvider::new_http(url);
-        Self::new(inner)
+        Self::new(inner, canyon)
     }
 
     /// Fetches a block [Header] and a list of raw RLP encoded transactions from the L2 provider.
@@ -67,7 +69,7 @@ impl OnlineValidator {
             prev_randao: header.mix_hash.unwrap_or_default(),
             fee_recipient: header.miner,
             // Withdrawals on optimism are always empty, *after* canyon (Shanghai) activation
-            withdrawals: (header.timestamp >= 1704992401).then_some(Vec::default()),
+            withdrawals: (header.timestamp >= self.canyon_activation).then_some(Vec::default()),
             parent_beacon_block_root: header.parent_beacon_block_root,
             transactions,
             no_tx_pool: true,
