@@ -277,11 +277,11 @@ where
                     .await
                     .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
 
-                let mut raw_output = [0u8; 97];
-                raw_output[0] = OUTPUT_ROOT_VERSION;
-                raw_output[1..33].copy_from_slice(header.state_root.as_ref());
-                raw_output[33..65].copy_from_slice(l2_to_l1_message_passer.storage_hash.as_ref());
-                raw_output[65..97].copy_from_slice(self.l2_head.as_ref());
+                let mut raw_output = [0u8; 128];
+                raw_output[31] = OUTPUT_ROOT_VERSION;
+                raw_output[32..64].copy_from_slice(header.state_root.as_ref());
+                raw_output[64..96].copy_from_slice(l2_to_l1_message_passer.storage_hash.as_ref());
+                raw_output[96..128].copy_from_slice(self.l2_head.as_ref());
                 let output_root = keccak256(raw_output);
 
                 let mut kv_write_lock = self.kv_store.write().await;
