@@ -6,7 +6,7 @@ use alloy_consensus::TxEnvelope;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{Block, BlockTransactions};
+use alloy_rpc_types::{Block, BlockTransactions, BlockId};
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use std::sync::Arc;
@@ -184,7 +184,32 @@ where
             }
             HintType::L2BlockHeader => todo!(),
             HintType::L2Transactions => todo!(),
-            HintType::L2Code => todo!(),
+            HintType::L2Code => {
+                if hint_data.len() != 8 + 20 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                let block_id: BlockId = u64::from_be_bytes(
+                    hint_data.as_ref()[..8]
+                        .try_into()
+                        .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
+                ).into();
+                let address = Address::from_slice(&hint_data.as_ref()[8..]);
+
+                let code = self
+                    .l2_provider
+                    .get_code_at(address, block_id)
+                    .await
+                    .map_err(|e| anyhow!("Failed to fetch code: {e}"))?;
+
+                let code_hash = keccak256(code.as_ref());
+
+                let mut kv_write_lock = self.kv_store.write().await;
+                kv_write_lock.set(
+                    PreimageKey::new(*code_hash, PreimageKeyType::Keccak256).into(),
+                    code.into(),
+                );
+            },
             HintType::L2Output => todo!(),
             HintType::L2StateNode => todo!(),
             HintType::L2AccountProof => {
