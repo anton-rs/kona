@@ -59,7 +59,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         cfg.canyon_time.unwrap_or_default(),
     );
     let mut pipeline =
-        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip).await;
+        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
     let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.

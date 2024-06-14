@@ -41,7 +41,7 @@ pub type OnlineAttributesQueue<DAP> = AttributesQueue<
 
 /// Creates a new online [DerivationPipeline] from the given inputs.
 /// Internally, this uses the [PipelineBuilder] to construct the pipeline.
-pub async fn new_online_pipeline(
+pub fn new_online_pipeline(
     rollup_config: Arc<RollupConfig>,
     chain_provider: AlloyChainProvider,
     dap_source: OnlineDataProvider,
