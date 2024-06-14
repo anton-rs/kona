@@ -182,7 +182,31 @@ where
                 kv_lock
                     .set(PreimageKey::new(*input_hash, PreimageKeyType::Precompile).into(), result);
             }
-            HintType::L2BlockHeader => todo!(),
+            HintType::L2BlockHeader => {
+                // Validate the hint data length.
+                if hint_data.len() != 32 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                // Fetch the raw header from the L2 chain provider.
+                let hash: B256 = hint_data
+                    .as_ref()
+                    .try_into()
+                    .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
+                let raw_header: Bytes = self
+                    .l2_provider
+                    .client()
+                    .request("debug_getRawHeader", [hash])
+                    .await
+                    .map_err(|e| anyhow!(e))?;
+
+                // Acquire a lock on the key-value store and set the preimage.
+                let mut kv_lock = self.kv_store.write().await;
+                kv_lock.set(
+                    PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
+                    raw_header.into(),
+                );
+            },
             HintType::L2Transactions => todo!(),
             HintType::L2Code => {
                 if hint_data.len() != 8 + 20 {
