@@ -49,7 +49,6 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 
     /// Loads the calldata into the source if it is not open.
     async fn load_calldata(&mut self) -> anyhow::Result<()> {
-        tracing::debug!("Loading calldata for block {}", self.block_ref.hash);
         if self.open {
             return Ok(());
         }
@@ -74,7 +73,6 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                 if tx.recover_public_key().ok()? != self.signer {
                     return None;
                 }
-                tracing::debug!("tx signed by correct signer");
                 Some(data.to_vec().into())
             })
             .collect::<VecDeque<_>>();

@@ -436,24 +436,24 @@ mod tests {
         },
         traits::test_utils::TestL2ChainProvider,
         types::{
-            BatchType, BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx,
-            L2ExecutionPayload, L2ExecutionPayloadEnvelope,
+            BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
+            L2ExecutionPayloadEnvelope,
         },
     };
     use alloc::vec;
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use miniz_oxide::deflate::compress_to_vec_zlib;
     use op_alloy_consensus::{OpTxType, TxDeposit};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     fn new_batch_reader() -> BatchReader {
-        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
-        let mut typed_data = vec![BatchType::Span as u8];
-        typed_data.extend_from_slice(raw_data.as_slice());
-        let compressed = compress_to_vec_zlib(typed_data.as_slice(), 5);
-        BatchReader::from(compressed)
+        let file_contents =
+            alloc::string::String::from_utf8_lossy(include_bytes!("../../testdata/batch.hex"));
+        let file_contents = &(&*file_contents)[..file_contents.len() - 1];
+        let data = alloy_primitives::hex::decode(file_contents).unwrap();
+        let bytes: alloy_primitives::Bytes = data.into();
+        BatchReader::from(bytes)
     }
 
     #[tokio::test]
@@ -469,7 +469,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_next_batch_not_enough_data() {
         let mut reader = new_batch_reader();
         let cfg = Arc::new(RollupConfig::default());
@@ -483,7 +482,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_next_batch_origin_behind() {
         let mut reader = new_batch_reader();
         let cfg = Arc::new(RollupConfig::default());
