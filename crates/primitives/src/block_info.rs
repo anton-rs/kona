@@ -52,7 +52,7 @@ pub enum L1BlockInfoTx {
 // | 32      | L1FeeOverhead            |
 // | 32      | L1FeeScalar              |
 // +---------+--------------------------+
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct L1BlockInfoBedrock {
     /// The current L1 origin block number
     pub number: u64,
@@ -89,7 +89,7 @@ pub struct L1BlockInfoBedrock {
 /// | 32      | BlockHash                |
 /// | 32      | BatcherHash              |
 /// +---------+--------------------------+
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct L1BlockInfoEcotone {
     /// The current L1 origin block number
     pub number: u64,

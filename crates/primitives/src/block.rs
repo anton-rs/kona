@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 /// Block Header Info
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Default)]
 pub struct BlockInfo {
     /// The block hash
     pub hash: B256,
@@ -49,7 +49,7 @@ impl core::fmt::Display for BlockInfo {
 
 /// L2 Block Header Info
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Default)]
 pub struct L2BlockInfo {
     /// The base [BlockInfo]
     pub block_info: BlockInfo,
