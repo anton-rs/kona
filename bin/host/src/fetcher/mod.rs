@@ -3,12 +3,9 @@
 
 use crate::{kv::KeyValueStore, util};
 use alloy_consensus::{Header, TxEnvelope};
-use alloy_consensus::{Header, TxEnvelope};
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
-use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rlp::Decodable;
 use alloy_rlp::Decodable;
 use alloy_rpc_types::{Block, BlockTransactions};
 use anyhow::{anyhow, Result};
@@ -34,8 +31,6 @@ where
     /// L2 chain provider.
     /// TODO: OP provider, N = Optimism
     l2_provider: ReqwestProvider,
-    /// L2 head
-    l2_head: B256,
     /// L2 head
     l2_head: B256,
     /// The last hint that was received. [None] if no hint has been received yet.
