@@ -3,7 +3,7 @@
 
 use crate::types::{Blob, BlobProviderError, BlockInfo, IndexedBlobHash, StageResult};
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
-use alloy_primitives::{Address, Bytes};
+use alloy_primitives::Bytes;
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -28,11 +28,7 @@ pub trait DataAvailabilityProvider {
 
     /// Returns the data availability for the block with the given hash, or an error if the block
     /// does not exist in the data source.
-    async fn open_data(
-        &self,
-        block_ref: &BlockInfo,
-        batcher_address: Address,
-    ) -> Result<Self::DataIter>;
+    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter>;
 }
 
 /// A simple asynchronous iterator trait.

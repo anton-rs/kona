@@ -44,8 +44,8 @@ pub struct MockAttributesProvider {
 }
 
 impl OriginProvider for MockAttributesProvider {
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.origin.as_ref()
+    fn origin(&self) -> Option<BlockInfo> {
+        self.origin
     }
 }
 

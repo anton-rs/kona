@@ -77,7 +77,7 @@ where
 
     /// Adds new L1 data to the channel bank. Should only be called after all data has been read.
     pub fn ingest_frame(&mut self, frame: Frame) -> StageResult<()> {
-        let origin = *self.origin().ok_or(StageError::MissingOrigin)?;
+        let origin = self.origin().ok_or(StageError::MissingOrigin)?;
 
         // Get the channel for the frame, or create a new one if it doesn't exist.
         let current_channel = self.channels.entry(frame.id).or_insert_with(|| {
@@ -200,7 +200,7 @@ impl<P> OriginProvider for ChannelBank<P>
 where
     P: ChannelBankProvider + PreviousStage + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }

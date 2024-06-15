@@ -1,9 +1,10 @@
 //! This module contains the various Block types.
 
+use crate::BlockID;
 use alloc::vec::Vec;
 use alloy_consensus::{Header, TxEnvelope};
 use alloy_eips::eip4895::Withdrawal;
-use alloy_primitives::{BlockHash, BlockNumber, B256};
+use alloy_primitives::B256;
 
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use op_alloy_consensus::OpTxEnvelope;
@@ -12,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 /// Block Header Info
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Default)]
 pub struct BlockInfo {
     /// The block hash
     pub hash: B256,
@@ -46,25 +47,9 @@ impl core::fmt::Display for BlockInfo {
     }
 }
 
-/// Block ID identifies a block by its hash and number
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
-pub struct BlockID {
-    /// The block hash
-    pub hash: BlockHash,
-    /// The block number
-    pub number: BlockNumber,
-}
-
-impl core::fmt::Display for BlockID {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{{ hash: {}, number: {} }}", self.hash, self.number)
-    }
-}
-
 /// L2 Block Header Info
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Default)]
 pub struct L2BlockInfo {
     /// The base [BlockInfo]
     pub block_info: BlockInfo,

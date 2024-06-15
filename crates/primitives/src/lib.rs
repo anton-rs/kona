@@ -4,6 +4,9 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![no_std]
 
+// Re-export superchain-primitives
+pub use superchain_primitives::*;
+
 extern crate alloc;
 
 /// Re-export the [Withdrawal] type from the [alloy_eips] crate.
@@ -12,7 +15,7 @@ extern crate alloc;
 pub use alloy_eips::eip4895::Withdrawal;
 
 pub mod block;
-pub use block::{Block, BlockID, BlockInfo, BlockKind, L2BlockInfo, OpBlock};
+pub use block::{Block, BlockInfo, BlockKind, L2BlockInfo, OpBlock};
 
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
@@ -26,22 +29,10 @@ pub use deposits::{
     L1InfoDepositSource, UpgradeDepositSource, UserDepositSource, DEPOSIT_EVENT_ABI_HASH,
 };
 
-pub mod genesis;
-pub use genesis::Genesis;
-
-pub mod params;
-pub use params::*;
-
 pub mod payload;
 pub use payload::{
     L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
 };
 
-pub mod rollup_config;
-pub use rollup_config::RollupConfig;
-
 pub mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
-
-pub mod system_config;
-pub use system_config::{SystemAccounts, SystemConfig, SystemConfigUpdateType};

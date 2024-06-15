@@ -306,8 +306,8 @@ where
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
         // Batches prior to the l1 origin of the l2 safe head are not accepted.
-        if self.origin != self.prev.origin().copied() {
-            self.origin = self.prev.origin().cloned();
+        if self.origin != self.prev.origin() {
+            self.origin = self.prev.origin();
             if !origin_behind {
                 let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
                 self.l1_blocks.push(*origin);
@@ -388,7 +388,7 @@ where
     P: BatchQueueProvider + PreviousStage + Debug,
     BF: L2ChainProvider + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }
@@ -436,24 +436,24 @@ mod tests {
         },
         traits::test_utils::TestL2ChainProvider,
         types::{
-            BatchType, BlockID, Genesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
+            BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
             L2ExecutionPayloadEnvelope,
         },
     };
     use alloc::vec;
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use miniz_oxide::deflate::compress_to_vec_zlib;
     use op_alloy_consensus::{OpTxType, TxDeposit};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     fn new_batch_reader() -> BatchReader {
-        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
-        let mut typed_data = vec![BatchType::Span as u8];
-        typed_data.extend_from_slice(raw_data.as_slice());
-        let compressed = compress_to_vec_zlib(typed_data.as_slice(), 5);
-        BatchReader::from(compressed)
+        let file_contents =
+            alloc::string::String::from_utf8_lossy(include_bytes!("../../testdata/batch.hex"));
+        let file_contents = &(&*file_contents)[..file_contents.len() - 1];
+        let data = alloy_primitives::hex::decode(file_contents).unwrap();
+        let bytes: alloy_primitives::Bytes = data.into();
+        BatchReader::from(bytes)
     }
 
     #[tokio::test]
@@ -515,11 +515,12 @@ mod tests {
             block_time: 100,
             max_sequencer_drift: 10000000,
             seq_window_size: 10000000,
-            genesis: Genesis {
+            genesis: ChainGenesis {
                 l2: BlockID { number: 8, hash: payload_block_hash },
                 l1: BlockID { number: 16988980031808077784, ..Default::default() },
                 ..Default::default()
             },
+            batch_inbox_address: address!("6887246668a3b87f54deb3b94ba47a6f63f32985"),
             ..Default::default()
         });
         let mut batch_vec: Vec<StageResult<Batch>> = vec![];
@@ -643,7 +644,7 @@ mod tests {
         assert!(logs[1].contains("Deriving next batch for epoch: 16988980031808077784"));
         let warns = trace_store.get_by_level(Level::WARN);
         assert_eq!(warns.len(), 1);
-        assert!(warns[0].contains("batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid"));
+        assert!(warns[0].contains("span batch has no new blocks after safe head"));
         assert_eq!(res, StageError::NotEnoughData);
     }
 

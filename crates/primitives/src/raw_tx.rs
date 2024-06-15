@@ -5,7 +5,7 @@ use alloy_rlp::{Decodable, Encodable};
 
 /// A raw transaction
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct RawTransaction(pub Bytes);
 
 impl RawTransaction {

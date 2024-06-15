@@ -20,7 +20,7 @@ use tracing::warn;
 #[derive(Debug, Clone)]
 pub struct L1Traversal<Provider: ChainProvider> {
     /// The current block in the traversal stage.
-    pub(crate) block: Option<BlockInfo>,
+    pub block: Option<BlockInfo>,
     /// The data source for the traversal stage.
     data_source: Provider,
     /// Signals whether or not the traversal stage is complete.
@@ -111,8 +111,8 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
 }
 
 impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.block.as_ref()
+    fn origin(&self) -> Option<BlockInfo> {
+        self.block
     }
 }
 
@@ -127,7 +127,7 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.block = Some(base);
         self.done = false;
-        self.system_config = *cfg;
+        self.system_config = cfg.clone();
         Err(StageError::Eof)
     }
 }

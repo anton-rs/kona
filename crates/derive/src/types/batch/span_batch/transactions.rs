@@ -1,17 +1,16 @@
 //! This module contains the [SpanBatchTransactions] type and logic for encoding and decoding
 //! transactions in a span batch.
 
-use alloc::vec::Vec;
-use alloy_primitives::{Address, U256};
-use alloy_rlp::{Buf, Decodable, Encodable};
-
 use super::{
     convert_v_to_y_parity, read_tx_data, utils::is_protected_v, SpanBatchBits, SpanBatchError,
     SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError,
 };
 use crate::types::RawTransaction;
+use alloc::vec::Vec;
 use alloy_consensus::{Transaction, TxEnvelope, TxType};
-use alloy_primitives::TxKind;
+use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{Address, TxKind, U256};
+use alloy_rlp::{Buf, Decodable, Encodable};
 
 /// This struct contains the decoded information for transactions in a span batch.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -290,7 +289,7 @@ impl SpanBatchTransactions {
                 .ok_or(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData))?;
             let tx_envelope = tx.to_enveloped_tx(*nonce, *gas, to, chain_id, sig.try_into()?)?;
             let mut buf = Vec::new();
-            tx_envelope.encode(&mut buf);
+            tx_envelope.encode_2718(&mut buf);
             txs.push(buf);
         }
         Ok(txs)

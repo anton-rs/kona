@@ -1,22 +1,14 @@
 //! Contains logic to validate derivation pipeline outputs.
 
-use crate::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
-use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{Block, BlockNumberOrTag, Header};
+use alloy_rpc_types::{BlockNumberOrTag, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
-use async_trait::async_trait;
+use kona_derive::types::{
+    L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig,
+};
+use std::vec::Vec;
 use tracing::warn;
-
-/// Validator
-///
-/// The validator trait describes the interface for validating the derivation outputs.
-#[async_trait]
-pub trait Validator {
-    /// Validates the given [`L2AttributesWithParent`].
-    async fn validate(&self, attributes: &L2AttributesWithParent) -> bool;
-}
 
 /// OnlineValidator
 ///
@@ -26,18 +18,20 @@ pub trait Validator {
 pub struct OnlineValidator {
     /// The L2 provider.
     provider: ReqwestProvider,
+    /// The canyon activation timestamp.
+    canyon_activation: u64,
 }
 
 impl OnlineValidator {
     /// Creates a new `OnlineValidator`.
-    pub fn new(provider: ReqwestProvider) -> Self {
-        Self { provider }
+    pub fn new(provider: ReqwestProvider, cfg: &RollupConfig) -> Self {
+        Self { provider, canyon_activation: cfg.canyon_time.unwrap_or_default() }
     }
 
     /// Creates a new [OnlineValidator] from the provided [reqwest::Url].
-    pub fn new_http(url: reqwest::Url) -> Self {
+    pub fn new_http(url: reqwest::Url, cfg: &RollupConfig) -> Self {
         let inner = ReqwestProvider::new_http(url);
-        Self::new(inner)
+        Self::new(inner, cfg)
     }
 
     /// Fetches a block [Header] and a list of raw RLP encoded transactions from the L2 provider.
@@ -49,14 +43,17 @@ impl OnlineValidator {
         tag: BlockNumberOrTag,
     ) -> Result<(Header, Vec<RawTransaction>)> {
         // Don't hydrate the block so we only get a list of transaction hashes.
-        let block: TransportResult<Block> =
-            self.provider.raw_request("eth_getBlockByNumber".into(), (tag, false)).await;
-        let block = block.map_err(|e| anyhow::anyhow!(e))?;
+        let block = self
+            .provider
+            .get_block(tag.into(), false)
+            .await
+            .map_err(|e| anyhow::anyhow!(e))?
+            .ok_or(anyhow::anyhow!("Block not found"))?;
         // For each transaction hash, fetch the raw transaction RLP.
         let mut txs = vec![];
         for tx in block.transactions.hashes() {
             let tx: TransportResult<RawTransaction> =
-                self.provider.raw_request("debug_getRawTransaction".into(), tx).await;
+                self.provider.raw_request("debug_getRawTransaction".into(), [tx]).await;
             if let Ok(tx) = tx {
                 txs.push(tx);
             } else {
@@ -73,22 +70,21 @@ impl OnlineValidator {
             timestamp: header.timestamp,
             prev_randao: header.mix_hash.unwrap_or_default(),
             fee_recipient: header.miner,
-            // Withdrawals on optimism are always empty
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(header.parent_hash),
+            // Withdrawals on optimism are always empty, *after* canyon (Shanghai) activation
+            withdrawals: (header.timestamp >= self.canyon_activation).then_some(Vec::default()),
+            parent_beacon_block_root: header.parent_beacon_block_root,
             transactions,
             no_tx_pool: true,
             gas_limit: Some(header.gas_limit as u64),
         })
     }
-}
 
-#[async_trait]
-impl Validator for OnlineValidator {
-    async fn validate(&self, attributes: &L2AttributesWithParent) -> bool {
+    /// Validates the given [`L2AttributesWithParent`].
+    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> bool {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
         let payload = self.get_payload(tag).await.unwrap();
+        tracing::debug!("Check payload against: {:?}", payload);
         attributes.attributes == payload
     }
 }

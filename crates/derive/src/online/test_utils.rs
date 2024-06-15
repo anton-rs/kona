@@ -2,9 +2,10 @@
 
 use super::BeaconClient;
 use crate::types::{
-    APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse, IndexedBlobHash,
+    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
+    IndexedBlobHash,
 };
-use alloc::{boxed::Box, string::String};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
 use alloy_rpc_client::RpcClient;
@@ -45,10 +46,6 @@ pub struct MockBeaconClient {
 
 #[async_trait]
 impl BeaconClient for MockBeaconClient {
-    async fn node_version(&self) -> anyhow::Result<String> {
-        self.node_version.clone().ok_or_else(|| anyhow::anyhow!("node_version not set"))
-    }
-
     async fn config_spec(&self) -> anyhow::Result<APIConfigResponse> {
         self.config_spec.clone().ok_or_else(|| anyhow::anyhow!("config_spec not set"))
     }
@@ -59,10 +56,12 @@ impl BeaconClient for MockBeaconClient {
 
     async fn beacon_blob_side_cars(
         &self,
-        _fetch_all_sidecars: bool,
         _slot: u64,
         _hashes: &[IndexedBlobHash],
-    ) -> anyhow::Result<APIGetBlobSidecarsResponse> {
-        self.blob_sidecars.clone().ok_or_else(|| anyhow::anyhow!("blob_sidecars not set"))
+    ) -> anyhow::Result<Vec<APIBlobSidecar>> {
+        self.blob_sidecars
+            .clone()
+            .ok_or_else(|| anyhow::anyhow!("blob_sidecars not set"))
+            .map(|r| r.data)
     }
 }

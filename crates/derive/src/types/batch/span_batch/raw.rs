@@ -1,11 +1,10 @@
 //! Raw Span Batch
 
-use alloc::vec::Vec;
-
 use crate::types::{
     BatchType, RawTransaction, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
     SpanDecodingError,
 };
+use alloc::{vec, vec::Vec};
 
 use super::{SpanBatch, SpanBatchError};
 
@@ -84,10 +83,10 @@ impl RawSpanBatch {
             return Err(SpanBatchError::EmptySpanBatch);
         }
 
-        let mut block_origin_nums = Vec::with_capacity(self.payload.block_count as usize);
+        let mut block_origin_nums = vec![0u64; self.payload.block_count as usize];
         let mut l1_origin_number = self.prefix.l1_origin_num;
         for i in (0..self.payload.block_count).rev() {
-            block_origin_nums.push(l1_origin_number);
+            block_origin_nums[i as usize] = l1_origin_number;
             if self
                 .payload
                 .origin_bits

@@ -38,6 +38,8 @@ impl AsyncIterator for TestIter {
 /// Mock data availability provider
 #[derive(Debug, Default)]
 pub struct TestDAP {
+    /// The batch inbox address.
+    pub batch_inbox_address: Address,
     /// Specifies the stage results the test iter returns as data.
     pub(crate) results: Vec<StageResult<Bytes>>,
 }
@@ -47,11 +49,7 @@ impl DataAvailabilityProvider for TestDAP {
     type Item = Bytes;
     type DataIter = TestIter;
 
-    async fn open_data(
-        &self,
-        block_ref: &BlockInfo,
-        batcher_address: Address,
-    ) -> Result<Self::DataIter> {
+    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
         // Construct a new vec of results to return.
         let results = self
             .results
@@ -61,7 +59,7 @@ impl DataAvailabilityProvider for TestDAP {
                 Err(_) => Err(StageError::Eof),
             })
             .collect::<Vec<StageResult<Bytes>>>();
-        Ok(TestIter { open_data_calls: vec![(*block_ref, batcher_address)], results })
+        Ok(TestIter { open_data_calls: vec![(*block_ref, self.batch_inbox_address)], results })
     }
 }
 

@@ -1,6 +1,6 @@
 //! EIP4844 Blob Type
 
-use alloc::vec::Vec;
+use alloc::vec;
 use alloy_primitives::{Bytes, B256};
 use anyhow::Result;
 
@@ -73,43 +73,42 @@ impl BlobData {
         }
 
         // Round 0 copies the remaining 27 bytes of the first field element
-        let mut output = Vec::with_capacity(BLOB_MAX_DATA_SIZE);
-        output.extend_from_slice(&data[5..32]);
+        let mut output = vec![0u8; BLOB_MAX_DATA_SIZE];
+        output[0..27].copy_from_slice(&data[5..32]);
 
         // Process the remaining 3 field elements to complete round 0
         let mut output_pos = 28;
         let mut input_pos = 32;
-        let mut encoding = [0u8; 4];
-        encoding[0] = data[0];
+        let mut encoded_byte = [0u8; 4];
+        encoded_byte[0] = data[0];
 
-        for b in encoding.iter_mut().skip(1) {
-            let (enc, opos, ipos, err) =
-                self.decode_field_element(output_pos, input_pos, &mut output);
-            if let Some(e) = err {
-                return Err(e);
-            }
+        for b in encoded_byte.iter_mut().skip(1) {
+            let (enc, opos, ipos) =
+                self.decode_field_element(output_pos, input_pos, &mut output)?;
             *b = enc;
             output_pos = opos;
             input_pos = ipos;
         }
 
         // Reassemble the 4 by 6 bit encoded chunks into 3 bytes of output
-        output_pos = self.reassemble_bytes(output_pos, &encoding, &mut output);
+        output_pos = self.reassemble_bytes(output_pos, &encoded_byte, &mut output);
 
         // In each remaining round, decode 4 field elements (128 bytes) of the
         // input into 127 bytes of output
         for _ in 1..BLOB_ENCODING_ROUNDS {
-            for d in &mut encoding {
-                let (enc, opos, ipos, err) =
-                    self.decode_field_element(output_pos, input_pos, &mut output);
-                if let Some(e) = err {
-                    return Err(e);
-                }
+            // Break early if the output position is greater than the length
+            if output_pos >= length {
+                break;
+            }
+
+            for d in &mut encoded_byte {
+                let (enc, opos, ipos) =
+                    self.decode_field_element(output_pos, input_pos, &mut output)?;
                 *d = enc;
                 output_pos = opos;
                 input_pos = ipos;
             }
-            output_pos = self.reassemble_bytes(output_pos, &encoding, &mut output);
+            output_pos = self.reassemble_bytes(output_pos, &encoded_byte, &mut output);
         }
 
         // Validate the remaining bytes
@@ -138,32 +137,29 @@ impl BlobData {
         &self,
         output_pos: usize,
         input_pos: usize,
-        output: &mut Vec<u8>,
-    ) -> (u8, usize, usize, Option<BlobDecodingError>) {
+        output: &mut [u8],
+    ) -> Result<(u8, usize, usize), BlobDecodingError> {
+        let Some(data) = self.data.as_ref() else {
+            return Err(BlobDecodingError::MissingData);
+        };
+
         // two highest order bits of the first byte of each field element should always be 0
-        if self.data.as_ref().map_or(false, |data| data[input_pos] & 0b1100_0000 != 0) {
-            return (0, 0, 0, Some(BlobDecodingError::InvalidFieldElement));
+        if data[input_pos] & 0b1100_0000 != 0 {
+            return Err(BlobDecodingError::InvalidFieldElement);
         }
-        output.extend_from_slice(
-            self.data.as_ref().map_or(&[], |data| &data[input_pos + 1..input_pos + 32]),
-        );
-        (
-            self.data.as_ref().map_or(0, |data| data[input_pos]),
-            output_pos + 32,
-            input_pos + 32,
-            None,
-        )
+        output[output_pos..output_pos + 31].copy_from_slice(&data[input_pos + 1..input_pos + 32]);
+        Ok((data[input_pos], output_pos + 32, input_pos + 32))
     }
 
     /// Reassemble 4 by 6 bit encoded chunks into 3 bytes of output and place them in their
     /// appropriate output positions.
     pub fn reassemble_bytes(
         &self,
-        output_pos: usize,
+        mut output_pos: usize,
         encoded_byte: &[u8],
         output: &mut [u8],
     ) -> usize {
-        let output_pos = output_pos - 1;
+        output_pos -= 1;
         let x = (encoded_byte[0] & 0b0011_1111) | ((encoded_byte[1] & 0b0011_0000) << 2);
         let y = (encoded_byte[1] & 0b0000_1111) | ((encoded_byte[3] & 0b0000_1111) << 4);
         let z = (encoded_byte[2] & 0b0011_1111) | ((encoded_byte[3] & 0b0011_0000) << 2);

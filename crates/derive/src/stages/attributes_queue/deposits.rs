@@ -1,9 +1,9 @@
 //! Contains a helper method to derive deposit transactions from L1 Receipts.
 
-use crate::types::{DepositError, RawTransaction};
+use crate::types::RawTransaction;
 use alloc::vec::Vec;
 use alloy_consensus::Receipt;
-use alloy_primitives::{Address, Log, B256};
+use alloy_primitives::{Address, B256};
 use kona_primitives::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
 
 /// Derive deposits for transaction receipts.
@@ -16,27 +16,35 @@ pub(crate) async fn derive_deposits(
     receipts: Vec<Receipt>,
     deposit_contract: Address,
 ) -> anyhow::Result<Vec<RawTransaction>> {
-    let receipts = receipts.into_iter().filter(|r| r.status).collect::<Vec<_>>();
-    // Flatten the list of receipts into a list of logs.
-    let addr = |l: &Log| l.address == deposit_contract;
-    let topics = |l: &Log| l.data.topics().first().map_or(false, |i| *i == DEPOSIT_EVENT_ABI_HASH);
-    let filter_logs =
-        |r: Receipt| r.logs.into_iter().filter(|l| addr(l) && topics(l)).collect::<Vec<Log>>();
-    let logs = receipts.into_iter().flat_map(filter_logs).collect::<Vec<Log>>();
-    // TODO(refcell): are logs **and** receipts guaranteed to be _in order_?
-    //                If not, we need to somehow get the index of each log in the block.
-    logs.iter()
-        .enumerate()
-        .map(|(i, l)| decode_deposit(block_hash, i, l))
-        .collect::<Result<Vec<_>, DepositError>>()
-        .map_err(|e| anyhow::anyhow!(e))
+    let mut global_index = 0;
+    let mut res = Vec::new();
+    for r in receipts.iter() {
+        if !r.status {
+            continue;
+        }
+        for l in r.logs.iter() {
+            let curr_index = global_index;
+            global_index += 1;
+            if !l.data.topics().first().map_or(false, |i| *i == DEPOSIT_EVENT_ABI_HASH) {
+                continue;
+            }
+            if l.address != deposit_contract {
+                continue;
+            }
+            let decoded =
+                decode_deposit(block_hash, curr_index, l).map_err(|e| anyhow::anyhow!(e))?;
+            res.push(decoded);
+        }
+    }
+    Ok(res)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::DepositError;
     use alloc::vec;
-    use alloy_primitives::{address, Bytes, LogData, U256, U64};
+    use alloy_primitives::{address, Bytes, Log, LogData, U256, U64};
 
     fn generate_valid_log() -> Log {
         let deposit_contract = address!("1111111111111111111111111111111111111111");

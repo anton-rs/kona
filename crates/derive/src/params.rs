@@ -33,7 +33,7 @@ pub type ChannelID = [u8; CHANNEL_ID_LENGTH];
 /// Frames cannot be larger than 1MB.
 /// Data transactions that carry frames are generally not larger than 128 KB due to L1 network
 /// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
-pub const MAX_FRAME_LEN: usize = 1000;
+pub const MAX_FRAME_LEN: usize = 1_000_000;
 
 /// `keccak256("ConfigUpdate(uint256,uint8,bytes)")`
 pub const CONFIG_UPDATE_TOPIC: B256 =

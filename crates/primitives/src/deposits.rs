@@ -1,10 +1,11 @@
 //! Contains deposit transaction types and helper methods.
 
 use alloc::{string::String, vec::Vec};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{b256, keccak256, Address, Bytes, Log, TxKind, B256, U256, U64};
 use alloy_rlp::Encodable;
 use core::fmt::Display;
-use op_alloy_consensus::TxDeposit;
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 use crate::RawTransaction;
 
@@ -386,8 +387,9 @@ pub fn decode_deposit(
     unmarshal_deposit_version0(&mut deposit_tx, to, opaque_data)?;
 
     // Re-encode the deposit transaction and return as a RawTransaction
-    let mut buffer = Vec::<u8>::new();
-    deposit_tx.encode(&mut buffer);
+    let deposit_envelope = OpTxEnvelope::Deposit(deposit_tx);
+    let mut buffer = Vec::with_capacity(deposit_envelope.length());
+    deposit_envelope.encode_2718(&mut buffer);
     Ok(RawTransaction::from(buffer))
 }
 
@@ -595,7 +597,7 @@ mod tests {
             ),
         };
         let tx = decode_deposit(B256::default(), 0, &log).unwrap();
-        let raw_hex = hex!("f887a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a14594000000000000000000000000000000000000000094000000000000000000000000000000000000000080808080b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+        let raw_hex = hex!("7ef887a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a14594000000000000000000000000000000000000000094000000000000000000000000000000000000000080808080b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
         let expected = RawTransaction::from(Bytes::from(raw_hex));
         assert_eq!(tx, expected);
     }
@@ -637,7 +639,7 @@ mod tests {
             ),
         };
         let tx = decode_deposit(B256::default(), 0, &log).unwrap();
-        let raw_hex = hex!("f875a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a145941111111111111111111111111111111111111111800a648203e880b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+        let raw_hex = hex!("7ef875a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a145941111111111111111111111111111111111111111800a648203e880b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
         let expected = RawTransaction::from(Bytes::from(raw_hex));
         assert_eq!(tx, expected);
     }

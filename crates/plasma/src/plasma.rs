@@ -4,7 +4,7 @@
 
 use crate::{source::PlasmaSource, traits::PlasmaInputFetcher};
 use alloc::{boxed::Box, fmt::Debug};
-use alloy_primitives::{Address, Bytes};
+use alloy_primitives::Bytes;
 use anyhow::Result;
 use async_trait::async_trait;
 use kona_derive::traits::{ChainProvider, DataAvailabilityProvider};
@@ -48,7 +48,7 @@ where
     type Item = Bytes;
     type DataIter = PlasmaSource<C, F, I>;
 
-    async fn open_data(&self, block_ref: &BlockInfo, _: Address) -> Result<Self::DataIter> {
+    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
         Ok(PlasmaSource::new(
             self.chain_provider.clone(),
             self.plasma_input_fetcher.clone(),

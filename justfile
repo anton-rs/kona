@@ -76,7 +76,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -85,4 +85,4 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync

@@ -8,10 +8,11 @@ use crate::{
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
+use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use tracing::error;
+use tracing::warn;
 
 /// The [ChannelReader] provider trait.
 #[async_trait]
@@ -79,7 +80,7 @@ where
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
-            error!("Failed to set batch reader: {:?}", e);
+            warn!("Failed to set batch reader: {:?}", e);
             self.next_channel();
             return Err(e);
         }
@@ -103,7 +104,7 @@ impl<P> OriginProvider for ChannelReader<P>
 where
     P: ChannelReaderProvider + PreviousStage + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }
@@ -153,8 +154,9 @@ impl BatchReader {
         }
 
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
-        let mut decompressed_reader = self.decompressed.as_slice()[self.cursor..].as_ref();
-        let batch = Batch::decode(&mut decompressed_reader, cfg).ok()?;
+        let decompressed_reader = &mut self.decompressed.as_slice()[self.cursor..].as_ref();
+        let bytes = Bytes::decode(decompressed_reader).ok()?;
+        let batch = Batch::decode(&mut bytes.as_ref(), cfg).unwrap();
 
         // Advance the cursor on the reader.
         self.cursor = self.decompressed.len() - decompressed_reader.len();
@@ -172,15 +174,15 @@ impl<T: Into<Vec<u8>>> From<T> for BatchReader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{stages::test_utils::MockChannelReaderProvider, types::BatchType};
+    use crate::stages::test_utils::MockChannelReaderProvider;
     use alloc::vec;
-    use miniz_oxide::deflate::compress_to_vec_zlib;
 
     fn new_compressed_batch_data() -> Bytes {
-        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
-        let mut typed_data = vec![BatchType::Span as u8];
-        typed_data.extend_from_slice(raw_data.as_slice());
-        compress_to_vec_zlib(typed_data.as_slice(), 5).into()
+        let file_contents =
+            alloc::string::String::from_utf8_lossy(include_bytes!("../../testdata/batch.hex"));
+        let file_contents = &(&*file_contents)[..file_contents.len() - 1];
+        let data = alloy_primitives::hex::decode(file_contents).unwrap();
+        data.into()
     }
 
     #[tokio::test]
@@ -200,8 +202,10 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_next_batch_not_enough_data() {
-        let mock = MockChannelReaderProvider::new(vec![Ok(Some(Bytes::default()))]);
+    async fn test_next_batch_batch_reader_not_enough_data() {
+        let mut first = new_compressed_batch_data();
+        let second = first.split_to(first.len() / 2);
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(first)), Ok(Some(second))]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         assert_eq!(reader.next_batch().await, Err(StageError::NotEnoughData));
         assert!(reader.next_batch.is_none());
@@ -219,14 +223,10 @@ mod test {
 
     #[test]
     fn test_batch_reader() {
-        let raw_data = include_bytes!("../../testdata/raw_batch.hex");
-        let mut typed_data = vec![BatchType::Span as u8];
-        typed_data.extend_from_slice(raw_data.as_slice());
-
-        let compressed_raw_data = compress_to_vec_zlib(typed_data.as_slice(), 5);
-        let mut reader = BatchReader::from(compressed_raw_data);
+        let raw = new_compressed_batch_data();
+        let decompressed_len = decompress_to_vec_zlib(&raw).unwrap().len();
+        let mut reader = BatchReader::from(raw);
         reader.next_batch(&RollupConfig::default()).unwrap();
-
-        assert_eq!(reader.cursor, typed_data.len());
+        assert_eq!(reader.cursor, decompressed_len);
     }
 }

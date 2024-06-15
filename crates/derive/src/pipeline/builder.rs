@@ -6,9 +6,9 @@ use super::{
 use crate::stages::{
     AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval, L1Traversal,
 };
-use alloc::{collections::VecDeque, sync::Arc};
+use alloc::sync::Arc;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig};
+use kona_primitives::{BlockInfo, RollupConfig};
 
 type L1TraversalStage<P> = L1Traversal<P>;
 type L1RetrievalStage<DAP, P> = L1Retrieval<DAP, L1TraversalStage<P>>;
@@ -32,9 +32,8 @@ where
     dap_source: Option<D>,
     chain_provider: Option<P>,
     builder: Option<B>,
+    origin: Option<BlockInfo>,
     rollup_config: Option<Arc<RollupConfig>>,
-    start_cursor: Option<L2BlockInfo>,
-    tip: Option<BlockInfo>,
 }
 
 impl<B, P, T, D> Default for PipelineBuilder<B, P, T, D>
@@ -50,9 +49,8 @@ where
             dap_source: None,
             chain_provider: None,
             builder: None,
-            tip: None,
+            origin: None,
             rollup_config: None,
-            start_cursor: None,
         }
     }
 }
@@ -75,15 +73,9 @@ where
         self
     }
 
-    /// Sets the tip for the pipeline.
-    pub fn tip(mut self, tip: BlockInfo) -> Self {
-        self.tip = Some(tip);
-        self
-    }
-
-    /// Sets the start cursor for the pipeline.
-    pub fn start_cursor(mut self, cursor: L2BlockInfo) -> Self {
-        self.start_cursor = Some(cursor);
+    /// Sets the origin L1 block for the pipeline.
+    pub fn origin(mut self, origin: BlockInfo) -> Self {
+        self.origin = Some(origin);
         self
     }
 
@@ -134,23 +126,18 @@ where
         let attributes_builder = builder.builder.expect("builder must be set");
 
         // Compose the stage stack.
-        let l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
+        let mut l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
+        l1_traversal.block = Some(builder.origin.expect("origin must be set"));
         let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
         let frame_queue = FrameQueue::new(l1_retrieval);
         let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);
         let channel_reader = ChannelReader::new(channel_bank, Arc::clone(&rollup_config));
         let batch_queue =
             BatchQueue::new(rollup_config.clone(), channel_reader, l2_chain_provider.clone());
-        let attributes = AttributesQueue::new(*rollup_config, batch_queue, attributes_builder);
+        let attributes =
+            AttributesQueue::new(rollup_config.clone(), batch_queue, attributes_builder);
 
         // Create the pipeline.
-        DerivationPipeline {
-            attributes,
-            tip: builder.tip.unwrap_or_default(),
-            prepared: VecDeque::new(),
-            cursor: builder.start_cursor.unwrap_or_default(),
-            rollup_config,
-            l2_chain_provider,
-        }
+        DerivationPipeline::new(attributes, rollup_config, l2_chain_provider)
     }
 }

@@ -26,8 +26,8 @@ impl MockChannelReaderProvider {
 }
 
 impl OriginProvider for MockChannelReaderProvider {
-    fn origin(&self) -> Option<&BlockInfo> {
-        self.block_info.as_ref()
+    fn origin(&self) -> Option<BlockInfo> {
+        self.block_info
     }
 }
 

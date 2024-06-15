@@ -10,7 +10,7 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 /// Provides data frames for the [FrameQueue] stage.
 #[async_trait]
@@ -79,7 +79,7 @@ where
                     }
                 }
                 Err(e) => {
-                    error!("Failed to retrieve data: {:?}", e);
+                    warn!("Failed to retrieve data: {:?}", e);
                     return Err(e); // Bubble up potential EOF error without wrapping.
                 }
             }
@@ -99,7 +99,7 @@ impl<P> OriginProvider for FrameQueue<P>
 where
     P: FrameQueueProvider + PreviousStage + Debug,
 {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }

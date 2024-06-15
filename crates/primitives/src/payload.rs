@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
-use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
+use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
@@ -174,7 +174,11 @@ impl L2ExecutionPayloadEnvelope {
             if execution_payload.block_hash != rollup_config.genesis.l2.hash {
                 anyhow::bail!("Invalid genesis hash");
             }
-            return Ok(rollup_config.genesis.system_config);
+            return rollup_config
+                .genesis
+                .system_config
+                .clone()
+                .ok_or_else(|| anyhow::anyhow!("Missing system config in genesis block"));
         }
 
         if execution_payload.transactions.is_empty() {
@@ -198,7 +202,7 @@ impl L2ExecutionPayloadEnvelope {
         let l1_fee_scalar = match l1_info {
             L1BlockInfoTx::Bedrock(L1BlockInfoBedrock { l1_fee_scalar, .. }) => l1_fee_scalar,
             L1BlockInfoTx::Ecotone(L1BlockInfoEcotone {
-                blob_base_fee,
+                base_fee_scalar,
                 blob_base_fee_scalar,
                 ..
             }) => {
@@ -208,16 +212,18 @@ impl L2ExecutionPayloadEnvelope {
                 let mut buf = B256::ZERO;
                 buf[0] = 0x01;
                 buf[24..28].copy_from_slice(blob_base_fee_scalar.to_be_bytes().as_ref());
-                buf[28..32].copy_from_slice(blob_base_fee.to_be_bytes().as_ref());
+                buf[28..32].copy_from_slice(base_fee_scalar.to_be_bytes().as_ref());
                 buf.into()
             }
         };
 
         Ok(SystemConfig {
             batcher_addr: l1_info.batcher_address(),
-            l1_fee_overhead: l1_info.l1_fee_overhead(),
-            l1_fee_scalar,
-            gas_limit: U256::from(execution_payload.gas_limit),
+            overhead: l1_info.l1_fee_overhead(),
+            scalar: l1_fee_scalar,
+            gas_limit: execution_payload.gas_limit as u64,
+            base_fee_scalar: None,
+            blob_base_fee_scalar: None,
         })
     }
 }

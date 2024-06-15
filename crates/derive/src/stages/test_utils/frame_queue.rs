@@ -24,7 +24,7 @@ impl MockFrameQueueProvider {
 }
 
 impl OriginProvider for MockFrameQueueProvider {
-    fn origin(&self) -> Option<&BlockInfo> {
+    fn origin(&self) -> Option<BlockInfo> {
         None
     }
 }

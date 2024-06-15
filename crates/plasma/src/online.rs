@@ -8,10 +8,7 @@ use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use kona_derive::online::AlloyChainProvider;
-use kona_primitives::{
-    block::{BlockID, BlockInfo},
-    system_config::SystemConfig,
-};
+use kona_primitives::{BlockID, BlockInfo, SystemConfig};
 
 /// An Online Plasma Input Fetcher.
 #[derive(Debug, Clone)]

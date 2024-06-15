@@ -11,10 +11,10 @@ use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
 pub struct SpanBatchEip1559TransactionData {
     /// The ETH value of the transaction.
     pub value: U256,
-    /// Maximum fee per gas.
-    pub max_fee_per_gas: U256,
     /// Maximum priority fee per gas.
     pub max_priority_fee_per_gas: U256,
+    /// Maximum fee per gas.
+    pub max_fee_per_gas: U256,
     /// Transaction calldata.
     pub data: Bytes,
     /// Access list, used to pre-warm storage slots through static declaration.
