@@ -25,6 +25,7 @@ async-trait.workspace = true
 kona-common = { path = "../../../crates/common", version = "0.0.1" }
 kona-common-proc = { path = "../../../crates/common-proc", version = "0.0.1" }
 kona-preimage = { path = "../../../crates/preimage", version = "0.0.1" }
+kona-primitives = { path = "../../../crates/primitives", version = "0.0.1" }
 kona-mpt = { path = "../../../crates/mpt", version = "0.0.1" }
 kona-derive = { path = "../../../crates/derive", version = "0.0.1" }
 

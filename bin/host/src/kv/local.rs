@@ -4,8 +4,8 @@ use super::KeyValueStore;
 use crate::cli::HostCli;
 use alloy_primitives::B256;
 use kona_client::{
-    L1_HEAD_KEY, L2_CHAIN_CONFIG_KEY, L2_CHAIN_ID_KEY, L2_CLAIM_BLOCK_NUMBER_KEY, L2_CLAIM_KEY,
-    L2_OUTPUT_ROOT_KEY, L2_ROLLUP_CONFIG_KEY,
+    L1_HEAD_KEY, L2_CHAIN_ID_KEY, L2_CLAIM_BLOCK_NUMBER_KEY, L2_CLAIM_KEY, L2_OUTPUT_ROOT_KEY,
+    L2_ROLLUP_CONFIG_KEY,
 };
 use kona_preimage::PreimageKey;
 
@@ -29,9 +29,8 @@ impl KeyValueStore for LocalKeyValueStore {
             L2_OUTPUT_ROOT_KEY => Some(self.cfg.l2_output_root.to_vec()),
             L2_CLAIM_KEY => Some(self.cfg.l2_claim.to_vec()),
             L2_CLAIM_BLOCK_NUMBER_KEY => Some(self.cfg.l2_block_number.to_be_bytes().to_vec()),
-            L2_CHAIN_ID_KEY => todo!(),
-            L2_CHAIN_CONFIG_KEY => todo!(),
-            L2_ROLLUP_CONFIG_KEY => todo!(),
+            L2_CHAIN_ID_KEY => Some(self.cfg.l2_chain_id.to_be_bytes().to_vec()),
+            L2_ROLLUP_CONFIG_KEY => unimplemented!("L2RollupConfig fetching in local store not implemented. Necessary for chain IDs without a known rollup config."),
             _ => None,
         }
     }

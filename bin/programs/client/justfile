@@ -17,6 +17,7 @@ run-client-native l1_rpc l1_beacon_rpc l2_rpc verbosity:
   L2_OUTPUT_ROOT=$(cast 2b 0)
   L2_CLAIM=$(cast 2b 0)
   L2_BLOCK_NUMBER=0
+  L2_CHAIN_ID=10
 
   L1_NODE_ADDRESS="{{l1_rpc}}"
   L1_BEACON_ADDRESS="{{l1_beacon_rpc}}"
@@ -36,6 +37,7 @@ run-client-native l1_rpc l1_beacon_rpc l2_rpc verbosity:
     --l2-claim $L2_CLAIM \
     --l2-output-root $L2_OUTPUT_ROOT \
     --l2-block-number $L2_BLOCK_NUMBER \
+    --l2-chain-id $L2_CHAIN_ID \
     --l1-node-address $L1_NODE_ADDRESS \
     --l1-beacon-address $L1_BEACON_ADDRESS \
     --l2-node-address $L2_NODE_ADDRESS \

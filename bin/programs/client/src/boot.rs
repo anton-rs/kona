@@ -4,6 +4,7 @@
 use alloy_primitives::{B256, U256};
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
+use kona_primitives::{RollupConfig, OP_MAINNET_CONFIG};
 
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
@@ -20,11 +21,8 @@ pub const L2_CLAIM_BLOCK_NUMBER_KEY: U256 = U256::from_be_slice(&[4]);
 /// The local key ident for the L2 chain ID.
 pub const L2_CHAIN_ID_KEY: U256 = U256::from_be_slice(&[5]);
 
-/// The local key ident for the L2 chain config.
-pub const L2_CHAIN_CONFIG_KEY: U256 = U256::from_be_slice(&[6]);
-
 /// The local key ident for the L2 rollup config.
-pub const L2_ROLLUP_CONFIG_KEY: U256 = U256::from_be_slice(&[7]);
+pub const L2_ROLLUP_CONFIG_KEY: U256 = U256::from_be_slice(&[6]);
 
 /// The boot information for the client program.
 ///
@@ -49,6 +47,8 @@ pub struct BootInfo {
     pub l2_claim_block: u64,
     /// The L2 chain ID.
     pub chain_id: u64,
+    /// The rollup config for the L2 chain.
+    pub rollup_config: RollupConfig,
 }
 
 impl BootInfo {
@@ -89,7 +89,16 @@ impl BootInfo {
                 .try_into()
                 .map_err(|_| anyhow!("Failed to convert L2 chain ID to u64"))?,
         );
+        let rollup_config = rollup_config_from_chain_id(chain_id)?;
 
-        Ok(Self { l1_head, l2_output_root, l2_claim, l2_claim_block, chain_id })
+        Ok(Self { l1_head, l2_output_root, l2_claim, l2_claim_block, chain_id, rollup_config })
+    }
+}
+
+/// Returns the rollup config for the given chain ID.
+fn rollup_config_from_chain_id(chain_id: u64) -> Result<RollupConfig> {
+    match chain_id {
+        10 => Ok(OP_MAINNET_CONFIG),
+        _ => anyhow::bail!("Unsupported chain ID: {}", chain_id),
     }
 }
