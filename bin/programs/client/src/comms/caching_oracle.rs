@@ -17,33 +17,27 @@ use spin::Mutex;
 ///
 /// [OracleReader]: kona_preimage::OracleReader
 #[derive(Debug, Clone)]
-pub struct CachingOracle<const N: usize> {
+pub struct CachingOracle {
     /// The spin-locked cache that stores the responses from the oracle.
     cache: Arc<Mutex<LruCache<PreimageKey, Vec<u8>>>>,
 }
 
-impl<const N: usize> CachingOracle<N> {
+impl CachingOracle {
     /// Creates a new [CachingOracle] that wraps the given [OracleReader] and stores up to `N`
     /// responses in the cache.
     ///
     /// [OracleReader]: kona_preimage::OracleReader
-    pub fn new() -> Self {
+    pub fn new(cache_size: usize) -> Self {
         Self {
             cache: Arc::new(Mutex::new(LruCache::new(
-                NonZeroUsize::new(N).expect("N must be greater than 0"),
+                NonZeroUsize::new(cache_size).expect("N must be greater than 0"),
             ))),
         }
     }
 }
 
-impl<const N: usize> Default for CachingOracle<N> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[async_trait]
-impl<const N: usize> PreimageOracleClient for CachingOracle<N> {
+impl PreimageOracleClient for CachingOracle {
     async fn get(&self, key: PreimageKey) -> Result<Vec<u8>> {
         let mut cache_lock = self.cache.lock();
         if let Some(value) = cache_lock.get(&key) {

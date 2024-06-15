@@ -6,7 +6,12 @@
 
 extern crate alloc;
 
+pub mod l1;
+
 pub mod l2;
+
+pub mod hint;
+pub use hint::HintType;
 
 mod comms;
 pub use comms::{CachingOracle, HINT_WRITER, ORACLE_READER};

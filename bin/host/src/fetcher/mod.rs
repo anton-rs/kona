@@ -9,13 +9,11 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::Decodable;
 use alloy_rpc_types::{Block, BlockTransactions};
 use anyhow::{anyhow, Result};
+use kona_client::HintType;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::debug;
-
-mod hint;
-pub use hint::HintType;
 
 mod precompiles;
 
@@ -191,7 +189,7 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
-                // Fetch the raw header from the L1 chain provider.
+                // Fetch the raw header from the L2 chain provider.
                 let hash: B256 = hint_data
                     .as_ref()
                     .try_into()
@@ -210,7 +208,43 @@ where
                     raw_header.into(),
                 );
             }
-            HintType::L2Transactions => todo!(),
+            HintType::L2Transactions => {
+                // Validate the hint data length.
+                if hint_data.len() != 32 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                // Fetch the block from the L2 chain provider and store the transactions within its
+                // body in the key-value store.
+                let hash: B256 = hint_data
+                    .as_ref()
+                    .try_into()
+                    .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
+                let Block { transactions, .. } = self
+                    .l2_provider
+                    .get_block_by_hash(hash, false)
+                    .await
+                    .map_err(|e| anyhow!("Failed to fetch block: {e}"))?
+                    .ok_or(anyhow!("Block not found."))?;
+
+                match transactions {
+                    BlockTransactions::Hashes(transactions) => {
+                        let mut encoded_transactions = Vec::with_capacity(transactions.len());
+                        for tx_hash in transactions {
+                            let tx = self
+                                .l2_provider
+                                .client()
+                                .request::<&[B256; 1], Bytes>("debug_getRawTransaction", &[tx_hash])
+                                .await
+                                .map_err(|e| anyhow!("Error fetching transaction: {e}"))?;
+                            encoded_transactions.push(tx);
+                        }
+
+                        self.store_trie_nodes(encoded_transactions.as_slice()).await?;
+                    }
+                    _ => anyhow::bail!("Only BlockTransactions::Hashes are supported."),
+                };
+            }
             HintType::L2Code => {
                 // geth hashdb scheme code hash key prefix
                 const CODE_PREFIX: u8 = b'c';
@@ -277,11 +311,11 @@ where
                     .await
                     .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
 
-                let mut raw_output = [0u8; 97];
-                raw_output[0] = OUTPUT_ROOT_VERSION;
-                raw_output[1..33].copy_from_slice(header.state_root.as_ref());
-                raw_output[33..65].copy_from_slice(l2_to_l1_message_passer.storage_hash.as_ref());
-                raw_output[65..97].copy_from_slice(self.l2_head.as_ref());
+                let mut raw_output = [0u8; 128];
+                raw_output[31] = OUTPUT_ROOT_VERSION;
+                raw_output[32..64].copy_from_slice(header.state_root.as_ref());
+                raw_output[64..96].copy_from_slice(l2_to_l1_message_passer.storage_hash.as_ref());
+                raw_output[96..128].copy_from_slice(self.l2_head.as_ref());
                 let output_root = keccak256(raw_output);
 
                 let mut kv_write_lock = self.kv_store.write().await;
@@ -405,9 +439,11 @@ where
         let mut hb = kona_mpt::ordered_trie_with_encoder(nodes, |node, buf| {
             buf.put_slice(node.as_ref());
         });
+        hb.root();
         let intermediates = hb.take_proofs();
 
         let mut kv_write_lock = self.kv_store.write().await;
+
         for (_, value) in intermediates.into_iter() {
             let value_hash = keccak256(value.as_ref());
             let key = PreimageKey::new(*value_hash, PreimageKeyType::Keccak256);
