@@ -150,7 +150,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
-        let traversal = new_populated_test_traversal();
+        let mut traversal = new_populated_test_traversal();
+        let _ = traversal.advance_origin().await;
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let retrieval = L1Retrieval::new(traversal, dap);
         let expected = BlockInfo::default();

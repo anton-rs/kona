@@ -1,7 +1,7 @@
 //! Contains online pipeline types.
 
 use super::{
-    AlloyChainProvider, AlloyL2ChainProvider, BlockInfo, DerivationPipeline, EthereumDataSource,
+    AlloyChainProvider, AlloyL2ChainProvider, DerivationPipeline, EthereumDataSource,
     OnlineBeaconClient, OnlineBlobProvider, PipelineBuilder, RollupConfig, SimpleSlotDerivation,
     StatefulAttributesBuilder,
 };
@@ -43,7 +43,6 @@ pub fn new_online_pipeline(
     dap_source: OnlineDataProvider,
     l2_chain_provider: AlloyL2ChainProvider,
     builder: OnlineAttributesBuilder,
-    origin: BlockInfo,
 ) -> OnlinePipeline {
     PipelineBuilder::new()
         .rollup_config(rollup_config)
@@ -51,6 +50,5 @@ pub fn new_online_pipeline(
         .l2_chain_provider(l2_chain_provider)
         .chain_provider(chain_provider)
         .builder(builder)
-        .origin(origin)
         .build()
 }

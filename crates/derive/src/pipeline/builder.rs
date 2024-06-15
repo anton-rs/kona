@@ -8,7 +8,7 @@ use crate::stages::{
 };
 use alloc::sync::Arc;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, RollupConfig};
+use kona_primitives::RollupConfig;
 
 type L1TraversalStage<P> = L1Traversal<P>;
 type L1RetrievalStage<DAP, P> = L1Retrieval<DAP, L1TraversalStage<P>>;
@@ -32,7 +32,6 @@ where
     dap_source: Option<D>,
     chain_provider: Option<P>,
     builder: Option<B>,
-    origin: Option<BlockInfo>,
     rollup_config: Option<Arc<RollupConfig>>,
 }
 
@@ -49,7 +48,6 @@ where
             dap_source: None,
             chain_provider: None,
             builder: None,
-            origin: None,
             rollup_config: None,
         }
     }
@@ -70,12 +68,6 @@ where
     /// Sets the rollup config for the pipeline.
     pub fn rollup_config(mut self, rollup_config: Arc<RollupConfig>) -> Self {
         self.rollup_config = Some(rollup_config);
-        self
-    }
-
-    /// Sets the origin L1 block for the pipeline.
-    pub fn origin(mut self, origin: BlockInfo) -> Self {
-        self.origin = Some(origin);
         self
     }
 
@@ -126,8 +118,7 @@ where
         let attributes_builder = builder.builder.expect("builder must be set");
 
         // Compose the stage stack.
-        let mut l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
-        l1_traversal.block = Some(builder.origin.expect("origin must be set"));
+        let l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
         let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
         let frame_queue = FrameQueue::new(l1_retrieval);
         let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);

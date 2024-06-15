@@ -40,6 +40,7 @@ impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
     async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {
         if !self.done {
             self.done = true;
+            self.load_origin().await;
             Ok(self.block)
         } else {
             Err(StageError::Eof)
@@ -51,11 +52,24 @@ impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
     pub fn new(data_source: F, cfg: Arc<RollupConfig>) -> Self {
         Self {
-            block: Some(BlockInfo::default()),
+            block: None,
             data_source,
             done: false,
             system_config: SystemConfig::default(),
             rollup_config: cfg,
+        }
+    }
+
+    /// Fetches the next origin via the [RollupConfig] if [Option::None].
+    async fn load_origin(&mut self) {
+        if self.block.is_none() {
+            let genesis_origin = self.rollup_config.genesis.l1.number;
+            match self.data_source.block_info_by_number(genesis_origin).await {
+                Ok(block) => self.block = Some(block),
+                Err(e) => {
+                    tracing::warn!(target: "traversal", "Failed to fetch block info {}", StageError::BlockInfoFetch(e))
+                }
+            }
         }
     }
 
@@ -76,6 +90,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         let block = match self.block {
             Some(block) => block,
             None => {
+                self.load_origin().await;
                 warn!("L1Traversal: No block to advance to");
                 return Err(StageError::Eof);
             }
@@ -138,6 +153,7 @@ pub(crate) mod tests {
     use crate::{
         params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
         traits::test_utils::TestChainProvider,
+        types::{BlockID, ChainGenesis},
     };
     use alloc::vec;
     use alloy_consensus::Receipt;
@@ -180,6 +196,13 @@ pub(crate) mod tests {
         let mut provider = TestChainProvider::default();
         let rollup_config = RollupConfig {
             l1_system_config_address: L1_SYS_CONFIG_ADDR,
+            genesis: ChainGenesis {
+                l1: BlockID {
+                    number: 0,
+                    hash: b256!("0000000000000000000000000000000000000000000000000000000000000000"),
+                },
+                ..Default::default()
+            },
             ..RollupConfig::default()
         };
         for (i, block) in blocks.iter().enumerate() {
@@ -224,7 +247,8 @@ pub(crate) mod tests {
         let blocks = vec![block, block];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
-        assert!(traversal.advance_origin().await.is_ok());
+        // Initially returns an Eof since the block is loaded from the rollup config.
+        assert_eq!(traversal.advance_origin().await, Err(StageError::Eof));
         let err = traversal.advance_origin().await.unwrap_err();
         assert_eq!(err, StageError::ReorgDetected(block.hash, block.parent_hash));
     }
@@ -232,7 +256,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_l1_traversal_missing_blocks() {
         let mut traversal = new_test_traversal(vec![], vec![]);
-        assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
+        assert_eq!(traversal.next_l1_block().await.unwrap(), None);
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), StageError::Eof);
         matches!(traversal.advance_origin().await.unwrap_err(), StageError::BlockInfoFetch(_));
     }
@@ -246,6 +270,7 @@ pub(crate) mod tests {
         let blocks = vec![block1, block2];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
+        traversal.block = Some(BlockInfo::default());
         assert!(traversal.advance_origin().await.is_ok());
         // Only the second block should fail since the second receipt
         // contains invalid logs that will error for a system config update.

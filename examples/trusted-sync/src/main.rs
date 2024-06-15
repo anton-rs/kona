@@ -40,7 +40,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     // Construct the pipeline and payload validator.
     let cfg = Arc::new(OP_MAINNET_CONFIG);
     let start = cli_cfg.start_l2_block.unwrap_or(cfg.genesis.l2.number);
-    let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
+    let l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
@@ -52,13 +52,8 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         .l2_block_info_by_number(start)
         .await
         .expect("Failed to fetch genesis L2 block info for pipeline cursor");
-    let tip = l1_provider
-        .block_info_by_number(cursor.l1_origin.number)
-        .await
-        .expect("Failed to fetch genesis L1 block info for pipeline tip");
     let validator = validation::OnlineValidator::new_http(l2_rpc_url.clone(), &cfg);
-    let mut pipeline =
-        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
+    let mut pipeline = new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes);
     let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.

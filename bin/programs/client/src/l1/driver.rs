@@ -100,7 +100,7 @@ impl DerivationDriver {
         let cfg = Arc::new(boot_info.rollup_config.clone());
 
         // Fetch the startup information.
-        let (l1_origin, l2_safe_head, l2_safe_head_header) = Self::find_startup_info(
+        let (_, l2_safe_head, l2_safe_head_header) = Self::find_startup_info(
             caching_oracle,
             boot_info,
             &mut chain_provider,
@@ -121,7 +121,6 @@ impl DerivationDriver {
             .l2_chain_provider(l2_chain_provider)
             .chain_provider(chain_provider)
             .builder(attributes)
-            .origin(l1_origin)
             .build();
 
         Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
