@@ -421,7 +421,7 @@ where
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
         let base_fee_params = if config.is_canyon_active(payload_attrs.timestamp) {
-            config.canyon_base_fee_params.unwrap_or(config.base_fee_params)
+            config.canyon_base_fee_params.expect("Canyon base fee params not provided")
         } else {
             config.base_fee_params
         };
