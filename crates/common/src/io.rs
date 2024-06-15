@@ -86,6 +86,10 @@ mod native_io {
             file.seek(SeekFrom::Current(-(n as i64)))
                 .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
 
+            // Attempt to sync the file to disk. This is a best-effort operation and should not
+            // throw if it fails.
+            let _ = file.sync_all();
+
             Ok(n)
         }
 
@@ -97,6 +101,10 @@ mod native_io {
             };
             let n =
                 file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
+
+            // Attempt to sync the file to disk. This is a best-effort operation and should not
+            // throw if it fails.
+            let _ = file.sync_all();
 
             Ok(n)
         }
