@@ -54,10 +54,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         .block_info_by_number(cursor.l1_origin.number)
         .await
         .expect("Failed to fetch genesis L1 block info for pipeline tip");
-    let validator = validation::OnlineValidator::new_http(
-        l2_rpc_url.clone(),
-        cfg.canyon_time.unwrap_or_default(),
-    );
+    let validator = validation::OnlineValidator::new_http(l2_rpc_url.clone(), &cfg);
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
     let mut derived_attributes_count = 0;

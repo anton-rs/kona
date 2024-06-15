@@ -4,7 +4,9 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
-use kona_derive::types::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction};
+use kona_derive::types::{
+    L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig,
+};
 use std::vec::Vec;
 use tracing::warn;
 
@@ -22,14 +24,14 @@ pub struct OnlineValidator {
 
 impl OnlineValidator {
     /// Creates a new `OnlineValidator`.
-    pub fn new(provider: ReqwestProvider, canyon: u64) -> Self {
-        Self { provider, canyon_activation: canyon }
+    pub fn new(provider: ReqwestProvider, cfg: &RollupConfig) -> Self {
+        Self { provider, canyon_activation: cfg.canyon_time.unwrap_or_default() }
     }
 
     /// Creates a new [OnlineValidator] from the provided [reqwest::Url].
-    pub fn new_http(url: reqwest::Url, canyon: u64) -> Self {
+    pub fn new_http(url: reqwest::Url, cfg: &RollupConfig) -> Self {
         let inner = ReqwestProvider::new_http(url);
-        Self::new(inner, canyon)
+        Self::new(inner, cfg)
     }
 
     /// Fetches a block [Header] and a list of raw RLP encoded transactions from the L2 provider.
