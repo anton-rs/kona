@@ -64,6 +64,42 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
             .await
             .map_err(BlobProviderError::Custom)
     }
+
+    /// Fetches blob sidecars for the given block reference and blob hashes.
+    pub async fn fetch_filtered_sidecars(
+        &self,
+        block_ref: &BlockInfo,
+        blob_hashes: &[IndexedBlobHash],
+    ) -> Result<Vec<BlobSidecar>, BlobProviderError> {
+        if blob_hashes.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Extract the genesis timestamp and slot interval from the loaded configs.
+        let genesis = self.genesis_time.expect("Genesis Config Loaded");
+        let interval = self.slot_interval.expect("Config Spec Loaded");
+
+        // Calculate the slot for the given timestamp.
+        let slot =
+            S::slot(genesis, interval, block_ref.timestamp).map_err(BlobProviderError::Slot)?;
+
+        // Fetch blob sidecars for the slot using the given blob hashes.
+        let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
+
+        // Filter blob sidecars that match the indicies in the specified list.
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
+        let filtered = sidecars
+            .into_iter()
+            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as usize)))
+            .collect::<Vec<_>>();
+
+        // Validate the correct number of blob sidecars were retrieved.
+        if blob_hashes.len() != filtered.len() {
+            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
+        }
+
+        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
+    }
 }
 
 /// Minimal slot derivation implementation.
@@ -97,39 +133,14 @@ where
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Blob>, BlobProviderError> {
-        if blob_hashes.is_empty() {
-            return Ok(Vec::new());
-        }
-
         // Fetches the genesis timestamp and slot interval from the
         // [BeaconGenesis] and [ConfigSpec] if not previously loaded.
         self.load_configs().await?;
 
-        // Extract the genesis timestamp and slot interval from the loaded configs.
-        let genesis = self.genesis_time.expect("Genesis Config Loaded");
-        let interval = self.slot_interval.expect("Config Spec Loaded");
-
-        // Calculate the slot for the given timestamp.
-        let slot =
-            S::slot(genesis, interval, block_ref.timestamp).map_err(BlobProviderError::Slot)?;
-
-        // Fetch blob sidecars for the slot using the given blob hashes.
-        let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
-
-        // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
-        let filtered = sidecars
-            .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as usize)))
-            .collect::<Vec<_>>();
-
-        // Validate the correct number of blob sidecars were retrieved.
-        if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
-        }
+        // Fetch the blob sidecars for the given block reference and blob hashes.
+        let sidecars = self.fetch_filtered_sidecars(block_ref, blob_hashes).await?;
 
         // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
-        let sidecars = filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>();
         let blobs = sidecars
             .into_iter()
             .enumerate()
@@ -214,7 +225,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_blobs_empty_hashes() {
-        let beacon_client = MockBeaconClient::default();
+        let beacon_client = MockBeaconClient {
+            beacon_genesis: Some(APIGenesisResponse::new(10)),
+            config_spec: Some(APIConfigResponse::new(12)),
+            ..Default::default()
+        };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo::default();

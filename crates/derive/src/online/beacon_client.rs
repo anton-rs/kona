@@ -41,7 +41,7 @@ pub trait BeaconClient {
 pub struct OnlineBeaconClient {
     /// The base URL of the beacon API.
     base: String,
-    /// The inner Ethereum JSON-RPC provider.
+    /// The inner reqwest client.
     inner: Client,
 }
 

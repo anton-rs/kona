@@ -83,7 +83,7 @@ mod native_io {
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
 
             // Reset the cursor back to before the data we just wrote for the reader's consumption.
-            file.seek(SeekFrom::Current(-(buf.len() as i64)))
+            file.seek(SeekFrom::Current(-(n as i64)))
                 .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
 
             Ok(n)

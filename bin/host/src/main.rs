@@ -13,6 +13,7 @@ use command_fds::{CommandFdExt, FdMapping};
 use fetcher::Fetcher;
 use futures::FutureExt;
 use kona_common::FileDescriptor;
+use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_preimage::{HintReader, OracleServer, PipeHandle};
 use kv::KeyValueStore;
 use std::{
@@ -59,10 +60,25 @@ async fn start_server(cfg: HostCli) -> Result<()> {
 
     let kv_store = cfg.construct_kv_store();
 
+    let beacon_client = OnlineBeaconClient::new_http(
+        cfg.l1_beacon_address.clone().expect("Beacon API URL must be set"),
+    );
+    let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
+    blob_provider
+        .load_configs()
+        .await
+        .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
+
     let fetcher = (!cfg.is_offline()).then(|| {
         let l1_provider = util::http_provider(&cfg.l1_node_address.expect("Provider must be set"));
         let l2_provider = util::http_provider(&cfg.l2_node_address.expect("Provider must be set"));
-        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider, cfg.l2_head)))
+        Arc::new(RwLock::new(Fetcher::new(
+            kv_store.clone(),
+            l1_provider,
+            blob_provider,
+            l2_provider,
+            cfg.l2_head,
+        )))
     });
 
     // Start the server and wait for it to complete.
@@ -80,12 +96,27 @@ async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
     let (preimage_pipe, hint_pipe, files) = util::create_native_pipes()?;
     let kv_store = cfg.construct_kv_store();
 
+    let beacon_client = OnlineBeaconClient::new_http(
+        cfg.l1_beacon_address.clone().expect("Beacon API URL must be set"),
+    );
+    let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
+    blob_provider
+        .load_configs()
+        .await
+        .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
+
     let fetcher = (!cfg.is_offline()).then(|| {
         let l1_provider =
             util::http_provider(cfg.l1_node_address.as_ref().expect("Provider must be set"));
         let l2_provider =
             util::http_provider(cfg.l2_node_address.as_ref().expect("Provider must be set"));
-        Arc::new(RwLock::new(Fetcher::new(kv_store.clone(), l1_provider, l2_provider, cfg.l2_head)))
+        Arc::new(RwLock::new(Fetcher::new(
+            kv_store.clone(),
+            l1_provider,
+            blob_provider,
+            l2_provider,
+            cfg.l2_head,
+        )))
     });
 
     // Create the server and start it.
