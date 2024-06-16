@@ -10,9 +10,9 @@ use crate::{
     },
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
-use alloy_eips::eip2718::Encodable2718;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
+use op_alloy_consensus::Encodable2718;
 
 /// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.

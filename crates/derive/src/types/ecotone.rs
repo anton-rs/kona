@@ -4,9 +4,8 @@
 
 use crate::types::{RawTransaction, UpgradeDepositSource};
 use alloc::{string::String, vec, vec::Vec};
-use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
-use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
+use op_alloy_consensus::{Encodable2718, OpTxEnvelope, TxDeposit};
 use spin::Lazy;
 
 /// The UpdgradeTo Function Signature
