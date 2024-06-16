@@ -6,9 +6,9 @@ use crate::{
     types::{APIBlobSidecar, Blob, BlobProviderError, BlobSidecar, BlockInfo, IndexedBlobHash},
 };
 use alloc::{boxed::Box, vec::Vec};
+use anyhow::{anyhow, ensure};
 use async_trait::async_trait;
 use core::marker::PhantomData;
-use tracing::debug;
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
@@ -42,11 +42,9 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
     /// Loads the beacon genesis and config spec
     pub async fn load_configs(&mut self) -> Result<(), BlobProviderError> {
         if self.genesis_time.is_none() {
-            debug!("Loading missing BeaconGenesis");
             self.genesis_time = Some(self.beacon_client.beacon_genesis().await?.data.genesis_time);
         }
         if self.slot_interval.is_none() {
-            debug!("Loading missing ConfigSpec");
             self.slot_interval =
                 Some(self.beacon_client.config_spec().await?.data.seconds_per_slot);
         }
@@ -108,13 +106,10 @@ pub struct SimpleSlotDerivation;
 
 impl SlotDerivation for SimpleSlotDerivation {
     fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> anyhow::Result<u64> {
-        if timestamp < genesis {
-            return Err(anyhow::anyhow!(
-                "provided timestamp ({}) precedes genesis time ({})",
-                timestamp,
-                genesis
-            ));
-        }
+        ensure!(
+            timestamp >= genesis,
+            "provided timestamp ({timestamp}) precedes genesis time ({genesis})"
+        );
         Ok((timestamp - genesis) / slot_time)
     }
 }
@@ -145,7 +140,7 @@ where
             .into_iter()
             .enumerate()
             .map(|(i, sidecar)| {
-                let hash = blob_hashes.get(i).ok_or(anyhow::anyhow!("failed to get blob hash"))?;
+                let hash = blob_hashes.get(i).ok_or(anyhow!("failed to get blob hash"))?;
                 match sidecar.verify_blob(hash) {
                     Ok(_) => Ok(sidecar.blob),
                     Err(e) => Err(e),

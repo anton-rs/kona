@@ -1,19 +1,15 @@
 //! Contains online pipeline types.
 
-use crate::{
-    online::{
-        AlloyChainProvider, AlloyL2ChainProvider, OnlineBeaconClient, OnlineBlobProvider,
-        SimpleSlotDerivation,
-    },
-    pipeline::{DerivationPipeline, PipelineBuilder},
-    sources::EthereumDataSource,
-    stages::{
-        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
-        L1Traversal, StatefulAttributesBuilder,
-    },
-    types::{BlockInfo, RollupConfig},
+use super::{
+    AlloyChainProvider, AlloyL2ChainProvider, BlockInfo, DerivationPipeline, EthereumDataSource,
+    OnlineBeaconClient, OnlineBlobProvider, PipelineBuilder, RollupConfig, SimpleSlotDerivation,
+    StatefulAttributesBuilder,
 };
 use alloc::sync::Arc;
+// Pipeline internal stages aren't re-exported at the module-level.
+use crate::stages::{
+    AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval, L1Traversal,
+};
 
 /// An online derivation pipeline.
 pub type OnlinePipeline =

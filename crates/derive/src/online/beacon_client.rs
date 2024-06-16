@@ -5,6 +5,7 @@ use crate::types::{
     IndexedBlobHash,
 };
 use alloc::{boxed::Box, format, string::String, vec::Vec};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use reqwest::Client;
 
@@ -21,10 +22,10 @@ pub(crate) const SIDECARS_METHOD_PREFIX: &str = "eth/v1/beacon/blob_sidecars";
 #[async_trait]
 pub trait BeaconClient {
     /// Returns the config spec.
-    async fn config_spec(&self) -> anyhow::Result<APIConfigResponse>;
+    async fn config_spec(&self) -> Result<APIConfigResponse>;
 
     /// Returns the beacon genesis.
-    async fn beacon_genesis(&self) -> anyhow::Result<APIGenesisResponse>;
+    async fn beacon_genesis(&self) -> Result<APIGenesisResponse>;
 
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. Order of the returned sidecars is guaranteed to be that of the hashes. Blob data is
@@ -33,7 +34,7 @@ pub trait BeaconClient {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> anyhow::Result<Vec<APIBlobSidecar>>;
+    ) -> Result<Vec<APIBlobSidecar>>;
 }
 
 /// An online implementation of the [BeaconClient] trait.
@@ -54,42 +55,42 @@ impl OnlineBeaconClient {
 
 #[async_trait]
 impl BeaconClient for OnlineBeaconClient {
-    async fn config_spec(&self) -> anyhow::Result<APIConfigResponse> {
+    async fn config_spec(&self) -> Result<APIConfigResponse> {
         self.inner
             .get(format!("{}/{}", self.base, SPEC_METHOD))
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!(e))?
+            .map_err(|e| anyhow!(e))?
             .json::<APIConfigResponse>()
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(|e| anyhow!(e))
     }
 
-    async fn beacon_genesis(&self) -> anyhow::Result<APIGenesisResponse> {
+    async fn beacon_genesis(&self) -> Result<APIGenesisResponse> {
         self.inner
             .get(format!("{}/{}", self.base, GENESIS_METHOD))
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!(e))?
+            .map_err(|e| anyhow!(e))?
             .json::<APIGenesisResponse>()
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(|e| anyhow!(e))
     }
 
     async fn beacon_blob_side_cars(
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> anyhow::Result<Vec<APIBlobSidecar>> {
+    ) -> Result<Vec<APIBlobSidecar>> {
         let raw_response = self
             .inner
             .get(format!("{}/{}/{}", self.base, SIDECARS_METHOD_PREFIX, slot))
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!(e))?
+            .map_err(|e| anyhow!(e))?
             .json::<APIGetBlobSidecarsResponse>()
             .await
-            .map_err(|e| anyhow::anyhow!(e))?;
+            .map_err(|e| anyhow!(e))?;
 
         let mut sidecars = Vec::with_capacity(hashes.len());
 
