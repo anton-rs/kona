@@ -19,10 +19,10 @@ alloy-rlp.workspace = true
 
 # local
 kona-client = { path = "../programs/client", version = "0.1.0" }
-kona-common = { path = "../../crates/common", version = "0.0.1" }
-kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
-kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }
-kona-derive = { path = "../../crates/derive", version = "0.0.1", features = ["online"] }
+kona-common = { path = "../../crates/common", version = "0.0.2" }
+kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
+kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
+kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
 
 # external
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
