@@ -64,14 +64,19 @@ pub struct DerivationDriver {
 }
 
 impl DerivationDriver {
-    /// Returns the current L2 safe head block information.
+    /// Returns the current L2 safe head [L2BlockInfo].
     pub fn l2_safe_head(&self) -> &L2BlockInfo {
         &self.l2_safe_head
     }
 
-    /// Returns the header of the current L2 safe head.
+    /// Returns the [Header] of the current L2 safe head.
     pub fn l2_safe_head_header(&self) -> &Sealed<Header> {
         &self.l2_safe_head_header
+    }
+
+    /// Consumes self and returns the owned [Header] of the current L2 safe head.
+    pub fn take_l2_safe_head_header(self) -> Sealed<Header> {
+        self.l2_safe_head_header
     }
 
     /// Creates a new [DerivationDriver] with the given configuration, blob provider, and chain

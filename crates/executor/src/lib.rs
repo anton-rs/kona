@@ -1,7 +1,12 @@
-//! The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
-//! allowing for stateless block execution of OP Stack blocks.
+#![doc = include_str!("../README.md")]
+#![warn(missing_debug_implementations, missing_docs, unreachable_pub, rustdoc::all)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![no_std]
 
-use alloc::{sync::Arc, vec::Vec};
+extern crate alloc;
+
+use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Sealed, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
@@ -17,37 +22,32 @@ use revm::{
     },
     Evm, StateBuilder,
 };
-
-mod hinter;
-pub use hinter::TrieDBHintWriter;
+use tracing::{debug, info};
 
 mod eip4788;
-pub(crate) use eip4788::pre_block_beacon_root_contract_call;
+use eip4788::pre_block_beacon_root_contract_call;
 
 mod canyon;
-pub(crate) use canyon::ensure_create2_deployer_canyon;
+use canyon::ensure_create2_deployer_canyon;
 
 mod util;
-use tracing::{debug, info};
-pub(crate) use util::{logs_bloom, wrap_receipt_with_bloom};
-
-use self::util::{extract_tx_gas_limit, is_system_transaction};
+use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, wrap_receipt_with_bloom};
 
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<F, H>
+pub struct StatelessL2BlockExecutor<'a, F, H>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
 {
     /// The [RollupConfig].
-    config: Arc<RollupConfig>,
+    config: &'a RollupConfig,
     /// The inner state database component.
     state: State<TrieDB<F, H>>,
 }
 
-impl<F, H> StatelessL2BlockExecutor<F, H>
+impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
@@ -55,7 +55,7 @@ where
     /// Constructs a new [StatelessL2BlockExecutor] with the given starting state root, parent hash,
     /// and [TrieDBFetcher].
     pub fn new(
-        config: Arc<RollupConfig>,
+        config: &'a RollupConfig,
         parent_header: Sealed<Header>,
         fetcher: F,
         hinter: H,
@@ -66,7 +66,7 @@ where
     }
 }
 
-impl<F, H> StatelessL2BlockExecutor<F, H>
+impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
@@ -91,7 +91,7 @@ where
         // Prepare the `revm` environment.
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.timestamp),
-            self.config.as_ref(),
+            self.config,
             self.state.database.parent_block_header(),
             &payload,
         );
@@ -112,7 +112,7 @@ where
         // Apply the pre-block EIP-4788 contract call.
         pre_block_beacon_root_contract_call(
             &mut self.state,
-            self.config.as_ref(),
+            self.config,
             block_number,
             &initialized_cfg,
             &initialized_block_env,
@@ -120,7 +120,7 @@ where
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        ensure_create2_deployer_canyon(&mut self.state, self.config.as_ref(), payload.timestamp)?;
+        ensure_create2_deployer_canyon(&mut self.state, self.config, payload.timestamp)?;
 
         // Construct the EVM with the given configuration.
         // TODO(clabby): Accelerate precompiles w/ custom precompile handler.
@@ -237,8 +237,7 @@ where
         let state_root = self.state.database.state_root(&bundle)?;
 
         let transactions_root = Self::compute_transactions_root(payload.transactions.as_slice());
-        let receipts_root =
-            Self::compute_receipts_root(&receipts, self.config.as_ref(), payload.timestamp);
+        let receipts_root = Self::compute_receipts_root(&receipts, self.config, payload.timestamp);
         debug!(
             target: "client_executor",
             "Computed transactions root: {transactions_root} | receipts root: {receipts_root}",
@@ -717,7 +716,7 @@ mod test {
 
         // Initialize the block executor on block #120794431's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            Arc::new(rollup_config),
+            &rollup_config,
             header.seal_slow(),
             TestdataTrieDBFetcher::new("block_120794432_exec"),
             NoopTrieDBHinter,
@@ -770,7 +769,7 @@ mod test {
 
         // Initialize the block executor on block #121049888's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            Arc::new(rollup_config),
+            &rollup_config,
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121049889_exec"),
             NoopTrieDBHinter,
@@ -827,7 +826,7 @@ mod test {
 
         // Initialize the block executor on block #121003240's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            Arc::new(rollup_config),
+            &rollup_config,
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121003241_exec"),
             NoopTrieDBHinter,
@@ -891,7 +890,7 @@ mod test {
 
         // Initialize the block executor on block #121057302's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            Arc::new(rollup_config),
+            &rollup_config,
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121057303_exec"),
             NoopTrieDBHinter,
@@ -949,7 +948,7 @@ mod test {
 
         // Initialize the block executor on block #121057302's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            Arc::new(rollup_config),
+            &rollup_config,
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121065789_exec"),
             NoopTrieDBHinter,
@@ -1016,7 +1015,7 @@ mod test {
 
         // Initialize the block executor on block #121135703's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            Arc::new(rollup_config),
+            &rollup_config,
             parent_header.seal_slow(),
             TestdataTrieDBFetcher::new("block_121135704_exec"),
             NoopTrieDBHinter,

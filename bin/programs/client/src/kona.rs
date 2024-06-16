@@ -9,10 +9,12 @@ use alloc::sync::Arc;
 use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
-    l2::{OracleL2ChainProvider, StatelessL2BlockExecutor, TrieDBHintWriter},
+    l2::{OracleL2ChainProvider, TrieDBHintWriter},
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
+use kona_executor::StatelessL2BlockExecutor;
+use kona_primitives::L2AttributesWithParent;
 
 extern crate alloc;
 
@@ -22,7 +24,13 @@ const ORACLE_LRU_SIZE: usize = 1024;
 #[client_entry(0x77359400)]
 fn main() -> Result<()> {
     #[cfg(feature = "tracing-subscriber")]
-    init_tracing_subscriber(3)?;
+    {
+        use anyhow::anyhow;
+        use tracing::Level;
+
+        let subscriber = tracing_subscriber::fmt().with_max_level(Level::DEBUG).finish();
+        tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))?;
+    }
 
     kona_common::block_on(async move {
         ////////////////////////////////////////////////////////////////
@@ -47,16 +55,15 @@ fn main() -> Result<()> {
             l2_provider.clone(),
         )
         .await?;
-        let attributes = driver.produce_disputed_payload().await?;
+        let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
-        let cfg = Arc::new(boot.rollup_config.clone());
         let mut executor = StatelessL2BlockExecutor::new(
-            cfg,
-            driver.l2_safe_head_header().clone(),
+            &boot.rollup_config,
+            driver.take_l2_safe_head_header(),
             l2_provider,
             TrieDBHintWriter,
         );
-        let Header { number, .. } = *executor.execute_payload(attributes.attributes)?;
+        let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;
 
         ////////////////////////////////////////////////////////////////
@@ -75,28 +82,4 @@ fn main() -> Result<()> {
 
         Ok::<_, anyhow::Error>(())
     })
-}
-
-/// Initializes the tracing subscriber
-///
-/// # Arguments
-/// * `verbosity_level` - The verbosity level (0-4)
-///
-/// # Returns
-/// * `Result<()>` - Ok if successful, Err otherwise.
-#[cfg(feature = "tracing-subscriber")]
-pub fn init_tracing_subscriber(verbosity_level: u8) -> anyhow::Result<()> {
-    use anyhow::anyhow;
-    use tracing::Level;
-
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(match verbosity_level {
-            0 => Level::ERROR,
-            1 => Level::WARN,
-            2 => Level::INFO,
-            3 => Level::DEBUG,
-            _ => Level::TRACE,
-        })
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))
 }

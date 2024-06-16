@@ -1685,12 +1685,12 @@ dependencies = [
  "kona-common",
  "kona-common-proc",
  "kona-derive",
+ "kona-executor",
  "kona-mpt",
  "kona-preimage",
  "kona-primitives",
  "lru",
  "op-alloy-consensus",
- "revm",
  "serde",
  "serde_json",
  "spin 0.9.8",
@@ -1754,6 +1754,24 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unsigned-varint",
+]
+
+[[package]]
+name = "kona-executor"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rlp",
+ "anyhow",
+ "kona-derive",
+ "kona-mpt",
+ "op-alloy-consensus",
+ "revm",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]
