@@ -7,8 +7,8 @@ use crate::{
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
