@@ -10,7 +10,7 @@ pub use crate::traits::{
 pub use crate::stages::AttributesBuilder;
 
 /// Re-export commonly used types.
-pub use crate::types::{RollupConfig, StageError, StageResult};
+pub use crate::types::{BlockInfo, RollupConfig, StageError, StageResult};
 
 mod builder;
 pub use builder::PipelineBuilder;
