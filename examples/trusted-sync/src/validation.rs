@@ -84,7 +84,6 @@ impl OnlineValidator {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
         let payload = self.get_payload(tag).await.unwrap();
-        tracing::debug!("Check payload against: {:?}", payload);
         attributes.attributes == payload
     }
 }

@@ -13,6 +13,8 @@ const L1_RPC_URL: &str = "L1_RPC_URL";
 const L2_RPC_URL: &str = "L2_RPC_URL";
 const BEACON_URL: &str = "BEACON_URL";
 
+const LOG_TARGET: &str = "trusted-sync";
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cfg = crate::cli::Cli::parse();
@@ -61,8 +63,8 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
 
     // Continuously step on the pipeline and validate payloads.
     loop {
-        info!(target: "loop", "Validated payload attributes number {}", derived_attributes_count);
-        info!(target: "loop", "Pending l2 safe head num: {}", cursor.block_info.number);
+        info!(target: LOG_TARGET, "Validated payload attributes number {}", derived_attributes_count);
+        info!(target: LOG_TARGET, "Pending l2 safe head num: {}", cursor.block_info.number);
         match pipeline.step(cursor).await {
             Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
             Err(e) => warn!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
@@ -70,14 +72,14 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
 
         if let Some(attributes) = pipeline.next_attributes() {
             if !validator.validate(&attributes).await {
-                error!(target: "loop", "Failed payload validation: {}", attributes.parent.block_info.hash);
+                error!(target: LOG_TARGET, "Failed payload validation: {}", attributes.parent.block_info.hash);
                 return Ok(());
             }
             derived_attributes_count += 1;
             match l2_provider.l2_block_info_by_number(cursor.block_info.number + 1).await {
                 Ok(bi) => cursor = bi,
                 Err(e) => {
-                    error!(target: "loop", "Failed to fetch next pending l2 safe head: {}, err: {:?}", cursor.block_info.number + 1, e);
+                    error!(target: LOG_TARGET, "Failed to fetch next pending l2 safe head: {}, err: {:?}", cursor.block_info.number + 1, e);
                 }
             }
             println!(
@@ -86,9 +88,9 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
                 attributes.attributes.timestamp,
                 pipeline.origin().unwrap().number,
             );
-            info!(target: "loop", "attributes: {:#?}", attributes);
+            info!(target: LOG_TARGET, "attributes: {:#?}", attributes);
         } else {
-            debug!(target: "loop", "No attributes to validate");
+            debug!(target: LOG_TARGET, "No attributes to validate");
         }
     }
 }
