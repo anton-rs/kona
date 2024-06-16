@@ -1687,6 +1687,7 @@ dependencies = [
  "kona-derive",
  "kona-mpt",
  "kona-preimage",
+ "kona-primitives",
  "lru",
  "op-alloy-consensus",
  "revm",

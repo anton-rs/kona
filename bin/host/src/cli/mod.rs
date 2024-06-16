@@ -52,6 +52,9 @@ pub struct HostCli {
     /// Number of the L2 block that the claim is from.
     #[clap(long)]
     pub l2_block_number: u64,
+    /// The L2 chain ID.
+    #[clap(long)]
+    pub l2_chain_id: u64,
     //// Path to the genesis file.
     #[clap(long)]
     pub l2_genesis_path: PathBuf,
