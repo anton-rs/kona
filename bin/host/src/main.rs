@@ -33,7 +33,7 @@ mod server;
 mod types;
 mod util;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     let cfg = HostCli::parse();
     init_tracing_subscriber(cfg.v)?;

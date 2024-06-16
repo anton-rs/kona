@@ -17,7 +17,7 @@ use kona_derive::{
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::debug;
+use tracing::trace;
 
 mod precompiles;
 
@@ -58,13 +58,13 @@ where
 
     /// Set the last hint to be received.
     pub fn hint(&mut self, hint: &str) {
-        debug!(target: "fetcher", "Received hint: {hint}");
+        trace!(target: "fetcher", "Received hint: {hint}");
         self.last_hint = Some(hint.to_string());
     }
 
     /// Get the preimage for the given key.
     pub async fn get_preimage(&self, key: B256) -> Result<Vec<u8>> {
-        debug!(target: "fetcher", "Pre-image requested. Key: {key}");
+        trace!(target: "fetcher", "Pre-image requested. Key: {key}");
 
         // Acquire a read lock on the key-value store.
         let kv_lock = self.kv_store.read().await;
@@ -88,7 +88,7 @@ where
     /// Fetch the preimage for the given hint and insert it into the key-value store.
     async fn prefetch(&self, hint: &str) -> Result<()> {
         let (hint_type, hint_data) = util::parse_hint(hint)?;
-        debug!(target: "fetcher", "Fetching hint: {hint_type} {hint_data}");
+        trace!(target: "fetcher", "Fetching hint: {hint_type} {hint_data}");
 
         match hint_type {
             HintType::L1BlockHeader => {
@@ -349,14 +349,15 @@ where
                 };
 
                 let mut kv_write_lock = self.kv_store.write().await;
-                kv_write_lock.set(hash, code.into());
+                kv_write_lock
+                    .set(PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(), code.into());
             }
             HintType::StartingL2Output => {
                 const OUTPUT_ROOT_VERSION: u8 = 0;
                 const L2_TO_L1_MESSAGE_PASSER_ADDRESS: Address =
                     address!("4200000000000000000000000000000000000016");
 
-                if !hint_data.is_empty() {
+                if hint_data.len() != 32 {
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
@@ -388,8 +389,15 @@ where
                 raw_output[96..128].copy_from_slice(self.l2_head.as_ref());
                 let output_root = keccak256(raw_output);
 
+                if output_root.as_slice() != hint_data.as_ref() {
+                    anyhow::bail!("Output root does not match L2 head.");
+                }
+
                 let mut kv_write_lock = self.kv_store.write().await;
-                kv_write_lock.set(output_root, raw_output.into());
+                kv_write_lock.set(
+                    PreimageKey::new(*output_root, PreimageKeyType::Keccak256).into(),
+                    raw_output.into(),
+                );
             }
             HintType::L2StateNode => {
                 if hint_data.len() != 32 {
@@ -410,7 +418,10 @@ where
                     .map_err(|e| anyhow!("Failed to fetch preimage: {e}"))?;
 
                 let mut kv_write_lock = self.kv_store.write().await;
-                kv_write_lock.set(hash, preimage.into());
+                kv_write_lock.set(
+                    PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
+                    preimage.into(),
+                );
             }
             HintType::L2AccountProof => {
                 if hint_data.len() != 8 + 20 {
@@ -422,7 +433,7 @@ where
                         .try_into()
                         .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
                 );
-                let address = Address::from_slice(&hint_data.as_ref()[8..]);
+                let address = Address::from_slice(&hint_data.as_ref()[8..28]);
 
                 let proof_response = self
                     .l2_provider
@@ -449,7 +460,7 @@ where
                         .try_into()
                         .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
                 );
-                let address = Address::from_slice(&hint_data.as_ref()[8..]);
+                let address = Address::from_slice(&hint_data.as_ref()[8..28]);
                 let slot = B256::from_slice(&hint_data.as_ref()[28..]);
 
                 let mut proof_response = self

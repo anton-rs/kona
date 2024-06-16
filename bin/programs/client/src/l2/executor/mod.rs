@@ -28,6 +28,7 @@ mod canyon;
 pub(crate) use canyon::ensure_create2_deployer_canyon;
 
 mod util;
+use tracing::{debug, info};
 pub(crate) use util::{logs_bloom, wrap_receipt_with_bloom};
 
 use self::util::{extract_tx_gas_limit, is_system_transaction};
@@ -100,6 +101,14 @@ where
         let gas_limit =
             payload.gas_limit.ok_or(anyhow!("Gas limit not provided in payload attributes"))?;
 
+        info!(
+            target: "client_executor",
+            "Executing block # {block_number} | Gas limit: {gas_limit} | Tx count: {tx_len}",
+            block_number = block_number,
+            gas_limit = gas_limit,
+            tx_len = payload.transactions.len()
+        );
+
         // Apply the pre-block EIP-4788 contract call.
         pre_block_beacon_root_contract_call(
             &mut self.state,
@@ -168,7 +177,18 @@ where
                 .flatten();
 
             // Execute the transaction.
+            let tx_hash = keccak256(raw_transaction);
+            debug!(
+                target: "client_executor",
+                "Executing transaction: {tx_hash}",
+            );
             let result = evm.transact_commit().map_err(|e| anyhow!("Fatal EVM Error: {e}"))?;
+            debug!(
+                target: "client_executor",
+                "Transaction executed: {tx_hash} | Gas used: {gas_used} | Success: {status}",
+                gas_used = result.gas_used(),
+                status = result.is_success()
+            );
 
             // Accumulate the gas used by the transaction.
             cumulative_gas_used += result.gas_used();
@@ -200,7 +220,14 @@ where
             receipts.push(receipt_envelope);
         }
 
+        info!(
+            target: "client_executor",
+            "Transaction execution complete | Cumulative gas used: {cumulative_gas_used}",
+            cumulative_gas_used = cumulative_gas_used
+        );
+
         // Merge all state transitions into the cache state.
+        debug!(target: "client_executor", "Merging state transitions");
         self.state.merge_transitions(BundleRetention::Reverts);
 
         // Take the bundle state.
@@ -208,9 +235,14 @@ where
 
         // Recompute the header roots.
         let state_root = self.state.database.state_root(&bundle)?;
+
         let transactions_root = Self::compute_transactions_root(payload.transactions.as_slice());
         let receipts_root =
             Self::compute_receipts_root(&receipts, self.config.as_ref(), payload.timestamp);
+        debug!(
+            target: "client_executor",
+            "Computed transactions root: {transactions_root} | receipts root: {receipts_root}",
+        );
 
         // The withdrawals root on OP Stack chains, after Canyon activation, is always the empty
         // root hash.
@@ -265,6 +297,15 @@ where
         }
         .seal_slow();
 
+        info!(
+            target: "client_executor",
+            "Sealed new header | Hash: {header_hash} | State root: {state_root} | Transactions root: {transactions_root} | Receipts root: {receipts_root}",
+            header_hash = header.seal(),
+            state_root = header.state_root,
+            transactions_root = header.transactions_root,
+            receipts_root = header.receipts_root,
+        );
+
         // Update the parent block hash in the state database.
         self.state.database.set_parent_block_header(header);
 
@@ -303,16 +344,32 @@ where
                 }
             };
 
-        // Construct the raw output.
         let parent_header = self.state.database.parent_block_header();
+
+        info!(
+            target: "client_executor",
+            "Computing output root | Version: {version} | State root: {state_root} | Storage root: {storage_root} | Block hash: {hash}",
+            version = OUTPUT_ROOT_VERSION,
+            state_root = self.state.database.parent_block_header().state_root,
+            hash = parent_header.seal(),
+        );
+
+        // Construct the raw output.
         let mut raw_output = [0u8; 128];
         raw_output[31] = OUTPUT_ROOT_VERSION;
         raw_output[32..64].copy_from_slice(parent_header.state_root.as_ref());
         raw_output[64..96].copy_from_slice(storage_root.as_ref());
         raw_output[96..128].copy_from_slice(parent_header.seal().as_ref());
+        let output_root = keccak256(raw_output);
+
+        info!(
+            target: "client_executor",
+            "Computed output root for block # {block_number} | Output root: {output_root}",
+            block_number = parent_header.number,
+        );
 
         // Hash the output and return
-        Ok(keccak256(raw_output))
+        Ok(output_root)
     }
 
     /// Returns the active [SpecId] for the executor.

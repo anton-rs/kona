@@ -3,7 +3,7 @@ use alloc::{boxed::Box, string::String, vec};
 use anyhow::Result;
 use async_trait::async_trait;
 use core::future::Future;
-use tracing::{debug, error};
+use tracing::{error, trace};
 
 /// A [HintWriter] is a high-level interface to the hint pipe. It provides a way to write hints to
 /// the host.
@@ -30,18 +30,18 @@ impl HintWriterClient for HintWriter {
         hint_bytes[0..4].copy_from_slice(u32::to_be_bytes(hint.len() as u32).as_ref());
         hint_bytes[4..].copy_from_slice(hint.as_bytes());
 
-        debug!(target: "hint_writer", "Writing hint \"{hint}\"");
+        trace!(target: "hint_writer", "Writing hint \"{hint}\"");
 
         // Write the hint to the host.
         self.pipe_handle.write(&hint_bytes).await?;
 
-        debug!(target: "hint_writer", "Successfully wrote hint");
+        trace!(target: "hint_writer", "Successfully wrote hint");
 
         // Read the hint acknowledgement from the host.
         let mut hint_ack = [0u8; 1];
         self.pipe_handle.read_exact(&mut hint_ack).await?;
 
-        debug!(target: "hint_writer", "Received hint acknowledgement");
+        trace!(target: "hint_writer", "Received hint acknowledgement");
 
         Ok(())
     }
@@ -79,7 +79,7 @@ impl HintReaderServer for HintReader {
         let payload = String::from_utf8(raw_payload)
             .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?;
 
-        debug!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
+        trace!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
 
         // Route the hint
         if let Err(e) = route_hint(payload).await {
@@ -93,7 +93,7 @@ impl HintReaderServer for HintReader {
         // Write back an acknowledgement to the client to unblock their process.
         self.pipe_handle.write(&[0x00]).await?;
 
-        debug!(target: "hint_reader", "Successfully routed and acknowledged hint");
+        trace!(target: "hint_reader", "Successfully routed and acknowledged hint");
 
         Ok(())
     }

@@ -14,7 +14,7 @@ use kona_preimage::{HintWriterClient, PreimageKey, PreimageKeyType, PreimageOrac
 use kona_primitives::BlockInfo;
 
 /// An oracle-backed blob provider.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OracleBlobProvider {
     oracle: Arc<CachingOracle>,
 }
@@ -69,6 +69,8 @@ impl OracleBlobProvider {
                 .await?;
             blob[(i as usize) << 5..(i as usize + 1) << 5].copy_from_slice(field_element.as_ref());
         }
+
+        tracing::info!(target: "client_oracle", "Retrieved blob {blob_hash:?} from the oracle.");
 
         Ok(blob)
     }

@@ -14,7 +14,7 @@ use kona_preimage::{HintWriterClient, PreimageKey, PreimageKeyType, PreimageOrac
 use kona_primitives::BlockInfo;
 
 /// The oracle-backed L1 chain provider for the client program.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OracleL1ChainProvider {
     /// The boot information
     boot_info: Arc<BootInfo>,

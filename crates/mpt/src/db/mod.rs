@@ -16,6 +16,7 @@ use revm::{
 
 mod account;
 pub use account::TrieAccount;
+use tracing::debug;
 
 /// A Trie DB that caches open state in-memory. When accounts that don't already exist within the
 /// cached [TrieNode] are queried, the database fetches the preimages of the trie nodes on the path
@@ -153,11 +154,19 @@ where
     /// - `Ok(B256)`: The new state root hash of the trie DB.
     /// - `Err(_)`: If the state root hash could not be computed.
     pub fn state_root(&mut self, bundle: &BundleState) -> Result<B256> {
+        debug!(target: "client_executor", "Recomputing state root");
+
         // Update the accounts in the trie with the changeset.
         self.update_accounts(bundle)?;
 
         // Recompute the root hash of the trie.
         self.root_node.blind();
+
+        debug!(
+            target: "client_executor",
+            "Recomputed state root: {commitment:?}",
+            commitment = self.root_node.blinded_commitment()
+        );
 
         // Extract the new state root from the root node.
         self.root_node.blinded_commitment().ok_or(anyhow!("State root node is not a blinded node"))

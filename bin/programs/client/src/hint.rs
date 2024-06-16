@@ -37,7 +37,7 @@ pub enum HintType {
 impl HintType {
     /// Encodes the hint type as a string.
     pub fn encode_with(&self, data: &[&[u8]]) -> String {
-        let concatenated = data.iter().map(hex::encode).collect::<Vec<_>>().join(" ");
+        let concatenated = data.iter().map(hex::encode).collect::<Vec<_>>().join("");
         alloc::format!("{} {}", self, concatenated)
     }
 }
@@ -55,7 +55,7 @@ impl TryFrom<&str> for HintType {
             "l2-block-header" => Ok(HintType::L2BlockHeader),
             "l2-transactions" => Ok(HintType::L2Transactions),
             "l2-code" => Ok(HintType::L2Code),
-            "l2-output" => Ok(HintType::StartingL2Output),
+            "starting-l2-output" => Ok(HintType::StartingL2Output),
             "l2-state-node" => Ok(HintType::L2StateNode),
             "l2-account-proof" => Ok(HintType::L2AccountProof),
             "l2-account-storage-proof" => Ok(HintType::L2AccountStorageProof),

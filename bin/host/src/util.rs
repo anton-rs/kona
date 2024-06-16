@@ -11,7 +11,6 @@ use kona_common::FileDescriptor;
 use kona_preimage::PipeHandle;
 use reqwest::Client;
 use std::{fs::File, os::fd::AsRawFd};
-use tempfile::tempfile;
 use tokio::task::JoinHandle;
 
 /// Parses a hint from a string.
@@ -34,7 +33,10 @@ pub(crate) fn parse_hint(s: &str) -> Result<(HintType, Bytes)> {
 
 /// Creates two temporary files that are connected by a pipe.
 pub(crate) fn create_temp_files() -> Result<(File, File)> {
-    let (read, write) = (tempfile().map_err(|e| anyhow!(e))?, tempfile().map_err(|e| anyhow!(e))?);
+    let (read, write) = (
+        tempfile::tempfile().map_err(|e| anyhow!(e))?,
+        tempfile::tempfile().map_err(|e| anyhow!(e))?,
+    );
     Ok((read, write))
 }
 
