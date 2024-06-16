@@ -23,8 +23,11 @@
 
 ## What's Kona?
 
-Kona is a [fault proof program][fpp-specs] designed to deterministically execute a rollup state transition in order to
-verify an [L2 output root][g-output-root] from the L1 inputs it was [derived from][g-derivation-pipeline].
+Kona is a suite of portable implementations of the OP Stack rollup state transition, namely the [derivation pipeline][g-derivation-pipeline] and
+the block execution logic.
+
+Built on top of these libraries, this repository also features a [fault proof program][fpp-specs] designed to deterministically execute the
+rollup state transition in order to verify an [L2 output root][g-output-root] from the L1 inputs it was [derived from][g-derivation-pipeline].
 
 ### Development Status
 
