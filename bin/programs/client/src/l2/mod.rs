@@ -2,4 +2,7 @@
 //! [StatelessL2BlockExecutor]
 
 mod executor;
-pub use executor::{StatelessL2BlockExecutor, TrieDBHintWriter, TrieDBProvider};
+pub use executor::{StatelessL2BlockExecutor, TrieDBHintWriter};
+
+mod chain_provider;
+pub use chain_provider::OracleL2ChainProvider;

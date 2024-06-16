@@ -1,11 +1,12 @@
 //! Contains utility functions and helpers for the host program.
 
-use crate::{fetcher::HintType, types::NativePipeFiles};
+use crate::types::NativePipeFiles;
 use alloy_primitives::{hex, Bytes};
 use alloy_provider::ReqwestProvider;
 use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
+use kona_client::HintType;
 use kona_common::FileDescriptor;
 use kona_preimage::PipeHandle;
 use reqwest::Client;

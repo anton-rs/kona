@@ -16,9 +16,9 @@ where
     // Store preimages for all intermediates
     let path_nibbles = (0..items_len)
         .map(|i| {
-            let i = adjust_index_for_rlp(i, items_len);
+            let index = adjust_index_for_rlp(i, items_len);
             index_buffer.clear();
-            i.encode(&mut index_buffer);
+            index.encode(&mut index_buffer);
             Nibbles::unpack(&index_buffer)
         })
         .collect::<Vec<_>>();

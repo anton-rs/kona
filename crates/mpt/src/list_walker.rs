@@ -140,7 +140,13 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.inner {
-            Some(ref mut leaves) => leaves.pop_front(),
+            Some(ref mut leaves) => {
+                let item = leaves.pop_front();
+                if leaves.is_empty() {
+                    self.inner = None;
+                }
+                item
+            }
             _ => None,
         }
     }

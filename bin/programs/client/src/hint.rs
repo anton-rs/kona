@@ -1,6 +1,9 @@
 //! This module contains the [HintType] enum.
 
-use std::fmt::Display;
+use core::fmt::Display;
+
+use alloc::{string::String, vec::Vec};
+use alloy_primitives::hex;
 
 /// The [HintType] enum is used to specify the type of hint that was received.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -30,6 +33,14 @@ pub enum HintType {
     /// A hint that specifies the proof on the path to a storage slot in an account within in the
     /// L2 state trie.
     L2AccountStorageProof,
+}
+
+impl HintType {
+    /// Encodes the hint type as a string.
+    pub fn encode_with(&self, data: &[&[u8]]) -> String {
+        let concatenated = data.iter().map(hex::encode).collect::<Vec<_>>().join(" ");
+        alloc::format!("{} {}", self, concatenated)
+    }
 }
 
 impl TryFrom<&str> for HintType {
@@ -74,7 +85,7 @@ impl From<HintType> for &str {
 }
 
 impl Display for HintType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let s: &str = (*self).into();
         write!(f, "{}", s)
     }

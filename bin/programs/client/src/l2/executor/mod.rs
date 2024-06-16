@@ -18,8 +18,8 @@ use revm::{
     Evm, StateBuilder,
 };
 
-mod fetcher;
-pub use fetcher::{TrieDBHintWriter, TrieDBProvider};
+mod hinter;
+pub use hinter::TrieDBHintWriter;
 
 mod eip4788;
 pub(crate) use eip4788::pre_block_beacon_root_contract_call;
