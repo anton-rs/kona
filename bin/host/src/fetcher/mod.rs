@@ -3,13 +3,17 @@
 
 use crate::{kv::KeyValueStore, util};
 use alloy_consensus::{Header, TxEnvelope};
-use alloy_eips::eip2718::Encodable2718;
+use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB};
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::Decodable;
 use alloy_rpc_types::{Block, BlockTransactions};
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
+use kona_derive::{
+    online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation},
+    types::{BlockInfo, IndexedBlobHash},
+};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -26,6 +30,8 @@ where
     kv_store: Arc<RwLock<KV>>,
     /// L1 chain provider.
     l1_provider: ReqwestProvider,
+    /// The blob provider
+    blob_provider: OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
     /// L2 chain provider.
     /// TODO: OP provider, N = Optimism
     l2_provider: ReqwestProvider,
@@ -43,10 +49,11 @@ where
     pub fn new(
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
+        blob_provider: OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
         l2_provider: ReqwestProvider,
         l2_head: B256,
     ) -> Self {
-        Self { kv_store, l1_provider, l2_provider, l2_head, last_hint: None }
+        Self { kv_store, l1_provider, blob_provider, l2_provider, l2_head, last_hint: None }
     }
 
     /// Set the last hint to be received.
@@ -149,7 +156,70 @@ where
                     .map_err(|e| anyhow!(e))?;
                 self.store_trie_nodes(raw_receipts.as_slice()).await?;
             }
-            HintType::L1Blob => todo!(),
+            HintType::L1Blob => {
+                if hint_data.len() != 48 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                let hash: B256 = hint_data[0..32]
+                    .as_ref()
+                    .try_into()
+                    .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
+                let index = u64::from_be_bytes(
+                    hint_data[32..40]
+                        .as_ref()
+                        .try_into()
+                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
+                );
+                let timestamp = u64::from_be_bytes(
+                    hint_data[40..48]
+                        .as_ref()
+                        .try_into()
+                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
+                );
+
+                let partial_block_ref = BlockInfo { timestamp, ..Default::default() };
+                let indexed_hash = IndexedBlobHash { index: index as usize, hash };
+
+                // Fetch the blob sidecar from the blob provider.
+                let mut sidecars = self
+                    .blob_provider
+                    .fetch_filtered_sidecars(&partial_block_ref, &[indexed_hash])
+                    .await
+                    .map_err(|e| anyhow!("Failed to fetch blob sidecars: {e}"))?;
+                if sidecars.len() != 1 {
+                    anyhow::bail!("Expected 1 sidecar, got {}", sidecars.len());
+                }
+                let sidecar = sidecars.remove(0);
+
+                // Acquire a lock on the key-value store and set the preimages.
+                let mut kv_write_lock = self.kv_store.write().await;
+
+                // Set the preimage for the blob commitment.
+                kv_write_lock.set(
+                    PreimageKey::new(*hash, PreimageKeyType::Sha256).into(),
+                    sidecar.kzg_commitment.to_vec(),
+                );
+
+                // Write all the field elements to the key-value store. There should be 4096.
+                // The preimage oracle key for each field element is the keccak256 hash of
+                // `abi.encodePacked(sidecar.KZGCommitment, uint256(i))`
+                let mut blob_key = [0u8; 80];
+                blob_key[..48].copy_from_slice(sidecar.kzg_commitment.as_ref());
+                for i in 0..FIELD_ELEMENTS_PER_BLOB {
+                    blob_key[72..].copy_from_slice(i.to_be_bytes().as_ref());
+                    let blob_key_hash = keccak256(blob_key.as_ref());
+
+                    kv_write_lock.set(
+                        PreimageKey::new(*blob_key_hash, PreimageKeyType::Keccak256).into(),
+                        blob_key.into(),
+                    );
+                    kv_write_lock.set(
+                        PreimageKey::new(*blob_key_hash, PreimageKeyType::Blob).into(),
+                        sidecar.blob[(i as usize) << 5..(i as usize + 1) << 5].to_vec(),
+                    );
+                }
+            }
             HintType::L1Precompile => {
                 // Validate the hint data length.
                 if hint_data.len() < 20 {

@@ -1,9 +1,8 @@
 //! This module contains the [HintType] enum.
 
-use core::fmt::Display;
-
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::hex;
+use core::fmt::Display;
 
 /// The [HintType] enum is used to specify the type of hint that was received.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
