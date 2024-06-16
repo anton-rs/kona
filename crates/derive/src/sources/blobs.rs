@@ -7,7 +7,7 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use tracing::warn;
 
@@ -101,7 +101,7 @@ where
                     TxEnvelope::Eip4844(blob_tx_wrapper) => Some(blob_tx_wrapper.hash()),
                     _ => None,
                 };
-                warn!("Blob tx has calldata, which will be ignored: {hash:?}");
+                warn!(target: "blob-source", "Blob tx has calldata, which will be ignored: {hash:?}");
             }
             let blob_hashes = if let Some(b) = blob_hashes {
                 b
@@ -138,8 +138,8 @@ where
 
         let blobs =
             self.blob_fetcher.get_blobs(&self.block_ref, &blob_hashes).await.map_err(|e| {
-                warn!("Failed to fetch blobs: {e}");
-                anyhow::anyhow!("Failed to fetch blobs: {e}")
+                warn!(target: "blob-source", "Failed to fetch blobs: {e}");
+                anyhow!("Failed to fetch blobs: {e}")
             })?;
 
         // Fill the blob pointers.
@@ -196,7 +196,7 @@ where
         match next_data.decode() {
             Ok(d) => Some(Ok(d)),
             Err(_) => {
-                warn!("Failed to decode blob data, skipping");
+                warn!(target: "blob-source", "Failed to decode blob data, skipping");
                 self.next().await
             }
         }

@@ -8,6 +8,7 @@ use alloc::{boxed::Box, collections::VecDeque};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
+use anyhow::Result;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
@@ -48,7 +49,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
     }
 
     /// Loads the calldata into the source if it is not open.
-    async fn load_calldata(&mut self) -> anyhow::Result<()> {
+    async fn load_calldata(&mut self) -> Result<()> {
         if self.open {
             return Ok(());
         }
