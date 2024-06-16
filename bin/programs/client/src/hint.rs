@@ -37,7 +37,7 @@ pub enum HintType {
 impl HintType {
     /// Encodes the hint type as a string.
     pub fn encode_with(&self, data: &[&[u8]]) -> String {
-        let concatenated = data.iter().map(hex::encode).collect::<Vec<_>>().join("");
+        let concatenated = hex::encode(data.iter().copied().flatten().copied().collect::<Vec<_>>());
         alloc::format!("{} {}", self, concatenated)
     }
 }
