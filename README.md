@@ -48,7 +48,8 @@ verify an [L2 output root][g-output-root] from the L1 inputs it was [derived fro
 - [`common-proc`](./crates/common-proc): Proc macro for the `client` program entrypoint.
 - [`primitives`](./crates/primitives): Primitive types for use in `kona` crates.
 - [`preimage`](./crates/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
-- [`mpt`](./crrates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
+- [`mpt`](./crates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
+- [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
   - [`plasma`](./crates/plasma/): Plasma extension to `kona-derive`
 

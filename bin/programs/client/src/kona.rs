@@ -9,10 +9,12 @@ use alloc::sync::Arc;
 use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
-    l2::{OracleL2ChainProvider, StatelessL2BlockExecutor, TrieDBHintWriter},
+    l2::{OracleL2ChainProvider, TrieDBHintWriter},
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
+use kona_executor::StatelessL2BlockExecutor;
+use kona_primitives::L2AttributesWithParent;
 
 extern crate alloc;
 
@@ -47,16 +49,15 @@ fn main() -> Result<()> {
             l2_provider.clone(),
         )
         .await?;
-        let attributes = driver.produce_disputed_payload().await?;
+        let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
-        let cfg = Arc::new(boot.rollup_config.clone());
         let mut executor = StatelessL2BlockExecutor::new(
-            cfg,
-            driver.l2_safe_head_header().clone(),
+            &boot.rollup_config,
+            driver.take_l2_safe_head_header(),
             l2_provider,
             TrieDBHintWriter,
         );
-        let Header { number, .. } = *executor.execute_payload(attributes.attributes)?;
+        let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;
 
         ////////////////////////////////////////////////////////////////

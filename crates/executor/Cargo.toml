@@ -1,0 +1,28 @@
+[package]
+name = "kona-executor"
+description = "An no_std implementation of a stateless L2 block executor for the OP Stack."
+version = "0.0.1"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+# workspace
+anyhow.workspace = true
+tracing.workspace = true
+alloy-primitives = { workspace = true, features = ["rlp"] }
+alloy-rlp.workspace = true
+alloy-eips.workspace = true
+alloy-consensus.workspace = true
+op-alloy-consensus.workspace = true
+revm = { workspace = true, features = ["optimism"] }
+
+# local
+kona-mpt = { path = "../mpt", version = "0.0.1" }
+kona-derive = { path = "../derive", version = "0.0.1" }
+
+[dev-dependencies]
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.117"
