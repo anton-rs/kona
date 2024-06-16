@@ -5,9 +5,11 @@ use super::{
     StageError,
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
+use anyhow::bail;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, RollupConfig};
+use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
@@ -67,11 +69,11 @@ where
             .system_config_by_number(block_info.number, Arc::clone(&self.rollup_config))
             .await?;
         match self.attributes.reset(block_info, &system_config).await {
-            Ok(()) => tracing::info!("Stages reset"),
-            Err(StageError::Eof) => tracing::info!("Stages reset with EOF"),
+            Ok(()) => trace!(target: "pipeline", "Stages reset"),
+            Err(StageError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
             Err(err) => {
-                tracing::error!("Stages reset failed: {:?}", err);
-                anyhow::bail!(err);
+                error!(target: "pipeline", "Stage reset errored: {:?}", err);
+                bail!(err);
             }
         }
         Ok(())
@@ -86,18 +88,17 @@ where
     async fn step(&mut self, cursor: L2BlockInfo) -> anyhow::Result<()> {
         match self.attributes.next_attributes(cursor).await {
             Ok(a) => {
-                tracing::info!("attributes queue stage step returned l2 attributes");
-                tracing::info!("prepared L2 attributes: {:?}", a);
+                trace!(target: "pipeline", "Prepared L2 attributes: {:?}", a);
                 self.prepared.push_back(a);
                 return Ok(());
             }
             Err(StageError::Eof) => {
-                tracing::info!("Pipeline advancing origin");
+                trace!(target: "pipeline", "Pipeline advancing origin");
                 self.attributes.advance_origin().await.map_err(|e| anyhow::anyhow!(e))?;
             }
             Err(err) => {
-                tracing::warn!("attributes queue step failed: {:?}", err);
-                return Err(anyhow::anyhow!(err));
+                warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
+                bail!(err);
             }
         }
         Ok(())
