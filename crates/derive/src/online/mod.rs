@@ -6,7 +6,7 @@ pub use crate::{
     sources::EthereumDataSource,
     stages::StatefulAttributesBuilder,
     traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline},
-    types::RollupConfig,
+    types::{BlockInfo, RollupConfig},
 };
 
 mod pipeline;
