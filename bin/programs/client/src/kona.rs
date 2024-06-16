@@ -24,7 +24,13 @@ const ORACLE_LRU_SIZE: usize = 1024;
 #[client_entry(0x77359400)]
 fn main() -> Result<()> {
     #[cfg(feature = "tracing-subscriber")]
-    init_tracing_subscriber(3)?;
+    {
+        use anyhow::anyhow;
+        use tracing::Level;
+
+        let subscriber = tracing_subscriber::fmt().with_max_level(Level::DEBUG).finish();
+        tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))?;
+    }
 
     kona_common::block_on(async move {
         ////////////////////////////////////////////////////////////////
@@ -76,28 +82,4 @@ fn main() -> Result<()> {
 
         Ok::<_, anyhow::Error>(())
     })
-}
-
-/// Initializes the tracing subscriber
-///
-/// # Arguments
-/// * `verbosity_level` - The verbosity level (0-4)
-///
-/// # Returns
-/// * `Result<()>` - Ok if successful, Err otherwise.
-#[cfg(feature = "tracing-subscriber")]
-pub fn init_tracing_subscriber(verbosity_level: u8) -> anyhow::Result<()> {
-    use anyhow::anyhow;
-    use tracing::Level;
-
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(match verbosity_level {
-            0 => Level::ERROR,
-            1 => Level::WARN,
-            2 => Level::INFO,
-            3 => Level::DEBUG,
-            _ => Level::TRACE,
-        })
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))
 }
