@@ -1,7 +1,7 @@
 //! This module contains a rudamentary pipe between two file descriptors, using [kona_common::io]
 //! for reading and writing from the file descriptors.
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use core::{
     cell::RefCell,
     cmp::Ordering,
@@ -76,8 +76,7 @@ impl Future for ReadFuture<'_> {
         self.read += chunk_read;
 
         match self.read.cmp(&buf_len) {
-            Ordering::Equal => Poll::Ready(Ok(self.read)),
-            Ordering::Greater => Poll::Ready(Err(anyhow!("Read more bytes than buffer size"))),
+            Ordering::Greater | Ordering::Equal => Poll::Ready(Ok(self.read)),
             Ordering::Less => {
                 // Register the current task to be woken up when it can make progress
                 ctx.waker().wake_by_ref();
@@ -105,6 +104,11 @@ impl Future for WriteFuture<'_> {
             Ok(0) => Poll::Ready(Ok(self.written)), // Finished writing
             Ok(n) => {
                 self.written += n;
+
+                if self.written >= self.buf.len() {
+                    return Poll::Ready(Ok(self.written));
+                }
+
                 // Register the current task to be woken up when it can make progress
                 ctx.waker().wake_by_ref();
                 Poll::Pending

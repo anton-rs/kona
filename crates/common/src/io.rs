@@ -59,13 +59,19 @@ mod native_io {
     extern crate std;
 
     use crate::{io::FileDescriptor, traits::BasicKernelInterface};
-    use alloc::boxed::Box;
     use anyhow::{anyhow, Result};
+    use spin::{Lazy, Mutex};
     use std::{
+        collections::HashMap,
         fs::File,
         io::{Read, Seek, SeekFrom, Write},
         os::fd::FromRawFd,
     };
+
+    static READ_CURSOR: Lazy<Mutex<HashMap<usize, usize>>> =
+        Lazy::new(|| Mutex::new(HashMap::new()));
+    static WRITE_CURSOR: Lazy<Mutex<HashMap<usize, usize>>> =
+        Lazy::new(|| Mutex::new(HashMap::new()));
 
     /// Mock IO implementation for native tests.
     #[derive(Debug)]
@@ -74,29 +80,41 @@ mod native_io {
     impl BasicKernelInterface for NativeIO {
         fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
             let raw_fd: usize = fd.into();
-            let file = unsafe {
-                let b = Box::new(File::from_raw_fd(raw_fd as i32));
-                Box::leak(b)
-            };
-            let n = file
-                .write(buf)
-                .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
+            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+
+            let mut cursor_entry_lock = WRITE_CURSOR.lock();
+            let cursor_entry = cursor_entry_lock.entry(raw_fd).or_insert(0);
 
             // Reset the cursor back to before the data we just wrote for the reader's consumption.
-            file.seek(SeekFrom::Current(-(n as i64)))
+            file.seek(SeekFrom::Start(*cursor_entry as u64))
                 .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
 
-            Ok(n)
+            file.write_all(buf)
+                .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
+
+            *cursor_entry += buf.len();
+
+            std::mem::forget(file);
+
+            Ok(buf.len())
         }
 
         fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
             let raw_fd: usize = fd.into();
-            let file = unsafe {
-                let b = Box::new(File::from_raw_fd(raw_fd as i32));
-                Box::leak(b)
-            };
+            let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
+
+            let mut cursor_entry_lock = READ_CURSOR.lock();
+            let cursor_entry = cursor_entry_lock.entry(raw_fd).or_insert(0);
+
+            file.seek(SeekFrom::Start(*cursor_entry as u64))
+                .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
+
             let n =
                 file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
+
+            *cursor_entry += n;
+
+            std::mem::forget(file);
 
             Ok(n)
         }

@@ -1,7 +1,7 @@
 //! Contains the concrete implementation of the [L2ChainProvider] trait for the client program.
 
 use crate::{BootInfo, CachingOracle, HintType, HINT_WRITER};
-use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Header;
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{Bytes, B256};
@@ -17,10 +17,8 @@ use kona_primitives::{
 use op_alloy_consensus::OpTxEnvelope;
 
 /// The oracle-backed L2 chain provider for the client program.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OracleL2ChainProvider {
-    /// The rollup configuration.
-    cfg: Arc<RollupConfig>,
     /// The boot information
     boot_info: Arc<BootInfo>,
     /// The preimage oracle client.
@@ -28,11 +26,22 @@ pub struct OracleL2ChainProvider {
 }
 
 impl OracleL2ChainProvider {
+    /// Creates a new [OracleL2ChainProvider] with the given boot information and oracle client.
+    pub fn new(boot_info: Arc<BootInfo>, oracle: Arc<CachingOracle>) -> Self {
+        Self { boot_info, oracle }
+    }
+}
+
+impl OracleL2ChainProvider {
     /// Returns a [Header] corresponding to the given L2 block number, by walking back from the
     /// L2 safe head.
     async fn header_by_number(&mut self, block_number: u64) -> Result<Header> {
         // Fetch the starting L2 output preimage.
-        HINT_WRITER.write(&HintType::StartingL2Output.to_string()).await?;
+        HINT_WRITER
+            .write(
+                &HintType::StartingL2Output.encode_with(&[self.boot_info.l2_output_root.as_ref()]),
+            )
+            .await?;
         let output_preimage = self
             .oracle
             .get(PreimageKey::new(*self.boot_info.l2_output_root, PreimageKeyType::Keccak256))
@@ -65,7 +74,7 @@ impl L2ChainProvider for OracleL2ChainProvider {
         let payload = self.payload_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_l2_block_ref(self.cfg.as_ref())
+        payload.to_l2_block_ref(&self.boot_info.rollup_config)
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
@@ -90,7 +99,7 @@ impl L2ChainProvider for OracleL2ChainProvider {
         let optimism_block = OpBlock {
             header,
             body: transactions,
-            withdrawals: self.cfg.is_canyon_active(timestamp).then(Vec::new),
+            withdrawals: self.boot_info.rollup_config.is_canyon_active(timestamp).then(Vec::new),
             ..Default::default()
         };
         Ok(optimism_block.into())

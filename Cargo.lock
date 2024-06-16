@@ -1694,6 +1694,8 @@ dependencies = [
  "serde",
  "serde_json",
  "spin 0.9.8",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1703,6 +1705,7 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "linked_list_allocator",
+ "spin 0.9.8",
 ]
 
 [[package]]

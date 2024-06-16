@@ -12,6 +12,7 @@ homepage.workspace = true
 # workspace
 anyhow.workspace = true
 cfg-if.workspace = true
+spin.workspace = true
 
 # external
 linked_list_allocator = "0.10.5"
