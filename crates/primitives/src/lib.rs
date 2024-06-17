@@ -7,6 +7,10 @@
 // Re-export superchain-primitives
 pub use superchain_primitives::*;
 
+// Re-export superchain bindings if the `serde` feature is enabled
+#[cfg(feature = "serde")]
+pub use superchain_registry::*;
+
 extern crate alloc;
 
 /// Re-export the [Withdrawal] type from the [alloy_eips] crate.
@@ -36,3 +40,14 @@ pub use payload::{
 
 pub mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
+
+/// Retrieves the [RollupConfig] for the given `chain_id`.
+pub fn get_rollup_config(chain_id: u64) -> anyhow::Result<RollupConfig> {
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "serde")] {
+    superchain_registry::ROLLUP_CONFIGS.get(&chain_id).ok_or_else(|| anyhow::anyhow!("Unknown chain ID: {}", chain_id)).cloned()
+        } else {
+            kona_primitives::rollup_config_from_chain_id(chain_id)
+        }
+    }
+}

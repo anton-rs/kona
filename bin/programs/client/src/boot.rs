@@ -4,7 +4,7 @@
 use alloy_primitives::{B256, U256};
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
-use kona_primitives::{RollupConfig, OP_MAINNET_CONFIG};
+use kona_primitives::{get_rollup_config, RollupConfig};
 
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
@@ -89,16 +89,8 @@ impl BootInfo {
                 .try_into()
                 .map_err(|_| anyhow!("Failed to convert L2 chain ID to u64"))?,
         );
-        let rollup_config = rollup_config_from_chain_id(chain_id)?;
+        let rollup_config = get_rollup_config(chain_id)?;
 
         Ok(Self { l1_head, l2_output_root, l2_claim, l2_claim_block, chain_id, rollup_config })
-    }
-}
-
-/// Returns the rollup config for the given chain ID.
-fn rollup_config_from_chain_id(chain_id: u64) -> Result<RollupConfig> {
-    match chain_id {
-        10 => Ok(OP_MAINNET_CONFIG),
-        _ => anyhow::bail!("Unsupported chain ID: {}", chain_id),
     }
 }

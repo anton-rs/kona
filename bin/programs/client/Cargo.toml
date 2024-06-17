@@ -8,7 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# workspace
+# Workspace
 cfg-if.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
@@ -21,15 +21,16 @@ spin.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
 
-# local
+# Local
 kona-common = { path = "../../../crates/common", version = "0.0.1" }
 kona-common-proc = { path = "../../../crates/common-proc", version = "0.0.1" }
 kona-preimage = { path = "../../../crates/preimage", version = "0.0.1" }
-kona-primitives = { path = "../../../crates/primitives", version = "0.0.1" }
+kona-primitives = { path = "../../../crates/primitives", version = "0.0.1", default-features = false }
 kona-mpt = { path = "../../../crates/mpt", version = "0.0.1" }
 kona-derive = { path = "../../../crates/derive", default-features = false, version = "0.0.1" }
 kona-executor = { path = "../../../crates/executor", version = "0.0.1" }
 
+# `tracing-subscriber` feature
 tracing-subscriber = { version = "0.3.18", optional = true }
 
 [dev-dependencies]
@@ -37,6 +38,7 @@ serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.117"
 
 [features]
+serde = ["kona-primitives/serde"]
 tracing-subscriber = ["dep:tracing-subscriber"]
 
 [[bin]]
