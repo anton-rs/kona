@@ -27,4 +27,4 @@ tempfile = "3.10.1"
 
 [features]
 default = []
-serde = ["serde"]
+serde = ["dep:serde"]
