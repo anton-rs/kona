@@ -1853,6 +1853,7 @@ dependencies = [
  "async-trait",
  "cfg-if",
  "kona-common",
+ "serde",
  "tempfile",
  "tokio",
  "tracing",
