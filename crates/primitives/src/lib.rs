@@ -43,11 +43,12 @@ pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
 
 /// Retrieves the [RollupConfig] for the given `chain_id`.
 pub fn get_rollup_config(chain_id: u64) -> anyhow::Result<RollupConfig> {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "serde")] {
-    superchain_registry::ROLLUP_CONFIGS.get(&chain_id).ok_or_else(|| anyhow::anyhow!("Unknown chain ID: {}", chain_id)).cloned()
-        } else {
-            kona_primitives::rollup_config_from_chain_id(chain_id)
-        }
+    if cfg!(feature = "serde") {
+        superchain_registry::ROLLUP_CONFIGS
+            .get(&chain_id)
+            .ok_or_else(|| anyhow::anyhow!("Unknown chain ID: {}", chain_id))
+            .cloned()
+    } else {
+        superchain_primitives::rollup_config_from_chain_id(chain_id)
     }
 }

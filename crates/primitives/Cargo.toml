@@ -18,13 +18,12 @@ alloy-eips.workspace = true
 op-alloy-consensus.workspace = true
 
 # External
-cfg-if = "1.0.0"
 alloy-sol-types = { version = "0.7.6", default-features = false }
 superchain-primitives = { git = "https://github.com/ethereum-optimism/superchain-registry", branch = "refcell/rollup-config-map", default-features = false }
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
-superchain-registry = { git = "https://github.com/ethereum-optimism/superchain-registry", branch = "refcell/rollup-config-map", default-feature = false, optional = true }
+superchain-registry = { git = "https://github.com/ethereum-optimism/superchain-registry", branch = "refcell/rollup-config-map", default-features = false, optional = true }
 
 [dev-dependencies]
 serde_json = { version = "1.0.117", default-features = false }
