@@ -2,8 +2,11 @@
 //! the preimage oracle.
 
 use alloy_primitives::{B256, U256};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
 pub enum PreimageKeyType {
@@ -53,6 +56,7 @@ impl TryFrom<u8> for PreimageKeyType {
 /// |---------|-------------|
 /// | [0, 1)  | Type byte   |
 /// | [1, 32) | Data        |
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct PreimageKey {
     data: [u8; 31],
