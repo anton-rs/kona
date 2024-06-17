@@ -55,9 +55,6 @@ pub struct HostCli {
     /// The L2 chain ID.
     #[clap(long)]
     pub l2_chain_id: u64,
-    //// Path to the genesis file.
-    #[clap(long)]
-    pub l2_genesis_path: PathBuf,
     /// Address of L1 JSON-RPC endpoint to use (eth namespace required)
     #[clap(long)]
     pub l1_node_address: Option<String>,
