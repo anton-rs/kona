@@ -1,8 +1,50 @@
 //! Contains utilities for the L2 executor.
 
-use alloy_consensus::Transaction;
+use alloc::vec::Vec;
 use alloy_primitives::{Bloom, Log};
-use op_alloy_consensus::{OpReceiptEnvelope, OpReceiptWithBloom, OpTxEnvelope, OpTxType};
+use op_alloy_consensus::{
+    Eip658Value, OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxEnvelope,
+    OpTxType, Receipt, ReceiptWithBloom, Transaction,
+};
+
+/// Constructs a [OpReceiptEnvelope] from a [Receipt] fields and [OpTxType].
+pub(crate) fn receipt_envelope_from_parts<'a>(
+    status: bool,
+    cumulative_gas_used: u128,
+    logs: impl IntoIterator<Item = &'a Log>,
+    tx_type: OpTxType,
+    deposit_nonce: Option<u64>,
+    deposit_receipt_version: Option<u64>,
+) -> OpReceiptEnvelope {
+    let logs = logs.into_iter().cloned().collect::<Vec<_>>();
+    let logs_bloom = logs_bloom(&logs);
+    let inner_receipt = Receipt { status: Eip658Value::Eip658(status), cumulative_gas_used, logs };
+    match tx_type {
+        OpTxType::Legacy => {
+            OpReceiptEnvelope::Legacy(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
+        }
+        OpTxType::Eip2930 => {
+            OpReceiptEnvelope::Eip2930(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
+        }
+        OpTxType::Eip1559 => {
+            OpReceiptEnvelope::Eip1559(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
+        }
+        OpTxType::Eip4844 => {
+            OpReceiptEnvelope::Eip4844(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
+        }
+        OpTxType::Deposit => {
+            let inner = OpDepositReceiptWithBloom {
+                receipt: OpDepositReceipt {
+                    inner: inner_receipt,
+                    deposit_nonce,
+                    deposit_receipt_version,
+                },
+                logs_bloom,
+            };
+            OpReceiptEnvelope::Deposit(inner)
+        }
+    }
+}
 
 /// Compute the logs bloom filter for the given logs.
 pub(crate) fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
@@ -14,20 +56,6 @@ pub(crate) fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
         }
     }
     bloom
-}
-
-/// Wrap an [OpReceiptWithBloom] in an [OpReceiptEnvelope], provided the receipt and a [OpTxType].
-pub(crate) fn wrap_receipt_with_bloom<T>(
-    receipt: OpReceiptWithBloom<T>,
-    tx_type: OpTxType,
-) -> OpReceiptEnvelope<T> {
-    match tx_type {
-        OpTxType::Legacy => OpReceiptEnvelope::Legacy(receipt),
-        OpTxType::Eip2930 => OpReceiptEnvelope::Eip2930(receipt),
-        OpTxType::Eip1559 => OpReceiptEnvelope::Eip1559(receipt),
-        OpTxType::Eip4844 => OpReceiptEnvelope::Eip4844(receipt),
-        OpTxType::Deposit => OpReceiptEnvelope::Deposit(receipt),
-    }
 }
 
 /// Extract the gas limit from an [OpTxEnvelope].

@@ -8,12 +8,11 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Sealed, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
-use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_derive::types::{L2PayloadAttributes, RawTransaction, RollupConfig};
 use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
-use op_alloy_consensus::{OpReceipt, OpReceiptEnvelope, OpReceiptWithBloom, OpTxEnvelope};
+use op_alloy_consensus::{Decodable2718, Encodable2718, OpReceiptEnvelope, OpTxEnvelope};
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
     primitives::{
@@ -31,7 +30,7 @@ mod canyon;
 use canyon::ensure_create2_deployer_canyon;
 
 mod util;
-use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, wrap_receipt_with_bloom};
+use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_envelope_from_parts};
 
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
@@ -194,30 +193,20 @@ where
             cumulative_gas_used += result.gas_used();
 
             // Create receipt envelope.
-            let logs_bloom = logs_bloom(result.logs());
-            let receipt_envelope = wrap_receipt_with_bloom(
-                OpReceiptWithBloom {
-                    receipt: OpReceipt {
-                        status: result.is_success(),
-                        cumulative_gas_used: cumulative_gas_used as u128,
-                        logs: result.into_logs(),
-                        deposit_nonce: depositor
-                            .as_ref()
-                            .map(|depositor| depositor.account_info().unwrap_or_default().nonce),
-                        // The deposit receipt version was introduced in Canyon to indicate an
-                        // update to how receipt hashes should be computed
-                        // when set. The state transition process
-                        // ensures this is only set for post-Canyon deposit transactions.
-                        deposit_receipt_version: depositor
-                            .is_some()
-                            .then(|| self.config.is_canyon_active(payload.timestamp).then_some(1))
-                            .flatten(),
-                    },
-                    logs_bloom,
-                },
+            let receipt = receipt_envelope_from_parts(
+                result.is_success(),
+                cumulative_gas_used as u128,
+                result.logs(),
                 transaction.tx_type(),
+                depositor
+                    .as_ref()
+                    .map(|depositor| depositor.account_info().unwrap_or_default().nonce),
+                depositor
+                    .is_some()
+                    .then(|| self.config.is_canyon_active(payload.timestamp).then_some(1))
+                    .flatten(),
             );
-            receipts.push(receipt_envelope);
+            receipts.push(receipt);
         }
 
         info!(

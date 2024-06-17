@@ -3,7 +3,6 @@
 use crate::{BootInfo, CachingOracle, HintType, HINT_WRITER};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Header;
-use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
@@ -14,7 +13,7 @@ use kona_preimage::{HintWriterClient, PreimageKey, PreimageKeyType, PreimageOrac
 use kona_primitives::{
     L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
 };
-use op_alloy_consensus::OpTxEnvelope;
+use op_alloy_consensus::{Decodable2718, OpTxEnvelope};
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]
