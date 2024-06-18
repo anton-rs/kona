@@ -5,7 +5,7 @@ pub use kona_primitives::*;
 
 // Re-export alloy consensus primitives.
 pub use alloy_consensus::{
-    Header, Receipt, Signed, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
+    self, Header, Receipt, Signed, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
     TxEip4844WithSidecar, TxEnvelope, TxLegacy,
 };
 
