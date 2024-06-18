@@ -10,6 +10,9 @@ pub use superchain_primitives::*;
 // Re-export alloy-primitives.
 pub use alloy_primitives;
 
+// Re-export alloy eips.
+pub use alloy_eips;
+
 extern crate alloc;
 
 /// Re-export the [Withdrawal] type from the [alloy_eips] crate.
