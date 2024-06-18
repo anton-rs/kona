@@ -1,7 +1,10 @@
 //! This module contains all of the types used within the derivation pipeline.
 
-/// Re-export the kona primitives.
+// Re-export the kona primitives.
 pub use kona_primitives::*;
+
+// Re-export alloy consensus primitives.
+pub use alloy_consensus::{Header, Receipt, TxEnvelope};
 
 pub mod batch;
 pub use batch::{
