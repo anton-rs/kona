@@ -28,7 +28,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build and Publish `${{ matrix.target }}-pipeline`
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           file: build/${{ matrix.target }}/${{ matrix.target }}.dockerfile
           context: build/${{ matrix.target }}
