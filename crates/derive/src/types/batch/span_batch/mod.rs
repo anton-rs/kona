@@ -10,13 +10,6 @@
 //! txs = contract_creation_bits ++ y_parity_bits ++ tx_sigs ++ tx_tos ++ tx_datas ++ tx_nonces ++ tx_gases ++ protected_bits
 //! ```
 
-use crate::MAX_RLP_BYTES_PER_CHANNEL;
-
-/// The maximum amount of bytes that will be needed to decode every span
-/// batch field. This value cannot be larger than [MAX_RLP_BYTES_PER_CHANNEL]
-/// because single batch cannot be larger than channel size.
-pub const MAX_SPAN_BATCH_SIZE: usize = MAX_RLP_BYTES_PER_CHANNEL as usize;
-
 mod batch;
 pub use batch::SpanBatch;
 

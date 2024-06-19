@@ -113,10 +113,11 @@ impl SingleBatch {
         }
 
         // Check if we ran out of sequencer time drift
-        let max = if let Some(max) = batch_origin.timestamp.checked_add(cfg.max_sequencer_drift) {
+        let max_drift = cfg.max_sequencer_drift(batch_origin.timestamp);
+        let max = if let Some(max) = batch_origin.timestamp.checked_add(max_drift) {
             max
         } else {
-            warn!("dropped batch, timestamp exceeds configured max sequencer drift, origin timestamp: {}, max drift: {}", batch_origin.timestamp, cfg.max_sequencer_drift);
+            warn!("dropped batch, timestamp exceeds configured max sequencer drift, origin timestamp: {}, max drift: {}", batch_origin.timestamp, max_drift);
             return BatchValidity::Drop;
         };
 
