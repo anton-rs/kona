@@ -24,6 +24,9 @@ pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 mod ecotone;
 pub use ecotone::*;
 
+mod fjord;
+pub use fjord::*;
+
 mod blob;
 pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
 
