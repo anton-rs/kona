@@ -15,8 +15,7 @@ ignore:
   - "tests"
   - "test_util*"
   - "test_utils"
-  - "bin/programs/minimal"
-  - "bin/programs/simple-revm"
+  - "bin/"
 
 # Make comments less noisy
 comment:
