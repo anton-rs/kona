@@ -1,7 +1,8 @@
 //! Raw Span Batch Payload
 
 use crate::types::{
-    SpanBatchBits, SpanBatchError, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_SIZE,
+    SpanBatchBits, SpanBatchError, SpanBatchTransactions, SpanDecodingError,
+    FJORD_MAX_SPAN_BATCH_SIZE, MAX_SPAN_BATCH_SIZE,
 };
 use alloc::vec::Vec;
 
@@ -21,12 +22,12 @@ pub struct SpanBatchPayload {
 
 impl SpanBatchPayload {
     /// Decodes a [SpanBatchPayload] from a reader.
-    pub fn decode_payload(r: &mut &[u8]) -> Result<Self, SpanBatchError> {
+    pub fn decode_payload(r: &mut &[u8], is_fjord_active: bool) -> Result<Self, SpanBatchError> {
         let mut payload = Self::default();
-        payload.decode_block_count(r)?;
+        payload.decode_block_count(r, is_fjord_active)?;
         payload.decode_origin_bits(r)?;
-        payload.decode_block_tx_counts(r)?;
-        payload.decode_txs(r)?;
+        payload.decode_block_tx_counts(r, is_fjord_active)?;
+        payload.decode_txs(r, is_fjord_active)?;
         Ok(payload)
     }
 
@@ -44,13 +45,27 @@ impl SpanBatchPayload {
         Ok(())
     }
 
+    /// Returns the max span batch size based on the Fjord hardfork.
+    pub fn max_span_batch_size(&self, is_fjord_active: bool) -> usize {
+        if is_fjord_active {
+            FJORD_MAX_SPAN_BATCH_SIZE
+        } else {
+            MAX_SPAN_BATCH_SIZE
+        }
+    }
+
     /// Decode a block count from a reader.
-    pub fn decode_block_count(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+    pub fn decode_block_count(
+        &mut self,
+        r: &mut &[u8],
+        is_fjord_active: bool,
+    ) -> Result<(), SpanBatchError> {
         let (block_count, remaining) = unsigned_varint::decode::u64(r)
             .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::BlockCount))?;
         // The number of transactions in a single L2 block cannot be greater than
-        // [MAX_SPAN_BATCH_SIZE].
-        if block_count as usize > MAX_SPAN_BATCH_SIZE {
+        // [MAX_SPAN_BATCH_SIZE] or [FJORD_MAX_SPAN_BATCH_SIZE] if Fjord is active.
+        let max_span_batch_size = self.max_span_batch_size(is_fjord_active);
+        if block_count as usize > max_span_batch_size {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
         if block_count == 0 {
@@ -62,7 +77,11 @@ impl SpanBatchPayload {
     }
 
     /// Decode block transaction counts from a reader.
-    pub fn decode_block_tx_counts(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+    pub fn decode_block_tx_counts(
+        &mut self,
+        r: &mut &[u8],
+        is_fjord_active: bool,
+    ) -> Result<(), SpanBatchError> {
         // Initially allocate the vec with the block count, to reduce re-allocations in the first
         // few blocks.
         let mut block_tx_counts = Vec::with_capacity(self.block_count as usize);
@@ -72,9 +91,10 @@ impl SpanBatchPayload {
                 .map_err(|_| SpanBatchError::Decoding(SpanDecodingError::BlockTxCounts))?;
 
             // The number of transactions in a single L2 block cannot be greater than
-            // [MAX_SPAN_BATCH_SIZE]. Every transaction will take at least a single
-            // byte.
-            if block_tx_count as usize > MAX_SPAN_BATCH_SIZE {
+            // [MAX_SPAN_BATCH_SIZE] or [FJORD_MAX_SPAN_BATCH_SIZE] if Fjord is active.
+            // Every transaction will take at least a single byte.
+            let max_span_batch_size = self.max_span_batch_size(is_fjord_active);
+            if block_tx_count as usize > max_span_batch_size {
                 return Err(SpanBatchError::TooBigSpanBatchSize);
             }
             block_tx_counts.push(block_tx_count);
@@ -85,7 +105,11 @@ impl SpanBatchPayload {
     }
 
     /// Decode transactions from a reader.
-    pub fn decode_txs(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+    pub fn decode_txs(
+        &mut self,
+        r: &mut &[u8],
+        is_fjord_active: bool,
+    ) -> Result<(), SpanBatchError> {
         if self.block_tx_counts.is_empty() {
             return Err(SpanBatchError::EmptySpanBatch);
         }
@@ -96,8 +120,9 @@ impl SpanBatchPayload {
             })?;
 
         // The total number of transactions in a span batch cannot be greater than
-        // [MAX_SPAN_BATCH_SIZE].
-        if total_block_tx_count as usize > MAX_SPAN_BATCH_SIZE {
+        // [MAX_SPAN_BATCH_SIZE] or [FJORD_MAX_SPAN_BATCH_SIZE] if Fjord is active.
+        let max_span_batch_size = self.max_span_batch_size(is_fjord_active);
+        if total_block_tx_count as usize > max_span_batch_size {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
         self.txs.total_block_tx_count = total_block_tx_count;

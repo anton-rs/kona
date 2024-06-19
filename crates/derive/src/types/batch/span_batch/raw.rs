@@ -1,7 +1,7 @@
 //! Raw Span Batch
 
 use crate::types::{
-    BatchType, RawTransaction, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
+    BatchType, RawTransaction, RollupConfig, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
     SpanDecodingError,
 };
 use alloc::{vec, vec::Vec};
@@ -64,9 +64,12 @@ impl RawSpanBatch {
     }
 
     /// Decodes the [RawSpanBatch] from a reader.]
-    pub fn decode(r: &mut &[u8]) -> Result<Self, SpanBatchError> {
+    pub fn decode(r: &mut &[u8], cfg: &RollupConfig) -> Result<Self, SpanBatchError> {
         let prefix = SpanBatchPrefix::decode_prefix(r)?;
-        let payload = SpanBatchPayload::decode_payload(r)?;
+        let rel_timestamp = prefix.rel_timestamp;
+        let timestamp = cfg.genesis.l2_time + rel_timestamp;
+        let is_fjord_active = cfg.is_fjord_active(timestamp);
+        let payload = SpanBatchPayload::decode_payload(r, is_fjord_active)?;
         Ok(Self { prefix, payload })
     }
 
@@ -133,7 +136,7 @@ impl RawSpanBatch {
 #[cfg(test)]
 mod test {
     extern crate std;
-    use super::{RawSpanBatch, SpanBatch, SpanBatchElement};
+    use super::{RawSpanBatch, RollupConfig, SpanBatch, SpanBatchElement};
     use alloc::{vec, vec::Vec};
     use alloy_primitives::FixedBytes;
 
@@ -173,7 +176,9 @@ mod test {
     fn test_decode_encode_raw_span_batch() {
         // Load in the raw span batch from the `op-node` derivation pipeline implementation.
         let raw_span_batch_hex = include_bytes!("../../../../testdata/raw_batch.hex");
-        let mut raw_span_batch = RawSpanBatch::decode(&mut raw_span_batch_hex.as_slice()).unwrap();
+        let cfg = RollupConfig::default();
+        let mut raw_span_batch =
+            RawSpanBatch::decode(&mut raw_span_batch_hex.as_slice(), &cfg).unwrap();
         raw_span_batch.payload.txs.recover_v(981).unwrap();
 
         let mut encoding_buf = Vec::new();
