@@ -86,8 +86,8 @@ mod native_io {
             let cursor_entry = cursor_entry_lock.entry(raw_fd).or_insert(0);
 
             // Reset the cursor back to before the data we just wrote for the reader's consumption.
-            file.seek(SeekFrom::Start(*cursor_entry as u64))
-                .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
+            // This is a best-effort operation, and may not work for all file descriptors.
+            let _ = file.seek(SeekFrom::Start(*cursor_entry as u64));
 
             file.write_all(buf)
                 .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
@@ -103,16 +103,28 @@ mod native_io {
             let raw_fd: usize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
 
-            let mut cursor_entry_lock = READ_CURSOR.lock();
-            let cursor_entry = cursor_entry_lock.entry(raw_fd).or_insert(0);
+            // If the file is seekable, we need to seek to the cursor position before reading.
+            // If not, it is likely a pipe or a socket. Read as normal.
+            let n = if file.stream_position().is_ok() {
+                let mut cursor_entry_lock = READ_CURSOR.lock();
+                let cursor_entry = cursor_entry_lock.entry(raw_fd).or_insert(0);
 
-            file.seek(SeekFrom::Start(*cursor_entry as u64))
-                .map_err(|e| anyhow!("Failed to reset file cursor to 0: {e}"))?;
+                file.seek(SeekFrom::Start(*cursor_entry as u64)).map_err(|e| {
+                    anyhow!(
+                        "Error seeking to cursor position {cursor_entry} in file descriptor: {e}"
+                    )
+                })?;
 
-            let n =
-                file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
+                let n = file
+                    .read(buf)
+                    .map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
 
-            *cursor_entry += n;
+                *cursor_entry += n;
+
+                n
+            } else {
+                file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?
+            };
 
             std::mem::forget(file);
 
