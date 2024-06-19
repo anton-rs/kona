@@ -46,24 +46,24 @@ pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>> {
     // );
 
     // Setup the decompressor inputs and outputs
-    let mut output = Vec::with_capacity(data.len());
-    // let input = &data[..];
+    let mut output = brotli_state.alloc_u8.alloc_cell(FJORD_MAX_SPAN_BATCH_BYTES as usize);
+    tracing::info!(target: "brotli", "Decompressing Brotli data with output length: {}", output.len());
     let mut available_in = data.len();
     let mut input_offset = 0;
-    let mut available_out = FJORD_MAX_SPAN_BATCH_BYTES as usize;
+    let mut available_out = output.len();
     let mut output_offset = 0;
     let mut written = 0;
 
     // Decompress the data stream until success or failure
     loop {
-        tracing::trace!(target: "brotli", "decompressing brotli stream...");
+        // tracing::trace!(target: "brotli", "decompressing brotli stream...");
         match brotli::BrotliDecompressStream(
             &mut available_in,
             &mut input_offset,
             data,
             &mut available_out,
             &mut output_offset,
-            &mut output,
+            output.slice_mut(),
             &mut written,
             &mut brotli_state,
         ) {
@@ -72,27 +72,45 @@ pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>> {
                 tracing::warn!(target: "brotli", "Brotli decompression failed");
                 break;
             }
-            _ => tracing::debug!(target: "batch-reader", "decompressing brotli data"),
+            _ => continue,
+            // _ => tracing::debug!(target: "batch-reader", "decompressing brotli data"),
         }
     }
     tracing::trace!(target: "brotli", "Written: {}", written);
-    tracing::trace!(target: "brotli", "Output: {:?}", output);
+    tracing::trace!(target: "brotli", "Output: {:?}", output.slice());
     tracing::trace!(target: "brotli", "Output offset: {}", output_offset);
-    Ok(output)
+    Ok(output.slice().to_vec())
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
+    // Tuple of (compressed, decompressed) test vectors.
+    const TEST_VECTORS: &[(&str, &str)] = &[
+        (
+            // The channel compressor uses the first byte to store the compression type.
+            "018b048075ed184249e9bc19675e",
+            "75ed184249e9bc19675e",
+        ),
+        (
+            // The channel compressor uses the first byte to store the compression type.
+            "018b098075ed184249e9bc19675e4d1f766213da71b64278",
+            "75ed184249e9bc19675e4d1f766213da71b64278",
+        ),
+    ];
+
     #[test]
     fn test_decompress_brotli() {
         use tracing::Level;
         let subscriber = tracing_subscriber::fmt().with_max_level(Level::TRACE).finish();
         tracing::subscriber::set_global_default(subscriber).unwrap();
-        let expected = alloy_primitives::hex::decode("75ed184249e9bc19675e").unwrap();
-        let compressed = alloy_primitives::hex::decode("018b048075ed184249e9bc19675e").unwrap();
-        let decompressed = decompress_brotli(&compressed).unwrap();
-        assert_eq!(decompressed, expected);
+
+        for (compressed, expected) in TEST_VECTORS {
+            let compressed = alloy_primitives::hex::decode(compressed).unwrap();
+            let expected = alloy_primitives::hex::decode(expected).unwrap();
+            let decompressed = decompress_brotli(&compressed[1..]).unwrap();
+            assert_eq!(decompressed, expected);
+        }
     }
 }
