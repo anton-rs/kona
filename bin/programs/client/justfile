@@ -1,45 +1,88 @@
 set fallback := true
 
+# Alter inputs as needed
+L1_HEAD := "0x99a606fd807b1d4de3b0e875e8999eca8b658144e8bf17fc1d5b35a18edad4c5"
+L2_HEAD := "0xa88ff85df4148ae174122d7e3637d5044ff08faff4aee1d8295b59df6e752f6b"
+L2_OUTPUT_ROOT := "0x436e677d6ead4a915be25462eba837d287efcfa14aab8aa0b7dae49f7ff21f67"
+L2_CLAIM := "0xff57b5ecc49aea302259672f8a3ec7634ef4b9970bf54798de4f265768015796"
+L2_BLOCK_NUMBER := "121449098"
+L2_CHAIN_ID := "10"
+
 # default recipe to display help information
 default:
   @just --list
 
-# Run the client program natively with the hos
-run-client-native l1_rpc l1_beacon_rpc l2_rpc verbosity:
+# Run the client program on asterisc with the host in detached server mode.
+run-client-asterisc l1_rpc l1_beacon_rpc l2_rpc verbosity:
   #!/usr/bin/env bash
-
-  # TODO: These configuration values are currently mocked. Once they're consumed, 
-  # update this to offer default run or optionally alter by pre-setting them.
-  ROLLUP_CONFIG_PATH="x"
-  L2_GENESIS_PATH="x"
-  L1_HEAD=$(cast 2b 0)
-  L2_HEAD=$(cast 2b 0)
-  L2_OUTPUT_ROOT=$(cast 2b 0)
-  L2_CLAIM=$(cast 2b 0)
-  L2_BLOCK_NUMBER=0
-  L2_CHAIN_ID=10
 
   L1_NODE_ADDRESS="{{l1_rpc}}"
   L1_BEACON_ADDRESS="{{l1_beacon_rpc}}"
   L2_NODE_ADDRESS="{{l2_rpc}}"
 
-  CLIENT_BIN_PATH="./target/release-client-lto/kona-client"
+  HOST_BIN_PATH="./target/release/kona-host"
+  CLIENT_BIN_PATH="./target/riscv64gc-unknown-none-elf/release-client-lto/kona"
+  STATE_PATH="./state.json"
+
+  # Move to the workspace root
+  cd $(git rev-parse --show-toplevel)
+
+  echo "Building client program for RISC-V target..."
+  just build-asterisc --bin kona --profile release-client-lto
+
+  echo "Loading client program into Asterisc state format..."
+  asterisc load-elf --path=$CLIENT_BIN_PATH
+
+  echo "Building host program for native target..."
+  cargo build --bin kona-host --release
+
+  echo "Running asterisc"
+  asterisc run \
+    --info-at '%10000000' \
+    --proof-at never \
+    --input $STATE_PATH \
+    -- \
+    $HOST_BIN_PATH \
+    --l1-head {{L1_HEAD}} \
+    --l2-head {{L2_HEAD}} \
+    --l2-claim {{L2_CLAIM}} \
+    --l2-output-root {{L2_OUTPUT_ROOT}} \
+    --l2-block-number {{L2_BLOCK_NUMBER}} \
+    --l2-chain-id {{L2_CHAIN_ID}} \
+    --l1-node-address $L1_NODE_ADDRESS \
+    --l1-beacon-address $L1_BEACON_ADDRESS \
+    --l2-node-address $L2_NODE_ADDRESS \
+    --server \
+    --data-dir ./data \
+    --exec "" \
+    {{verbosity}}
+
+# Run the client program natively with the host program attached.
+run-client-native l1_rpc l1_beacon_rpc l2_rpc verbosity:
+  #!/usr/bin/env bash
+
+  L1_NODE_ADDRESS="{{l1_rpc}}"
+  L1_BEACON_ADDRESS="{{l1_beacon_rpc}}"
+  L2_NODE_ADDRESS="{{l2_rpc}}"
+
+  CLIENT_BIN_PATH="./target/release-client-lto/kona"
+
+  # Move to the workspace root
+  cd $(git rev-parse --show-toplevel)
 
   echo "Building client program..."
-  cargo build --bin kona-client --profile release-client-lto
+  cargo build --bin kona --profile release-client-lto --features tracing-subscriber
   echo "Running host program with native client program..."
-  (cd ../../.. && cargo r --bin kona-host --release -- \
-    --rollup-config $ROLLUP_CONFIG_PATH \
-    --network optimism \
-    --l2-genesis-path $L2_GENESIS_PATH \
-    --l1-head $L1_HEAD \
-    --l2-head $L2_HEAD \
-    --l2-claim $L2_CLAIM \
-    --l2-output-root $L2_OUTPUT_ROOT \
-    --l2-block-number $L2_BLOCK_NUMBER \
-    --l2-chain-id $L2_CHAIN_ID \
+  cargo r --bin kona-host --release -- \
+    --l1-head {{L1_HEAD}} \
+    --l2-head {{L2_HEAD}} \
+    --l2-claim {{L2_CLAIM}} \
+    --l2-output-root {{L2_OUTPUT_ROOT}} \
+    --l2-block-number {{L2_BLOCK_NUMBER}} \
+    --l2-chain-id {{L2_CHAIN_ID}} \
     --l1-node-address $L1_NODE_ADDRESS \
     --l1-beacon-address $L1_BEACON_ADDRESS \
     --l2-node-address $L2_NODE_ADDRESS \
     --exec $CLIENT_BIN_PATH \
-    {{verbosity}})
+    --data-dir ./data \
+    {{verbosity}}
