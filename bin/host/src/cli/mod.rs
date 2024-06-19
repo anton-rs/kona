@@ -13,9 +13,6 @@ use tokio::sync::RwLock;
 mod parser;
 pub(crate) use parser::parse_b256;
 
-mod types;
-pub(crate) use types::Network;
-
 mod tracing_util;
 pub(crate) use tracing_util::init_tracing_subscriber;
 
@@ -25,18 +22,6 @@ pub struct HostCli {
     /// Verbosity level (0-4)
     #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
     pub v: u8,
-    /// The rollup chain parameters
-    #[clap(long)]
-    pub rollup_config: PathBuf,
-    /// Predefined network selection.
-    #[clap(long)]
-    pub network: Network,
-    /// The Data Directory for preimage data storage. Default uses in-memory storage.
-    #[clap(long)]
-    pub data_dir: Option<PathBuf>,
-    /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
-    #[clap(long)]
-    pub l2_node_address: Option<String>,
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256)]
     pub l1_head: B256,
@@ -55,15 +40,18 @@ pub struct HostCli {
     /// The L2 chain ID.
     #[clap(long)]
     pub l2_chain_id: u64,
-    //// Path to the genesis file.
+    /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
     #[clap(long)]
-    pub l2_genesis_path: PathBuf,
+    pub l2_node_address: Option<String>,
     /// Address of L1 JSON-RPC endpoint to use (eth namespace required)
     #[clap(long)]
     pub l1_node_address: Option<String>,
     /// Address of the L1 Beacon API endpoint to use.
     #[clap(long)]
     pub l1_beacon_address: Option<String>,
+    /// The Data Directory for preimage data storage. Default uses in-memory storage.
+    #[clap(long)]
+    pub data_dir: Option<PathBuf>,
     /// Run the specified client program as a separate process detached from the host. Default is
     /// to run the client program in the host process.
     #[clap(long)]
