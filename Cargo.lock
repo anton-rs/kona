@@ -3073,7 +3073,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 [[package]]
 name = "superchain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=main#645bb0a309970f3cc03ef6ff84670fc35917772a"
+source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=main#3fb9d9b4c72183373447571e932ea01f6fef46e9"
 dependencies = [
  "alloy-consensus 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=cb95183)",
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=cb95183)",
