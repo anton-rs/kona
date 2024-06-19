@@ -72,8 +72,11 @@ pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>> {
                 tracing::warn!(target: "brotli", "Brotli decompression failed");
                 break;
             }
-            _ => continue,
-            // _ => tracing::debug!(target: "batch-reader", "decompressing brotli data"),
+            brotli::BrotliResult::NeedsMoreInput => tracing::debug!(target: "brotli", "Brotli needs more input, output: {:?}", output.slice()),
+            brotli::BrotliResult::NeedsMoreOutput => {
+                tracing::warn!(target: "brotli", "Brotli needs more output");
+                break;
+            }
         }
     }
     tracing::trace!(target: "brotli", "Written: {}", written);
