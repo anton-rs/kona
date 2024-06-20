@@ -1,11 +1,11 @@
 //! Stage Utilities
 
-use core::ops;
 use crate::FJORD_MAX_SPAN_BATCH_BYTES;
 use alloc::{vec, vec::Vec};
 use alloc_no_stdlib::*;
 use anyhow::{ensure, Result};
 use brotli::*;
+use core::ops;
 
 /// Decompresses the given bytes data using the Brotli decompressor implemented
 /// in the [`brotli`](https://crates.io/crates/brotli) crate.
