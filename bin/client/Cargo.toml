@@ -22,13 +22,13 @@ async-trait.workspace = true
 tracing.workspace = true
 
 # local
-kona-common = { path = "../../../crates/common", version = "0.0.1" }
-kona-common-proc = { path = "../../../crates/common-proc", version = "0.0.1" }
-kona-preimage = { path = "../../../crates/preimage", version = "0.0.1" }
-kona-primitives = { path = "../../../crates/primitives", version = "0.0.1" }
-kona-mpt = { path = "../../../crates/mpt", version = "0.0.1" }
-kona-derive = { path = "../../../crates/derive", default-features = false, version = "0.0.1" }
-kona-executor = { path = "../../../crates/executor", version = "0.0.1" }
+kona-common = { path = "../../crates/common", version = "0.0.1" }
+kona-common-proc = { path = "../../crates/common-proc", version = "0.0.1" }
+kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
+kona-primitives = { path = "../../crates/primitives", version = "0.0.1" }
+kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }
+kona-derive = { path = "../../crates/derive", default-features = false, version = "0.0.1" }
+kona-executor = { path = "../../crates/executor", version = "0.0.1" }
 
 tracing-subscriber = { version = "0.3.18", optional = true }
 

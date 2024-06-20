@@ -18,7 +18,7 @@ alloy-consensus.workspace = true
 alloy-rlp.workspace = true
 
 # local
-kona-client = { path = "../programs/client", version = "0.1.0" }
+kona-client = { path = "../client", version = "0.1.0" }
 kona-common = { path = "../../crates/common", version = "0.0.1" }
 kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
 kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }

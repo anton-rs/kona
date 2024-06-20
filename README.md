@@ -37,7 +37,7 @@ rollup state transition in order to verify an [L2 output root][g-output-root] fr
 
 **`kona`**
 
-- [`client`](./bin/programs/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
+- [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
 - [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
 **Build Pipelines**
