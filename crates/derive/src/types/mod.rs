@@ -15,7 +15,6 @@ pub use batch::{
     SpanBatchBits, SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
     SpanBatchElement, SpanBatchError, SpanBatchLegacyTransactionData, SpanBatchPayload,
     SpanBatchPrefix, SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError,
-    MAX_SPAN_BATCH_SIZE,
 };
 
 /// Re-export eip4844 primitives.

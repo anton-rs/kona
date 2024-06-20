@@ -17,12 +17,25 @@ pub const DERIVATION_VERSION_0: u8 = 0;
 /// MaxRLPBytesPerChannel because single batch cannot be larger than channel size.
 pub const MAX_SPAN_BATCH_BYTES: u64 = MAX_RLP_BYTES_PER_CHANNEL;
 
+/// [FJORD_MAX_SPAN_BATCH_BYTES] is the maximum amount of bytes that will be needed
+/// to decode every span batch field after the Fjord Hardfork.
+/// This value cannot be larger than MaxRLPBytesPerChannel because single batch
+/// cannot be larger than channel size.
+pub const FJORD_MAX_SPAN_BATCH_BYTES: u64 = FJORD_MAX_RLP_BYTES_PER_CHANNEL;
+
 /// [MAX_RLP_BYTES_PER_CHANNEL] is the maximum amount of bytes that will be read from
 /// a channel. This limit is set when decoding the RLP.
 pub const MAX_RLP_BYTES_PER_CHANNEL: u64 = 10_000_000;
 
+/// [FJORD_MAX_RLP_BYTES_PER_CHANNEL] is the maximum amount of bytes that will be read from
+/// a channel when the Fjord Hardfork is activated. This limit is set when decoding the RLP.
+pub const FJORD_MAX_RLP_BYTES_PER_CHANNEL: u64 = 100_000_000;
+
 /// The maximum size of a channel bank.
 pub const MAX_CHANNEL_BANK_SIZE: usize = 100_000_000;
+
+/// The maximum size of a channel bank after the Fjord Hardfork.
+pub const FJORD_MAX_CHANNEL_BANK_SIZE: usize = 1_000_000_000;
 
 /// [CHANNEL_ID_LENGTH] is the length of the channel ID.
 pub const CHANNEL_ID_LENGTH: usize = 16;
