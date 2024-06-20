@@ -34,7 +34,6 @@ unsigned-varint = "0.8.0"
 miniz_oxide = "0.7.3"
 brotli = { version = "6.0.0", default-features = false }
 alloc-no-stdlib = "2.0.4"
-alloc-stdlib = "0.2.2"
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
