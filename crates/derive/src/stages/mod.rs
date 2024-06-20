@@ -36,5 +36,8 @@ pub use attributes_queue::{
     AttributesBuilder, AttributesProvider, AttributesQueue, StatefulAttributesBuilder,
 };
 
+mod utils;
+pub use utils::decompress_brotli;
+
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
