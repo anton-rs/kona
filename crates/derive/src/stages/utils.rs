@@ -1,24 +1,24 @@
 //! Stage Utilities
 
+use core::ops;
 use crate::FJORD_MAX_SPAN_BATCH_BYTES;
 use alloc::{vec, vec::Vec};
-use alloc_no_stdlib::bzero;
-use alloc_stdlib::HeapPrealloc;
+use alloc_no_stdlib::*;
 use anyhow::{ensure, Result};
 use brotli::*;
 
 /// Decompresses the given bytes data using the Brotli decompressor implemented
 /// in the [`brotli`](https://crates.io/crates/brotli) crate.
 pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>> {
-    // Set up the Brotli state with the heap preallocators
+    declare_stack_allocator_struct!(MemPool, 4096, calloc);
+
     let mut u8_buffer = vec![0; 32 * 1024 * 1024].into_boxed_slice();
     let mut u32_buffer = vec![0; 1024 * 1024].into_boxed_slice();
     let mut hc_buffer = vec![HuffmanCode::default(); 4 * 1024 * 1024].into_boxed_slice();
-    let heap_u8_allocator = HeapPrealloc::<u8>::new_allocator(4096, &mut u8_buffer, bzero);
-    let heap_u32_allocator = HeapPrealloc::<u32>::new_allocator(4096, &mut u32_buffer, bzero);
-    let heap_hc_allocator = HeapPrealloc::<HuffmanCode>::new_allocator(4096, &mut hc_buffer, bzero);
-    let mut brotli_state =
-        BrotliState::new(heap_u8_allocator, heap_u32_allocator, heap_hc_allocator);
+    let u8_allocator = MemPool::<u8>::new_allocator(&mut u8_buffer, bzero);
+    let u32_allocator = MemPool::<u32>::new_allocator(&mut u32_buffer, bzero);
+    let hc_allocator = MemPool::<HuffmanCode>::new_allocator(&mut hc_buffer, bzero);
+    let mut brotli_state = BrotliState::new(u8_allocator, u32_allocator, hc_allocator);
 
     // Setup the decompressor inputs and outputs
     let mut output = vec![0; data.len()];
