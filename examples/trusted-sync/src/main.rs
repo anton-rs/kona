@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use kona_derive::{online::*, types::OP_MAINNET_CONFIG};
+use kona_derive::online::*;
 use reqwest::Url;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn, Level};
@@ -37,10 +37,18 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     let beacon_url: String =
         cli_cfg.beacon_url.unwrap_or_else(|| std::env::var(BEACON_URL).unwrap());
 
-    // Construct the pipeline and payload validator.
-    let cfg = Arc::new(OP_MAINNET_CONFIG);
-    let start = cli_cfg.start_l2_block.unwrap_or(cfg.genesis.l2.number);
+    // Query for the L2 Chain ID
+    let mut l2_provider =
+        AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), Arc::new(RollupConfig::default()));
+    let l2_chain_id =
+        l2_provider.chain_id().await.expect("Failed to fetch chain ID from L2 provider");
+    let cfg = RollupConfig::from_l2_chain_id(l2_chain_id)
+        .expect("Failed to fetch rollup config from L2 chain ID");
+    let cfg = Arc::new(cfg);
+
+    // Construct the pipeline
     let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
+    let start = cli_cfg.start_l2_block.unwrap_or(cfg.genesis.l2.number);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
