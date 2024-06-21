@@ -171,7 +171,7 @@ impl BatchReader {
                 self.decompressed = decompress_to_vec_zlib(&data).ok()?;
             } else if compression_type == CHANNEL_VERSION_BROTLI {
                 brotli_used = true;
-                self.decompressed = decompress_brotli(&data).ok()?;
+                self.decompressed = decompress_brotli(&data[1..]).ok()?;
             } else {
                 tracing::error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
                 return None;
