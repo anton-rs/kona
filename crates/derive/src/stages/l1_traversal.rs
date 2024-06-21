@@ -162,7 +162,8 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn new_receipts() -> alloc::vec::Vec<Receipt> {
-        let mut receipt = Receipt { status: true, ..Receipt::default() };
+        let mut receipt =
+            Receipt { status: alloy_consensus::Eip658Value::Eip658(true), ..Receipt::default() };
         let bad = Log::new(
             Address::from([2; 20]),
             vec![CONFIG_UPDATE_TOPIC, B256::default()],

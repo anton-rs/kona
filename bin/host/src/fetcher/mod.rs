@@ -3,11 +3,11 @@
 
 use crate::{kv::KeyValueStore, util};
 use alloy_consensus::{Header, TxEnvelope};
-use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB};
+use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::Decodable;
-use alloy_rpc_types::{Block, BlockTransactions};
+use alloy_rpc_types::{Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind};
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
 use kona_derive::{
@@ -130,7 +130,7 @@ where
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
                 let Block { transactions, .. } = self
                     .l1_provider
-                    .get_block_by_hash(hash, true)
+                    .get_block_by_hash(hash, BlockTransactionsKind::Full)
                     .await
                     .map_err(|e| anyhow!("Failed to fetch block: {e}"))?
                     .ok_or(anyhow!("Block not found."))?;
@@ -292,7 +292,7 @@ where
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
                 let Block { transactions, .. } = self
                     .l2_provider
-                    .get_block_by_hash(hash, false)
+                    .get_block_by_hash(hash, BlockTransactionsKind::Hashes)
                     .await
                     .map_err(|e| anyhow!("Failed to fetch block: {e}"))?
                     .ok_or(anyhow!("Block not found."))?;
@@ -374,11 +374,8 @@ where
                 // Fetch the storage root for the L2 head block.
                 let l2_to_l1_message_passer = self
                     .l2_provider
-                    .get_proof(
-                        L2_TO_L1_MESSAGE_PASSER_ADDRESS,
-                        Default::default(),
-                        self.l2_head.into(),
-                    )
+                    .get_proof(L2_TO_L1_MESSAGE_PASSER_ADDRESS, Default::default())
+                    .block_id(BlockId::Hash(self.l2_head.into()))
                     .await
                     .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
 
@@ -437,7 +434,8 @@ where
 
                 let proof_response = self
                     .l2_provider
-                    .get_proof(address, Default::default(), block_number.into())
+                    .get_proof(address, Default::default())
+                    .block_id(BlockId::Number(BlockNumberOrTag::Number(block_number)))
                     .await
                     .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
 
@@ -465,7 +463,8 @@ where
 
                 let mut proof_response = self
                     .l2_provider
-                    .get_proof(address, vec![slot], block_number.into())
+                    .get_proof(address, vec![slot])
+                    .block_id(BlockId::Number(BlockNumberOrTag::Number(block_number)))
                     .await
                     .map_err(|e| anyhow!("Failed to fetch account proof: {e}"))?;
 

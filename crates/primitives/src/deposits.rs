@@ -1,10 +1,11 @@
 //! Contains deposit transaction types and helper methods.
 
 use alloc::{string::String, vec::Vec};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{b256, keccak256, Address, Bytes, Log, TxKind, B256, U256, U64};
 use alloy_rlp::Encodable;
 use core::fmt::Display;
-use op_alloy_consensus::{Encodable2718, OpTxEnvelope, TxDeposit};
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 
 use crate::RawTransaction;
 

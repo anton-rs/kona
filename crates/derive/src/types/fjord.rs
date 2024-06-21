@@ -6,8 +6,9 @@ use crate::types::{
     upgrade_to_calldata, RawTransaction, UpgradeDepositSource, GAS_PRICE_ORACLE_ADDRESS,
 };
 use alloc::{string::String, vec, vec::Vec};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
-use op_alloy_consensus::{Encodable2718, OpTxEnvelope, TxDeposit};
+use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 use spin::Lazy;
 
 /// The L1 Info Depositer Address.
