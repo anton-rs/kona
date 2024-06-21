@@ -58,7 +58,7 @@ dependencies = [
 [[package]]
 name = "alloy-consensus"
 version = "0.1.2"
-source = "git+https://github.com/alloy-rs/alloy#68639726d659555a9693f3c1656e8efd0e2a5fdf"
+source = "git+https://github.com/alloy-rs/alloy#8aa54828c025a99bbe7e2d4fc9768605d172cc6d"
 dependencies = [
  "alloy-eips 0.1.2",
  "alloy-primitives",
@@ -83,7 +83,7 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.1.2"
-source = "git+https://github.com/alloy-rs/alloy#68639726d659555a9693f3c1656e8efd0e2a5fdf"
+source = "git+https://github.com/alloy-rs/alloy#8aa54828c025a99bbe7e2d4fc9768605d172cc6d"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -281,7 +281,7 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.1.2"
-source = "git+https://github.com/alloy-rs/alloy#68639726d659555a9693f3c1656e8efd0e2a5fdf"
+source = "git+https://github.com/alloy-rs/alloy#8aa54828c025a99bbe7e2d4fc9768605d172cc6d"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -3007,9 +3007,9 @@ dependencies = [
 
 [[package]]
 name = "subtle"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
+checksum = "0d0208408ba0c3df17ed26eb06992cb1a1268d41b2c0e12e65203fbe3972cee5"
 
 [[package]]
 name = "superchain-primitives"

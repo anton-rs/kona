@@ -11,8 +11,8 @@ homepage.workspace = true
 [dependencies]
 cfg-if.workspace = true
 anyhow.workspace = true
-kona-common = { path = "../../../crates/common" }
-kona-common-proc = { path = "../../../crates/common-proc" }
+kona-common = { path = "../../crates/common" }
+kona-common-proc = { path = "../../crates/common-proc" }
 
 [[bin]]
 name = "minimal"

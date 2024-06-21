@@ -9,13 +9,13 @@ test: build-cannon-examples build-asterisc-examples test-cannon test-asterisc
 
 # Build cannon programs
 build-cannon-examples:
-  @cd ../bin/programs/minimal && just build-cannon --profile release-client-lto
-  @cd ../bin/programs/simple-revm && just build-cannon --profile release-client-lto
+  @cd ../examples/minimal && just build-cannon --profile release-client-lto
+  @cd ../examples/simple-revm && just build-cannon --profile release-client-lto
 
 # Build asterisc programs
 build-asterisc-examples:
-  @cd ../bin/programs/minimal && just build-asterisc --profile release-client-lto
-  @cd ../bin/programs/simple-revm && just build-asterisc --profile release-client-lto
+  @cd ../examples/minimal && just build-asterisc --profile release-client-lto
+  @cd ../examples/simple-revm && just build-asterisc --profile release-client-lto
 
 # Test programs on `cannon`
 test-cannon: test-cannon-go test-cannon-rs
