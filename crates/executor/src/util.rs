@@ -1,10 +1,10 @@
 //! Contains utilities for the L2 executor.
 
 use alloc::vec::Vec;
+use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, Transaction};
 use alloy_primitives::{Bloom, Log};
 use op_alloy_consensus::{
-    Eip658Value, OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxEnvelope,
-    OpTxType, Receipt, ReceiptWithBloom, Transaction,
+    OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxEnvelope, OpTxType,
 };
 
 /// Constructs a [OpReceiptEnvelope] from a [Receipt] fields and [OpTxType].

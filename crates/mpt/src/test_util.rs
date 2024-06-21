@@ -7,7 +7,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{keccak256, Bytes, Log, B256};
 use alloy_provider::{network::eip2718::Encodable2718, Provider, ProviderBuilder};
-use alloy_rpc_types::BlockTransactions;
+use alloy_rpc_types::{BlockTransactions, BlockTransactionsKind};
 use anyhow::{anyhow, Result};
 use reqwest::Url;
 
@@ -17,13 +17,11 @@ const RPC_URL: &str = "https://docs-demo.quiknode.pro/";
 pub(crate) async fn get_live_derivable_receipts_list(
 ) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<ReceiptEnvelope>)> {
     // Initialize the provider.
-    let provider = ProviderBuilder::new()
-        .on_http(Url::parse(RPC_URL).expect("invalid rpc url"))
-        .map_err(|e| anyhow!(e))?;
+    let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
 
     let block_number = 19005266;
     let block = provider
-        .get_block(block_number.into(), true)
+        .get_block(block_number.into(), BlockTransactionsKind::Full)
         .await
         .map_err(|e| anyhow!(e))?
         .ok_or(anyhow!("Missing block"))?;
@@ -82,13 +80,11 @@ pub(crate) async fn get_live_derivable_receipts_list(
 pub(crate) async fn get_live_derivable_transactions_list(
 ) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<TxEnvelope>)> {
     // Initialize the provider.
-    let provider = ProviderBuilder::new()
-        .on_http(Url::parse(RPC_URL).expect("invalid rpc url"))
-        .map_err(|e| anyhow!(e))?;
+    let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
 
     let block_number = 19005266;
     let block = provider
-        .get_block(block_number.into(), true)
+        .get_block(block_number.into(), BlockTransactionsKind::Full)
         .await
         .map_err(|e| anyhow!(e))?
         .ok_or(anyhow!("Missing block"))?;

@@ -1,7 +1,7 @@
 //! Contains the logic for executing the pre-block beacon root call.
 
 use alloc::{boxed::Box, vec::Vec};
-use alloy_consensus::constants::BEACON_ROOTS_ADDRESS;
+use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_derive::types::{L2PayloadAttributes, RollupConfig};

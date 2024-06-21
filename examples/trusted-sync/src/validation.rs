@@ -1,7 +1,7 @@
 //! Contains logic to validate derivation pipeline outputs.
 
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{BlockNumberOrTag, Header};
+use alloy_rpc_types::{BlockNumberOrTag, BlockTransactionsKind, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
 use kona_derive::types::{
@@ -45,7 +45,7 @@ impl OnlineValidator {
         // Don't hydrate the block so we only get a list of transaction hashes.
         let block = self
             .provider
-            .get_block(tag.into(), false)
+            .get_block(tag.into(), BlockTransactionsKind::Hashes)
             .await
             .map_err(|e| anyhow::anyhow!(e))?
             .ok_or(anyhow::anyhow!("Block not found"))?;

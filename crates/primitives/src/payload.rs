@@ -1,9 +1,10 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
+use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
-use op_alloy_consensus::{Decodable2718, Encodable2718, OpTxEnvelope, OpTxType};
+use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
