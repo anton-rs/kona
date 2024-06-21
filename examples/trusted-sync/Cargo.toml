@@ -23,5 +23,5 @@ tracing-subscriber = "0.3.18"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 serde = { version = "1.0.198", features = ["derive"] }
 alloy-provider = { version = "0.1", default-features = false }
-alloy-rpc-types = { version = "0.1", default-features = false }
+alloy-rpc-types = { version = "0.1" }
 alloy-transport = { version = "0.1", default-features = false }
