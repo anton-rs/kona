@@ -2,13 +2,14 @@
 //! the preimage oracle.
 
 use alloy_primitives::{B256, U256};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
+#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)))]
 pub enum PreimageKeyType {
     /// Local key types are local to a given instance of a fault-proof and context dependent.
     /// Commonly these local keys are mapped to bootstrap data for the fault proof program.
@@ -56,8 +57,9 @@ impl TryFrom<u8> for PreimageKeyType {
 /// |---------|-------------|
 /// | [0, 1)  | Type byte   |
 /// | [1, 32) | Data        |
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
+#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)))]
 pub struct PreimageKey {
     data: [u8; 31],
     key_type: PreimageKeyType,
