@@ -1630,7 +1630,7 @@ dependencies = [
  "op-alloy-consensus",
  "serde",
  "serde_json",
- "spin 0.9.8",
+ "spin",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1642,7 +1642,7 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "linked_list_allocator",
- "spin 0.9.8",
+ "spin",
 ]
 
 [[package]]
@@ -1688,7 +1688,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "spin 0.9.8",
+ "spin",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -1818,11 +1818,11 @@ dependencies = [
 
 [[package]]
 name = "lazy_static"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 dependencies = [
- "spin 0.5.2",
+ "spin",
 ]
 
 [[package]]
@@ -2351,9 +2351,9 @@ dependencies = [
 
 [[package]]
 name = "proptest"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b476131c3c86cb68032fdc5cb6d5a1045e3e42d96b69fa599fd77701e1f5bf"
+checksum = "b4c2511913b88df1637da85cc8d96ec8e43a3f8bb8ccb71ee1ac240d6f3df58d"
 dependencies = [
  "bit-set",
  "bit-vec",
@@ -2489,8 +2489,8 @@ dependencies = [
 
 [[package]]
 name = "revm"
-version = "9.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
+version = "10.0.0"
+source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -2503,8 +2503,8 @@ dependencies = [
 
 [[package]]
 name = "revm-interpreter"
-version = "5.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
+version = "6.0.0"
+source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
 dependencies = [
  "revm-primitives",
  "serde",
@@ -2512,8 +2512,8 @@ dependencies = [
 
 [[package]]
 name = "revm-precompile"
-version = "7.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
+version = "8.0.0"
+source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -2530,8 +2530,8 @@ dependencies = [
 
 [[package]]
 name = "revm-primitives"
-version = "4.0.0"
-source = "git+https://github.com/bluealloy/revm?rev=a832a4e#a832a4e9f17ce6876d98d5f53b7efbb18d27fb23"
+version = "5.0.0"
+source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
 dependencies = [
  "alloy-primitives",
  "auto_impl",
@@ -2568,7 +2568,7 @@ dependencies = [
  "cfg-if",
  "getrandom",
  "libc",
- "spin 0.9.8",
+ "spin",
  "untrusted",
  "windows-sys 0.52.0",
 ]
@@ -2964,12 +2964,6 @@ dependencies = [
  "libc",
  "windows-sys 0.52.0",
 ]
-
-[[package]]
-name = "spin"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spin"
