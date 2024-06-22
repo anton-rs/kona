@@ -18,7 +18,7 @@ async-trait.workspace = true
 
 # Local
 kona-primitives = { path = "../primitives", version = "0.0.1" }
-kona-derive = { path = "../derive", version = "0.0.1" }
+kona-derive = { path = "../derive", version = "0.0.2" }
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
