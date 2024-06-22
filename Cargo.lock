@@ -1756,6 +1756,7 @@ dependencies = [
  "alloy-trie",
  "anyhow",
  "futures",
+ "proptest",
  "reqwest",
  "revm",
  "tokio",
