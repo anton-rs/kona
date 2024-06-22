@@ -30,3 +30,4 @@ reqwest = "0.12.4"
 tracing-subscriber = "0.3.18"
 futures = { version = "0.3.30", default-features = false }
 proptest = "1.4"
+rand = "0.8.5"

@@ -424,6 +424,12 @@ impl TrieNode {
                             );
                             *self = TrieNode::Extension { prefix: new_prefix, node: node.clone() };
                         }
+                        TrieNode::Branch { .. } => {
+                            *self = TrieNode::Extension {
+                                prefix: Nibbles::from_nibbles_unchecked([*index as u8]),
+                                node: Box::new(non_empty_node.clone()),
+                            };
+                        }
                         TrieNode::Blinded { commitment } => {
                             // In this special case, we need to send a hint to fetch the preimage of
                             // the blinded node, since it is outside of the paths that have been
@@ -624,16 +630,17 @@ impl Decodable for TrieNode {
 }
 
 #[cfg(test)]
-mod static_test {
+mod test {
     use super::*;
     use crate::{
         fetcher::NoopTrieDBFetcher, ordered_trie_with_encoder, test_util::TrieNodeProvider,
-        TrieNode,
+        NoopTrieDBHinter, TrieNode,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
     use alloy_primitives::{b256, bytes, hex, keccak256};
     use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};
     use alloy_trie::{HashBuilder, Nibbles};
+    use rand::prelude::SliceRandom;
 
     #[test]
     fn test_decode_branch() {
@@ -796,7 +803,7 @@ mod static_test {
     proptest::proptest! {
         /// Differential test for inserting an arbitrary number of keys into an empty `TrieNode` / `HashBuilder`.
         #[test]
-        fn diff_hash_builder_insert(mut keys in proptest::collection::vec(proptest::prelude::any::<[u8; 32]>(), 1..1024)) {
+        fn diff_hash_builder_insert(mut keys in proptest::collection::vec(proptest::prelude::any::<[u8; 32]>(), 1..4096)) {
             // Ensure the keys are sorted; `HashBuilder` expects sorted keys.`
             keys.sort();
 
@@ -810,6 +817,42 @@ mod static_test {
 
             node.blind();
             assert_eq!(node.blinded_commitment().unwrap(), hb.root());
+        }
+
+        /// Differential test for deleting an arbitrary number of keys from a `TrieNode` / `HashBuilder`.
+        #[test]
+        fn diff_hash_builder_delete(mut keys in proptest::collection::vec(proptest::prelude::any::<[u8; 32]>(), 1..4096)) {
+            // Ensure the keys are sorted; `HashBuilder` expects sorted keys.`
+            keys.sort();
+
+            let mut hb = HashBuilder::default();
+            let mut node = TrieNode::Empty;
+
+            let mut rng = rand::thread_rng();
+            let deleted_keys =
+            keys.choose_multiple(&mut rng, 5.min(keys.len())).copied().collect::<Vec<_>>();
+
+            // Insert the keys into the `HashBuilder` and `TrieNode`.
+            for key in keys {
+                // Don't add any keys that are to be deleted from the trie node to the `HashBuilder`.
+                if !deleted_keys.contains(&key) {
+                    hb.add_leaf(Nibbles::unpack(key), key.as_ref());
+                }
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+            }
+
+            // Delete the keys that were randomly selected from the trie node.
+            for deleted_key in deleted_keys {
+                node.delete(&Nibbles::unpack(deleted_key), &NoopTrieDBFetcher, &NoopTrieDBHinter)
+                    .unwrap();
+            }
+
+            // Blind manually, since the single node remaining may be a leaf or empty node, and always must be blinded.
+            let mut rlp_buf = Vec::with_capacity(node.length());
+            node.encode(&mut rlp_buf);
+            let trie_root = keccak256(rlp_buf);
+
+            assert_eq!(trie_root, hb.root());
         }
     }
 }
