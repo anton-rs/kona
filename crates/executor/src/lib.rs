@@ -509,7 +509,7 @@ where
                 env.gas_priority_fee = None;
                 env.transact_to = match tx.to {
                     TxKind::Call(to) => TransactTo::Call(to),
-                    TxKind::Create => TransactTo::create(),
+                    TxKind::Create => TransactTo::Create,
                 };
                 env.value = tx.value;
                 env.data = tx.input.clone();
@@ -536,7 +536,7 @@ where
                 env.gas_priority_fee = None;
                 env.transact_to = match tx.to {
                     TxKind::Call(to) => TransactTo::Call(to),
-                    TxKind::Create => TransactTo::create(),
+                    TxKind::Create => TransactTo::Create,
                 };
                 env.value = tx.value;
                 env.data = tx.input.clone();
@@ -573,7 +573,7 @@ where
                 env.gas_priority_fee = Some(U256::from(tx.max_priority_fee_per_gas));
                 env.transact_to = match tx.to {
                     TxKind::Call(to) => TransactTo::Call(to),
-                    TxKind::Create => TransactTo::create(),
+                    TxKind::Create => TransactTo::Create,
                 };
                 env.value = tx.value;
                 env.data = tx.input.clone();
@@ -608,7 +608,7 @@ where
                 env.gas_priority_fee = None;
                 match tx.to {
                     TxKind::Call(to) => env.transact_to = TransactTo::Call(to),
-                    TxKind::Create => env.transact_to = TransactTo::create(),
+                    TxKind::Create => env.transact_to = TransactTo::Create,
                 }
                 env.value = tx.value;
                 env.data = tx.input.clone();

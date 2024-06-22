@@ -22,17 +22,17 @@ pub(crate) fn execute<T: Into<Bytes>>(address: Address, input: T) -> Result<Vec<
         match precompile.1 {
             Precompile::Standard(std_precompile) => {
                 // Standard precompile execution - no access to environment required.
-                let (_, result) = std_precompile(&input.into(), u64::MAX)
+                let output = std_precompile(&input.into(), u64::MAX)
                     .map_err(|e| anyhow!("Failed precompile execution: {e}"))?;
 
-                Ok(result.to_vec())
+                Ok(output.bytes.into())
             }
             Precompile::Env(env_precompile) => {
                 // Use default environment for KZG point evaluation.
-                let (_, result) = env_precompile(&input.into(), u64::MAX, &Env::default())
+                let output = env_precompile(&input.into(), u64::MAX, &Env::default())
                     .map_err(|e| anyhow!("Failed precompile execution: {e}"))?;
 
-                Ok(result.to_vec())
+                Ok(output.bytes.into())
             }
             _ => anyhow::bail!("Precompile not accelerated"),
         }
