@@ -12,6 +12,7 @@ cfg_if! {
     } else if #[cfg(target_arch = "riscv64")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
         pub type ClientIO = crate::asterisc::io::AsteriscIO;
+    } else if #[cfg(target_arch = "zkvm")] {
     } else {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `native` target architecture."]
         pub type ClientIO = native_io::NativeIO;
@@ -54,7 +55,7 @@ pub fn exit(code: usize) -> ! {
     ClientIO::exit(code)
 }
 
-#[cfg(not(any(target_arch = "mips", target_arch = "riscv64")))]
+#[cfg(not(any(target_arch = "mips", target_arch = "riscv64", target_arch = "zkvm")))]
 mod native_io {
     extern crate std;
 
