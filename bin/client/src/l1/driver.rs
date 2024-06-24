@@ -4,7 +4,7 @@
 //! [L2PayloadAttributes]: kona_derive::types::L2PayloadAttributes
 
 use super::{OracleBlobProvider, OracleL1ChainProvider};
-use crate::{l2::OracleL2ChainProvider, BootInfo, CachingOracle, HintType, HINT_WRITER};
+use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
 use anyhow::{anyhow, Result};
@@ -19,31 +19,32 @@ use kona_derive::{
     traits::{ChainProvider, L2ChainProvider},
 };
 use kona_mpt::TrieDBFetcher;
-use kona_preimage::{HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient};
+use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
 use tracing::{info, warn};
 
 /// An oracle-backed derivation pipeline.
-pub type OraclePipeline =
-    DerivationPipeline<OracleAttributesQueue<OracleDataProvider>, OracleL2ChainProvider>;
+pub type OraclePipeline<O> =
+    DerivationPipeline<OracleAttributesQueue<OracleDataProvider<O>, O>, OracleL2ChainProvider<O>>;
 
 /// An oracle-backed Ethereum data source.
-pub type OracleDataProvider = EthereumDataSource<OracleL1ChainProvider, OracleBlobProvider>;
+pub type OracleDataProvider<O> =
+    EthereumDataSource<OracleL1ChainProvider<O>, OracleBlobProvider<O>>;
 
 /// An oracle-backed payload attributes builder for the `AttributesQueue` stage of the derivation
 /// pipeline.
-pub type OracleAttributesBuilder =
-    StatefulAttributesBuilder<OracleL1ChainProvider, OracleL2ChainProvider>;
+pub type OracleAttributesBuilder<O> =
+    StatefulAttributesBuilder<OracleL1ChainProvider<O>, OracleL2ChainProvider<O>>;
 
 /// An oracle-backed attributes queue for the derivation pipeline.
-pub type OracleAttributesQueue<DAP> = AttributesQueue<
+pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
     BatchQueue<
         ChannelReader<
-            ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<OracleL1ChainProvider>>>>,
+            ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<OracleL1ChainProvider<O>>>>>,
         >,
-        OracleL2ChainProvider,
+        OracleL2ChainProvider<O>,
     >,
-    OracleAttributesBuilder,
+    OracleAttributesBuilder<O>,
 >;
 
 /// The [DerivationDriver] struct is responsible for handling the [L2PayloadAttributes] derivation
@@ -54,16 +55,16 @@ pub type OracleAttributesQueue<DAP> = AttributesQueue<
 ///
 /// [L2PayloadAttributes]: kona_derive::types::L2PayloadAttributes
 #[derive(Debug)]
-pub struct DerivationDriver {
+pub struct DerivationDriver<O: CommsClient + Send + Sync + Debug> {
     /// The current L2 safe head.
     l2_safe_head: L2BlockInfo,
     /// The header of the L2 safe head.
     l2_safe_head_header: Sealed<Header>,
     /// The inner pipeline.
-    pipeline: OraclePipeline,
+    pipeline: OraclePipeline<O>,
 }
 
-impl DerivationDriver {
+impl<O: CommsClient + Send + Sync + Debug> DerivationDriver<O> {
     /// Returns the current L2 safe head [L2BlockInfo].
     pub fn l2_safe_head(&self) -> &L2BlockInfo {
         &self.l2_safe_head
@@ -92,10 +93,10 @@ impl DerivationDriver {
     /// - A new [DerivationDriver] instance.
     pub async fn new(
         boot_info: &BootInfo,
-        caching_oracle: &CachingOracle,
-        blob_provider: OracleBlobProvider,
-        mut chain_provider: OracleL1ChainProvider,
-        mut l2_chain_provider: OracleL2ChainProvider,
+        caching_oracle: &O,
+        blob_provider: OracleBlobProvider<O>,
+        mut chain_provider: OracleL1ChainProvider<O>,
+        mut l2_chain_provider: OracleL2ChainProvider<O>,
     ) -> Result<Self> {
         let cfg = Arc::new(boot_info.rollup_config.clone());
 
@@ -159,13 +160,13 @@ impl DerivationDriver {
     /// ## Returns
     /// - A tuple containing the L1 origin block information and the L2 safe head information.
     async fn find_startup_info(
-        caching_oracle: &CachingOracle,
+        caching_oracle: &O,
         boot_info: &BootInfo,
-        chain_provider: &mut OracleL1ChainProvider,
-        l2_chain_provider: &mut OracleL2ChainProvider,
+        chain_provider: &mut OracleL1ChainProvider<O>,
+        l2_chain_provider: &mut OracleL2ChainProvider<O>,
     ) -> Result<(BlockInfo, L2BlockInfo, Sealed<Header>)> {
         // Find the initial safe head, based off of the starting L2 block number in the boot info.
-        HINT_WRITER
+        caching_oracle
             .write(&HintType::StartingL2Output.encode_with(&[boot_info.l2_output_root.as_ref()]))
             .await?;
         let mut output_preimage = [0u8; 128];

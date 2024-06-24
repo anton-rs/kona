@@ -3,18 +3,17 @@
 use crate::{BootInfo, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Header;
-use alloy_eips::eip2718::Decodable2718;
-use alloy_primitives::{Address, Bytes, B256};
+use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
-use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{OrderedListWalker, TrieDBFetcher};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_primitives::{
     L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
 };
-use op_alloy_consensus::OpTxEnvelope;
+use op_alloy_consensus::{Decodable2718, OpTxEnvelope};
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]
@@ -32,7 +31,7 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
     }
 }
 
-impl<T: CommsClient> OracleL2ChainProvider<T> {
+impl<T: CommsClient + Send + Sync> OracleL2ChainProvider<T> {
     /// Returns a [Header] corresponding to the given L2 block number, by walking back from the
     /// L2 safe head.
     async fn header_by_number(&mut self, block_number: u64) -> Result<Header> {
@@ -118,7 +117,7 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
     }
 }
 
-impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
+impl<T: CommsClient + Send + Sync> TrieDBFetcher for OracleL2ChainProvider<T> {
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L2, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
@@ -151,42 +150,6 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
                 self.oracle.get(PreimageKey::new(*hash, PreimageKeyType::Keccak256)).await?;
             Header::decode(&mut header_bytes.as_slice())
                 .map_err(|e| anyhow!("Failed to RLP decode Header: {e}"))
-        })
-    }
-}
-
-impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
-    fn hint_trie_node(&self, hash: B256) -> Result<()> {
-        kona_common::block_on(async move {
-            self.oracle.write(&HintType::L2StateNode.encode_with(&[hash.as_slice()])).await
-        })
-    }
-
-    fn hint_account_proof(&self, address: Address, block_number: u64) -> Result<()> {
-        kona_common::block_on(async move {
-            self.oracle
-                .write(
-                    &HintType::L2AccountProof
-                        .encode_with(&[block_number.to_be_bytes().as_ref(), address.as_slice()]),
-                )
-                .await
-        })
-    }
-
-    fn hint_storage_proof(
-        &self,
-        address: alloy_primitives::Address,
-        slot: alloy_primitives::U256,
-        block_number: u64,
-    ) -> Result<()> {
-        kona_common::block_on(async move {
-            self.oracle
-                .write(&HintType::L2AccountStorageProof.encode_with(&[
-                    block_number.to_be_bytes().as_ref(),
-                    address.as_slice(),
-                    slot.to_be_bytes::<32>().as_ref(),
-                ]))
-                .await
         })
     }
 }
