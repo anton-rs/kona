@@ -9,16 +9,16 @@ mod metrics;
 mod telemetry;
 mod validation;
 
-const METRICS_SERVER_ADDR: &str = "127.0.0.1:9090";
 const LOG_TARGET: &str = "trusted-sync";
 
 #[actix_web::main]
 async fn main() -> Result<()> {
     let cfg = cli::Cli::parse();
     telemetry::init(cfg.v)?;
+    let addr = cfg.metrics_server_addr();
     let handle = tokio::spawn(async { sync(cfg).await });
     tokio::select! {
-        res = metrics::serve_metrics(METRICS_SERVER_ADDR) => {
+        res = metrics::serve_metrics(&addr) => {
             error!(target: LOG_TARGET, "Metrics server failed: {:?}", res);
             return res.map_err(|e| anyhow::anyhow!(e));
         }

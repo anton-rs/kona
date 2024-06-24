@@ -65,25 +65,61 @@ impl AlloyChainProvider {
 #[async_trait]
 impl ChainProvider for AlloyChainProvider {
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["chain_provider", "header_by_hash"])
+            .start_timer();
         if let Some(header) = self.header_by_hash_cache.get(&hash) {
+            timer.observe_duration();
             return Ok(header.clone());
         }
 
         let raw_header: TransportResult<Bytes> =
             self.inner.raw_request("debug_getRawHeader".into(), [hash]).await;
-        let raw_header: Bytes = raw_header.map_err(|e| anyhow!(e))?;
-        Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e))
+        let raw_header: Bytes = match raw_header.map_err(|e| anyhow!(e)) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        match Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e)) {
+            Ok(header) => {
+                self.header_by_hash_cache.put(hash, header.clone());
+                timer.observe_duration();
+                Ok(header)
+            }
+            Err(e) => {
+                timer.observe_duration();
+                Err(e)
+            }
+        }
     }
 
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["chain_provider", "block_info_by_number"])
+            .start_timer();
         if let Some(block_info) = self.block_info_by_number_cache.get(&number) {
+            timer.observe_duration();
             return Ok(*block_info);
         }
 
         let raw_header: TransportResult<Bytes> =
             self.inner.raw_request("debug_getRawHeader".into(), [U64::from(number)]).await;
-        let raw_header: Bytes = raw_header.map_err(|e| anyhow!(e))?;
-        let header = Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e))?;
+        let raw_header: Bytes = match raw_header.map_err(|e| anyhow!(e)) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        let header = match Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e)) {
+            Ok(h) => h,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
 
         let block_info = BlockInfo {
             hash: header.hash_slow(),
@@ -92,19 +128,30 @@ impl ChainProvider for AlloyChainProvider {
             timestamp: header.timestamp,
         };
         self.block_info_by_number_cache.put(number, block_info);
+        timer.observe_duration();
         Ok(block_info)
     }
 
     async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["chain_provider", "receipts_by_hash"])
+            .start_timer();
         if let Some(receipts) = self.receipts_by_hash_cache.get(&hash) {
+            timer.observe_duration();
             return Ok(receipts.clone());
         }
 
         let raw_receipts: TransportResult<Vec<Bytes>> =
             self.inner.raw_request("debug_getRawReceipts".into(), [hash]).await;
-        let raw_receipts: Vec<Bytes> = raw_receipts.map_err(|e| anyhow!(e))?;
+        let raw_receipts: Vec<Bytes> = match raw_receipts.map_err(|e| anyhow!(e)) {
+            Ok(r) => r,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
 
-        let receipts = raw_receipts
+        let receipts = match raw_receipts
             .iter()
             .map(|r| {
                 let r = &mut r.as_ref();
@@ -116,8 +163,16 @@ impl ChainProvider for AlloyChainProvider {
 
                 Ok(ReceiptWithBloom::decode(r).map_err(|e| anyhow!(e))?.receipt)
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<Vec<_>>>()
+        {
+            Ok(r) => r,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
         self.receipts_by_hash_cache.put(hash, receipts.clone());
+        timer.observe_duration();
         Ok(receipts)
     }
 
@@ -125,15 +180,31 @@ impl ChainProvider for AlloyChainProvider {
         &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["chain_provider", "block_info_and_transactions_by_hash"])
+            .start_timer();
         if let Some(block_info_and_txs) = self.block_info_and_transactions_by_hash_cache.get(&hash)
         {
+            timer.observe_duration();
             return Ok(block_info_and_txs.clone());
         }
 
         let raw_block: TransportResult<Bytes> =
             self.inner.raw_request("debug_getRawBlock".into(), [hash]).await;
-        let raw_block: Bytes = raw_block.map_err(|e| anyhow!(e))?;
-        let block = Block::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
+        let raw_block: Bytes = match raw_block.map_err(|e| anyhow!(e)) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        let block = match Block::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e)) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
 
         let block_info = BlockInfo {
             hash: block.header.hash_slow(),
@@ -142,6 +213,7 @@ impl ChainProvider for AlloyChainProvider {
             timestamp: block.header.timestamp,
         };
         self.block_info_and_transactions_by_hash_cache.put(hash, (block_info, block.body.clone()));
+        timer.observe_duration();
         Ok((block_info, block.body))
     }
 }

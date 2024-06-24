@@ -9,6 +9,8 @@ pub use crate::{
     types::{BlockInfo, RollupConfig},
 };
 
+mod metrics;
+
 mod pipeline;
 pub use pipeline::{
     new_online_pipeline, OnlineAttributesBuilder, OnlineAttributesQueue, OnlineDataProvider,

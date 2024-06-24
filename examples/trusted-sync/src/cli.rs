@@ -7,6 +7,8 @@ use reqwest::Url;
 const L1_RPC_URL: &str = "L1_RPC_URL";
 const L2_RPC_URL: &str = "L2_RPC_URL";
 const BEACON_URL: &str = "BEACON_URL";
+const DEFAULT_METRICS_SERVER_ADDR: &str = "127.0.0.1";
+const DEFAULT_METRICS_SERVER_PORT: u16 = 9000;
 
 /// The host binary CLI application arguments.
 #[derive(Parser, Clone, serde::Serialize, serde::Deserialize)]
@@ -26,9 +28,26 @@ pub struct Cli {
     /// The l2 block to start from.
     #[clap(long, short, help = "Starting l2 block, defaults to chain genesis if none specified")]
     pub start_l2_block: Option<u64>,
+    /// The address of the metrics server.
+    #[clap(long, short, help = "Address of the metrics server")]
+    pub metrics_server_addr: Option<String>,
+    /// The metrics server port.
+    #[clap(long, short, help = "Port of the metrics server")]
+    pub metrics_server_port: Option<u16>,
 }
 
 impl Cli {
+    /// Returns the full metrics server address string.
+    pub fn metrics_server_addr(&self) -> String {
+        format!(
+            "{}:{}",
+            self.metrics_server_addr
+                .clone()
+                .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
+            self.metrics_server_port.unwrap_or(DEFAULT_METRICS_SERVER_PORT)
+        )
+    }
+
     /// Returns the l1 rpc url from CLI or environment variable.
     pub fn l1_rpc_url(&self) -> Result<Url> {
         let url = if let Some(s) = self.l1_rpc_url.clone() {
