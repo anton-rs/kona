@@ -1,45 +1,43 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Parser;
 use kona_derive::online::*;
-use reqwest::Url;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn, Level};
+use tracing::{debug, error, info, warn};
 
 mod cli;
+mod metrics;
+mod telemetry;
 mod validation;
 
-// Environment Variables
-const L1_RPC_URL: &str = "L1_RPC_URL";
-const L2_RPC_URL: &str = "L2_RPC_URL";
-const BEACON_URL: &str = "BEACON_URL";
-
+const METRICS_SERVER_ADDR: &str = "127.0.0.1:9090";
 const LOG_TARGET: &str = "trusted-sync";
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> Result<()> {
-    let cfg = crate::cli::Cli::parse();
-    init_tracing_subscriber(cfg.v)?;
-    sync(cfg).await
+    let cfg = cli::Cli::parse();
+    telemetry::init(cfg.v)?;
+    let handle = tokio::spawn(async { sync(cfg).await });
+    tokio::select! {
+        res = metrics::serve_metrics(METRICS_SERVER_ADDR) => {
+            error!(target: LOG_TARGET, "Metrics server failed: {:?}", res);
+            return res.map_err(|e| anyhow::anyhow!(e));
+        }
+        val = handle => {
+            error!(target: LOG_TARGET, "Sync failed: {:?}", val);
+            anyhow::bail!("Sync failed: {:?}", val);
+        }
+    }
 }
 
-async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
-    // Parse the CLI arguments and environment variables.
-    let l1_rpc_url: Url = cli_cfg
-        .l1_rpc_url
-        .unwrap_or_else(|| std::env::var(L1_RPC_URL).unwrap())
-        .parse()
-        .expect("valid l1 rpc url");
-    let l2_rpc_url: Url = cli_cfg
-        .l2_rpc_url
-        .unwrap_or_else(|| std::env::var(L2_RPC_URL).unwrap())
-        .parse()
-        .expect("valid l2 rpc url");
-    let beacon_url: String =
-        cli_cfg.beacon_url.unwrap_or_else(|| std::env::var(BEACON_URL).unwrap());
+async fn sync(cli: cli::Cli) -> Result<()> {
+    // Parse CLI arguments.
+    let l1_rpc_url = cli.l1_rpc_url()?;
+    let l2_rpc_url = cli.l2_rpc_url()?;
+    let beacon_url = cli.beacon_url()?;
 
     // Query for the L2 Chain ID
     let mut l2_provider =
-        AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), Arc::new(RollupConfig::default()));
+        AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), Arc::new(Default::default()));
     let l2_chain_id =
         l2_provider.chain_id().await.expect("Failed to fetch chain ID from L2 provider");
     let cfg = RollupConfig::from_l2_chain_id(l2_chain_id)
@@ -48,7 +46,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
 
     // Construct the pipeline
     let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
-    let start = cli_cfg.start_l2_block.unwrap_or(cfg.genesis.l2.number);
+    let start = cli.start_l2_block.unwrap_or(cfg.genesis.l2.number);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
@@ -60,6 +58,7 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
         .l2_block_info_by_number(start)
         .await
         .expect("Failed to fetch genesis L2 block info for pipeline cursor");
+    metrics::SAFE_L2_HEAD.inc_by(cursor.block_info.number);
     let tip = l1_provider
         .block_info_by_number(cursor.l1_origin.number)
         .await
@@ -67,11 +66,10 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
     let validator = validation::OnlineValidator::new_http(l2_rpc_url.clone(), &cfg);
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
-    let mut derived_attributes_count = 0;
 
     // Continuously step on the pipeline and validate payloads.
     loop {
-        info!(target: LOG_TARGET, "Validated payload attributes number {}", derived_attributes_count);
+        info!(target: LOG_TARGET, "Validated payload attributes number {}", metrics::DERIVED_ATTRIBUTES_COUNT.get());
         info!(target: LOG_TARGET, "Pending l2 safe head num: {}", cursor.block_info.number);
         match pipeline.step(cursor).await {
             Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
@@ -83,15 +81,19 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
                 error!(target: LOG_TARGET, "Failed payload validation: {}", attributes.parent.block_info.hash);
                 return Ok(());
             }
-            derived_attributes_count += 1;
+            metrics::DERIVED_ATTRIBUTES_COUNT.inc();
             match l2_provider.l2_block_info_by_number(cursor.block_info.number + 1).await {
-                Ok(bi) => cursor = bi,
+                Ok(bi) => {
+                    cursor = bi;
+                    metrics::SAFE_L2_HEAD.inc();
+                }
                 Err(e) => {
                     error!(target: LOG_TARGET, "Failed to fetch next pending l2 safe head: {}, err: {:?}", cursor.block_info.number + 1, e);
                 }
             }
             println!(
-                "Validated Payload Attributes {derived_attributes_count} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
+                "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
+                metrics::DERIVED_ATTRIBUTES_COUNT.get(),
                 attributes.parent.block_info.number + 1,
                 attributes.attributes.timestamp,
                 pipeline.origin().unwrap().number,
@@ -101,17 +103,4 @@ async fn sync(cli_cfg: crate::cli::Cli) -> Result<()> {
             debug!(target: LOG_TARGET, "No attributes to validate");
         }
     }
-}
-
-fn init_tracing_subscriber(v: u8) -> Result<()> {
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(match v {
-            0 => Level::ERROR,
-            1 => Level::WARN,
-            2 => Level::INFO,
-            3 => Level::DEBUG,
-            _ => Level::TRACE,
-        })
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))
 }
