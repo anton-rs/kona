@@ -119,7 +119,7 @@ where
 
         // Get the epoch
         let epoch = self.l1_blocks[0];
-        info!("Deriving next batch for epoch: {}", epoch.number);
+        info!(target: "batch-queue", "Deriving next batch for epoch: {}", epoch.number);
 
         // Note: epoch origin can now be one block ahead of the L2 Safe Head
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
@@ -151,7 +151,7 @@ where
                     remaining.push(batch.clone());
                 }
                 BatchValidity::Drop => {
-                    warn!("Dropping batch: {:?}, parent: {}", batch.batch, parent.block_info);
+                    warn!(target: "batch-queue", "Dropping batch: {:?}, parent: {}", batch.batch, parent.block_info);
                     continue;
                 }
                 BatchValidity::Accept => {
@@ -171,7 +171,7 @@ where
         self.batches = remaining;
 
         if let Some(nb) = next_batch {
-            info!("Next batch found: {:?}", nb.batch);
+            info!(target: "batch-queue", "Next batch found: {:?}", nb.batch);
             return Ok(nb.batch);
         }
 
@@ -190,6 +190,7 @@ where
         }
 
         info!(
+            target: "batch-queue",
             "Generating empty batches for epoch: {} | parent: {}",
             epoch.number, parent.l1_origin.number
         );
@@ -205,7 +206,7 @@ where
         // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
         // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
-            info!("Generating empty batch for epoch: {}", epoch.number);
+            info!(target: "batch-queue", "Generating empty batch for epoch: {}", epoch.number);
             return Ok(Batch::Single(SingleBatch {
                 parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
@@ -218,6 +219,7 @@ where
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
         info!(
+            target: "batch-queue",
             "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
             next_epoch.number, next_timestamp, next_epoch.timestamp
         );
@@ -228,7 +230,7 @@ where
     /// Adds a batch to the queue.
     pub async fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
-            error!("Cannot add batch without an origin");
+            error!(target: "batch-queue", "Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
         }
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
@@ -274,6 +276,7 @@ where
             // Means the previously returned batch is invalid.
             // Drop cached batches and find another batch.
             warn!(
+                target: "batch-queue",
                 "Parent block does not match the next batch. Dropping {} cached batches.",
                 self.next_spans.len()
             );
@@ -289,7 +292,7 @@ where
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
                     self.l1_blocks.drain(0..i);
-                    info!("Advancing epoch");
+                    info!(target: "batch-queue", "Advancing epoch");
                     break;
                 }
             }
@@ -318,7 +321,7 @@ where
                 // reset is called, the origin behind is false.
                 self.l1_blocks.clear();
             }
-            info!("Advancing batch queue origin: {:?}", self.origin);
+            info!(target: "batch-queue", "Advancing batch queue origin: {:?}", self.origin);
         }
 
         // Load more data into the batch queue.
@@ -328,7 +331,7 @@ where
                 if !origin_behind {
                     self.add_batch(b, parent).await.ok();
                 } else {
-                    warn!("Dropping batch: Origin is behind");
+                    warn!(target: "batch-queue", "Dropping batch: Origin is behind");
                 }
             }
             Err(StageError::Eof) => out_of_data = true,

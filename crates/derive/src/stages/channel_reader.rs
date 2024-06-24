@@ -12,7 +12,7 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use tracing::warn;
+use tracing::{error, warn};
 
 /// ZLIB Deflate Compression Method.
 pub(crate) const ZLIB_DEFLATE_COMPRESSION_METHOD: u8 = 8;
@@ -89,7 +89,7 @@ where
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         if let Err(e) = self.set_batch_reader().await {
-            warn!("Failed to set batch reader: {:?}", e);
+            warn!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
             self.next_channel();
             return Err(e);
         }
@@ -161,7 +161,7 @@ impl BatchReader {
         if let Some(data) = self.data.take() {
             // Peek at the data to determine the compression type.
             if data.is_empty() {
-                tracing::warn!(target: "batch-reader", "Data is too short to determine compression type, skipping batch");
+                warn!(target: "batch-reader", "Data is too short to determine compression type, skipping batch");
                 return None;
             }
             let compression_type = data[0];
@@ -173,7 +173,7 @@ impl BatchReader {
                 brotli_used = true;
                 self.decompressed = decompress_brotli(&data[1..]).ok()?;
             } else {
-                tracing::error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
+                error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
                 return None;
             }
         }
@@ -185,7 +185,7 @@ impl BatchReader {
 
         // Confirm that brotli decompression was performed *after* the Fjord hardfork.
         if brotli_used && !cfg.is_fjord_active(batch.timestamp()) {
-            tracing::warn!(target: "batch-reader", "Brotli compression used before Fjord hardfork, skipping batch");
+            warn!(target: "batch-reader", "Brotli compression used before Fjord hardfork, skipping batch");
             return None;
         }
 
