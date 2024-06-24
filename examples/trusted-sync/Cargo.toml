@@ -14,7 +14,7 @@ homepage.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["serde"] }
-kona-derive = { path = "../../crates/derive", version = "0.0.1", features = ["serde", "k256", "online"] }
+kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["serde", "k256", "online"] }
 
 # Custom dependencies
 reqwest = "0.12"
@@ -22,6 +22,6 @@ tokio = { version = "1.37.0", features = ["full"] }
 tracing-subscriber = "0.3.18"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 serde = { version = "1.0.198", features = ["derive"] }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
+alloy-provider = { version = "0.1", default-features = false }
+alloy-rpc-types = { version = "0.1" }
+alloy-transport = { version = "0.1", default-features = false }

@@ -18,14 +18,14 @@ async-trait.workspace = true
 
 # Local
 kona-primitives = { path = "../primitives", version = "0.0.1" }
-kona-derive = { path = "../derive", version = "0.0.1" }
+kona-derive = { path = "../derive", version = "0.0.2" }
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
 
 # `online` feature dependencies
-alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", optional = true } 
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false, optional = true }
+alloy-transport-http = { version = "0.1", optional = true } 
+alloy-provider = { version = "0.1", default-features = false, optional = true }
 reqwest = { version = "0.12", default-features = false, optional = true }
 
 [dev-dependencies]

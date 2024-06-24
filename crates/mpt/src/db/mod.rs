@@ -9,7 +9,7 @@ use alloy_rlp::{Decodable, Encodable};
 use alloy_trie::Nibbles;
 use anyhow::{anyhow, Result};
 use revm::{
-    db::BundleState,
+    db::{states::StorageSlot, BundleState},
     primitives::{AccountInfo, Bytecode, HashMap, BLOCK_HASH_HISTORY},
     Database,
 };
@@ -222,6 +222,10 @@ where
     /// - `Err(_)` if the accounts could not be updated.
     fn update_accounts(&mut self, bundle: &BundleState) -> Result<()> {
         for (address, bundle_account) in bundle.state() {
+            if bundle_account.status.is_not_modified() {
+                continue;
+            }
+
             // Compute the path to the account in the trie.
             let account_path = Nibbles::unpack(keccak256(address.as_slice()));
 
@@ -247,13 +251,7 @@ where
                 .entry(*address)
                 .or_insert_with(|| TrieNode::new_blinded(EMPTY_ROOT_HASH));
             bundle_account.storage.iter().try_for_each(|(index, value)| {
-                Self::change_storage(
-                    acc_storage_root,
-                    *index,
-                    value.present_value,
-                    &self.fetcher,
-                    &self.hinter,
-                )
+                Self::change_storage(acc_storage_root, *index, value, &self.fetcher, &self.hinter)
             })?;
 
             // Recompute the account storage root.
@@ -288,17 +286,21 @@ where
     fn change_storage(
         storage_root: &mut TrieNode,
         index: U256,
-        value: U256,
+        value: &StorageSlot,
         fetcher: &F,
         hinter: &H,
     ) -> Result<()> {
+        if !value.is_changed() {
+            return Ok(());
+        }
+
         // RLP encode the storage slot value.
-        let mut rlp_buf = Vec::with_capacity(value.length());
-        value.encode(&mut rlp_buf);
+        let mut rlp_buf = Vec::with_capacity(value.present_value.length());
+        value.present_value.encode(&mut rlp_buf);
 
         // Insert or update the storage slot in the trie.
         let hashed_slot_key = Nibbles::unpack(keccak256(index.to_be_bytes::<32>().as_slice()));
-        if value.is_zero() {
+        if value.present_value.is_zero() {
             // If the storage slot is being set to zero, prune it from the trie.
             storage_root.delete(&hashed_slot_key, fetcher, hinter)?;
         } else {

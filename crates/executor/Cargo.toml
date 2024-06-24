@@ -20,8 +20,8 @@ op-alloy-consensus.workspace = true
 revm = { workspace = true, features = ["optimism"] }
 
 # local
-kona-mpt = { path = "../mpt", version = "0.0.1" }
-kona-derive = { path = "../derive", version = "0.0.1" }
+kona-mpt = { path = "../mpt", version = "0.0.2" }
+kona-derive = { path = "../derive", version = "0.0.2" }
 
 [dev-dependencies]
 serde = { version = "1.0.197", features = ["derive"] }
