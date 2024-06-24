@@ -1,6 +1,11 @@
 # `kona-derive`
 
-> **Notice**: This crate is a WIP.
+<p align="center">
+  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
+  <a href="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm_tests.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm_tests.yaml/badge.svg?label=FPVM Tests" alt="FPVM Tests"></a>
+    <a href="https://crates.io/crates/kona-derive"><img src="https://img.shields.io/crates/v/kona-derive.svg?label=kona-derive&labelColor=2a2f35" alt="Kona Derive"></a>
+  <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license&labelColor=2a2f35" alt="License">
+</p>
 
 A `no_std` compatible implementation of the OP Stack's [derivation pipeline][derive].
 
