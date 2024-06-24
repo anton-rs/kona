@@ -271,28 +271,62 @@ impl AlloyL2ChainProvider {
 #[async_trait]
 impl L2ChainProvider for AlloyL2ChainProvider {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["l2_chain_provider", "l2_block_info_by_number"])
+            .start_timer();
         if let Some(l2_block_info) = self.l2_block_info_by_number_cache.get(&number) {
+            timer.observe_duration();
             return Ok(*l2_block_info);
         }
 
-        let payload = self.payload_by_number(number).await?;
-        let l2_block_info = payload.to_l2_block_ref(self.rollup_config.as_ref())?;
+        let payload = match self.payload_by_number(number).await {
+            Ok(p) => p,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        let l2_block_info = match payload.to_l2_block_ref(self.rollup_config.as_ref()) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
         self.l2_block_info_by_number_cache.put(number, l2_block_info);
+        timer.observe_duration();
         Ok(l2_block_info)
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["l2_chain_provider", "payload_by_number"])
+            .start_timer();
         if let Some(payload) = self.payload_by_number_cache.get(&number) {
+            timer.observe_duration();
             return Ok(payload.clone());
         }
 
         let raw_block: TransportResult<Bytes> =
             self.inner.raw_request("debug_getRawBlock".into(), [U64::from(number)]).await;
-        let raw_block: Bytes = raw_block.map_err(|e| anyhow!(e))?;
-        let block = OpBlock::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e))?;
+        let raw_block: Bytes = match raw_block.map_err(|e| anyhow!(e)) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        let block = match OpBlock::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e)) {
+            Ok(b) => b,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
         let payload_envelope: L2ExecutionPayloadEnvelope = block.into();
 
         self.payload_by_number_cache.put(number, payload_envelope.clone());
+        timer.observe_duration();
         Ok(payload_envelope)
     }
 
@@ -301,11 +335,30 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         number: u64,
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["l2_chain_provider", "system_config_by_number"])
+            .start_timer();
         if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
+            timer.observe_duration();
             return Ok(system_config.clone());
         }
 
-        let envelope = self.payload_by_number(number).await?;
-        envelope.to_system_config(&rollup_config)
+        let envelope = match self.payload_by_number(number).await {
+            Ok(e) => e,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        let sys_config = match envelope.to_system_config(&rollup_config) {
+            Ok(s) => s,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
+        self.system_config_by_number_cache.put(number, sys_config.clone());
+        timer.observe_duration();
+        Ok(sys_config)
     }
 }

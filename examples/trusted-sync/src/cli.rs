@@ -29,10 +29,10 @@ pub struct Cli {
     #[clap(long, short, help = "Starting l2 block, defaults to chain genesis if none specified")]
     pub start_l2_block: Option<u64>,
     /// The address of the metrics server.
-    #[clap(long, short, help = "Address of the metrics server")]
+    #[clap(long, help = "Address of the metrics server")]
     pub metrics_server_addr: Option<String>,
     /// The metrics server port.
-    #[clap(long, short, help = "Port of the metrics server")]
+    #[clap(long, help = "Port of the metrics server")]
     pub metrics_server_port: Option<u16>,
 }
 
