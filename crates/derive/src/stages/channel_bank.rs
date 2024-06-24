@@ -119,6 +119,9 @@ where
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
             warn!(target: "channel-bank", "Channel {:?} timed out", first);
+            #[cfg(feature = "metrics")]
+            crate::metrics::CHANNEL_TIMEOUTS
+                .observe((origin.number - channel.open_block_number()) as f64);
             self.channels.remove(&first);
             self.channel_queue.pop_front();
             return Ok(None);
@@ -179,15 +182,23 @@ where
     P: ChannelBankProvider + PreviousStage + Send + Debug,
 {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
+        #[cfg(feature = "metrics")]
+        let timer = crate::metrics::STAGE_ADVANCE_RESPONSE_TIME
+            .with_label_values(&["channel_bank"])
+            .start_timer();
         match self.read() {
             Err(StageError::Eof) => {
                 // continue - we will attempt to load data into the channel bank
             }
             Err(e) => {
+                #[cfg(feature = "metrics")]
+                timer.stop_and_discard();
                 return Err(anyhow!("Error fetching next data from channel bank: {:?}", e).into());
             }
             data => return data,
         };
+        #[cfg(feature = "metrics")]
+        timer.stop_and_discard();
 
         // Load the data into the channel bank
         let frame = self.prev.next_frame().await?;

@@ -2,7 +2,7 @@
 #![warn(missing_debug_implementations, missing_docs, unreachable_pub, rustdoc::all)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-#![no_std]
+#![cfg_attr(not(any(test, feature = "metrics")), no_std)]
 
 extern crate alloc;
 
@@ -22,3 +22,6 @@ pub mod types;
 
 #[cfg(feature = "online")]
 pub mod online;
+
+#[cfg(feature = "metrics")]
+pub mod metrics;

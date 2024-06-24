@@ -106,7 +106,7 @@ impl Frame {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
+    use std;
 
     use super::*;
 

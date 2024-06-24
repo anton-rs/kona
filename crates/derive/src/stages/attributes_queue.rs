@@ -85,11 +85,29 @@ where
         &mut self,
         parent: L2BlockInfo,
     ) -> StageResult<L2AttributesWithParent> {
+        #[cfg(feature = "metrics")]
+        let timer = crate::metrics::STAGE_ADVANCE_RESPONSE_TIME
+            .with_label_values(&["attributes_queue"])
+            .start_timer();
         // Load the batch.
-        let batch = self.load_batch(parent).await?;
+        let batch = match self.load_batch(parent).await {
+            Ok(batch) => batch,
+            Err(e) => {
+                #[cfg(feature = "metrics")]
+                timer.stop_and_discard();
+                return Err(e);
+            }
+        };
 
         // Construct the payload attributes from the loaded batch.
-        let attributes = self.create_next_attributes(batch, parent).await?;
+        let attributes = match self.create_next_attributes(batch, parent).await {
+            Ok(attributes) => attributes,
+            Err(e) => {
+                #[cfg(feature = "metrics")]
+                timer.stop_and_discard();
+                return Err(e);
+            }
+        };
         let populated_attributes =
             L2AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
 
