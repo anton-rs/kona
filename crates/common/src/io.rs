@@ -13,8 +13,8 @@ cfg_if! {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
         pub type ClientIO = crate::asterisc::io::AsteriscIO;
     } else if #[cfg(target_os = "zkvm")] {
-        // #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `zkvm` target architecture."]
-        // pub type ClientIO = crate::zkvm::io::ZkvmIO;
+        #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `zkvm` target architecture."]
+        pub type ClientIO = crate::zkvm::io::ZkvmIO;
     } else {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `native` target architecture."]
         pub type ClientIO = native_io::NativeIO;
