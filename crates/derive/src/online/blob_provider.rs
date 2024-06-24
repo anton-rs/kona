@@ -128,15 +128,27 @@ where
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Blob>, BlobProviderError> {
+        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
+            .with_label_values(&["blob_provider", "get_blobs"])
+            .start_timer();
         // Fetches the genesis timestamp and slot interval from the
         // [BeaconGenesis] and [ConfigSpec] if not previously loaded.
-        self.load_configs().await?;
+        if let Err(e) = self.load_configs().await {
+            timer.observe_duration();
+            return Err(e);
+        }
 
         // Fetch the blob sidecars for the given block reference and blob hashes.
-        let sidecars = self.fetch_filtered_sidecars(block_ref, blob_hashes).await?;
+        let sidecars = match self.fetch_filtered_sidecars(block_ref, blob_hashes).await {
+            Ok(sidecars) => sidecars,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(e);
+            }
+        };
 
         // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
-        let blobs = sidecars
+        let blobs = match sidecars
             .into_iter()
             .enumerate()
             .map(|(i, sidecar)| {
@@ -146,8 +158,16 @@ where
                     Err(e) => Err(e),
                 }
             })
-            .collect::<anyhow::Result<Vec<Blob>>>()?;
+            .collect::<anyhow::Result<Vec<Blob>>>()
+        {
+            Ok(blobs) => blobs,
+            Err(e) => {
+                timer.observe_duration();
+                return Err(BlobProviderError::Custom(e));
+            }
+        };
 
+        timer.observe_duration();
         Ok(blobs)
     }
 }
