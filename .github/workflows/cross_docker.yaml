@@ -1,7 +1,10 @@
 name: Build and Publish Cross Images
+
 on: [workflow_dispatch, workflow_call]
+
 env:
   REGISTRY: ghcr.io
+
 jobs:
   build-pipelines:
     runs-on: ubuntu-latest
