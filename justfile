@@ -5,6 +5,8 @@ alias l := lint
 alias ln := lint-native
 alias fmt := fmt-native-fix
 alias b := build
+alias d := docker-build-ts
+alias r := docker-run-ts
 
 # default recipe to display help information
 default:
@@ -86,3 +88,18 @@ build-asterisc *args='':
     -v `pwd`/:/workdir \
     -w="/workdir" \
     ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
+
+# Build the `trusted-sync` docker image
+docker-build-ts *args='':
+  docker build -t trusted-sync -f examples/trusted-sync/Dockerfile . $@
+
+# Run the `trusted-sync` docker container
+docker-run-ts:
+  docker run -it \
+    -e L1_RPC_URL=$L1_RPC_URL \
+    -e L2_RPC_URL=$L2_RPC_URL \
+    -e BEACON_URL=$BEACON_URL \
+    -e START_L2_BLOCK=$START_L2_BLOCK \
+    -e METRICS_SERVER_ADDR=$METRICS_SERVER_ADDR \
+    -e METRICS_SERVER_PORT=$METRICS_SERVER_PORT \
+    trusted-sync
