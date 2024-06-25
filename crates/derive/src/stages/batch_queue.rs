@@ -264,16 +264,12 @@ where
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
     async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::STAGE_ADVANCE_RESPONSE_TIME
-            .with_label_values(&["batch_queue"])
-            .start_timer();
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "batch_queue", timer);
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
             if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return self
                     .pop_next_batch(parent)
                     .ok_or(anyhow!("failed to pop next batch from span batch").into());
@@ -321,8 +317,7 @@ where
                 let origin = match self.origin.as_ref().ok_or_else(|| anyhow!("missing origin")) {
                     Ok(o) => o,
                     Err(e) => {
-                        #[cfg(feature = "metrics")]
-                        timer.stop_and_discard();
+                        crate::timer!(DISCARD, timer);
                         return Err(StageError::Custom(e));
                     }
                 };
@@ -349,8 +344,7 @@ where
             }
             Err(StageError::Eof) => out_of_data = true,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         }
@@ -358,8 +352,7 @@ where
         // Skip adding the data unless up to date with the origin,
         // but still fully empty the previous stages.
         if origin_behind {
-            #[cfg(feature = "metrics")]
-            timer.stop_and_discard();
+            crate::timer!(DISCARD, timer);
             if out_of_data {
                 return Err(StageError::Eof);
             }
@@ -370,8 +363,7 @@ where
         let batch = match self.derive_next_batch(out_of_data, parent).await {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 match e {
                     StageError::Eof => {
                         if out_of_data {
@@ -396,8 +388,7 @@ where
                 }) {
                     Ok(b) => b,
                     Err(e) => {
-                        #[cfg(feature = "metrics")]
-                        timer.stop_and_discard();
+                        crate::timer!(DISCARD, timer);
                         return Err(e);
                     }
                 };
@@ -408,8 +399,7 @@ where
                 {
                     Ok(b) => b,
                     Err(e) => {
-                        #[cfg(feature = "metrics")]
-                        timer.stop_and_discard();
+                        crate::timer!(DISCARD, timer);
                         return Err(StageError::Custom(e));
                     }
                 };

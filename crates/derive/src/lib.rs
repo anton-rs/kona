@@ -6,6 +6,8 @@
 
 extern crate alloc;
 
+mod macros;
+
 mod params;
 pub use params::{
     ChannelID, CHANNEL_ID_LENGTH, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC,

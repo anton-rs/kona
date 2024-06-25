@@ -85,16 +85,11 @@ where
         &mut self,
         parent: L2BlockInfo,
     ) -> StageResult<L2AttributesWithParent> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::STAGE_ADVANCE_RESPONSE_TIME
-            .with_label_values(&["attributes_queue"])
-            .start_timer();
-        // Load the batch.
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "attributes_queue", timer);
         let batch = match self.load_batch(parent).await {
             Ok(batch) => batch,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -103,8 +98,7 @@ where
         let attributes = match self.create_next_attributes(batch, parent).await {
             Ok(attributes) => attributes,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };

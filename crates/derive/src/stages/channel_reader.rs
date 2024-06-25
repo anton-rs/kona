@@ -88,15 +88,11 @@ where
     P: ChannelReaderProvider + PreviousStage + Send + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::STAGE_ADVANCE_RESPONSE_TIME
-            .with_label_values(&["channel_reader"])
-            .start_timer();
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "channel_reader", timer);
         if let Err(e) = self.set_batch_reader().await {
             warn!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
             self.next_channel();
-            #[cfg(feature = "metrics")]
-            timer.stop_and_discard();
+            crate::timer!(DISCARD, timer);
             return Err(e);
         }
         match self
@@ -107,14 +103,11 @@ where
             .ok_or(StageError::NotEnoughData)
         {
             Ok(batch) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_record();
                 Ok(batch)
             }
             Err(e) => {
                 self.next_channel();
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 Err(e)
             }
         }

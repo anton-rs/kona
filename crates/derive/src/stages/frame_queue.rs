@@ -71,14 +71,10 @@ where
             match self.prev.next_data().await {
                 Ok(data) => {
                     if let Ok(frames) = into_frames(Ok(data)) {
-                        #[cfg(feature = "metrics")]
-                        crate::metrics::DERIVED_FRAMES_COUNT
-                            .with_label_values(&["success"])
-                            .add(frames.len() as f64);
+                        crate::inc_gauge!(DERIVED_FRAMES_COUNT, frames.len() as f64, "success");
                         self.queue.extend(frames);
                     } else {
-                        #[cfg(feature = "metrics")]
-                        crate::metrics::DERIVED_FRAMES_COUNT.with_label_values(&["failed"]).inc();
+                        crate::inc_gauge!(DERIVED_FRAMES_COUNT, "failed");
                         // There may be more frames in the queue for the
                         // pipeline to advance, so don't return an error here.
                         error!(target: "frame-queue", "Failed to parse frames from data.");

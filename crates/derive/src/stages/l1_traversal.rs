@@ -104,8 +104,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
             return Err(StageError::SystemConfigUpdate(e));
         }
 
-        #[cfg(feature = "metrics")]
-        crate::metrics::ORIGIN_GAUGE.set(next_l1_origin.number as i64);
+        crate::metrics_set!(ORIGIN_GAUGE, next_l1_origin.number as i64);
         self.block = Some(next_l1_origin);
         self.done = false;
         Ok(())
