@@ -3,12 +3,12 @@
 //!
 //! [OracleReader]: kona_preimage::OracleReader
 
-use crate::{ORACLE_READER, HINT_WRITER};
+use crate::{HINT_WRITER, ORACLE_READER};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::Result;
 use async_trait::async_trait;
 use core::num::NonZeroUsize;
-use kona_preimage::{PreimageKey, PreimageOracleClient, HintWriterClient};
+use kona_preimage::{HintWriterClient, PreimageKey, PreimageOracleClient};
 use lru::LruCache;
 use spin::Mutex;
 

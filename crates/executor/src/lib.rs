@@ -57,7 +57,8 @@ where
     pub fn new(
         config: &'a RollupConfig,
         parent_header: Sealed<Header>,
-        // TODO: @Clabby - would you rather refactor this to assume Provider implements F + H and just pass one argument?
+        // TODO: @Clabby - would you rather refactor this to assume Provider implements F + H
+        // and just pass one argument?
         fetcher: F,
         hinter: H,
     ) -> Self {

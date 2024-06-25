@@ -10,7 +10,6 @@ impl BasicKernelInterface for ZkvmIO {
         unimplemented!();
     }
 
-
     fn read(_fd: FileDescriptor, _buf: &mut [u8]) -> Result<usize> {
         unimplemented!();
     }
