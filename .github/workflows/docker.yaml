@@ -21,4 +21,4 @@ jobs:
           context: .
           file: examples/trusted-sync/Dockerfile
           push: true
-          tags: kona/trusted-sync:latest
+          tags: refcell/trusted-sync:latest
