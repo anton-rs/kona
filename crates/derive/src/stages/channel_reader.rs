@@ -102,9 +102,7 @@ where
             .next_batch(self.cfg.as_ref())
             .ok_or(StageError::NotEnoughData)
         {
-            Ok(batch) => {
-                Ok(batch)
-            }
+            Ok(batch) => Ok(batch),
             Err(e) => {
                 self.next_channel();
                 crate::timer!(DISCARD, timer);

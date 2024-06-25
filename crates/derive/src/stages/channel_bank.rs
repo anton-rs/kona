@@ -119,7 +119,10 @@ where
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
             warn!(target: "channel-bank", "Channel {:?} timed out", first);
-            crate::observe_histogram!(CHANNEL_TIMEOUTS, (origin.number - channel.open_block_number()) as f64);
+            crate::observe_histogram!(
+                CHANNEL_TIMEOUTS,
+                (origin.number - channel.open_block_number()) as f64
+            );
             self.channels.remove(&first);
             self.channel_queue.pop_front();
             return Ok(None);
