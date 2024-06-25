@@ -264,10 +264,12 @@ where
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
     async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["batch_queue"], timer);
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
             if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
+                crate::timer!(DISCARD, timer);
                 return self
                     .pop_next_batch(parent)
                     .ok_or(anyhow!("failed to pop next batch from span batch").into());
@@ -312,7 +314,13 @@ where
         if self.origin != self.prev.origin() {
             self.origin = self.prev.origin();
             if !origin_behind {
-                let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
+                let origin = match self.origin.as_ref().ok_or_else(|| anyhow!("missing origin")) {
+                    Ok(o) => o,
+                    Err(e) => {
+                        crate::timer!(DISCARD, timer);
+                        return Err(StageError::Custom(e));
+                    }
+                };
                 self.l1_blocks.push(*origin);
             } else {
                 // This is to handle the special case of startup.
@@ -335,12 +343,16 @@ where
                 }
             }
             Err(StageError::Eof) => out_of_data = true,
-            Err(e) => return Err(e),
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                return Err(e);
+            }
         }
 
         // Skip adding the data unless up to date with the origin,
         // but still fully empty the previous stages.
         if origin_behind {
+            crate::timer!(DISCARD, timer);
             if out_of_data {
                 return Err(StageError::Eof);
             }
@@ -350,15 +362,18 @@ where
         // Attempt to derive more batches.
         let batch = match self.derive_next_batch(out_of_data, parent).await {
             Ok(b) => b,
-            Err(e) => match e {
-                StageError::Eof => {
-                    if out_of_data {
-                        return Err(StageError::Eof);
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                match e {
+                    StageError::Eof => {
+                        if out_of_data {
+                            return Err(StageError::Eof);
+                        }
+                        return Err(StageError::NotEnoughData);
                     }
-                    return Err(StageError::NotEnoughData);
+                    _ => return Err(e),
                 }
-                _ => return Err(e),
-            },
+            }
         };
 
         // If the next batch is derived from the span batch, it's the last batch of the span.
@@ -366,15 +381,28 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
+                let batches = match sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
                     StageError::Custom(anyhow!(
                         "Could not get singular batches from span batch: {e}"
                     ))
-                })?;
+                }) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        crate::timer!(DISCARD, timer);
+                        return Err(e);
+                    }
+                };
                 self.next_spans = batches;
-                let nb = self
+                let nb = match self
                     .pop_next_batch(parent)
-                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))?;
+                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))
+                {
+                    Ok(b) => b,
+                    Err(e) => {
+                        crate::timer!(DISCARD, timer);
+                        return Err(StageError::Custom(e));
+                    }
+                };
                 Ok(nb)
             }
         }

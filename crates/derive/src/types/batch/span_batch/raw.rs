@@ -139,7 +139,6 @@ impl RawSpanBatch {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
     use super::{RawSpanBatch, RollupConfig, SpanBatch, SpanBatchElement};
     use alloc::{vec, vec::Vec};
     use alloy_primitives::FixedBytes;

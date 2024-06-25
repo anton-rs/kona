@@ -128,13 +128,11 @@ where
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Blob>, BlobProviderError> {
-        let timer = crate::online::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["blob_provider", "get_blobs"])
-            .start_timer();
+        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
         // [BeaconGenesis] and [ConfigSpec] if not previously loaded.
         if let Err(e) = self.load_configs().await {
-            timer.observe_duration();
+            crate::timer!(DISCARD, timer);
             return Err(e);
         }
 
@@ -142,7 +140,7 @@ where
         let sidecars = match self.fetch_filtered_sidecars(block_ref, blob_hashes).await {
             Ok(sidecars) => sidecars,
             Err(e) => {
-                timer.observe_duration();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -162,12 +160,11 @@ where
         {
             Ok(blobs) => blobs,
             Err(e) => {
-                timer.observe_duration();
+                crate::timer!(DISCARD, timer);
                 return Err(BlobProviderError::Custom(e));
             }
         };
 
-        timer.observe_duration();
         Ok(blobs)
     }
 }
