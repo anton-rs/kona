@@ -131,6 +131,7 @@ where
         attributes.transactions.extend(batch.transactions);
 
         info!(
+            target: "attributes-queue",
             "generated attributes in payload queue: txs={}, timestamp={}",
             tx_count, batch.timestamp
         );
@@ -196,7 +197,7 @@ where
         system_config: &SystemConfig,
     ) -> StageResult<()> {
         self.prev.reset(block_info, system_config).await?;
-        info!("resetting attributes queue");
+        info!(target: "attributes-queue", "resetting attributes queue");
         self.batch = None;
         self.is_last_in_span = false;
         Err(StageError::Eof)
