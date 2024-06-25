@@ -85,7 +85,7 @@ where
         &mut self,
         parent: L2BlockInfo,
     ) -> StageResult<L2AttributesWithParent> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "attributes_queue", timer);
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["attributes_queue"], timer);
         let batch = match self.load_batch(parent).await {
             Ok(batch) => batch,
             Err(e) => {

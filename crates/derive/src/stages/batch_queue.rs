@@ -264,7 +264,7 @@ where
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
     async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "batch_queue", timer);
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["batch_queue"], timer);
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.

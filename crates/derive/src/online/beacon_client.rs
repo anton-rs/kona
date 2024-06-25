@@ -56,10 +56,7 @@ impl OnlineBeaconClient {
 #[async_trait]
 impl BeaconClient for OnlineBeaconClient {
     async fn config_spec(&self) -> Result<APIConfigResponse> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["beacon_client", "config_spec"])
-            .start_timer();
+        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["beacon_client", "config_spec"], timer);
         let first = match self
             .inner
             .get(format!("{}/{}", self.base, SPEC_METHOD))
@@ -69,8 +66,7 @@ impl BeaconClient for OnlineBeaconClient {
         {
             Ok(response) => response,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -78,10 +74,7 @@ impl BeaconClient for OnlineBeaconClient {
     }
 
     async fn beacon_genesis(&self) -> Result<APIGenesisResponse> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["beacon_client", "beacon_genesis"])
-            .start_timer();
+        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["beacon_client", "beacon_genesis"], timer);
         let first = match self
             .inner
             .get(format!("{}/{}", self.base, GENESIS_METHOD))
@@ -91,8 +84,7 @@ impl BeaconClient for OnlineBeaconClient {
         {
             Ok(response) => response,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -104,10 +96,12 @@ impl BeaconClient for OnlineBeaconClient {
         slot: u64,
         hashes: &[IndexedBlobHash],
     ) -> Result<Vec<APIBlobSidecar>> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["beacon_client", "beacon_blob_side_cars"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["beacon_client", "beacon_blob_side_cars"],
+            timer
+        );
         let raw_response = match self
             .inner
             .get(format!("{}/{}/{}", self.base, SIDECARS_METHOD_PREFIX, slot))
@@ -117,8 +111,7 @@ impl BeaconClient for OnlineBeaconClient {
         {
             Ok(response) => response,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -126,8 +119,7 @@ impl BeaconClient for OnlineBeaconClient {
             match raw_response.json::<APIGetBlobSidecarsResponse>().await.map_err(|e| anyhow!(e)) {
                 Ok(response) => response,
                 Err(e) => {
-                    #[cfg(feature = "metrics")]
-                    timer.stop_and_discard();
+                    crate::timer!(DISCARD, timer);
                     return Err(e);
                 }
             };

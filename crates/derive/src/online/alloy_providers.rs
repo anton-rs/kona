@@ -65,10 +65,7 @@ impl AlloyChainProvider {
 #[async_trait]
 impl ChainProvider for AlloyChainProvider {
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["chain_provider", "header_by_hash"])
-            .start_timer();
+        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["chain_provider", "header_by_hash"], timer);
         if let Some(header) = self.header_by_hash_cache.get(&hash) {
             return Ok(header.clone());
         }
@@ -78,8 +75,7 @@ impl ChainProvider for AlloyChainProvider {
         let raw_header: Bytes = match raw_header.map_err(|e| anyhow!(e)) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -89,18 +85,19 @@ impl ChainProvider for AlloyChainProvider {
                 Ok(header)
             }
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 Err(e)
             }
         }
     }
 
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["chain_provider", "block_info_by_number"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["chain_provider", "block_info_by_number"],
+            timer
+        );
         if let Some(block_info) = self.block_info_by_number_cache.get(&number) {
             return Ok(*block_info);
         }
@@ -110,16 +107,14 @@ impl ChainProvider for AlloyChainProvider {
         let raw_header: Bytes = match raw_header.map_err(|e| anyhow!(e)) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
         let header = match Header::decode(&mut raw_header.as_ref()).map_err(|e| anyhow!(e)) {
             Ok(h) => h,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -135,10 +130,12 @@ impl ChainProvider for AlloyChainProvider {
     }
 
     async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["chain_provider", "receipts_by_hash"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["chain_provider", "receipts_by_hash"],
+            timer
+        );
         if let Some(receipts) = self.receipts_by_hash_cache.get(&hash) {
             return Ok(receipts.clone());
         }
@@ -148,8 +145,7 @@ impl ChainProvider for AlloyChainProvider {
         let raw_receipts: Vec<Bytes> = match raw_receipts.map_err(|e| anyhow!(e)) {
             Ok(r) => r,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -170,8 +166,7 @@ impl ChainProvider for AlloyChainProvider {
         {
             Ok(r) => r,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -183,10 +178,12 @@ impl ChainProvider for AlloyChainProvider {
         &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["chain_provider", "block_info_and_transactions_by_hash"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["chain_provider", "block_info_and_transactions_by_hash"],
+            timer
+        );
         if let Some(block_info_and_txs) = self.block_info_and_transactions_by_hash_cache.get(&hash)
         {
             return Ok(block_info_and_txs.clone());
@@ -197,16 +194,14 @@ impl ChainProvider for AlloyChainProvider {
         let raw_block: Bytes = match raw_block.map_err(|e| anyhow!(e)) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
         let block = match Block::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e)) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -275,10 +270,12 @@ impl AlloyL2ChainProvider {
 #[async_trait]
 impl L2ChainProvider for AlloyL2ChainProvider {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["l2_chain_provider", "l2_block_info_by_number"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["l2_chain_provider", "l2_block_info_by_number"],
+            timer
+        );
         if let Some(l2_block_info) = self.l2_block_info_by_number_cache.get(&number) {
             return Ok(*l2_block_info);
         }
@@ -286,16 +283,14 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         let payload = match self.payload_by_number(number).await {
             Ok(p) => p,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
         let l2_block_info = match payload.to_l2_block_ref(self.rollup_config.as_ref()) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -304,10 +299,12 @@ impl L2ChainProvider for AlloyL2ChainProvider {
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["l2_chain_provider", "payload_by_number"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["l2_chain_provider", "payload_by_number"],
+            timer
+        );
         if let Some(payload) = self.payload_by_number_cache.get(&number) {
             return Ok(payload.clone());
         }
@@ -317,16 +314,14 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         let raw_block: Bytes = match raw_block.map_err(|e| anyhow!(e)) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
         let block = match OpBlock::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e)) {
             Ok(b) => b,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -341,10 +336,12 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         number: u64,
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
-        #[cfg(feature = "metrics")]
-        let timer = crate::metrics::PROVIDER_RESPONSE_TIME
-            .with_label_values(&["l2_chain_provider", "system_config_by_number"])
-            .start_timer();
+        crate::timer!(
+            START,
+            PROVIDER_RESPONSE_TIME,
+            &["l2_chain_provider", "system_config_by_number"],
+            timer
+        );
         if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
             return Ok(system_config.clone());
         }
@@ -352,16 +349,14 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         let envelope = match self.payload_by_number(number).await {
             Ok(e) => e,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
         let sys_config = match envelope.to_system_config(&rollup_config) {
             Ok(s) => s,
             Err(e) => {
-                #[cfg(feature = "metrics")]
-                timer.stop_and_discard();
+                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };

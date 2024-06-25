@@ -88,7 +88,7 @@ where
     P: ChannelReaderProvider + PreviousStage + Send + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "channel_reader", timer);
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
             warn!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
             self.next_channel();

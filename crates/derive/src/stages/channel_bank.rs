@@ -183,7 +183,7 @@ where
     P: ChannelBankProvider + PreviousStage + Send + Debug,
 {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, "channel_bank", timer);
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
         match self.read() {
             Err(StageError::Eof) => {
                 // continue - we will attempt to load data into the channel bank

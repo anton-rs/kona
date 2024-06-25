@@ -3,9 +3,9 @@
 /// Starts the timer with a label value.
 #[macro_export]
 macro_rules! timer {
-    (START, $metric:ident, $label:expr, $timer:ident) => {
+    (START, $metric:ident, $labels:expr, $timer:ident) => {
         #[cfg(feature = "metrics")]
-        let $timer = $crate::metrics::$metric.with_label_values(&[$label]).start_timer();
+        let $timer = $crate::metrics::$metric.with_label_values($labels).start_timer();
         #[cfg(not(feature = "metrics"))]
         let $timer = ();
     };
