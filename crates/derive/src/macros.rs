@@ -6,8 +6,6 @@ macro_rules! timer {
     (START, $metric:ident, $labels:expr, $timer:ident) => {
         #[cfg(feature = "metrics")]
         let $timer = $crate::metrics::$metric.with_label_values($labels).start_timer();
-        #[cfg(not(feature = "metrics"))]
-        let $timer = ();
     };
     (DISCARD, $timer:ident) => {
         #[cfg(feature = "metrics")]
