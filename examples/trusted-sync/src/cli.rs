@@ -36,12 +36,9 @@ pub struct Cli {
     /// The metrics server port.
     #[clap(long, help = "Port of the metrics server")]
     pub metrics_server_port: Option<u16>,
-    /// The address of the loki server.
-    #[clap(long, help = "Address of the loki server")]
-    pub loki_server_addr: Option<String>,
-    /// The loki server port.
-    #[clap(long, help = "Port of the loki server")]
-    pub loki_server_port: Option<u16>,
+    /// The Loki Url endpoint.
+    #[clap(long, help = "Url to post Loki logs")]
+    pub loki_url: Option<String>,
 }
 
 impl Cli {
@@ -58,11 +55,10 @@ impl Cli {
 
     /// Returns the full loki server address.
     pub fn loki_addr(&self) -> Url {
-        let str = format!(
-            "http://{}:{}",
-            self.loki_server_addr.clone().unwrap_or_else(|| DEFAULT_LOKI_SERVER_ADDR.to_string()),
-            self.loki_server_port.unwrap_or(DEFAULT_LOKI_SERVER_PORT)
-        );
+        if let Some(url) = self.loki_url.clone() {
+            return Url::parse(&url).expect("Failed to parse loki server address");
+        }
+        let str = format!("http://{DEFAULT_LOKI_SERVER_ADDR}:{DEFAULT_LOKI_SERVER_PORT}");
         Url::parse(&str).expect("Failed to parse loki server address")
     }
 
