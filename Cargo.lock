@@ -3474,9 +3474,9 @@ checksum = "0d0208408ba0c3df17ed26eb06992cb1a1268d41b2c0e12e65203fbe3972cee5"
 
 [[package]]
 name = "superchain-primitives"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ce53db1b0ae24593ac759782cceedb03c838a39bb1f2ccd5c0923778acd7871"
+checksum = "a88a85697c4aa789e1465c86f855cfaecd8d38553961f1fec77af6ea51d30e8e"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
