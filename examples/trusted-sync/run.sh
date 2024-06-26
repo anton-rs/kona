@@ -7,4 +7,6 @@
   --start-l2-block $START_L2_BLOCK \
   --metrics-server-addr $METRICS_SERVER_ADDR \
   --metrics-server-port $METRICS_SERVER_PORT \
+  --loki-server-addr $LOKI_SERVER_ADDR \
+  --loki-server-port $LOKI_SERVER_PORT \
   -vvv
