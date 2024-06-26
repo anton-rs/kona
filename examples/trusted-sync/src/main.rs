@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kona_derive::online::*;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 mod cli;
 mod metrics;
@@ -68,39 +68,51 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
 
     // Continuously step on the pipeline and validate payloads.
+    let mut advance_cursor_flag = false;
     loop {
         info!(target: LOG_TARGET, "Validated payload attributes number {}", metrics::DERIVED_ATTRIBUTES_COUNT.get());
         info!(target: LOG_TARGET, "Pending l2 safe head num: {}", cursor.block_info.number);
-        match pipeline.step(cursor).await {
-            Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
-            Err(e) => warn!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
-        }
-
-        if let Some(attributes) = pipeline.next_attributes() {
-            if !validator.validate(&attributes).await {
-                error!(target: LOG_TARGET, "Failed payload validation: {}", attributes.parent.block_info.hash);
-                return Ok(());
-            }
-            metrics::DERIVED_ATTRIBUTES_COUNT.inc();
+        if advance_cursor_flag {
             match l2_provider.l2_block_info_by_number(cursor.block_info.number + 1).await {
                 Ok(bi) => {
                     cursor = bi;
                     metrics::SAFE_L2_HEAD.inc();
+                    advance_cursor_flag = false;
                 }
                 Err(e) => {
                     error!(target: LOG_TARGET, "Failed to fetch next pending l2 safe head: {}, err: {:?}", cursor.block_info.number + 1, e);
+                    // We don't need to step on the pipeline if we failed to fetch the next pending
+                    // l2 safe head.
+                    continue;
                 }
             }
-            println!(
-                "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
-                metrics::DERIVED_ATTRIBUTES_COUNT.get(),
-                attributes.parent.block_info.number + 1,
-                attributes.attributes.timestamp,
-                pipeline.origin().unwrap().number,
-            );
-            info!(target: LOG_TARGET, "attributes: {:#?}", attributes);
+        }
+        match pipeline.step(cursor).await {
+            Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
+            Err(e) => debug!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
+        }
+
+        let attributes = if let Some(attributes) = pipeline.next_attributes() {
+            attributes
         } else {
             debug!(target: LOG_TARGET, "No attributes to validate");
+            continue;
+        };
+
+        if !validator.validate(&attributes).await {
+            error!(target: LOG_TARGET, "Failed payload validation: {}", attributes.parent.block_info.hash);
+            metrics::FAILED_PAYLOAD_DERIVATION.inc();
         }
+        // If we validated payload attributes, we should advance the cursor.
+        advance_cursor_flag = true;
+        metrics::DERIVED_ATTRIBUTES_COUNT.inc();
+        println!(
+            "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
+            metrics::DERIVED_ATTRIBUTES_COUNT.get(),
+            attributes.parent.block_info.number + 1,
+            attributes.attributes.timestamp,
+            pipeline.origin().unwrap().number,
+        );
+        debug!(target: LOG_TARGET, "attributes: {:#?}", attributes);
     }
 }
