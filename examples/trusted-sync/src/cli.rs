@@ -60,9 +60,7 @@ impl Cli {
     pub fn loki_addr(&self) -> Url {
         let str = format!(
             "http://{}:{}",
-            self.loki_server_addr
-                .clone()
-                .unwrap_or_else(|| DEFAULT_LOKI_SERVER_ADDR.to_string()),
+            self.loki_server_addr.clone().unwrap_or_else(|| DEFAULT_LOKI_SERVER_ADDR.to_string()),
             self.loki_server_port.unwrap_or(DEFAULT_LOKI_SERVER_PORT)
         );
         Url::parse(&str).expect("Failed to parse loki server address")
