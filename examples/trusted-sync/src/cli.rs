@@ -9,6 +9,8 @@ const L2_RPC_URL: &str = "L2_RPC_URL";
 const BEACON_URL: &str = "BEACON_URL";
 const DEFAULT_METRICS_SERVER_ADDR: &str = "127.0.0.1";
 const DEFAULT_METRICS_SERVER_PORT: u16 = 9000;
+const DEFAULT_LOKI_SERVER_ADDR: &str = "127.0.0.1";
+const DEFAULT_LOKI_SERVER_PORT: u16 = 3133;
 
 /// The host binary CLI application arguments.
 #[derive(Parser, Clone, serde::Serialize, serde::Deserialize)]
@@ -60,8 +62,8 @@ impl Cli {
             "http://{}:{}",
             self.loki_server_addr
                 .clone()
-                .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
-            self.loki_server_port.unwrap_or(DEFAULT_METRICS_SERVER_PORT)
+                .unwrap_or_else(|| DEFAULT_LOKI_SERVER_ADDR.to_string()),
+            self.loki_server_port.unwrap_or(DEFAULT_LOKI_SERVER_PORT)
         );
         Url::parse(&str).expect("Failed to parse loki server address")
     }
