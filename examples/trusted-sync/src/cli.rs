@@ -57,7 +57,7 @@ impl Cli {
     /// Returns the full loki server address.
     pub fn loki_addr(&self) -> Url {
         let str = format!(
-            "{}:{}",
+            "http://{}:{}",
             self.loki_server_addr
                 .clone()
                 .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
