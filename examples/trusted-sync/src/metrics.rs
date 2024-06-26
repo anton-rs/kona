@@ -8,6 +8,9 @@ use lazy_static::lazy_static;
 use prometheus::register_int_counter;
 
 lazy_static! {
+    pub static ref FAILED_PAYLOAD_DERIVATION: IntCounter =
+        register_int_counter!("failed_payload_derivation", "Number of failed payload derivations")
+            .unwrap();
     pub static ref DERIVED_ATTRIBUTES_COUNT: IntCounter = register_int_counter!(
         "derived_attributes_count",
         "Number of total payload attributes derived"

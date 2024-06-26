@@ -12,7 +12,7 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 /// ZLIB Deflate Compression Method.
 pub(crate) const ZLIB_DEFLATE_COMPRESSION_METHOD: u8 = 8;
@@ -90,7 +90,7 @@ where
     async fn next_batch(&mut self) -> StageResult<Batch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
-            warn!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
+            debug!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
             self.next_channel();
             crate::timer!(DISCARD, timer);
             return Err(e);

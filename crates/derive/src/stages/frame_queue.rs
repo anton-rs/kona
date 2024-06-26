@@ -10,7 +10,7 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use tracing::{error, trace, warn};
+use tracing::{debug, error, trace};
 
 /// Provides data frames for the [FrameQueue] stage.
 #[async_trait]
@@ -81,7 +81,7 @@ where
                     }
                 }
                 Err(e) => {
-                    warn!(target: "frame-queue", "Failed to retrieve data: {:?}", e);
+                    debug!(target: "frame-queue", "Failed to retrieve data: {:?}", e);
                     return Err(e); // Bubble up potential EOF error without wrapping.
                 }
             }
