@@ -14,7 +14,8 @@ const LOG_TARGET: &str = "trusted-sync";
 #[actix_web::main]
 async fn main() -> Result<()> {
     let cfg = cli::Cli::parse();
-    telemetry::init(cfg.v)?;
+    let loki_addr = cfg.loki_addr();
+    telemetry::init(cfg.v, loki_addr).await?;
     let addr = cfg.metrics_server_addr();
     let handle = tokio::spawn(async { sync(cfg).await });
     tokio::select! {

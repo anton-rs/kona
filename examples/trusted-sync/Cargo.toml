@@ -18,11 +18,12 @@ kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["se
 
 # Custom dependencies
 lazy_static = "1.5.0"
+tracing-loki = "0.2.5"
 reqwest = "0.12"
 actix-web = "4.8.0"
 prometheus = { version = "0.13.4", features = ["process"] }
 tokio = { version = "1.37.0", features = ["full"] }
-tracing-subscriber = "0.3.18"
+tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
 clap = { version = "4.5.4", features = ["derive", "env"] }
 serde = { version = "1.0.198", features = ["derive"] }
 alloy-provider = { version = "0.1", default-features = false }

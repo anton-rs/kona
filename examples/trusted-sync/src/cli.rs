@@ -34,6 +34,12 @@ pub struct Cli {
     /// The metrics server port.
     #[clap(long, help = "Port of the metrics server")]
     pub metrics_server_port: Option<u16>,
+    /// The address of the loki server.
+    #[clap(long, help = "Address of the loki server")]
+    pub loki_server_addr: Option<String>,
+    /// The loki server port.
+    #[clap(long, help = "Port of the loki server")]
+    pub loki_server_port: Option<u16>,
 }
 
 impl Cli {
@@ -46,6 +52,18 @@ impl Cli {
                 .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
             self.metrics_server_port.unwrap_or(DEFAULT_METRICS_SERVER_PORT)
         )
+    }
+
+    /// Returns the full loki server address.
+    pub fn loki_addr(&self) -> Url {
+        let str = format!(
+            "{}:{}",
+            self.loki_server_addr
+                .clone()
+                .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
+            self.loki_server_port.unwrap_or(DEFAULT_METRICS_SERVER_PORT)
+        );
+        Url::parse(&str).expect("Failed to parse loki server address")
     }
 
     /// Returns the l1 rpc url from CLI or environment variable.
