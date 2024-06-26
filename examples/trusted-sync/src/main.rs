@@ -88,8 +88,14 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             }
         }
         match pipeline.step(cursor).await {
-            Ok(_) => info!(target: "loop", "Stepped derivation pipeline"),
-            Err(e) => debug!(target: "loop", "Error stepping derivation pipeline: {:?}", e),
+            Ok(_) => {
+                metrics::PIPELINE_STEPS.with_label_values(&["success"]).inc();
+                info!(target: "loop", "Stepped derivation pipeline");
+            }
+            Err(e) => {
+                metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
+                debug!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
+            }
         }
 
         let attributes = if let Some(attributes) = pipeline.next_attributes() {
