@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/ethereum-optimism/kona/compare/kona-derive-v0.0.2...kona-derive-v0.0.3) - 2024-06-27
+
+### Added
+- *(derive)* Stage Level Metrics ([#309](https://github.com/ethereum-optimism/kona/pull/309))
+- *(examples)* Trusted Sync Metrics ([#308](https://github.com/ethereum-optimism/kona/pull/308))
+
+### Fixed
+- *(derive)* Warnings with metrics macro ([#322](https://github.com/ethereum-optimism/kona/pull/322))
+
+### Other
+- clean up trusted sync loop ([#318](https://github.com/ethereum-optimism/kona/pull/318))
+- *(docs)* Label Cleanup ([#307](https://github.com/ethereum-optimism/kona/pull/307))
+- *(derive)* add targets to stage logs ([#310](https://github.com/ethereum-optimism/kona/pull/310))
+
 ## [0.0.2](https://github.com/ethereum-optimism/kona/compare/kona-derive-v0.0.1...kona-derive-v0.0.2) - 2024-06-22
 
 ### Added

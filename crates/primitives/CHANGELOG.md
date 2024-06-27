@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2](https://github.com/ethereum-optimism/kona/compare/kona-primitives-v0.0.1...kona-primitives-v0.0.2) - 2024-06-27
+
+### Other
+- Bump `superchain-registry` version ([#306](https://github.com/ethereum-optimism/kona/pull/306))
+
 ## [0.0.1](https://github.com/ethereum-optimism/kona/releases/tag/kona-primitives-v0.0.1) - 2024-06-22
 
 ### Added
