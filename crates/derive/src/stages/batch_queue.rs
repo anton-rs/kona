@@ -151,7 +151,7 @@ where
                     remaining.push(batch.clone());
                 }
                 BatchValidity::Drop => {
-                    warn!(target: "batch-queue", "Dropping batch: {:?}, parent: {}", batch.batch, parent.block_info);
+                    warn!(target: "batch-queue", "Dropping batch with parent: {}", parent.block_info);
                     continue;
                 }
                 BatchValidity::Accept => {
@@ -171,7 +171,7 @@ where
         self.batches = remaining;
 
         if let Some(nb) = next_batch {
-            info!(target: "batch-queue", "Next batch found: {:?}", nb.batch);
+            info!(target: "batch-queue", "Next batch found for timestamp {}", nb.batch.timestamp());
             return Ok(nb.batch);
         }
 
