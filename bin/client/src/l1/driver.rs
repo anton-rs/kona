@@ -142,7 +142,7 @@ impl DerivationDriver {
                 }
             }
 
-            attributes = self.pipeline.next_attributes();
+            attributes = self.pipeline.next();
         }
 
         Ok(attributes.expect("Must be some"))

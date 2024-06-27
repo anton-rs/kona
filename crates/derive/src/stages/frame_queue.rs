@@ -10,7 +10,7 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, trace};
 
 /// Provides data frames for the [FrameQueue] stage.
 #[async_trait]
@@ -71,15 +71,17 @@ where
             match self.prev.next_data().await {
                 Ok(data) => {
                     if let Ok(frames) = into_frames(Ok(data)) {
+                        crate::inc!(DERIVED_FRAMES_COUNT, frames.len() as f64, &["success"]);
                         self.queue.extend(frames);
                     } else {
+                        crate::inc!(DERIVED_FRAMES_COUNT, &["failed"]);
                         // There may be more frames in the queue for the
                         // pipeline to advance, so don't return an error here.
-                        error!("Failed to parse frames from data.");
+                        error!(target: "frame-queue", "Failed to parse frames from data.");
                     }
                 }
                 Err(e) => {
-                    warn!("Failed to retrieve data: {:?}", e);
+                    debug!(target: "frame-queue", "Failed to retrieve data: {:?}", e);
                     return Err(e); // Bubble up potential EOF error without wrapping.
                 }
             }
@@ -87,7 +89,7 @@ where
 
         // If we did not add more frames but still have more data, retry this function.
         if self.queue.is_empty() {
-            debug!("Queue is empty after fetching data. Retrying next_frame.");
+            trace!(target: "frame-queue", "Queue is empty after fetching data. Retrying next_frame.");
             return Err(StageError::NotEnoughData);
         }
 

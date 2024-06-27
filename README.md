@@ -9,9 +9,9 @@
 <p align="center">
   <a href="https://github.com/ethereum-optimism/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
   <a href="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm_tests.yaml"><img src="https://github.com/ethereum-optimism/kona/actions/workflows/fpvm_tests.yaml/badge.svg?label=FPVM Tests" alt="FPVM Tests"></a>
-  <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license" alt="License">
-  <a href="https://ethereum-optimism.github.io/kona"><img src="https://img.shields.io/badge/Contributor%20Book-grey?logo=mdBook" alt="Book"></a>
-  <a href="https://github.com/ethereum-optimism/monorepo"><img src="https://img.shields.io/badge/OP%20Stack-monorepo-red" alt="OP Stack"></a>
+  <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license&labelColor=2a2f35" alt="License">
+  <a href="https://ethereum-optimism.github.io/kona"><img src="https://img.shields.io/badge/Contributor%20Book-854a15?logo=mdBook&labelColor=2a2f35" alt="Book"></a>
+  <a href="https://github.com/ethereum-optimism/monorepo"><img src="https://img.shields.io/badge/OP%20Stack-monorepo-red?labelColor=2a2f35" alt="OP Stack"></a>
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@ rollup state transition in order to verify an [L2 output root][g-output-root] fr
 
 **`kona`**
 
-- [`client`](./bin/programs/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
+- [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
 - [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
 **Build Pipelines**

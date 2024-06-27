@@ -1,6 +1,9 @@
 //! Module for working with span batch bits.
 
-use crate::types::{SpanBatchError, MAX_SPAN_BATCH_SIZE};
+use crate::{
+    params::{FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES},
+    types::SpanBatchError,
+};
 use alloc::{vec, vec::Vec};
 use alloy_rlp::Buf;
 use anyhow::Result;
@@ -31,10 +34,19 @@ impl From<SpanBatchBits> for Vec<u8> {
 impl SpanBatchBits {
     /// Decodes a standard span-batch bitlist from a reader.
     /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8
-    /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
-    pub fn decode(b: &mut &[u8], bit_length: usize) -> Result<Self, SpanBatchError> {
+    /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_BYTES].
+    pub fn decode(
+        b: &mut &[u8],
+        bit_length: usize,
+        is_fjord_active: bool,
+    ) -> Result<Self, SpanBatchError> {
         let buffer_len = bit_length / 8 + if bit_length % 8 != 0 { 1 } else { 0 };
-        if buffer_len > MAX_SPAN_BATCH_SIZE {
+        let max_bytes = if is_fjord_active {
+            FJORD_MAX_SPAN_BATCH_BYTES as usize
+        } else {
+            MAX_SPAN_BATCH_BYTES as usize
+        };
+        if buffer_len > max_bytes {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
 
@@ -59,11 +71,13 @@ impl SpanBatchBits {
 
     /// Encodes a standard span-batch bitlist.
     /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8
-    /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_SIZE].
+    /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_BYTES] or
+    /// [FJORD_MAX_SPAN_BATCH_BYTES] if fjord is active.
     pub fn encode(
         w: &mut Vec<u8>,
         bit_length: usize,
         bits: &SpanBatchBits,
+        is_fjord_active: bool,
     ) -> Result<(), SpanBatchError> {
         if bits.bit_len() > bit_length {
             return Err(SpanBatchError::BitfieldTooLong);
@@ -72,7 +86,12 @@ impl SpanBatchBits {
         // Round up, ensure enough bytes when number of bits is not a multiple of 8.
         // Alternative of (L+7)/8 is not overflow-safe.
         let buf_len = bit_length / 8 + if bit_length % 8 != 0 { 1 } else { 0 };
-        if buf_len > MAX_SPAN_BATCH_SIZE {
+        let max_bytes = if is_fjord_active {
+            FJORD_MAX_SPAN_BATCH_BYTES as usize
+        } else {
+            MAX_SPAN_BATCH_BYTES as usize
+        };
+        if buf_len > max_bytes {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
         let mut buf = vec![0; buf_len];
@@ -174,9 +193,9 @@ mod test {
         #[test]
         fn test_encode_decode_roundtrip_span_bitlist(vec in vec(any::<u8>(), 0..5096)) {
             let bits = SpanBatchBits(vec);
-            assert_eq!(SpanBatchBits::decode(&mut bits.as_ref(), bits.0.len() * 8).unwrap(), bits);
+            assert_eq!(SpanBatchBits::decode(&mut bits.as_ref(), bits.0.len() * 8, false).unwrap(), bits);
             let mut encoded = Vec::new();
-            SpanBatchBits::encode(&mut encoded, bits.0.len() * 8, &bits).unwrap();
+            SpanBatchBits::encode(&mut encoded, bits.0.len() * 8, &bits, false).unwrap();
             assert_eq!(encoded, bits.0);
         }
 

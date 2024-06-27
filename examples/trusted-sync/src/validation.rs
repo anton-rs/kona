@@ -1,14 +1,14 @@
 //! Contains logic to validate derivation pipeline outputs.
 
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{BlockNumberOrTag, Header};
+use alloy_rpc_types::{BlockNumberOrTag, BlockTransactionsKind, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
 use kona_derive::types::{
     L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig,
 };
 use std::vec::Vec;
-use tracing::warn;
+use tracing::{error, warn};
 
 /// OnlineValidator
 ///
@@ -45,7 +45,7 @@ impl OnlineValidator {
         // Don't hydrate the block so we only get a list of transaction hashes.
         let block = self
             .provider
-            .get_block(tag.into(), false)
+            .get_block(tag.into(), BlockTransactionsKind::Hashes)
             .await
             .map_err(|e| anyhow::anyhow!(e))?
             .ok_or(anyhow::anyhow!("Block not found"))?;
@@ -57,7 +57,7 @@ impl OnlineValidator {
             if let Ok(tx) = tx {
                 txs.push(tx);
             } else {
-                warn!("Failed to fetch transaction: {:?}", tx);
+                warn!(target: "validation", "Failed to fetch transaction: {:?}", tx);
             }
         }
         Ok((block.header, txs))
@@ -80,10 +80,15 @@ impl OnlineValidator {
     }
 
     /// Validates the given [`L2AttributesWithParent`].
-    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> bool {
+    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> Result<bool> {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
-        let payload = self.get_payload(tag).await.unwrap();
-        attributes.attributes == payload
+        match self.get_payload(tag).await {
+            Ok(payload) => Ok(attributes.attributes == payload),
+            Err(e) => {
+                error!(target: "validation", "Failed to fetch payload for block {}: {:?}", expected, e);
+                Err(e)
+            }
+        }
     }
 }

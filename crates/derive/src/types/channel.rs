@@ -154,8 +154,6 @@ mod test {
         vec::Vec,
     };
 
-    extern crate std;
-
     struct FrameValidityTestCase {
         name: String,
         frames: Vec<Frame>,

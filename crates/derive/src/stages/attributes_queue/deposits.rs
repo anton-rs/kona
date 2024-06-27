@@ -2,7 +2,7 @@
 
 use crate::types::RawTransaction;
 use alloc::vec::Vec;
-use alloy_consensus::Receipt;
+use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, B256};
 use kona_primitives::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
 
@@ -19,7 +19,7 @@ pub(crate) async fn derive_deposits(
     let mut global_index = 0;
     let mut res = Vec::new();
     for r in receipts.iter() {
-        if !r.status {
+        if Eip658Value::Eip658(false) == r.status {
             continue;
         }
         for l in r.logs.iter() {
@@ -90,7 +90,7 @@ mod tests {
         let mut invalid_topic_log = generate_valid_log();
         invalid_topic_log.data.topics_mut()[0] = B256::default();
         Receipt {
-            status: true,
+            status: Eip658Value::Eip658(true),
             logs: vec![generate_valid_log(), bad_dest_log, invalid_topic_log],
             ..Default::default()
         }

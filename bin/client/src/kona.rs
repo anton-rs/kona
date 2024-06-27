@@ -21,7 +21,7 @@ extern crate alloc;
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
 
-#[client_entry(0x77359400)]
+#[client_entry(100_000_000)]
 fn main() -> Result<()> {
     #[cfg(feature = "tracing-subscriber")]
     {
@@ -79,6 +79,12 @@ fn main() -> Result<()> {
             number = number,
             output_root = output_root
         );
+
+        kona_common::io::print(&alloc::format!(
+            "Successfully validated L2 block #{} with output root {}\n",
+            number,
+            output_root
+        ));
 
         Ok::<_, anyhow::Error>(())
     })

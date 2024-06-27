@@ -119,7 +119,7 @@ where
 
         // Get the epoch
         let epoch = self.l1_blocks[0];
-        info!("Deriving next batch for epoch: {}", epoch.number);
+        info!(target: "batch-queue", "Deriving next batch for epoch: {}", epoch.number);
 
         // Note: epoch origin can now be one block ahead of the L2 Safe Head
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
@@ -151,7 +151,7 @@ where
                     remaining.push(batch.clone());
                 }
                 BatchValidity::Drop => {
-                    warn!("Dropping batch: {:?}, parent: {}", batch.batch, parent.block_info);
+                    warn!(target: "batch-queue", "Dropping batch with parent: {}", parent.block_info);
                     continue;
                 }
                 BatchValidity::Accept => {
@@ -171,7 +171,7 @@ where
         self.batches = remaining;
 
         if let Some(nb) = next_batch {
-            info!("Next batch found: {:?}", nb.batch);
+            info!(target: "batch-queue", "Next batch found for timestamp {}", nb.batch.timestamp());
             return Ok(nb.batch);
         }
 
@@ -190,6 +190,7 @@ where
         }
 
         info!(
+            target: "batch-queue",
             "Generating empty batches for epoch: {} | parent: {}",
             epoch.number, parent.l1_origin.number
         );
@@ -205,7 +206,7 @@ where
         // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
         // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
-            info!("Generating empty batch for epoch: {}", epoch.number);
+            info!(target: "batch-queue", "Generating empty batch for epoch: {}", epoch.number);
             return Ok(Batch::Single(SingleBatch {
                 parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
@@ -218,6 +219,7 @@ where
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
         info!(
+            target: "batch-queue",
             "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
             next_epoch.number, next_timestamp, next_epoch.timestamp
         );
@@ -228,7 +230,7 @@ where
     /// Adds a batch to the queue.
     pub async fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
         if self.l1_blocks.is_empty() {
-            error!("Cannot add batch without an origin");
+            error!(target: "batch-queue", "Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
         }
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
@@ -262,10 +264,12 @@ where
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
     async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["batch_queue"], timer);
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
             if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
+                crate::timer!(DISCARD, timer);
                 return self
                     .pop_next_batch(parent)
                     .ok_or(anyhow!("failed to pop next batch from span batch").into());
@@ -274,6 +278,7 @@ where
             // Means the previously returned batch is invalid.
             // Drop cached batches and find another batch.
             warn!(
+                target: "batch-queue",
                 "Parent block does not match the next batch. Dropping {} cached batches.",
                 self.next_spans.len()
             );
@@ -289,7 +294,7 @@ where
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
                     self.l1_blocks.drain(0..i);
-                    info!("Advancing epoch");
+                    info!(target: "batch-queue", "Advancing epoch");
                     break;
                 }
             }
@@ -309,7 +314,13 @@ where
         if self.origin != self.prev.origin() {
             self.origin = self.prev.origin();
             if !origin_behind {
-                let origin = self.origin.as_ref().ok_or_else(|| anyhow!("missing origin"))?;
+                let origin = match self.origin.as_ref().ok_or_else(|| anyhow!("missing origin")) {
+                    Ok(o) => o,
+                    Err(e) => {
+                        crate::timer!(DISCARD, timer);
+                        return Err(StageError::Custom(e));
+                    }
+                };
                 self.l1_blocks.push(*origin);
             } else {
                 // This is to handle the special case of startup.
@@ -318,7 +329,7 @@ where
                 // reset is called, the origin behind is false.
                 self.l1_blocks.clear();
             }
-            info!("Advancing batch queue origin: {:?}", self.origin);
+            info!(target: "batch-queue", "Advancing batch queue origin: {:?}", self.origin);
         }
 
         // Load more data into the batch queue.
@@ -328,16 +339,20 @@ where
                 if !origin_behind {
                     self.add_batch(b, parent).await.ok();
                 } else {
-                    warn!("Dropping batch: Origin is behind");
+                    warn!(target: "batch-queue", "Dropping batch: Origin is behind");
                 }
             }
             Err(StageError::Eof) => out_of_data = true,
-            Err(e) => return Err(e),
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                return Err(e);
+            }
         }
 
         // Skip adding the data unless up to date with the origin,
         // but still fully empty the previous stages.
         if origin_behind {
+            crate::timer!(DISCARD, timer);
             if out_of_data {
                 return Err(StageError::Eof);
             }
@@ -347,15 +362,18 @@ where
         // Attempt to derive more batches.
         let batch = match self.derive_next_batch(out_of_data, parent).await {
             Ok(b) => b,
-            Err(e) => match e {
-                StageError::Eof => {
-                    if out_of_data {
-                        return Err(StageError::Eof);
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                match e {
+                    StageError::Eof => {
+                        if out_of_data {
+                            return Err(StageError::Eof);
+                        }
+                        return Err(StageError::NotEnoughData);
                     }
-                    return Err(StageError::NotEnoughData);
+                    _ => return Err(e),
                 }
-                _ => return Err(e),
-            },
+            }
         };
 
         // If the next batch is derived from the span batch, it's the last batch of the span.
@@ -363,15 +381,28 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
+                let batches = match sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
                     StageError::Custom(anyhow!(
                         "Could not get singular batches from span batch: {e}"
                     ))
-                })?;
+                }) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        crate::timer!(DISCARD, timer);
+                        return Err(e);
+                    }
+                };
                 self.next_spans = batches;
-                let nb = self
+                let nb = match self
                     .pop_next_batch(parent)
-                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))?;
+                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))
+                {
+                    Ok(b) => b,
+                    Err(e) => {
+                        crate::timer!(DISCARD, timer);
+                        return Err(StageError::Custom(e));
+                    }
+                };
                 Ok(nb)
             }
         }

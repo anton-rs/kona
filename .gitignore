@@ -3,3 +3,6 @@
 
 # Rust target
 target/
+
+# Environment Variables
+.env

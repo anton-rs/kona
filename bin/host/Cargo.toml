@@ -6,6 +6,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
+publish = false
 
 [dependencies]
 # workspace
@@ -18,17 +19,17 @@ alloy-consensus.workspace = true
 alloy-rlp.workspace = true
 
 # local
-kona-client = { path = "../programs/client", version = "0.1.0" }
-kona-common = { path = "../../crates/common", version = "0.0.1" }
-kona-preimage = { path = "../../crates/preimage", version = "0.0.1" }
-kona-mpt = { path = "../../crates/mpt", version = "0.0.1" }
-kona-derive = { path = "../../crates/derive", version = "0.0.1", features = ["online"] }
+kona-client = { path = "../client", version = "0.1.0" }
+kona-common = { path = "../../crates/common", version = "0.0.2" }
+kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
+kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
+kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
 
 # external
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
-alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
-alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183" } 
+alloy-provider = { version = "0.1" } 
+alloy-transport-http = { version = "0.1" } 
+alloy-rpc-client = { version = "0.1" } 
+alloy-rpc-types = { version = "0.1" } 
 reqwest = "0.12"
 tokio = { version = "1.37.0", features = ["full"] }
 futures = "0.3"

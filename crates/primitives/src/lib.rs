@@ -4,8 +4,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![no_std]
 
-// Re-export superchain-primitives
+// Re-export superchain-primitives.
 pub use superchain_primitives::*;
+
+// Re-export alloy-primitives.
+pub use alloy_primitives;
 
 extern crate alloc;
 

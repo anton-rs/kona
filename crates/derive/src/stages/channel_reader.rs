@@ -1,7 +1,7 @@
 //! This module contains the `ChannelReader` struct.
 
 use crate::{
-    stages::BatchQueueProvider,
+    stages::{decompress_brotli, BatchQueueProvider},
     traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
     types::{Batch, BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
@@ -12,7 +12,16 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use tracing::warn;
+use tracing::{debug, error, warn};
+
+/// ZLIB Deflate Compression Method.
+pub(crate) const ZLIB_DEFLATE_COMPRESSION_METHOD: u8 = 8;
+
+/// ZLIB Reserved Compression Info.
+pub(crate) const ZLIB_RESERVED_COMPRESSION_METHOD: u8 = 15;
+
+/// Brotili Compression Channel Version.
+pub(crate) const CHANNEL_VERSION_BROTLI: u8 = 1;
 
 /// The [ChannelReader] provider trait.
 #[async_trait]
@@ -79,9 +88,11 @@ where
     P: ChannelReaderProvider + PreviousStage + Send + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
-            warn!("Failed to set batch reader: {:?}", e);
+            debug!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
             self.next_channel();
+            crate::timer!(DISCARD, timer);
             return Err(e);
         }
         match self
@@ -94,6 +105,7 @@ where
             Ok(batch) => Ok(batch),
             Err(e) => {
                 self.next_channel();
+                crate::timer!(DISCARD, timer);
                 Err(e)
             }
         }
@@ -148,15 +160,42 @@ impl BatchReader {
     /// Pulls out the next batch from the reader.
     pub(crate) fn next_batch(&mut self, cfg: &RollupConfig) -> Option<Batch> {
         // If the data is not already decompressed, decompress it.
+        let mut brotli_used = false;
+        let mut raw_len = 0;
         if let Some(data) = self.data.take() {
-            let decompressed_data = decompress_to_vec_zlib(&data).ok()?;
-            self.decompressed = decompressed_data;
+            // Peek at the data to determine the compression type.
+            if data.is_empty() {
+                warn!(target: "batch-reader", "Data is too short to determine compression type, skipping batch");
+                return None;
+            }
+            raw_len = data.len();
+            let compression_type = data[0];
+            if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD ||
+                (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
+            {
+                self.decompressed = decompress_to_vec_zlib(&data).ok()?;
+            } else if compression_type == CHANNEL_VERSION_BROTLI {
+                brotli_used = true;
+                self.decompressed = decompress_brotli(&data[1..]).ok()?;
+            } else {
+                error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
+                crate::inc!(BATCH_READER_ERRORS, &["unsupported_compression_type"]);
+                return None;
+            }
         }
 
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
         let decompressed_reader = &mut self.decompressed.as_slice()[self.cursor..].as_ref();
         let bytes = Bytes::decode(decompressed_reader).ok()?;
+        crate::set!(BATCH_COMPRESSION_RATIO, (raw_len as i64) * 100 / bytes.len() as i64);
         let batch = Batch::decode(&mut bytes.as_ref(), cfg).unwrap();
+
+        // Confirm that brotli decompression was performed *after* the Fjord hardfork.
+        if brotli_used && !cfg.is_fjord_active(batch.timestamp()) {
+            warn!(target: "batch-reader", "Brotli compression used before Fjord hardfork, skipping batch");
+            crate::inc!(BATCH_READER_ERRORS, &["brotli_used_before_fjord"]);
+            return None;
+        }
 
         // Advance the cursor on the reader.
         self.cursor = self.decompressed.len() - decompressed_reader.len();

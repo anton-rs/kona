@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
-use tracing::{debug, warn};
+use tracing::{trace, warn};
 
 /// Provides frames for the [ChannelBank] stage.
 #[async_trait]
@@ -88,14 +88,14 @@ where
 
         // Check if the channel is not timed out. If it has, ignore the frame.
         if current_channel.open_block_number() + self.cfg.channel_timeout < origin.number {
-            warn!("Channel {:?} timed out", frame.id);
+            warn!(target: "channel-bank", "Channel {:?} timed out", frame.id);
             return Ok(());
         }
 
         // Ingest the frame. If it fails, ignore the frame.
         let frame_id = frame.id;
         if current_channel.add_frame(frame, origin).is_err() {
-            warn!("Failed to add frame to channel: {:?}", frame_id);
+            warn!(target: "channel-bank", "Failed to add frame to channel: {:?}", frame_id);
             return Ok(());
         }
 
@@ -108,7 +108,7 @@ where
     pub fn read(&mut self) -> StageResult<Option<Bytes>> {
         // Bail if there are no channels to read from.
         if self.channel_queue.is_empty() {
-            debug!("No channels to read from");
+            trace!(target: "channel-bank", "No channels to read from");
             return Err(StageError::Eof);
         }
 
@@ -118,7 +118,8 @@ where
         let channel = self.channels.get(&first).ok_or(StageError::ChannelNotFound)?;
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
         if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
-            warn!("Channel {:?} timed out", first);
+            warn!(target: "channel-bank", "Channel {:?} timed out", first);
+            crate::observe!(CHANNEL_TIMEOUTS, (origin.number - channel.open_block_number()) as f64);
             self.channels.remove(&first);
             self.channel_queue.pop_front();
             return Ok(None);
@@ -179,19 +180,29 @@ where
     P: ChannelBankProvider + PreviousStage + Send + Debug,
 {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
         match self.read() {
             Err(StageError::Eof) => {
                 // continue - we will attempt to load data into the channel bank
             }
             Err(e) => {
+                crate::timer!(DISCARD, timer);
                 return Err(anyhow!("Error fetching next data from channel bank: {:?}", e).into());
             }
             data => return data,
         };
 
         // Load the data into the channel bank
-        let frame = self.prev.next_frame().await?;
-        self.ingest_frame(frame)?;
+        let frame = match self.prev.next_frame().await {
+            Ok(f) => f,
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                return Err(e);
+            }
+        };
+        let res = self.ingest_frame(frame);
+        crate::timer!(DISCARD, timer);
+        res?;
         Err(StageError::NotEnoughData)
     }
 }

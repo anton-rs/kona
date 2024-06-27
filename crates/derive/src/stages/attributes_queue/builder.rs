@@ -5,14 +5,14 @@ use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::{ChainProvider, L2ChainProvider},
     types::{
-        BlockID, BuilderError, EcotoneTransactionBuilder, L1BlockInfoTx, L2BlockInfo,
-        L2PayloadAttributes, RawTransaction, RollupConfig,
+        BlockID, BuilderError, EcotoneTransactionBuilder, FjordTransactionBuilder, L1BlockInfoTx,
+        L2BlockInfo, L2PayloadAttributes, RawTransaction, RollupConfig,
     },
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
-use op_alloy_consensus::Encodable2718;
 
 /// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.
@@ -126,6 +126,13 @@ where
         {
             upgrade_transactions =
                 EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
+        }
+        if self.rollup_cfg.is_fjord_active(next_l2_time) &&
+            !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
+        {
+            upgrade_transactions.append(
+                FjordTransactionBuilder::build_txs().map_err(BuilderError::Custom)?.as_mut(),
+            );
         }
 
         // Build and encode the L1 info transaction for the current payload.
@@ -391,5 +398,49 @@ mod tests {
         };
         assert_eq!(payload, expected);
         assert_eq!(payload.transactions.len(), 7);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_payload_with_fjord() {
+        let block_time = 2;
+        let timestamp = 100;
+        let cfg =
+            Arc::new(RollupConfig { block_time, fjord_time: Some(102), ..Default::default() });
+        let l2_number = 1;
+        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        fetcher.insert(l2_number, SystemConfig::default());
+        let mut provider = TestChainProvider::default();
+        let header = Header { timestamp, ..Default::default() };
+        let prev_randao = header.mix_hash;
+        let hash = header.hash_slow();
+        provider.insert_header(hash, header);
+        let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
+        let epoch = BlockID { hash, number: l2_number };
+        let l2_parent = L2BlockInfo {
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: l2_number,
+                timestamp,
+                parent_hash: hash,
+            },
+            l1_origin: BlockID { hash, number: l2_number },
+            seq_num: 0,
+        };
+        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
+        let expected = L2PayloadAttributes {
+            timestamp: next_l2_time,
+            prev_randao,
+            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+            transactions: payload.transactions.clone(),
+            no_tx_pool: true,
+            gas_limit: Some(u64::from_be_bytes(
+                alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
+            )),
+            withdrawals: None,
+            parent_beacon_block_root: None,
+        };
+        assert_eq!(payload, expected);
+        assert_eq!(payload.transactions.len(), 4);
     }
 }

@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*", "bin/host", "bin/programs/*", "examples/*"]
-default-members = ["bin/host", "bin/programs/*"]
+members = ["crates/*", "bin/host", "bin/client", "examples/*"]
+default-members = ["bin/host", "bin/client"]
 exclude = ["fpvm-tests/cannon-rs-tests"]
 resolver = "2"
 
@@ -24,10 +24,10 @@ async-trait = "0.1.80"
 # Ethereum
 alloy-primitives = { version = "0.7.6", default-features = false }
 alloy-rlp = { version = "0.3.5", default-features = false }
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "refcell/re-exports", default-features = false }
-alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "cb95183", default-features = false }
-revm = { git = "https://github.com/bluealloy/revm", rev = "a832a4e", default-features = false }
+alloy-consensus = { version = "0.1", default-features = false }
+op-alloy-consensus = { version = "0.1.0", default-features = false }
+alloy-eips = { version = "0.1", default-features = false }
+revm = { git = "https://github.com/bluealloy/revm", tag = "v37", version = "10.0.0", default-features = false }
 
 [profile.dev]
 opt-level = 1

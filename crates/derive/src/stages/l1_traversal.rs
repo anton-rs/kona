@@ -76,7 +76,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         let block = match self.block {
             Some(block) => block,
             None => {
-                warn!("L1Traversal: No block to advance to");
+                warn!(target: "l1-traversal",  "Missing current block, can't advance origin with no reference.");
                 return Err(StageError::Eof);
             }
         };
@@ -104,6 +104,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
             return Err(StageError::SystemConfigUpdate(e));
         }
 
+        crate::set!(ORIGIN_GAUGE, next_l1_origin.number as i64);
         self.block = Some(next_l1_origin);
         self.done = false;
         Ok(())
@@ -162,7 +163,8 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn new_receipts() -> alloc::vec::Vec<Receipt> {
-        let mut receipt = Receipt { status: true, ..Receipt::default() };
+        let mut receipt =
+            Receipt { status: alloy_consensus::Eip658Value::Eip658(true), ..Receipt::default() };
         let bad = Log::new(
             Address::from([2; 20]),
             vec![CONFIG_UPDATE_TOPIC, B256::default()],

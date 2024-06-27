@@ -128,15 +128,31 @@ where
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Blob>, BlobProviderError> {
+        crate::inc!(PROVIDER_CALLS, &["blob_provider", "get_blobs"]);
+        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
         // [BeaconGenesis] and [ConfigSpec] if not previously loaded.
-        self.load_configs().await?;
+        if let Err(e) = self.load_configs().await {
+            crate::timer!(DISCARD, timer);
+            crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "load_configs"]);
+            return Err(e);
+        }
 
         // Fetch the blob sidecars for the given block reference and blob hashes.
-        let sidecars = self.fetch_filtered_sidecars(block_ref, blob_hashes).await?;
+        let sidecars = match self.fetch_filtered_sidecars(block_ref, blob_hashes).await {
+            Ok(sidecars) => sidecars,
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["blob_provider", "get_blobs", "fetch_filtered_sidecars"]
+                );
+                return Err(e);
+            }
+        };
 
         // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
-        let blobs = sidecars
+        let blobs = match sidecars
             .into_iter()
             .enumerate()
             .map(|(i, sidecar)| {
@@ -146,7 +162,15 @@ where
                     Err(e) => Err(e),
                 }
             })
-            .collect::<anyhow::Result<Vec<Blob>>>()?;
+            .collect::<anyhow::Result<Vec<Blob>>>()
+        {
+            Ok(blobs) => blobs,
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "verify_blob"]);
+                return Err(BlobProviderError::Custom(e));
+            }
+        };
 
         Ok(blobs)
     }

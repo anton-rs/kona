@@ -85,11 +85,23 @@ where
         &mut self,
         parent: L2BlockInfo,
     ) -> StageResult<L2AttributesWithParent> {
-        // Load the batch.
-        let batch = self.load_batch(parent).await?;
+        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["attributes_queue"], timer);
+        let batch = match self.load_batch(parent).await {
+            Ok(batch) => batch,
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                return Err(e);
+            }
+        };
 
         // Construct the payload attributes from the loaded batch.
-        let attributes = self.create_next_attributes(batch, parent).await?;
+        let attributes = match self.create_next_attributes(batch, parent).await {
+            Ok(attributes) => attributes,
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                return Err(e);
+            }
+        };
         let populated_attributes =
             L2AttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
 
@@ -131,6 +143,7 @@ where
         attributes.transactions.extend(batch.transactions);
 
         info!(
+            target: "attributes-queue",
             "generated attributes in payload queue: txs={}, timestamp={}",
             tx_count, batch.timestamp
         );
@@ -196,7 +209,7 @@ where
         system_config: &SystemConfig,
     ) -> StageResult<()> {
         self.prev.reset(block_info, system_config).await?;
-        info!("resetting attributes queue");
+        info!(target: "attributes-queue", "resetting attributes queue");
         self.batch = None;
         self.is_last_in_span = false;
         Err(StageError::Eof)
