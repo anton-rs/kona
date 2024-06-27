@@ -45,7 +45,7 @@ macro_rules! observe {
 
 /// Sets a metric value.
 #[macro_export]
-macro_rules! metrics_set {
+macro_rules! set {
     ($metric:ident, $value:expr) => {
         #[cfg(feature = "metrics")]
         $crate::metrics::$metric.set($value);

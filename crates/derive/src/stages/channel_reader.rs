@@ -161,12 +161,14 @@ impl BatchReader {
     pub(crate) fn next_batch(&mut self, cfg: &RollupConfig) -> Option<Batch> {
         // If the data is not already decompressed, decompress it.
         let mut brotli_used = false;
+        let mut raw_len = 0;
         if let Some(data) = self.data.take() {
             // Peek at the data to determine the compression type.
             if data.is_empty() {
                 warn!(target: "batch-reader", "Data is too short to determine compression type, skipping batch");
                 return None;
             }
+            raw_len = data.len();
             let compression_type = data[0];
             if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD ||
                 (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
@@ -177,6 +179,7 @@ impl BatchReader {
                 self.decompressed = decompress_brotli(&data[1..]).ok()?;
             } else {
                 error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
+                crate::inc!(BATCH_READER_ERRORS, &["unsupported_compression_type"]);
                 return None;
             }
         }
@@ -184,11 +187,13 @@ impl BatchReader {
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
         let decompressed_reader = &mut self.decompressed.as_slice()[self.cursor..].as_ref();
         let bytes = Bytes::decode(decompressed_reader).ok()?;
+        crate::set!(BATCH_COMPRESSION_RATIO, (raw_len as i64) * 100 / bytes.len() as i64);
         let batch = Batch::decode(&mut bytes.as_ref(), cfg).unwrap();
 
         // Confirm that brotli decompression was performed *after* the Fjord hardfork.
         if brotli_used && !cfg.is_fjord_active(batch.timestamp()) {
             warn!(target: "batch-reader", "Brotli compression used before Fjord hardfork, skipping batch");
+            crate::inc!(BATCH_READER_ERRORS, &["brotli_used_before_fjord"]);
             return None;
         }
 
