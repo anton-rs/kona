@@ -65,6 +65,7 @@ impl AlloyChainProvider {
 #[async_trait]
 impl ChainProvider for AlloyChainProvider {
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
+        crate::inc!(PROVIDER_CALLS, &["chain_provider", "header_by_hash"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["chain_provider", "header_by_hash"], timer);
         if let Some(header) = self.header_by_hash_cache.get(&hash) {
             return Ok(header.clone());
@@ -76,6 +77,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "header_by_hash", "debug_getRawHeader"]);
                 return Err(e);
             }
         };
@@ -86,12 +88,14 @@ impl ChainProvider for AlloyChainProvider {
             }
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "header_by_hash", "decode"]);
                 Err(e)
             }
         }
     }
 
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo> {
+        crate::inc!(PROVIDER_CALLS, &["chain_provider", "block_info_by_number"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -108,6 +112,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_by_number", "debug_getRawHeader"]);
                 return Err(e);
             }
         };
@@ -115,6 +120,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(h) => h,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_by_number", "decode"]);
                 return Err(e);
             }
         };
@@ -130,6 +136,7 @@ impl ChainProvider for AlloyChainProvider {
     }
 
     async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>> {
+        crate::inc!(PROVIDER_CALLS, &["chain_provider", "receipts_by_hash"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -146,6 +153,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(r) => r,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "receipts_by_hash", "debug_getRawReceipts"]);
                 return Err(e);
             }
         };
@@ -167,6 +175,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(r) => r,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "receipts_by_hash", "decode"]);
                 return Err(e);
             }
         };
@@ -178,6 +187,7 @@ impl ChainProvider for AlloyChainProvider {
         &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
+        crate::inc!(PROVIDER_CALLS, &["chain_provider", "block_info_and_transactions_by_hash"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -195,6 +205,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_and_transactions_by_hash", "debug_getRawBlock"]);
                 return Err(e);
             }
         };
@@ -202,6 +213,7 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_and_transactions_by_hash", "decode"]);
                 return Err(e);
             }
         };
@@ -270,6 +282,7 @@ impl AlloyL2ChainProvider {
 #[async_trait]
 impl L2ChainProvider for AlloyL2ChainProvider {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
+        crate::inc!(PROVIDER_CALLS, &["l2_chain_provider", "l2_block_info_by_number"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -284,6 +297,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(p) => p,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "l2_block_info_by_number", "payload_by_number"]);
                 return Err(e);
             }
         };
@@ -291,6 +305,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "l2_block_info_by_number", "to_l2_block_ref"]);
                 return Err(e);
             }
         };
@@ -299,6 +314,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
+        crate::inc!(PROVIDER_CALLS, &["l2_chain_provider", "payload_by_number"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -315,6 +331,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "payload_by_number", "debug_getRawBlock"]);
                 return Err(e);
             }
         };
@@ -322,6 +339,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "payload_by_number", "decode"]);
                 return Err(e);
             }
         };
@@ -336,6 +354,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         number: u64,
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
+        crate::inc!(PROVIDER_CALLS, &["l2_chain_provider", "system_config_by_number"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -350,6 +369,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(e) => e,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "system_config_by_number", "payload_by_number"]);
                 return Err(e);
             }
         };
@@ -357,6 +377,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(s) => s,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "system_config_by_number", "to_system_config"]);
                 return Err(e);
             }
         };

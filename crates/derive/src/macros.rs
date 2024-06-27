@@ -17,29 +17,30 @@ macro_rules! timer {
     };
 }
 
+
 /// Increments a metric with a label value.
 #[macro_export]
-macro_rules! inc_gauge {
-    ($metric:ident, $label:expr) => {
+macro_rules! inc {
+    ($metric:ident, $labels:expr) => {
         #[cfg(feature = "metrics")]
-        $crate::metrics::$metric.with_label_values(&[$label]).inc();
+        $crate::metrics::$metric.with_label_values($labels).inc();
     };
-    ($metric:ident, $value:expr, $label:expr) => {
+    ($metric:ident, $value:expr, $labels:expr) => {
         #[cfg(feature = "metrics")]
-        $crate::metrics::$metric.with_label_values(&[$label]).add($value);
+        $crate::metrics::$metric.with_label_values($labels).add($value);
     };
 }
 
 /// Observes a metric with a label value.
 #[macro_export]
-macro_rules! observe_histogram {
+macro_rules! observe {
     ($metric:ident, $value:expr) => {
         #[cfg(feature = "metrics")]
         $crate::metrics::$metric.observe($value);
     };
-    ($metric:ident, $value:expr, $label:expr) => {
+    ($metric:ident, $value:expr, $labels:expr) => {
         #[cfg(feature = "metrics")]
-        $crate::metrics::$metric.with_label_values(&[$label]).observe($value);
+        $crate::metrics::$metric.with_label_values($label).observe($value);
     };
 }
 

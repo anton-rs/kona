@@ -56,6 +56,7 @@ impl OnlineBeaconClient {
 #[async_trait]
 impl BeaconClient for OnlineBeaconClient {
     async fn config_spec(&self) -> Result<APIConfigResponse> {
+        crate::inc!(PROVIDER_CALLS, &["beacon_client", "config_spec"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["beacon_client", "config_spec"], timer);
         let first = match self
             .inner
@@ -67,13 +68,22 @@ impl BeaconClient for OnlineBeaconClient {
             Ok(response) => response,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "config_spec", "request"]);
                 return Err(e);
             }
         };
-        first.json::<APIConfigResponse>().await.map_err(|e| anyhow!(e))
+        match first.json::<APIConfigResponse>().await.map_err(|e| anyhow!(e)) {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "config_spec", "decode"]);
+                Err(e)
+            }
+        }
     }
 
     async fn beacon_genesis(&self) -> Result<APIGenesisResponse> {
+        crate::inc!(PROVIDER_CALLS, &["beacon_client", "beacon_genesis"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["beacon_client", "beacon_genesis"], timer);
         let first = match self
             .inner
@@ -85,10 +95,18 @@ impl BeaconClient for OnlineBeaconClient {
             Ok(response) => response,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_genesis", "request"]);
                 return Err(e);
             }
         };
-        first.json::<APIGenesisResponse>().await.map_err(|e| anyhow!(e))
+        match first.json::<APIGenesisResponse>().await.map_err(|e| anyhow!(e)) {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_genesis", "decode"]);
+                Err(e)
+            }
+        }
     }
 
     async fn beacon_blob_side_cars(
@@ -96,6 +114,7 @@ impl BeaconClient for OnlineBeaconClient {
         slot: u64,
         hashes: &[IndexedBlobHash],
     ) -> Result<Vec<APIBlobSidecar>> {
+        crate::inc!(PROVIDER_CALLS, &["beacon_client", "beacon_blob_side_cars"]);
         crate::timer!(
             START,
             PROVIDER_RESPONSE_TIME,
@@ -112,6 +131,7 @@ impl BeaconClient for OnlineBeaconClient {
             Ok(response) => response,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_blob_side_cars", "request"]);
                 return Err(e);
             }
         };
@@ -120,6 +140,7 @@ impl BeaconClient for OnlineBeaconClient {
                 Ok(response) => response,
                 Err(e) => {
                     crate::timer!(DISCARD, timer);
+                    crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_blob_side_cars", "decode"]);
                     return Err(e);
                 }
             };
