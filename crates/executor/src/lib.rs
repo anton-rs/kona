@@ -60,6 +60,7 @@ where
         fetcher: F,
         hinter: H,
     ) -> Self {
+        // comment
         let trie_db = TrieDB::new(parent_header.state_root, parent_header, fetcher, hinter);
         let state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
         Self { config, state }
