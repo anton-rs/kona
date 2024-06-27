@@ -8,7 +8,7 @@ use kona_derive::types::{
     L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig,
 };
 use std::vec::Vec;
-use tracing::warn;
+use tracing::{error, warn};
 
 /// OnlineValidator
 ///
@@ -57,7 +57,7 @@ impl OnlineValidator {
             if let Ok(tx) = tx {
                 txs.push(tx);
             } else {
-                warn!("Failed to fetch transaction: {:?}", tx);
+                warn!(target: "validation", "Failed to fetch transaction: {:?}", tx);
             }
         }
         Ok((block.header, txs))
@@ -80,10 +80,15 @@ impl OnlineValidator {
     }
 
     /// Validates the given [`L2AttributesWithParent`].
-    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> bool {
+    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> Result<bool> {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
-        let payload = self.get_payload(tag).await.unwrap();
-        attributes.attributes == payload
+        match self.get_payload(tag).await {
+            Ok(payload) => Ok(attributes.attributes == payload),
+            Err(e) => {
+                error!(target: "validation", "Failed to fetch payload for block {}: {:?}", expected, e);
+                Err(e)
+            }
+        }
     }
 }
