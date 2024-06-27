@@ -3,8 +3,9 @@
 use alloc::{boxed::Box, string::String};
 use lazy_static::lazy_static;
 use prometheus::{
-    self, opts, register_gauge_vec, register_histogram, register_histogram_vec, register_int_gauge,
-    GaugeVec, Histogram, HistogramVec, IntGauge,
+    self, opts, register_counter_vec, register_gauge_vec, register_histogram,
+    register_histogram_vec, register_int_gauge, CounterVec, GaugeVec, Histogram, HistogramVec,
+    IntGauge,
 };
 
 const RESPONSE_TIME_CUSTOM_BUCKETS: &[f64; 18] = &[
@@ -18,6 +19,20 @@ lazy_static! {
         "origin_gauge",
         "Tracks the L1 origin for the L1 Traversal Stage"
     ).expect("Origin Gauge failed to register");
+
+    /// Tracks the number of provider method calls.
+    pub static ref PROVIDER_CALLS: CounterVec = register_counter_vec!(
+        "provider_calls",
+        "Number of provider method calls",
+        &["provider", "method"]
+    ).expect("Provider Calls failed to register");
+
+    /// Tracks the number of errors in provider methods.
+    pub static ref PROVIDER_ERRORS: CounterVec = register_counter_vec!(
+        "provider_errors",
+        "Number of provider errors",
+        &["provider", "method", "error"]
+    ).expect("Provider Errors failed to register");
 
     /// Tracks the time taken for provider methods.
     pub static ref PROVIDER_RESPONSE_TIME: HistogramVec = register_histogram_vec!(
