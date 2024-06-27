@@ -20,6 +20,19 @@ lazy_static! {
         "Tracks the L1 origin for the L1 Traversal Stage"
     ).expect("Origin Gauge failed to register");
 
+    /// Tracks batch reader errors.
+    pub static ref BATCH_READER_ERRORS: CounterVec = register_counter_vec!(
+        "batch_reader_errors",
+        "Number of batch reader errors",
+        &["error"]
+    ).expect("Batch Reader Errors failed to register");
+
+    /// Tracks the compression ratio of batches.
+    pub static ref BATCH_COMPRESSION_RATIO: IntGauge = register_int_gauge!(
+        "batch_compression_ratio",
+        "Compression ratio of batches"
+    ).expect("Batch Compression Ratio failed to register");
+
     /// Tracks the number of provider method calls.
     pub static ref PROVIDER_CALLS: CounterVec = register_counter_vec!(
         "provider_calls",
