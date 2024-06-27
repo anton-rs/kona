@@ -68,6 +68,9 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
 
+    // Reset the failed payload derivation metric to 0 so it can be queried.
+    metrics::FAILED_PAYLOAD_DERIVATION.reset();
+
     // Continuously step on the pipeline and validate payloads.
     let mut advance_cursor_flag = false;
     loop {
