@@ -56,8 +56,13 @@ where
     S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
+    /// Peeks at the next prepared [L2AttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&L2AttributesWithParent> {
+        self.prepared.front()
+    }
+
     /// Returns the next prepared [L2AttributesWithParent] from the pipeline.
-    fn next_attributes(&mut self) -> Option<L2AttributesWithParent> {
+    fn next(&mut self) -> Option<L2AttributesWithParent> {
         self.prepared.pop_front()
     }
 
