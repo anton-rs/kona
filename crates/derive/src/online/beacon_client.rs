@@ -131,19 +131,25 @@ impl BeaconClient for OnlineBeaconClient {
             Ok(response) => response,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_blob_side_cars", "request"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["beacon_client", "beacon_blob_side_cars", "request"]
+                );
                 return Err(e);
             }
         };
-        let raw_response =
-            match raw_response.json::<APIGetBlobSidecarsResponse>().await.map_err(|e| anyhow!(e)) {
-                Ok(response) => response,
-                Err(e) => {
-                    crate::timer!(DISCARD, timer);
-                    crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_blob_side_cars", "decode"]);
-                    return Err(e);
-                }
-            };
+        let raw_response = match raw_response
+            .json::<APIGetBlobSidecarsResponse>()
+            .await
+            .map_err(|e| anyhow!(e))
+        {
+            Ok(response) => response,
+            Err(e) => {
+                crate::timer!(DISCARD, timer);
+                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_blob_side_cars", "decode"]);
+                return Err(e);
+            }
+        };
 
         let mut sidecars = Vec::with_capacity(hashes.len());
 

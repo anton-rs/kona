@@ -77,7 +77,10 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "header_by_hash", "debug_getRawHeader"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["chain_provider", "header_by_hash", "debug_getRawHeader"]
+                );
                 return Err(e);
             }
         };
@@ -112,7 +115,10 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_by_number", "debug_getRawHeader"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["chain_provider", "block_info_by_number", "debug_getRawHeader"]
+                );
                 return Err(e);
             }
         };
@@ -153,7 +159,10 @@ impl ChainProvider for AlloyChainProvider {
             Ok(r) => r,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "receipts_by_hash", "debug_getRawReceipts"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["chain_provider", "receipts_by_hash", "debug_getRawReceipts"]
+                );
                 return Err(e);
             }
         };
@@ -205,7 +214,10 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_and_transactions_by_hash", "debug_getRawBlock"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["chain_provider", "block_info_and_transactions_by_hash", "debug_getRawBlock"]
+                );
                 return Err(e);
             }
         };
@@ -213,7 +225,10 @@ impl ChainProvider for AlloyChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_and_transactions_by_hash", "decode"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["chain_provider", "block_info_and_transactions_by_hash", "decode"]
+                );
                 return Err(e);
             }
         };
@@ -297,7 +312,10 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(p) => p,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "l2_block_info_by_number", "payload_by_number"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["l2_chain_provider", "l2_block_info_by_number", "payload_by_number"]
+                );
                 return Err(e);
             }
         };
@@ -305,7 +323,10 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "l2_block_info_by_number", "to_l2_block_ref"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["l2_chain_provider", "l2_block_info_by_number", "to_l2_block_ref"]
+                );
                 return Err(e);
             }
         };
@@ -331,7 +352,10 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "payload_by_number", "debug_getRawBlock"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["l2_chain_provider", "payload_by_number", "debug_getRawBlock"]
+                );
                 return Err(e);
             }
         };
@@ -369,7 +393,10 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(e) => e,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "system_config_by_number", "payload_by_number"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["l2_chain_provider", "system_config_by_number", "payload_by_number"]
+                );
                 return Err(e);
             }
         };
@@ -377,7 +404,10 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             Ok(s) => s,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "system_config_by_number", "to_system_config"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["l2_chain_provider", "system_config_by_number", "to_system_config"]
+                );
                 return Err(e);
             }
         };

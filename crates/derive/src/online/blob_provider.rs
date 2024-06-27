@@ -143,7 +143,10 @@ where
             Ok(sidecars) => sidecars,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "fetch_filtered_sidecars"]);
+                crate::inc!(
+                    PROVIDER_ERRORS,
+                    &["blob_provider", "get_blobs", "fetch_filtered_sidecars"]
+                );
                 return Err(e);
             }
         };

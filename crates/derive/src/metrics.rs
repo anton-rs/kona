@@ -3,8 +3,9 @@
 use alloc::{boxed::Box, string::String};
 use lazy_static::lazy_static;
 use prometheus::{
-    self, opts, register_gauge_vec, register_histogram, register_histogram_vec, register_int_gauge,
-    GaugeVec, Histogram, HistogramVec, IntGauge, CounterVec, register_counter_vec,
+    self, opts, register_counter_vec, register_gauge_vec, register_histogram,
+    register_histogram_vec, register_int_gauge, CounterVec, GaugeVec, Histogram, HistogramVec,
+    IntGauge,
 };
 
 const RESPONSE_TIME_CUSTOM_BUCKETS: &[f64; 18] = &[
