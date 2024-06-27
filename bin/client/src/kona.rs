@@ -9,7 +9,7 @@ use alloc::sync::Arc;
 use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
-    l2::{OracleL2ChainProvider, TrieDBHintWriter},
+    l2::OracleL2ChainProvider,
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
@@ -60,8 +60,8 @@ fn main() -> Result<()> {
         let mut executor = StatelessL2BlockExecutor::new(
             &boot.rollup_config,
             driver.take_l2_safe_head_header(),
+            l2_provider.clone(),
             l2_provider,
-            TrieDBHintWriter,
         );
         let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;

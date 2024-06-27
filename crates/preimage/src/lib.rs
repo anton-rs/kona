@@ -19,4 +19,6 @@ mod pipe;
 pub use pipe::PipeHandle;
 
 mod traits;
-pub use traits::{HintReaderServer, HintWriterClient, PreimageOracleClient, PreimageOracleServer};
+pub use traits::{
+    CommsClient, HintReaderServer, HintWriterClient, PreimageOracleClient, PreimageOracleServer,
+};
