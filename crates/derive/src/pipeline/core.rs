@@ -50,6 +50,18 @@ where
     }
 }
 
+impl<S, P> Iterator for DerivationPipeline<S, P>
+where
+    S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
+    P: L2ChainProvider + Send + Sync + Debug,
+{
+    type Item = L2AttributesWithParent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.prepared.pop_front()
+    }
+}
+
 #[async_trait]
 impl<S, P> Pipeline for DerivationPipeline<S, P>
 where
@@ -59,11 +71,6 @@ where
     /// Peeks at the next prepared [L2AttributesWithParent] from the pipeline.
     fn peek(&self) -> Option<&L2AttributesWithParent> {
         self.prepared.front()
-    }
-
-    /// Returns the next prepared [L2AttributesWithParent] from the pipeline.
-    fn next(&mut self) -> Option<L2AttributesWithParent> {
-        self.prepared.pop_front()
     }
 
     /// Resets the pipelien by calling the [`ResettableStage::reset`] method.
