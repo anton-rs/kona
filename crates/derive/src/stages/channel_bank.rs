@@ -98,7 +98,18 @@ where
             warn!(target: "channel-bank", "Failed to add frame to channel: {:?}", frame_id);
             return Ok(());
         }
-        crate::inc!(CURRENT_CHANNEL_FRAMES);
+        // Only increment the channel frames if the channel is current.
+        if self.channel_queue.front().map_or(false, |id| *id == current_channel.id()) {
+            crate::inc!(CURRENT_CHANNEL_FRAMES);
+        }
+        #[cfg(feature = "metrics")]
+        {
+            // For each channel, get the number of frames and record it in the CHANNEL_FRAME_COUNT
+            // histogram metric.
+            for (_, channel) in &self.channels {
+                crate::observe!(CHANNEL_FRAME_COUNT, channel.len() as f64);
+            }
+        }
 
         self.prune()
     }
