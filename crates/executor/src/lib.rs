@@ -7,12 +7,15 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use alloy_consensus::{Header, Sealable, Sealed, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
+use alloy_consensus::{Header, Sealable, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_derive::types::{L2PayloadAttributes, RawTransaction, RollupConfig};
-use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{
+    ordered_trie_with_encoder, NoopTrieDBFetcher, NoopTrieDBHinter, TrieDB, TrieDBFetcher,
+    TrieDBHinter,
+};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
@@ -20,9 +23,12 @@ use revm::{
         calc_excess_blob_gas, BlobExcessGasAndPrice, BlockEnv, CfgEnv, CfgEnvWithHandlerCfg,
         EnvWithHandlerCfg, OptimismFields, SpecId, TransactTo, TxEnv,
     },
-    Evm, StateBuilder,
+    Evm,
 };
 use tracing::{debug, info};
+
+mod builder;
+pub use builder::StatelessL2BlockExecutorBuilder;
 
 mod eip4788;
 use eip4788::pre_block_beacon_root_contract_call;
@@ -36,7 +42,7 @@ use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_enve
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F, H>
+pub struct StatelessL2BlockExecutor<'a, F = NoopTrieDBFetcher, H = NoopTrieDBHinter>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
@@ -52,25 +58,11 @@ where
     F: TrieDBFetcher,
     H: TrieDBHinter,
 {
-    /// Constructs a new [StatelessL2BlockExecutor] with the given starting state root, parent hash,
-    /// and [TrieDBFetcher].
-    pub fn new(
-        config: &'a RollupConfig,
-        parent_header: Sealed<Header>,
-        fetcher: F,
-        hinter: H,
-    ) -> Self {
-        let trie_db = TrieDB::new(parent_header.state_root, parent_header, fetcher, hinter);
-        let state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
-        Self { config, state }
+    /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
+    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
+        StatelessL2BlockExecutorBuilder::with_config(config)
     }
-}
 
-impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
-where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
-{
     /// Executes the given block, returning the resulting state root.
     ///
     /// ## Steps
@@ -706,12 +698,12 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #120794431's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            &rollup_config,
-            header.seal_slow(),
-            TestdataTrieDBFetcher::new("block_120794432_exec"),
-            NoopTrieDBHinter,
-        );
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+            .with_parent_header(header.seal_slow())
+            .with_fetcher(TestdataTrieDBFetcher::new("block_120794432_exec"))
+            .with_hinter(NoopTrieDBHinter)
+            .build()
+            .unwrap();
 
         let raw_tx = hex!("7ef8f8a003b511b9b71520cd62cad3b5fd5b1b8eaebd658447723c31c7f1eba87cfe98c894deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000300000000665a33a70000000001310e960000000000000000000000000000000000000000000000000000000214d2697300000000000000000000000000000000000000000000000000000000000000015346d208a396843018a2e666c8e7832067358433fb87ca421273c6a4e69f78d50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985");
         let payload_attrs = L2PayloadAttributes {
@@ -759,12 +751,12 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121049888's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            &rollup_config,
-            parent_header.seal_slow(),
-            TestdataTrieDBFetcher::new("block_121049889_exec"),
-            NoopTrieDBHinter,
-        );
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+            .with_parent_header(parent_header.seal_slow())
+            .with_fetcher(TestdataTrieDBFetcher::new("block_121049889_exec"))
+            .with_hinter(NoopTrieDBHinter)
+            .build()
+            .unwrap();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a01e6036fa5dc5d76e0095f42fef2c4aa7d6589b4f496f9c4bea53daef1b4a24c194deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc50000000000000000000000006661ff73000000000131b40700000000000000000000000000000000000000000000000000000005c9ea450a0000000000000000000000000000000000000000000000000000000000000001e885b088376fedbd0490a7991be47854872f6467c476d255eed3151d5f6a95940000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -816,12 +808,12 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121003240's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            &rollup_config,
-            parent_header.seal_slow(),
-            TestdataTrieDBFetcher::new("block_121003241_exec"),
-            NoopTrieDBHinter,
-        );
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+            .with_parent_header(parent_header.seal_slow())
+            .with_fetcher(TestdataTrieDBFetcher::new("block_121003241_exec"))
+            .with_hinter(NoopTrieDBHinter)
+            .build()
+            .unwrap();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a02c3adbd572915b3ef2fe7c81418461cb32407df8cb1bd4c1f5f4b45e474bfce694deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000400000000666092ff00000000013195d800000000000000000000000000000000000000000000000000000004da0e1101000000000000000000000000000000000000000000000000000000000000000493a1359bf7a89d8b2b2073a153c47f9c399f8f7a864e4f25744d6832cb6fadd80000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -880,12 +872,12 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            &rollup_config,
-            parent_header.seal_slow(),
-            TestdataTrieDBFetcher::new("block_121057303_exec"),
-            NoopTrieDBHinter,
-        );
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+            .with_parent_header(parent_header.seal_slow())
+            .with_fetcher(TestdataTrieDBFetcher::new("block_121057303_exec"))
+            .with_hinter(NoopTrieDBHinter)
+            .build()
+            .unwrap();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a01a2c45522a69a90b583aa08a0968847a6fbbdc5480fe6f967b5fcb9384f46e9594deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000010000000066623963000000000131b8d700000000000000000000000000000000000000000000000000000003ec02c0240000000000000000000000000000000000000000000000000000000000000001c10a3bb5847ad354f9a70b56f253baaea1c3841647851c4c62e10b22fe4e86940000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -938,12 +930,12 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            &rollup_config,
-            parent_header.seal_slow(),
-            TestdataTrieDBFetcher::new("block_121065789_exec"),
-            NoopTrieDBHinter,
-        );
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+            .with_parent_header(parent_header.seal_slow())
+            .with_fetcher(TestdataTrieDBFetcher::new("block_121065789_exec"))
+            .with_hinter(NoopTrieDBHinter)
+            .build()
+            .unwrap();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a0dd829082801fa06ba178080ec514ae92ae90b5fd6799fcedc5a582a54f1358c094deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000050000000066627b9f000000000131be5400000000000000000000000000000000000000000000000000000001e05d6a160000000000000000000000000000000000000000000000000000000000000001dc97827f5090fcc3425f1f8a22ac4603b0b176a11997a423006eb61cf64d817a0000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -1005,12 +997,12 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121135703's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::new(
-            &rollup_config,
-            parent_header.seal_slow(),
-            TestdataTrieDBFetcher::new("block_121135704_exec"),
-            NoopTrieDBHinter,
-        );
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+            .with_parent_header(parent_header.seal_slow())
+            .with_fetcher(TestdataTrieDBFetcher::new("block_121135704_exec"))
+            .with_hinter(NoopTrieDBHinter)
+            .build()
+            .unwrap();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a0bd8a03d2faac7261a1627e834405975aa1c55c968b072ffa6db6c100d891c9b794deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000070000000066649ddb000000000131eb9a000000000000000000000000000000000000000000000000000000023c03238b0000000000000000000000000000000000000000000000000000000000000001427035b1edf748d109f4a751c5e2e33122340b0e22961600d8b76cfde3c7a6b50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),

@@ -57,12 +57,11 @@ fn main() -> Result<()> {
         .await?;
         let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
-        let mut executor = StatelessL2BlockExecutor::new(
-            &boot.rollup_config,
-            driver.take_l2_safe_head_header(),
-            l2_provider,
-            TrieDBHintWriter,
-        );
+        let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
+            .with_parent_header(driver.take_l2_safe_head_header())
+            .with_fetcher(l2_provider)
+            .with_hinter(TrieDBHintWriter)
+            .build()?;
         let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;
 
