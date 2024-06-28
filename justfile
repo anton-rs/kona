@@ -99,8 +99,16 @@ docker-run-ts:
     -e L1_RPC_URL=$L1_RPC_URL \
     -e L2_RPC_URL=$L2_RPC_URL \
     -e BEACON_URL=$BEACON_URL \
-    -e LOKI_URL=$LOKI_URL \
-    -e START_L2_BLOCK=$START_L2_BLOCK \
-    -e METRICS_SERVER_ADDR=$METRICS_SERVER_ADDR \
-    -e METRICS_SERVER_PORT=$METRICS_SERVER_PORT \
     trusted-sync
+
+# Run the `trusted-sync` docker container with Loki logging
+docker-run-ts-with-loki:
+  docker run -it \
+    -e L1_RPC_URL=$L1_RPC_URL \
+    -e L2_RPC_URL=$L2_RPC_URL \
+    -e BEACON_URL=$BEACON_URL \
+    -e LOKI_URL=$LOKI_URL \
+    -e METRICS_URL=$METRICS_URL \
+    -e START_L2_BLOCK=$START_L2_BLOCK \
+    trusted-sync
+

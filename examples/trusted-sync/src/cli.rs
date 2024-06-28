@@ -30,27 +30,24 @@ pub struct Cli {
     /// The l2 block to start from.
     #[clap(long, short, help = "Starting l2 block, defaults to chain genesis if none specified")]
     pub start_l2_block: Option<u64>,
-    /// The address of the metrics server.
+    /// The url for metrics.
     #[clap(long, help = "Address of the metrics server")]
-    pub metrics_server_addr: Option<String>,
-    /// The metrics server port.
-    #[clap(long, help = "Port of the metrics server")]
-    pub metrics_server_port: Option<u16>,
+    pub metrics_url: Option<String>,
     /// The Loki Url endpoint.
     #[clap(long, help = "Url to post Loki logs")]
     pub loki_url: Option<String>,
+    /// Whether to enable Loki Metrics.
+    #[clap(long, help = "Enable Loki metrics")]
+    pub loki_metrics: bool,
 }
 
 impl Cli {
     /// Returns the full metrics server address string.
     pub fn metrics_server_addr(&self) -> String {
-        format!(
-            "{}:{}",
-            self.metrics_server_addr
-                .clone()
-                .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
-            self.metrics_server_port.unwrap_or(DEFAULT_METRICS_SERVER_PORT)
-        )
+        if let Some(url) = self.metrics_url.clone() {
+            return url;
+        }
+        format!("{}:{}", DEFAULT_METRICS_SERVER_ADDR, DEFAULT_METRICS_SERVER_PORT)
     }
 
     /// Returns the full loki server address.
