@@ -9,6 +9,7 @@ use tracing::trace;
 
 /// The [PreimageServer] is responsible for waiting for incoming preimage requests and
 /// serving them to the client.
+#[derive(Debug)]
 pub struct PreimageServer<P, H, KV>
 where
     P: PreimageOracleServer,

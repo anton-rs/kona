@@ -10,6 +10,7 @@ use kona_client::{
 use kona_preimage::PreimageKey;
 
 /// A simple, synchronous key-value store that returns data from a [HostCli] config.
+#[derive(Debug)]
 pub struct LocalKeyValueStore {
     cfg: HostCli,
 }

@@ -10,9 +10,9 @@ pub mod server;
 pub mod types;
 pub mod util;
 
-pub use cli::{HostCli, init_tracing_subscriber};
-use server::PreimageServer;
+pub use cli::{init_tracing_subscriber, HostCli};
 use fetcher::Fetcher;
+use server::PreimageServer;
 
 use anyhow::{anyhow, Result};
 use command_fds::{CommandFdExt, FdMapping};

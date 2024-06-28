@@ -22,6 +22,7 @@ use tracing::trace;
 mod precompiles;
 
 /// The [Fetcher] struct is responsible for fetching preimages from a remote source.
+#[derive(Debug)]
 pub struct Fetcher<KV>
 where
     KV: KeyValueStore + ?Sized,
