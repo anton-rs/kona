@@ -12,10 +12,7 @@ use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_derive::types::{L2PayloadAttributes, RawTransaction, RollupConfig};
-use kona_mpt::{
-    ordered_trie_with_encoder, NoopTrieDBFetcher, NoopTrieDBHinter, TrieDB, TrieDBFetcher,
-    TrieDBHinter,
-};
+use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
@@ -30,6 +27,9 @@ use tracing::{debug, info};
 mod builder;
 pub use builder::StatelessL2BlockExecutorBuilder;
 
+mod precompile;
+pub use precompile::{NoPrecompileOverride, PrecompileOverride};
+
 mod eip4788;
 use eip4788::pre_block_beacon_root_contract_call;
 
@@ -42,24 +42,28 @@ use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_enve
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F = NoopTrieDBFetcher, H = NoopTrieDBHinter>
+pub struct StatelessL2BlockExecutor<'a, F, H, PO>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
+    PO: PrecompileOverride<F, H>,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
     /// The inner state database component.
     state: State<TrieDB<F, H>>,
+    /// Phantom data for the precompile overrides.
+    _phantom: core::marker::PhantomData<PO>,
 }
 
-impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
+impl<'a, F, H, PO> StatelessL2BlockExecutor<'a, F, H, PO>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
+    PO: PrecompileOverride<F, H>,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
-    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
+    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H, PO> {
         StatelessL2BlockExecutorBuilder::with_config(config)
     }
 
@@ -114,11 +118,21 @@ where
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
         ensure_create2_deployer_canyon(&mut self.state, self.config, payload.timestamp)?;
 
-        // Construct the EVM with the given configuration.
-        // TODO(clabby): Accelerate precompiles w/ custom precompile handler.
         let mut cumulative_gas_used = 0u64;
         let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(payload.transactions.len());
         let is_regolith = self.config.is_regolith_active(payload.timestamp);
+
+        // Construct the block-scoped EVM with the given configuration.
+        // The transaction environment is set within the loop for each transaction.
+        let mut evm = Evm::builder()
+            .with_db(&mut self.state)
+            .with_env_with_handler_cfg(EnvWithHandlerCfg::new_with_cfg_env(
+                initialized_cfg.clone(),
+                initialized_block_env.clone(),
+                Default::default(),
+            ))
+            .append_handler_register(PO::set_precompiles)
+            .build();
 
         // Execute the transactions in the payload.
         let transactions = payload
@@ -144,13 +158,10 @@ where
                 anyhow::bail!("EIP-4844 transactions are not supported");
             }
 
-            let mut evm = Evm::builder()
-                .with_db(&mut self.state)
-                .with_env_with_handler_cfg(EnvWithHandlerCfg::new_with_cfg_env(
-                    initialized_cfg.clone(),
-                    initialized_block_env.clone(),
-                    Self::prepare_tx_env(&transaction, raw_transaction)?,
-                ))
+            // Modify the transaction environment with the current transaction.
+            evm = evm
+                .modify()
+                .with_tx_env(Self::prepare_tx_env(&transaction, raw_transaction)?)
                 .build();
 
             // If the transaction is a deposit, cache the depositor account.
@@ -207,6 +218,9 @@ where
             "Transaction execution complete | Cumulative gas used: {cumulative_gas_used}",
             cumulative_gas_used = cumulative_gas_used
         );
+
+        // Drop the EVM to rid the exclusive reference to the database.
+        drop(evm);
 
         // Merge all state transitions into the cache state.
         debug!(target: "client_executor", "Merging state transitions");
@@ -702,6 +716,7 @@ mod test {
             .with_parent_header(header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_120794432_exec"))
             .with_hinter(NoopTrieDBHinter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -755,6 +770,7 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121049889_exec"))
             .with_hinter(NoopTrieDBHinter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -812,6 +828,7 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121003241_exec"))
             .with_hinter(NoopTrieDBHinter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -876,6 +893,7 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121057303_exec"))
             .with_hinter(NoopTrieDBHinter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -934,6 +952,7 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121065789_exec"))
             .with_hinter(NoopTrieDBHinter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -1001,6 +1020,7 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121135704_exec"))
             .with_hinter(NoopTrieDBHinter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
