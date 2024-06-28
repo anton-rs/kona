@@ -20,6 +20,12 @@ lazy_static! {
         "Tracks the L1 origin for the L1 Traversal Stage"
     ).expect("Origin Gauge failed to register");
 
+    /// Tracks the number of frames in the current channel.
+    pub static ref CURRENT_CHANNEL_FRAMES: IntGauge = register_int_gauge!(
+        "kona_derive_current_channel_frames",
+        "Tracks the number of frames in the current channel."
+    ).expect("Current channel frames failed to register");
+
     /// Tracks batch reader errors.
     pub static ref BATCH_READER_ERRORS: CounterVec = register_counter_vec!(
         "kona_derive_batch_reader_errors",
