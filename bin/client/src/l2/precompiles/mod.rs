@@ -9,6 +9,7 @@ use revm::{
 
 mod bn128_pair;
 mod ecrecover;
+mod kzg_point_eval;
 
 /// The [PrecompileOverride] implementation for the FPVM-accelerated precompiles.
 #[derive(Debug)]
@@ -43,7 +44,11 @@ where
                 ContextPrecompiles::new(PrecompileSpecId::from_spec_id(spec_id)).clone();
 
             // Extend with FPVM-accelerated precompiles
-            let override_precompiles = [ecrecover::FPVM_ECRECOVER, bn128_pair::FPVM_ECPAIRING];
+            let override_precompiles = [
+                ecrecover::FPVM_ECRECOVER,
+                bn128_pair::FPVM_ECPAIRING,
+                kzg_point_eval::FPVM_KZG_POINT_EVAL,
+            ];
             ctx_precompiles.extend(override_precompiles);
 
             ctx_precompiles
