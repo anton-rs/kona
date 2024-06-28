@@ -7,6 +7,7 @@ use revm::{
     handler::register::EvmHandler, precompile::PrecompileSpecId, ContextPrecompiles, State,
 };
 
+mod bn128_pair;
 mod ecrecover;
 
 /// The [PrecompileOverride] implementation for the FPVM-accelerated precompiles.
@@ -42,7 +43,7 @@ where
                 ContextPrecompiles::new(PrecompileSpecId::from_spec_id(spec_id)).clone();
 
             // Extend with FPVM-accelerated precompiles
-            let override_precompiles = [ecrecover::FPVM_ECRECOVER];
+            let override_precompiles = [ecrecover::FPVM_ECRECOVER, bn128_pair::FPVM_ECPAIRING];
             ctx_precompiles.extend(override_precompiles);
 
             ctx_precompiles
