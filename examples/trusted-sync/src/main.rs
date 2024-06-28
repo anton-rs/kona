@@ -52,8 +52,18 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     // Construct the pipeline
     let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
 
-    let start =
+    let mut start =
         cli.start_l2_block.filter(|n| *n >= cfg.genesis.l2.number).unwrap_or(cfg.genesis.l2.number);
+
+    // If the start block from tip cli flag is specified, find the latest l2 block number
+    // and subtract the specified number of blocks to get the start block number.
+    if let Some(blocks) = cli.start_blocks_from_tip {
+        let latest = l2_provider.latest_block_number().await?;
+        start = latest.saturating_sub(blocks);
+        info!(target: LOG_TARGET, "Starting {} blocks from tip at L2 block number: {}", blocks, start);
+    }
+
+    println!("Starting from L2 block number: {}", start);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
