@@ -13,7 +13,7 @@ use kona_client::{
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
-use kona_executor::StatelessL2BlockExecutor;
+use kona_executor::{NoPrecompileOverride, StatelessL2BlockExecutor};
 use kona_primitives::L2AttributesWithParent;
 
 extern crate alloc;
@@ -61,6 +61,7 @@ fn main() -> Result<()> {
             .with_parent_header(driver.take_l2_safe_head_header())
             .with_fetcher(l2_provider)
             .with_hinter(TrieDBHintWriter)
+            .with_precompile_overrides(NoPrecompileOverride)
             .build()?;
         let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;
