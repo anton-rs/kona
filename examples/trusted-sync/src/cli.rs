@@ -10,7 +10,7 @@ const BEACON_URL: &str = "BEACON_URL";
 const DEFAULT_METRICS_SERVER_ADDR: &str = "127.0.0.1";
 const DEFAULT_METRICS_SERVER_PORT: u16 = 9000;
 const DEFAULT_LOKI_SERVER_ADDR: &str = "127.0.0.1";
-const DEFAULT_LOKI_SERVER_PORT: u16 = 3133;
+const DEFAULT_LOKI_SERVER_PORT: u16 = 3100;
 
 /// The host binary CLI application arguments.
 #[derive(Parser, Clone, serde::Serialize, serde::Deserialize)]
