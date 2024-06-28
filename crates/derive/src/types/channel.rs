@@ -40,6 +40,11 @@ impl Channel {
         Self { id, open_block, inputs: HashMap::new(), ..Default::default() }
     }
 
+    /// Returns the current [ChannelID] for the channel.
+    pub fn id(&self) -> ChannelID {
+        self.id
+    }
+
     /// Returns the number of frames ingested.
     pub fn len(&self) -> usize {
         self.inputs.len()

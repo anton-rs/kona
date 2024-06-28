@@ -13,6 +13,8 @@ const RESPONSE_TIME_CUSTOM_BUCKETS: &[f64; 18] = &[
     0.1, 0.2, 0.5, 0.8, 1.0,
 ];
 
+const FRAME_COUNT_BUCKETS: &[f64; 8] = &[1.0, 2.0, 5.0, 20.0, 50.0, 200.0, 500.0, 1000.0];
+
 lazy_static! {
     /// Tracks the L1 origin for the L1 Traversal Stage.
     pub static ref ORIGIN_GAUGE: IntGauge = register_int_gauge!(
@@ -25,6 +27,13 @@ lazy_static! {
         "kona_derive_current_channel_frames",
         "Tracks the number of frames in the current channel."
     ).expect("Current channel frames failed to register");
+
+    /// Tracks the number of channels that have the bucket amount of frames.
+    pub static ref CHANNEL_FRAME_COUNT: Histogram = register_histogram!(
+        "kona_derive_channel_frame_count",
+        "Tracks the number of channels that have the bucket amount of frames.",
+        FRAME_COUNT_BUCKETS.to_vec()
+    ).expect("Channel frame count failed to register");
 
     /// Tracks batch reader errors.
     pub static ref BATCH_READER_ERRORS: CounterVec = register_counter_vec!(
