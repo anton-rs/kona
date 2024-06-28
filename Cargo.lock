@@ -1929,6 +1929,7 @@ dependencies = [
  "kona-primitives",
  "lru",
  "op-alloy-consensus",
+ "revm",
  "serde",
  "serde_json",
  "spin",

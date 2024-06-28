@@ -9,11 +9,11 @@ use alloc::sync::Arc;
 use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
-    l2::{OracleL2ChainProvider, TrieDBHintWriter},
+    l2::{FPVMPrecompileOverride, OracleL2ChainProvider, TrieDBHintWriter},
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
-use kona_executor::{NoPrecompileOverride, StatelessL2BlockExecutor};
+use kona_executor::StatelessL2BlockExecutor;
 use kona_primitives::L2AttributesWithParent;
 
 extern crate alloc;
@@ -57,11 +57,13 @@ fn main() -> Result<()> {
         .await?;
         let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
+        let precompile_overrides =
+            FPVMPrecompileOverride::<OracleL2ChainProvider, TrieDBHintWriter>::default();
         let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
             .with_parent_header(driver.take_l2_safe_head_header())
             .with_fetcher(l2_provider)
             .with_hinter(TrieDBHintWriter)
-            .with_precompile_overrides(NoPrecompileOverride)
+            .with_precompile_overrides(precompile_overrides)
             .build()?;
         let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;
