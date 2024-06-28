@@ -161,14 +161,22 @@ impl BatchReader {
     pub(crate) fn next_batch(&mut self, cfg: &RollupConfig) -> Option<Batch> {
         // If the data is not already decompressed, decompress it.
         let mut brotli_used = false;
+
+        #[cfg(feature = "metrics")]
         let mut raw_len = 0;
+
         if let Some(data) = self.data.take() {
             // Peek at the data to determine the compression type.
             if data.is_empty() {
                 warn!(target: "batch-reader", "Data is too short to determine compression type, skipping batch");
                 return None;
             }
-            raw_len = data.len();
+
+            #[cfg(feature = "metrics")]
+            {
+                raw_len = data.len();
+            }
+
             let compression_type = data[0];
             if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD ||
                 (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
