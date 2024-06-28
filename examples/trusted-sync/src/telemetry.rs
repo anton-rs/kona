@@ -3,7 +3,21 @@ use reqwest::Url;
 use tracing::Level;
 use tracing_subscriber::{layer::SubscriberExt, prelude::*};
 
-pub async fn init(v: u8, addr: Url) -> Result<()> {
+/// Initializes the tracing subscriber
+pub fn init(v: u8) -> Result<()> {
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(match v {
+            0 => Level::ERROR,
+            1 => Level::WARN,
+            2 => Level::INFO,
+            3 => Level::DEBUG,
+            _ => Level::TRACE,
+        })
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))
+}
+
+pub fn init_with_loki(v: u8, addr: Url) -> Result<()> {
     let (loki_layer, task) = tracing_loki::builder()
         .label("environment", "production")
         .map_err(|e| anyhow!(e))?

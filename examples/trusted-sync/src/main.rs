@@ -14,8 +14,12 @@ const LOG_TARGET: &str = "trusted-sync";
 #[actix_web::main]
 async fn main() -> Result<()> {
     let cfg = cli::Cli::parse();
-    let loki_addr = cfg.loki_addr();
-    telemetry::init(cfg.v, loki_addr).await?;
+    if cfg.loki_metrics {
+        let loki_addr = cfg.loki_addr();
+        telemetry::init_with_loki(cfg.v, loki_addr)?;
+    } else {
+        telemetry::init(cfg.v)?;
+    }
     let addr = cfg.metrics_server_addr();
     let handle = tokio::spawn(async { sync(cfg).await });
     tokio::select! {
@@ -47,7 +51,9 @@ async fn sync(cli: cli::Cli) -> Result<()> {
 
     // Construct the pipeline
     let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
-    let start = cli.start_l2_block.unwrap_or(cfg.genesis.l2.number);
+
+    let start =
+        cli.start_l2_block.filter(|n| *n >= cfg.genesis.l2.number).unwrap_or(cfg.genesis.l2.number);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
