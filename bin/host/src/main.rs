@@ -29,6 +29,7 @@ use types::NativePipeFiles;
 mod cli;
 mod fetcher;
 mod kv;
+mod preimage;
 mod server;
 mod types;
 mod util;

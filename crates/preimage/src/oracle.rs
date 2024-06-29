@@ -1,7 +1,8 @@
-use crate::{PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer};
+use crate::{
+    traits::PreimageFetcher, PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer,
+};
 use alloc::{boxed::Box, vec::Vec};
 use anyhow::{bail, Result};
-use core::future::Future;
 use tracing::trace;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
@@ -98,10 +99,9 @@ impl OracleServer {
 
 #[async_trait::async_trait]
 impl PreimageOracleServer for OracleServer {
-    async fn next_preimage_request<F, Fut>(&self, mut get_preimage: F) -> Result<()>
+    async fn next_preimage_request<F>(&self, fetcher: &F) -> Result<()>
     where
-        F: FnMut(PreimageKey) -> Fut + Send,
-        Fut: Future<Output = Result<Vec<u8>>> + Send,
+        F: PreimageFetcher + Send + Sync,
     {
         // Read the preimage request from the client, and throw early if there isn't is any.
         let mut buf = [0u8; 32];
@@ -111,7 +111,7 @@ impl PreimageOracleServer for OracleServer {
         trace!(target: "oracle_server", "Fetching preimage for key {preimage_key}");
 
         // Fetch the preimage value from the preimage getter.
-        let value = get_preimage(preimage_key).await?;
+        let value = fetcher.get_preimage(preimage_key).await?;
 
         // Write the length as a big-endian u64 followed by the data.
         let data = [(value.len() as u64).to_be_bytes().as_ref(), value.as_ref()]
@@ -135,7 +135,7 @@ mod test {
     use crate::PreimageKeyType;
     use alloc::sync::Arc;
     use alloy_primitives::keccak256;
-    use core::pin::Pin;
+    use anyhow::anyhow;
     use kona_common::FileDescriptor;
     use std::{collections::HashMap, fs::File, os::fd::AsRawFd};
     use tempfile::tempfile;
@@ -174,6 +174,18 @@ mod test {
         }
     }
 
+    struct TestFetcher {
+        preimages: Arc<Mutex<HashMap<PreimageKey, Vec<u8>>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl PreimageFetcher for TestFetcher {
+        async fn get_preimage(&self, key: PreimageKey) -> Result<Vec<u8>> {
+            let read_lock = self.preimages.lock().await;
+            read_lock.get(&key).cloned().ok_or_else(|| anyhow!("Key not found"))
+        }
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_oracle_client_and_host() {
         const MOCK_DATA_A: &[u8] = b"1234567890";
@@ -204,23 +216,10 @@ mod test {
             (contents_a, contents_b)
         });
         let host = tokio::task::spawn(async move {
-            #[allow(clippy::type_complexity)]
-            let get_preimage =
-                move |key: PreimageKey| -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send>> {
-                    let preimages = Arc::clone(&preimages);
-                    Box::pin(async move {
-                        // Simulate fetching preimage data
-                        preimages
-                            .lock()
-                            .await
-                            .get(&key)
-                            .ok_or(anyhow::anyhow!("Preimage not available"))
-                            .cloned()
-                    })
-                };
+            let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
 
             loop {
-                if oracle_server.next_preimage_request(&get_preimage).await.is_err() {
+                if oracle_server.next_preimage_request(&test_fetcher).await.is_err() {
                     break;
                 }
             }
