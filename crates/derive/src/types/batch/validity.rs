@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// Batch Validity
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BatchValidity {
     /// The batch is invalid now and in the future, unless we reorg
     Drop,

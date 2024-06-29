@@ -26,12 +26,14 @@ mod single_batch;
 pub use single_batch::SingleBatch;
 
 /// A batch with its inclusion block.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct BatchWithInclusionBlock {
     /// The inclusion block
     pub inclusion_block: BlockInfo,
     /// The batch
     pub batch: Batch,
+    /// Whether or not the batch has been validated yet.
+    pub validity: Option<BatchValidity>,
 }
 
 impl BatchWithInclusionBlock {
@@ -41,13 +43,18 @@ impl BatchWithInclusionBlock {
     /// In case of only a single L1 block, the decision whether a batch is valid may have to stay
     /// undecided.
     pub async fn check_batch<BF: L2ChainProvider>(
-        &self,
+        &mut self,
         cfg: &RollupConfig,
         l1_blocks: &[BlockInfo],
         l2_safe_head: L2BlockInfo,
         fetcher: &mut BF,
     ) -> BatchValidity {
-        match &self.batch {
+        if let Some(BatchValidity::Accept) = self.validity {
+            return BatchValidity::Accept;
+        }
+
+        tracing::info!(target: "batch", "Checking batch validity with inclusion block (hash: {})", self.inclusion_block.hash);
+        let result = match &self.batch {
             Batch::Single(single_batch) => {
                 single_batch.check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block)
             }
@@ -56,7 +63,9 @@ impl BatchWithInclusionBlock {
                     .check_batch(cfg, l1_blocks, l2_safe_head, &self.inclusion_block, fetcher)
                     .await
             }
-        }
+        };
+        self.validity = Some(result);
+        result
     }
 }
 
@@ -67,6 +76,12 @@ pub enum Batch {
     Single(SingleBatch),
     /// Span Batches
     Span(SpanBatch),
+}
+
+impl Default for Batch {
+    fn default() -> Self {
+        Self::Single(Default::default())
+    }
 }
 
 impl Batch {

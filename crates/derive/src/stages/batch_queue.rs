@@ -143,9 +143,10 @@ where
         // any undecided ones.
         let mut remaining = Vec::new();
         for i in 0..self.batches.len() {
-            let batch = &self.batches[i];
+            let batch = &mut self.batches[i];
             let validity =
                 batch.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await;
+
             match validity {
                 BatchValidity::Future => {
                     remaining.push(batch.clone());
@@ -234,7 +235,8 @@ where
             panic!("Cannot add batch without an origin");
         }
         let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
-        let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
+        let mut data =
+            BatchWithInclusionBlock { inclusion_block: origin, batch, ..Default::default() };
         // If we drop the batch, validation logs the drop reason with WARN level.
         if data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await.is_drop() {
             return Ok(());
@@ -669,10 +671,11 @@ mod tests {
         };
         let res = bq.next_batch(parent).await.unwrap_err();
         let logs = trace_store.get_by_level(Level::INFO);
-        assert_eq!(logs.len(), 2);
+        assert_eq!(logs.len(), 3);
         let str = alloc::format!("Advancing batch queue origin: {:?}", origin);
         assert!(logs[0].contains(&str));
-        assert!(logs[1].contains("Deriving next batch for epoch: 16988980031808077784"));
+        assert!(logs[1].contains("Checking batch validity with inclusion block"));
+        assert!(logs[2].contains("Deriving next batch for epoch: 16988980031808077784"));
         let warns = trace_store.get_by_level(Level::WARN);
         assert_eq!(warns.len(), 1);
         assert!(warns[0].contains("span batch has no new blocks after safe head"));
