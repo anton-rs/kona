@@ -60,7 +60,6 @@ run-client-asterisc block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc ver
     --l2-node-address $L2_NODE_ADDRESS \
     --server \
     --data-dir ./data \
-    --exec "" \
     {{verbosity}}
 
 # Run the client program natively with the host program attached.

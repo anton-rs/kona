@@ -55,7 +55,7 @@ pub struct HostCli {
     /// Run the specified client program as a separate process detached from the host. Default is
     /// to run the client program in the host process.
     #[clap(long)]
-    pub exec: String,
+    pub exec: Option<String>,
     /// Run in pre-image server mode without executing any client program. Defaults to `false`.
     #[clap(long)]
     pub server: bool,

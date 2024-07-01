@@ -184,7 +184,8 @@ where
 async fn start_native_client_program(cfg: HostCli, files: NativePipeFiles) -> Result<()> {
     // Map the file descriptors to the standard streams and the preimage oracle and hint
     // reader's special file descriptors.
-    let mut command = Command::new(cfg.exec);
+    let mut command =
+        Command::new(cfg.exec.ok_or_else(|| anyhow!("No client program binary path specified."))?);
     command
         .fd_mappings(vec![
             FdMapping { parent_fd: stdin().as_fd().try_clone_to_owned().unwrap(), child_fd: 0 },
