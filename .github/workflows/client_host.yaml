@@ -29,6 +29,7 @@ jobs:
         with:
           cache-on-failure: true
           prefix-key: ${{ matrix.target }}-${{ matrix.name }}
+      - uses: rui314/setup-mold@v1
       - name: Clone `asterisc` repository
         if: "!contains(matrix.target, 'native')"
         run: |
