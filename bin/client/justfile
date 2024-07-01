@@ -137,3 +137,48 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
     --exec $CLIENT_BIN_PATH \
     --data-dir ./data \
     {{verbosity}}
+
+# Run the client program on asterisc with the host program detached, in offline mode.
+run-client-asterisc-offline block_number l2_claim l2_output_root l2_head l1_head l2_chain_id verbosity:
+  #!/usr/bin/env bash
+
+  HOST_BIN_PATH="./target/release/kona-host"
+  CLIENT_BIN_PATH="./target/riscv64gc-unknown-none-elf/release-client-lto/kona"
+  STATE_PATH="./state.json"
+
+  L2_BLOCK_NUMBER={{block_number}}
+  L2_CLAIM={{l2_claim}}
+  L2_OUTPUT_ROOT={{l2_output_root}}
+  L2_HEAD={{l2_head}}
+  L1_HEAD={{l1_head}}
+  L2_CHAIN_ID={{l2_chain_id}}
+
+  # Move to the workspace root
+  cd $(git rev-parse --show-toplevel)
+
+  echo "Building client program for RISC-V target..."
+  just build-asterisc --bin kona --profile release-client-lto
+
+  echo "Loading client program into Asterisc state format..."
+  asterisc load-elf --path=$CLIENT_BIN_PATH
+
+  echo "Building host program for native target..."
+  cargo build --bin kona-host --release
+
+  echo "Running asterisc"
+  asterisc run \
+    --info-at '%10000000' \
+    --proof-at never \
+    --input $STATE_PATH \
+    -- \
+    $HOST_BIN_PATH \
+    --l1-head $L1_HEAD \
+    --l2-head $L2_HEAD \
+    --l2-claim $L2_CLAIM \
+    --l2-output-root $L2_OUTPUT_ROOT \
+    --l2-block-number $L2_BLOCK_NUMBER \
+    --l2-chain-id $L2_CHAIN_ID \
+    --server \
+    --data-dir ./data \
+    --exec "" \
+    {{verbosity}}

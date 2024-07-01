@@ -8,9 +8,10 @@ env:
   CARGO_TERM_COLOR: always
 jobs:
   host-client-offline-runs:
-    name: ${{ matrix.name }}
+    name: ${{ matrix.target}} | ${{ matrix.name }}
     strategy:
       matrix:
+        target: ["native", "asterisc"]
         name:
           [
             "OP Mainnet (Ecotone) - Block #122093770",
@@ -27,8 +28,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-          prefix-key: ${{ matrix.target }}
-      - name: Set environment
+          prefix-key: ${{ matrix.target }}-${{ matrix.name }}
+      - name: Clone `asterisc` repository
+        if: "!contains(matrix.target, 'native')"
+        run: |
+          git clone https://github.com/ethereum-optimism/asterisc.git
+      - name: Setup Go toolchain
+        if: "!contains(matrix.target, 'native')"
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.6"
+          cache-dependency-path: |
+            asterisc/go.sum
+      - name: Build `asterisc`
+        if: "!contains(matrix.target, 'native')"
+        run: |
+          cd asterisc && git checkout v1.0.0 && make build-rvgo
+          mv ./rvgo/bin/asterisc /usr/local/bin/
+      - name: Set run environment
         run: |
           if [[ ${{ contains(matrix.name, 122093770) }} == true ]]; then
             BLOCK_NUMBER=122093770
@@ -50,13 +67,13 @@ jobs:
             echo "WITNESS_TAR_NAME=fjord-op-sepolia-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
           fi
       - name: Decompress witness data directory
-        working-directory: .
         run: |
           tar --zstd -xvf ./bin/client/testdata/$WITNESS_TAR_NAME -C .
       - name: Run host + client offline
         working-directory: ./bin/client
         run: |
-          just run-client-native-offline \
+          mkdir -p ../../target
+          just run-client-${{ matrix.target }}-offline \
             $BLOCK_NUMBER \
             $L2_CLAIM \
             $L2_OUTPUT_ROOT \
