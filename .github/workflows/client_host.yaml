@@ -1,0 +1,66 @@
+name: Client + Host
+on:
+  push:
+    branches: [main]
+  merge_group:
+  pull_request:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  host-client-offline-runs:
+    name: ${{ matrix.name }}
+    strategy:
+      matrix:
+        name:
+          [
+            "OP Mainnet (Ecotone) - Block #122093770",
+            "OP Sepolia (Fjord) - Block #13992475",
+          ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          prefix-key: ${{ matrix.target }}
+      - name: Set environment
+        run: |
+          if [[ ${{ contains(matrix.name, 122093770) }} == true ]]; then
+            BLOCK_NUMBER=122093770
+            echo "BLOCK_NUMBER=$BLOCK_NUMBER" >> $GITHUB_ENV
+            echo "L2_CLAIM=0xf31619aa7cdf03e6e51bb5eda528309eff0354172c4a64186622929c76bd58a9" >> $GITHUB_ENV
+            echo "L2_OUTPUT_ROOT=0xec52f62123ab0404c1729fbb34716046cffaba6c47836b353184e231e290c560" >> $GITHUB_ENV
+            echo "L2_HEAD=0xd20e2cad399a964c7bb656c8d32a6e5356a831167cc58a00e60285abf7e94df6" >> $GITHUB_ENV
+            echo "L1_HEAD=0xed32f3f6cdf80c1d755851ad065f4436ff17ff35b7910262f0d22c1e0919a315" >> $GITHUB_ENV
+            echo "L2_CHAIN_ID=10" >> $GITHUB_ENV
+            echo "WITNESS_TAR_NAME=ecotone-op-mainnet-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
+          elif [[ ${{ contains(matrix.name, 13992475) }} == true ]]; then
+            BLOCK_NUMBER=13992475
+            echo "BLOCK_NUMBER=$BLOCK_NUMBER" >> $GITHUB_ENV
+            echo "L2_CLAIM=0xba854e0a3e1e65f8e4b05f39a5ad28c13eac0d5444c7c336b6f7ebabb0f20229" >> $GITHUB_ENV
+            echo "L2_OUTPUT_ROOT=0x59cfca741f06a0e5607e3526e4f9931b8a6a2313b48d8bd0c2242bace6d930f1" >> $GITHUB_ENV
+            echo "L2_HEAD=0x90ec80845a776021ce56b3e87072e8e30d2931c9c67ccaf2a305bd08268178ee" >> $GITHUB_ENV
+            echo "L1_HEAD=0x607b4a4d2bd7e7bced989e4bc471a5ce61335b63881c624c8522f63113a5af86" >> $GITHUB_ENV
+            echo "L2_CHAIN_ID=11155420" >> $GITHUB_ENV
+            echo "WITNESS_TAR_NAME=fjord-op-sepolia-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
+          fi
+      - name: Decompress witness data directory
+        working-directory: .
+        run: |
+          tar --zstd -xvf ./bin/client/testdata/$WITNESS_TAR_NAME -C .
+      - name: Run host + client offline
+        working-directory: ./bin/client
+        run: |
+          just run-client-native-offline \
+            $BLOCK_NUMBER \
+            $L2_CLAIM \
+            $L2_OUTPUT_ROOT \
+            $L2_HEAD \
+            $L1_HEAD \
+            $L2_CHAIN_ID \
+            -vv
