@@ -112,3 +112,16 @@ docker-run-ts-with-loki:
     -e START_L2_BLOCK=$START_L2_BLOCK \
     trusted-sync
 
+# Build the `kona-client` prestate artifacts for the latest release.
+build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
+  #!/bin/bash
+  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
+  OUTPUT_DIR={{out}}
+
+  echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
+  docker build \
+    -f $PATH_TO_REPRO_BUILDER \
+    --output $OUTPUT_DIR \
+    --build-arg CLIENT_TAG={{kona_tag}} \
+    --build-arg ASTERISC_TAG={{asterisc_tag}} \
+    .
