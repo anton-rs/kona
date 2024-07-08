@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/ethereum-optimism/kona/compare/kona-derive-v0.0.2...kona-derive-v0.0.3) - 2024-07-08
+
+### Added
+- *(derive)* histogram for number of channels for given frame counts ([#337](https://github.com/ethereum-optimism/kona/pull/337))
+- *(derive)* track the current channel size ([#331](https://github.com/ethereum-optimism/kona/pull/331))
+- *(derive)* more stage metrics ([#326](https://github.com/ethereum-optimism/kona/pull/326))
+- *(derive)* Granular Provider Metrics ([#325](https://github.com/ethereum-optimism/kona/pull/325))
+- *(derive)* Stage Level Metrics ([#309](https://github.com/ethereum-optimism/kona/pull/309))
+- *(examples)* Trusted Sync Metrics ([#308](https://github.com/ethereum-optimism/kona/pull/308))
+
+### Fixed
+- *(derive)* Unused var w/o `metrics` feature ([#345](https://github.com/ethereum-optimism/kona/pull/345))
+- *(derive)* bind the Pipeline trait to Iterator ([#334](https://github.com/ethereum-optimism/kona/pull/334))
+- *(derive)* prefix all metric names ([#330](https://github.com/ethereum-optimism/kona/pull/330))
+- *(examples)* don't panic on validation fetch failure ([#327](https://github.com/ethereum-optimism/kona/pull/327))
+- *(derive)* Warnings with metrics macro ([#322](https://github.com/ethereum-optimism/kona/pull/322))
+
+### Other
+- *(derive)* Remove noisy batch logs ([#329](https://github.com/ethereum-optimism/kona/pull/329))
+- clean up trusted sync loop ([#318](https://github.com/ethereum-optimism/kona/pull/318))
+- *(docs)* Label Cleanup ([#307](https://github.com/ethereum-optimism/kona/pull/307))
+- *(derive)* add targets to stage logs ([#310](https://github.com/ethereum-optimism/kona/pull/310))
+
 ## [0.0.2](https://github.com/ethereum-optimism/kona/compare/kona-derive-v0.0.1...kona-derive-v0.0.2) - 2024-06-22
 
 ### Added
