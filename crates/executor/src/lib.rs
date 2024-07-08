@@ -67,6 +67,11 @@ where
         StatelessL2BlockExecutorBuilder::with_config(config)
     }
 
+    /// Returns a reference to the current [State] database of the executor.
+    pub fn state_ref(&self) -> &State<TrieDB<F, H>> {
+        &self.state
+    }
+
     /// Executes the given block, returning the resulting state root.
     ///
     /// ## Steps
