@@ -29,5 +29,12 @@ alloy-transport-http = { version = "0.1" }
 reqwest = "0.12.4"
 tracing-subscriber = "0.3.18"
 futures = { version = "0.3.30", default-features = false }
+
 proptest = "1.4"
 rand = "0.8.5"
+criterion = { version = "0.5.1", features = ["html_reports"] }
+pprof = { version = "0.13.0", features = ["criterion", "flamegraph", "frame-pointer"] } 
+
+[[bench]]
+name = "trie_node"
+harness = false

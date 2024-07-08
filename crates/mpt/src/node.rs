@@ -122,7 +122,7 @@ impl TrieNode {
     pub fn blind(&mut self) {
         if self.length() >= B256::ZERO.len() && !matches!(self, TrieNode::Blinded { .. }) {
             let mut rlp_buf = Vec::with_capacity(self.length());
-            self.encode(&mut rlp_buf);
+            self.encode_in_place(&mut rlp_buf);
             *self = TrieNode::Blinded { commitment: keccak256(rlp_buf) }
         }
     }
@@ -355,6 +355,44 @@ impl TrieNode {
             TrieNode::Blinded { .. } => {
                 self.unblind(fetcher)?;
                 self.delete(path, fetcher, hinter)
+            }
+        }
+    }
+
+    /// Alternative function to the [Encodable::encode] implementation for this type, that blinds
+    /// children nodes throughout the encoding process. This function is useful in the case where
+    /// the trie node cache is no longer required (i.e., during [Self::blind]).
+    ///
+    /// ## Takes
+    /// - `self` - The root trie node
+    /// - `out` - The buffer to write the encoded trie node to
+    pub fn encode_in_place(&mut self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length = self.payload_length();
+        match self {
+            Self::Empty => out.put_u8(EMPTY_STRING_CODE),
+            Self::Blinded { commitment } => commitment.encode(out),
+            Self::Leaf { prefix, value } => {
+                // Encode the leaf node's header and key-value pair.
+                Header { list: true, payload_length }.encode(out);
+                prefix.encode_path_leaf(true).as_slice().encode(out);
+                value.encode(out);
+            }
+            Self::Extension { prefix, node } => {
+                // Encode the extension node's header, prefix, and pointer node.
+                Header { list: true, payload_length }.encode(out);
+                prefix.encode_path_leaf(false).as_slice().encode(out);
+                node.blind();
+                node.encode_in_place(out);
+            }
+            Self::Branch { stack } => {
+                // In branch nodes, if an element is longer than 32 bytes in length, it is blinded.
+                // Assuming we have an open trie node, we must re-hash the elements
+                // that are longer than 32 bytes in length.
+                Header { list: true, payload_length }.encode(out);
+                stack.iter_mut().for_each(|node| {
+                    node.blind();
+                    node.encode_in_place(out);
+                });
             }
         }
     }
