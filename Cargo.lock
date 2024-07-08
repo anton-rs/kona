@@ -2208,6 +2208,7 @@ dependencies = [
  "alloy-rpc-types",
  "alloy-transport-http",
  "anyhow",
+ "async-trait",
  "clap",
  "command-fds",
  "futures",
