@@ -58,8 +58,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     // If the start block from tip cli flag is specified, find the latest l2 block number
     // and subtract the specified number of blocks to get the start block number.
     if let Some(blocks) = cli.start_blocks_from_tip {
-        let latest = l2_provider.latest_block_number().await?;
-        start = latest.saturating_sub(blocks);
+        start = l2_provider.latest_block_number().await?.saturating_sub(blocks);
         info!(target: LOG_TARGET, "Starting {} blocks from tip at L2 block number: {}", blocks, start);
     }
 
