@@ -99,6 +99,9 @@ docker-run-ts:
     -e L1_RPC_URL=$L1_RPC_URL \
     -e L2_RPC_URL=$L2_RPC_URL \
     -e BEACON_URL=$BEACON_URL \
+    -e METRICS_URL=$METRICS_URL \
+    -e START_L2_BLOCK=$START_L2_BLOCK \
+    -e START_BLOCKS_FROM_TIP=$START_BLOCKS_FROM_TIP \
     trusted-sync
 
 # Run the `trusted-sync` docker container with Loki logging
@@ -110,6 +113,7 @@ docker-run-ts-with-loki:
     -e LOKI_URL=$LOKI_URL \
     -e METRICS_URL=$METRICS_URL \
     -e START_L2_BLOCK=$START_L2_BLOCK \
+    -e START_BLOCKS_FROM_TIP=$START_BLOCKS_FROM_TIP \
     trusted-sync
 
 # Build the `kona-client` prestate artifacts for the latest release.

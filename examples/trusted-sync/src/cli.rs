@@ -39,6 +39,9 @@ pub struct Cli {
     /// Whether to enable Loki Metrics.
     #[clap(long, help = "Enable Loki metrics")]
     pub loki_metrics: bool,
+    /// Start blocks from tip.
+    #[clap(long, help = "Number of blocks prior to tip to start from")]
+    pub start_blocks_from_tip: Option<u64>,
 }
 
 impl Cli {
