@@ -3,7 +3,8 @@
 use std::fs::File;
 
 /// Represents the files that are used to communicate with the native client.
-pub(crate) struct NativePipeFiles {
+#[derive(Debug)]
+pub struct NativePipeFiles {
     /// The file that the preimage oracle reads from.
     pub preimage_read: File,
     /// The file that the preimage oracle writes to.

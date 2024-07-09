@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// A [Fetcher]-backed implementation of the [PreimageFetcher] trait.
+#[derive(Debug)]
 pub struct OnlinePreimageFetcher<KV>
 where
     KV: KeyValueStore + ?Sized,
@@ -37,6 +38,7 @@ where
 }
 
 /// A [KeyValueStore]-backed implementation of the [PreimageFetcher] trait.
+#[derive(Debug)]
 pub struct OfflinePreimageFetcher<KV>
 where
     KV: KeyValueStore + ?Sized,
@@ -66,6 +68,7 @@ where
 }
 
 /// A [Fetcher]-backed implementation of the [HintRouter] trait.
+#[derive(Debug)]
 pub struct OnlineHintRouter<KV>
 where
     KV: KeyValueStore + ?Sized,
@@ -96,6 +99,7 @@ where
 }
 
 /// An [OfflineHintRouter] is a [HintRouter] that does nothing.
+#[derive(Debug)]
 pub struct OfflineHintRouter;
 
 #[async_trait]
