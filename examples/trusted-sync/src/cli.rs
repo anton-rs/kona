@@ -7,9 +7,10 @@ use reqwest::Url;
 const L1_RPC_URL: &str = "L1_RPC_URL";
 const L2_RPC_URL: &str = "L2_RPC_URL";
 const BEACON_URL: &str = "BEACON_URL";
-const DEFAULT_METRICS_SERVER_ADDR: &str = "127.0.0.1";
+const METRICS_URL: &str = "METRICS_URL";
+const DEFAULT_METRICS_SERVER_ADDR: &str = "0.0.0.0";
 const DEFAULT_METRICS_SERVER_PORT: u16 = 9000;
-const DEFAULT_LOKI_SERVER_ADDR: &str = "127.0.0.1";
+const DEFAULT_LOKI_SERVER_ADDR: &str = "0.0.0.0";
 const DEFAULT_LOKI_SERVER_PORT: u16 = 3100;
 
 /// The host binary CLI application arguments.
@@ -48,6 +49,9 @@ impl Cli {
     /// Returns the full metrics server address string.
     pub fn metrics_server_addr(&self) -> String {
         if let Some(url) = self.metrics_url.clone() {
+            return url;
+        }
+        if let Ok(url) = std::env::var(METRICS_URL) {
             return url;
         }
         format!("{}:{}", DEFAULT_METRICS_SERVER_ADDR, DEFAULT_METRICS_SERVER_PORT)
