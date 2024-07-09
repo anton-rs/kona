@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 START="${START_L2_BLOCK:-0}"
-METRICS="${METRICS_URL:-127.0.0.1:9000}"
+METRICS="${METRICS_URL:-0.0.0.0:9000}"
 
 # If the `START_BLOCKS_FROM_TIP` environment variable is set, we will start syncing from the tip of the chain.
 if [ -n "$START_BLOCKS_FROM_TIP" ]; then
