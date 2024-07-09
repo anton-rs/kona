@@ -10,7 +10,7 @@ const BEACON_URL: &str = "BEACON_URL";
 const DEFAULT_METRICS_SERVER_ADDR: &str = "127.0.0.1";
 const DEFAULT_METRICS_SERVER_PORT: u16 = 9000;
 const DEFAULT_LOKI_SERVER_ADDR: &str = "127.0.0.1";
-const DEFAULT_LOKI_SERVER_PORT: u16 = 3133;
+const DEFAULT_LOKI_SERVER_PORT: u16 = 3100;
 
 /// The host binary CLI application arguments.
 #[derive(Parser, Clone, serde::Serialize, serde::Deserialize)]
@@ -30,27 +30,27 @@ pub struct Cli {
     /// The l2 block to start from.
     #[clap(long, short, help = "Starting l2 block, defaults to chain genesis if none specified")]
     pub start_l2_block: Option<u64>,
-    /// The address of the metrics server.
+    /// The url for metrics.
     #[clap(long, help = "Address of the metrics server")]
-    pub metrics_server_addr: Option<String>,
-    /// The metrics server port.
-    #[clap(long, help = "Port of the metrics server")]
-    pub metrics_server_port: Option<u16>,
+    pub metrics_url: Option<String>,
     /// The Loki Url endpoint.
     #[clap(long, help = "Url to post Loki logs")]
     pub loki_url: Option<String>,
+    /// Whether to enable Loki Metrics.
+    #[clap(long, help = "Enable Loki metrics")]
+    pub loki_metrics: bool,
+    /// Start blocks from tip.
+    #[clap(long, help = "Number of blocks prior to tip to start from")]
+    pub start_blocks_from_tip: Option<u64>,
 }
 
 impl Cli {
     /// Returns the full metrics server address string.
     pub fn metrics_server_addr(&self) -> String {
-        format!(
-            "{}:{}",
-            self.metrics_server_addr
-                .clone()
-                .unwrap_or_else(|| DEFAULT_METRICS_SERVER_ADDR.to_string()),
-            self.metrics_server_port.unwrap_or(DEFAULT_METRICS_SERVER_PORT)
-        )
+        if let Some(url) = self.metrics_url.clone() {
+            return url;
+        }
+        format!("{}:{}", DEFAULT_METRICS_SERVER_ADDR, DEFAULT_METRICS_SERVER_PORT)
     }
 
     /// Returns the full loki server address.

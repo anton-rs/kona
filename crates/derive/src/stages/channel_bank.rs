@@ -98,6 +98,18 @@ where
             warn!(target: "channel-bank", "Failed to add frame to channel: {:?}", frame_id);
             return Ok(());
         }
+        // Only increment the channel frames if the channel is current.
+        if self.channel_queue.front().map_or(false, |id| *id == current_channel.id()) {
+            crate::inc!(CURRENT_CHANNEL_FRAMES);
+        }
+        #[cfg(feature = "metrics")]
+        {
+            // For each channel, get the number of frames and record it in the CHANNEL_FRAME_COUNT
+            // histogram metric.
+            for (_, channel) in &self.channels {
+                crate::observe!(CHANNEL_FRAME_COUNT, channel.len() as f64);
+            }
+        }
 
         self.prune()
     }
@@ -122,6 +134,14 @@ where
             crate::observe!(CHANNEL_TIMEOUTS, (origin.number - channel.open_block_number()) as f64);
             self.channels.remove(&first);
             self.channel_queue.pop_front();
+            crate::set!(
+                CURRENT_CHANNEL_FRAMES,
+                self.channel_queue.front().map_or(0, |id| self
+                    .channels
+                    .get(id)
+                    .map_or(0, |c| c.len())
+                    as i64)
+            );
             return Ok(None);
         }
 

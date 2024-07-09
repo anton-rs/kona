@@ -287,6 +287,19 @@ impl AlloyL2ChainProvider {
         u64::from_str_radix(&chain_id, 16).map_err(|e| anyhow!(e))
     }
 
+    /// Returns the latest L2 block number.
+    pub async fn latest_block_number(&mut self) -> Result<u64> {
+        let b: TransportResult<alloc::string::String> =
+            self.inner.raw_request("eth_blockNumber".into(), ()).await;
+        match b {
+            Ok(s) => {
+                let s = alloc::string::String::from(s.trim_start_matches("0x"));
+                u64::from_str_radix(&s, 16).map_err(|e| anyhow!(e))
+            }
+            Err(e) => Err(anyhow!(e)),
+        }
+    }
+
     /// Creates a new [AlloyL2ChainProvider] from the provided [reqwest::Url].
     pub fn new_http(url: reqwest::Url, rollup_config: Arc<RollupConfig>) -> Self {
         let inner = ReqwestProvider::new_http(url);

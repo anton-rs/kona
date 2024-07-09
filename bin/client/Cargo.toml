@@ -21,6 +21,7 @@ lru.workspace = true
 spin.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
+revm.workspace = true
 
 # local
 kona-common = { path = "../../crates/common", version = "0.0.2" }
@@ -31,6 +32,7 @@ kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
 kona-derive = { path = "../../crates/derive", default-features = false, version = "0.0.2" }
 kona-executor = { path = "../../crates/executor", version = "0.0.1" }
 
+# external
 tracing-subscriber = { version = "0.3.18", optional = true }
 
 [dev-dependencies]

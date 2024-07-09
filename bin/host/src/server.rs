@@ -1,11 +1,16 @@
 //! This module contains the [PreimageServer] struct and its implementation.
 
-use crate::{fetcher::Fetcher, kv::KeyValueStore};
+use crate::{
+    fetcher::Fetcher,
+    kv::KeyValueStore,
+    preimage::{
+        OfflineHintRouter, OfflinePreimageFetcher, OnlineHintRouter, OnlinePreimageFetcher,
+    },
+};
 use anyhow::{anyhow, Result};
-use kona_preimage::{HintReaderServer, PreimageKey, PreimageOracleServer};
-use std::{future::Future, pin::Pin, sync::Arc};
+use kona_preimage::{HintReaderServer, HintRouter, PreimageFetcher, PreimageOracleServer};
+use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::trace;
 
 /// The [PreimageServer] is responsible for waiting for incoming preimage requests and
 /// serving them to the client.
@@ -69,62 +74,50 @@ where
         fetcher: Option<Arc<RwLock<Fetcher<KV>>>>,
         oracle_server: P,
     ) {
-        #[allow(clippy::type_complexity)]
-        let get_preimage =
-            |key: PreimageKey| -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send>> {
-                if let Some(fetcher) = fetcher.as_ref() {
-                    // If a fetcher is present, use it to fetch the preimage.
-                    Box::pin(async move {
-                        let fetcher = fetcher.read().await;
-                        fetcher.get_preimage(key.into()).await
-                    })
-                } else {
-                    // Otherwise, use the key-value store to fetch the preimage when in offline
-                    // mode.
-                    let kv_store = kv_store.as_ref();
-                    Box::pin(async move {
-                        kv_store
-                            .read()
-                            .await
-                            .get(key.into())
-                            .ok_or_else(|| anyhow!("Preimage not found"))
-                    })
+        #[inline(always)]
+        async fn do_loop<F, P>(fetcher: &F, server: &P)
+        where
+            F: PreimageFetcher + Send + Sync,
+            P: PreimageOracleServer,
+        {
+            loop {
+                // TODO: More granular error handling. Some errors here are expected, such as the
+                // client closing the pipe, while others are not and should throw.
+                if server.next_preimage_request(fetcher).await.is_err() {
+                    break;
                 }
-            };
-
-        loop {
-            // TODO: More granular error handling. Some errors here are expected, such as the client
-            // closing the pipe, while others are not and should throw.
-            if oracle_server.next_preimage_request(get_preimage).await.is_err() {
-                break;
             }
         }
+
+        if let Some(fetcher) = fetcher.as_ref() {
+            do_loop(&OnlinePreimageFetcher::new(Arc::clone(fetcher)), &oracle_server).await;
+        } else {
+            do_loop(&OfflinePreimageFetcher::new(Arc::clone(&kv_store)), &oracle_server).await;
+        };
     }
 
     /// Starts the hint router, which waits for incoming hints and routes them to the appropriate
     /// handler.
     async fn start_hint_router(hint_reader: H, fetcher: Option<Arc<RwLock<Fetcher<KV>>>>) {
-        let route_hint = |hint: String| -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-            if let Some(fetcher) = fetcher.as_ref() {
-                let fetcher = Arc::clone(fetcher);
-                Box::pin(async move {
-                    fetcher.write().await.hint(&hint);
-                    Ok(())
-                })
-            } else {
-                Box::pin(async move {
-                    trace!(target: "preimage_server", "Received hint in offline mode: {}", &hint);
-                    Ok(())
-                })
+        #[inline(always)]
+        async fn do_loop<R, H>(router: &R, server: &H)
+        where
+            R: HintRouter + Send + Sync,
+            H: HintReaderServer,
+        {
+            loop {
+                // TODO: More granular error handling. Some errors here are expected, such as the
+                // client closing the pipe, while others are not and should throw.
+                if server.next_hint(router).await.is_err() {
+                    break;
+                }
             }
-        };
+        }
 
-        loop {
-            // TODO: More granular error handling. Some errors here are expected, such as the client
-            // closing the pipe, while others are not and should throw.
-            if hint_reader.next_hint(route_hint).await.is_err() {
-                break;
-            }
+        if let Some(fetcher) = fetcher {
+            do_loop(&OnlineHintRouter::new(Arc::clone(&fetcher)), &hint_reader).await;
+        } else {
+            do_loop(&OfflineHintRouter, &hint_reader).await;
         }
     }
 }

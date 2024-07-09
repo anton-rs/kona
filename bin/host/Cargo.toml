@@ -17,6 +17,7 @@ revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", 
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
 alloy-rlp.workspace = true
+async-trait.workspace = true
 
 # local
 kona-client = { path = "../client", version = "0.1.0" }

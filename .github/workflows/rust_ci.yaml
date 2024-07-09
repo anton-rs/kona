@@ -51,6 +51,25 @@ jobs:
       - name: chown target
         run: |
           sudo chown -R $(id -u):$(id -g) ./target
+  cargo-build-benches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: build-benchmarks
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: build benches
+        run: cargo bench --no-run --workspace --all
+      - name: chown target
+        run: |
+          sudo chown -R $(id -u):$(id -g) ./target
   cargo-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20

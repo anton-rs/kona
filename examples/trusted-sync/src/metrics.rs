@@ -10,19 +10,19 @@ use prometheus::{register_gauge_vec, register_int_counter};
 lazy_static! {
     /// Tracks the number of failed payload derivations.
     pub static ref FAILED_PAYLOAD_DERIVATION: IntCounter =
-        register_int_counter!("failed_payload_derivation", "Number of failed payload derivations")
+        register_int_counter!("trusted_sync_failed_payload_derivation", "Number of failed payload derivations")
             .expect("Failed to register failed payload derivation metric");
 
     /// Tracks the number of total payload attributes derived.
     pub static ref DERIVED_ATTRIBUTES_COUNT: IntCounter = register_int_counter!(
-        "derived_attributes_count",
+        "trusted_sync_derived_attributes_count",
         "Number of total payload attributes derived"
     )
     .expect("Failed to register derived attributes count metric");
 
     /// Tracks the pending L2 safe head.
     pub static ref SAFE_L2_HEAD: IntCounter =
-        register_int_counter!("safe_l2_head", "Pending L2 safe head").expect("Failed to register safe L2 head metric");
+        register_int_counter!("trusted_sync_safe_l2_head", "Pending L2 safe head").expect("Failed to register safe L2 head metric");
 
     /// Tracks the number of pipeline steps.
     pub static ref PIPELINE_STEPS: GaugeVec = {

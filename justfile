@@ -99,9 +99,33 @@ docker-run-ts:
     -e L1_RPC_URL=$L1_RPC_URL \
     -e L2_RPC_URL=$L2_RPC_URL \
     -e BEACON_URL=$BEACON_URL \
+    -e METRICS_URL=$METRICS_URL \
     -e START_L2_BLOCK=$START_L2_BLOCK \
-    -e METRICS_SERVER_ADDR=$METRICS_SERVER_ADDR \
-    -e METRICS_SERVER_PORT=$METRICS_SERVER_PORT \
-    -e LOKI_SERVER_ADDR=$LOKI_SERVER_ADDR \
-    -e LOKI_SERVER_PORT=$LOKI_SERVER_PORT \
+    -e START_BLOCKS_FROM_TIP=$START_BLOCKS_FROM_TIP \
     trusted-sync
+
+# Run the `trusted-sync` docker container with Loki logging
+docker-run-ts-with-loki:
+  docker run -it \
+    -e L1_RPC_URL=$L1_RPC_URL \
+    -e L2_RPC_URL=$L2_RPC_URL \
+    -e BEACON_URL=$BEACON_URL \
+    -e LOKI_URL=$LOKI_URL \
+    -e METRICS_URL=$METRICS_URL \
+    -e START_L2_BLOCK=$START_L2_BLOCK \
+    -e START_BLOCKS_FROM_TIP=$START_BLOCKS_FROM_TIP \
+    trusted-sync
+
+# Build the `kona-client` prestate artifacts for the latest release.
+build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
+  #!/bin/bash
+  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
+  OUTPUT_DIR={{out}}
+
+  echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
+  docker build \
+    -f $PATH_TO_REPRO_BUILDER \
+    --output $OUTPUT_DIR \
+    --build-arg CLIENT_TAG={{kona_tag}} \
+    --build-arg ASTERISC_TAG={{asterisc_tag}} \
+    .

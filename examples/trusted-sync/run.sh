@@ -1,12 +1,23 @@
 #!/usr/bin/bash
 
-/usr/local/bin/trusted-sync \
-  --l1-rpc-url $L1_RPC_URL \
-  --l2-rpc-url $L2_RPC_URL \
-  --beacon-url $BEACON_URL \
-  --start-l2-block $START_L2_BLOCK \
-  --metrics-server-addr $METRICS_SERVER_ADDR \
-  --metrics-server-port $METRICS_SERVER_PORT \
-  --loki-server-addr $LOKI_SERVER_ADDR \
-  --loki-server-port $LOKI_SERVER_PORT \
-  -vvv
+START="${START_L2_BLOCK:-0}"
+METRICS="${METRICS_URL:-127.0.0.1:9000}"
+
+# If the `START_BLOCKS_FROM_TIP` environment variable is set, we will start syncing from the tip of the chain.
+if [ -n "$START_BLOCKS_FROM_TIP" ]; then
+  /usr/local/bin/trusted-sync \
+    --l1-rpc-url $L1_RPC_URL \
+    --l2-rpc-url $L2_RPC_URL \
+    --beacon-url $BEACON_URL \
+    --metrics-url $METRICS \
+    --start-blocks-from-tip $START_BLOCKS_FROM_TIP \
+    -vvv
+else
+  /usr/local/bin/trusted-sync \
+    --l1-rpc-url $L1_RPC_URL \
+    --l2-rpc-url $L2_RPC_URL \
+    --beacon-url $BEACON_URL \
+    --metrics-url $METRICS \
+    --start-l2-block $START \
+    -vvv
+fi

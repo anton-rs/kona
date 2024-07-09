@@ -2,7 +2,6 @@ use crate::PreimageKey;
 use alloc::{boxed::Box, string::String, vec::Vec};
 use anyhow::Result;
 use async_trait::async_trait;
-use core::future::Future;
 
 /// A [PreimageOracleClient] is a high-level interface to read data from the host, keyed by a
 /// [PreimageKey].
@@ -53,10 +52,9 @@ pub trait PreimageOracleServer {
     /// # Returns
     /// - `Ok(())` if the data was successfully written into the client pipe.
     /// - `Err(_)` if the data could not be written to the client.
-    async fn next_preimage_request<F, Fut>(&self, get_preimage: F) -> Result<()>
+    async fn next_preimage_request<F>(&self, get_preimage: &F) -> Result<()>
     where
-        F: FnMut(PreimageKey) -> Fut + Send,
-        Fut: Future<Output = Result<Vec<u8>>> + Send;
+        F: PreimageFetcher + Send + Sync;
 }
 
 /// A [HintReaderServer] is a high-level interface to read preimage hints from the
@@ -69,8 +67,35 @@ pub trait HintReaderServer {
     /// - `Ok(())` if the hint was received and the client was notified of the host's
     ///   acknowledgement.
     /// - `Err(_)` if the hint was not received correctly.
-    async fn next_hint<F, Fut>(&self, route_hint: F) -> Result<()>
+    async fn next_hint<R>(&self, route_hint: &R) -> Result<()>
     where
-        F: FnMut(String) -> Fut + Send,
-        Fut: Future<Output = Result<()>> + Send;
+        R: HintRouter + Send + Sync;
+}
+
+/// A [HintRouter] is a high-level interface to route hints to the appropriate handler.
+#[async_trait]
+pub trait HintRouter {
+    /// Routes a hint to the appropriate handler.
+    ///
+    /// # Arguments
+    /// - `hint`: The hint to route.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the hint was successfully routed.
+    /// - `Err(_)` if the hint could not be routed.
+    async fn route_hint(&self, hint: String) -> Result<()>;
+}
+
+/// A [PreimageFetcher] is a high-level interface to fetch preimages during preimage requests.
+#[async_trait]
+pub trait PreimageFetcher {
+    /// Get the preimage corresponding to the given key.
+    ///
+    /// # Arguments
+    /// - `key`: The key to fetch the preimage for.
+    ///
+    /// # Returns
+    /// - `Ok(Vec<u8>)` if the preimage was successfully fetched.
+    /// - `Err(_)` if the preimage could not be fetched.
+    async fn get_preimage(&self, key: PreimageKey) -> Result<Vec<u8>>;
 }

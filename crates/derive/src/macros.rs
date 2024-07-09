@@ -20,6 +20,10 @@ macro_rules! timer {
 /// Increments a metric with a label value.
 #[macro_export]
 macro_rules! inc {
+    ($metric:ident) => {
+        #[cfg(feature = "metrics")]
+        $crate::metrics::$metric.inc();
+    };
     ($metric:ident, $labels:expr) => {
         #[cfg(feature = "metrics")]
         $crate::metrics::$metric.with_label_values($labels).inc();
