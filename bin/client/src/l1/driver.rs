@@ -10,7 +10,7 @@ use alloy_consensus::{Header, Sealed};
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
-    pipeline::{DerivationPipeline, Pipeline, PipelineBuilder},
+    pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
@@ -136,8 +136,16 @@ impl DerivationDriver {
         let mut attributes = None;
         while attributes.is_none() {
             match self.pipeline.step(self.l2_safe_head).await {
-                Ok(_) => info!(target: "client_derivation_driver", "Stepped derivation pipeline"),
-                Err(e) => {
+                StepResult::PreparedAttributes => {
+                    info!(target: "client_derivation_driver", "Stepped derivation pipeline")
+                }
+                StepResult::AdvancedOrigin => {
+                    info!(target: "client_derivation_driver", "Advanced origin")
+                }
+                StepResult::OriginAdvanceErr(e) => {
+                    warn!(target: "client_derivation_driver", "Failed to advance origin: {:?}", e)
+                }
+                StepResult::StepFailed(e) => {
                     warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e)
                 }
             }

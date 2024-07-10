@@ -2,7 +2,7 @@
 
 use super::{
     L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResettableStage,
-    StageError,
+    StageError, StepResult,
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use anyhow::bail;
@@ -97,22 +97,24 @@ where
     /// An error is expected when the underlying source closes.
     /// When [DerivationPipeline::step] returns [Ok(())], it should be called again, to continue the
     /// derivation process.
-    async fn step(&mut self, cursor: L2BlockInfo) -> anyhow::Result<()> {
+    async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
         match self.attributes.next_attributes(cursor).await {
             Ok(a) => {
                 trace!(target: "pipeline", "Prepared L2 attributes: {:?}", a);
                 self.prepared.push_back(a);
-                return Ok(());
+                StepResult::PreparedAttributes
             }
             Err(StageError::Eof) => {
                 trace!(target: "pipeline", "Pipeline advancing origin");
-                self.attributes.advance_origin().await.map_err(|e| anyhow::anyhow!(e))?;
+                if let Err(e) = self.attributes.advance_origin().await {
+                    return StepResult::OriginAdvanceErr(e);
+                }
+                StepResult::AdvancedOrigin
             }
             Err(err) => {
                 warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
-                bail!(err);
+                StepResult::StepFailed(err)
             }
         }
-        Ok(())
     }
 }

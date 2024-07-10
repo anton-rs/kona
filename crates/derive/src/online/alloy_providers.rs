@@ -60,6 +60,17 @@ impl AlloyChainProvider {
         let inner = ReqwestProvider::new_http(url);
         Self::new(inner)
     }
+
+    /// Returns the chain ID.
+    pub async fn chain_id(&mut self) -> Result<u64> {
+        let chain_id: TransportResult<alloc::string::String> =
+            self.inner.raw_request("eth_chainId".into(), ()).await;
+        let chain_id = match chain_id {
+            Ok(s) => alloc::string::String::from(s.trim_start_matches("0x")),
+            Err(e) => return Err(anyhow!(e)),
+        };
+        u64::from_str_radix(&chain_id, 16).map_err(|e| anyhow!(e))
+    }
 }
 
 #[async_trait]
