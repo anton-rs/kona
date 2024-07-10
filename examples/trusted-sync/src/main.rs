@@ -45,12 +45,16 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), Arc::new(Default::default()));
     let l2_chain_id =
         l2_provider.chain_id().await.expect("Failed to fetch chain ID from L2 provider");
+    metrics::CHAIN_ID.inc_by(l2_chain_id);
     let cfg = RollupConfig::from_l2_chain_id(l2_chain_id)
         .expect("Failed to fetch rollup config from L2 chain ID");
     let cfg = Arc::new(cfg);
+    metrics::GENESIS_L2_BLOCK.inc_by(cfg.genesis.l2.number);
 
     // Construct the pipeline
     let mut l1_provider = AlloyChainProvider::new_http(l1_rpc_url);
+    let l1_chain_id = l1_provider.chain_id().await?;
+    metrics::CONSENSUS_CHAIN_ID.inc_by(l1_chain_id);
 
     let mut start =
         cli.start_l2_block.filter(|n| *n >= cfg.genesis.l2.number).unwrap_or(cfg.genesis.l2.number);
@@ -61,8 +65,9 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         start = l2_provider.latest_block_number().await?.saturating_sub(blocks);
         info!(target: LOG_TARGET, "Starting {} blocks from tip at L2 block number: {}", blocks, start);
     }
+    metrics::START_L2_BLOCK.inc_by(start);
+    println!("Starting from L2 block number: {}", metrics::START_L2_BLOCK.get());
 
-    println!("Starting from L2 block number: {}", start);
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
@@ -107,22 +112,28 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             }
         }
         match pipeline.step(cursor).await {
-            Ok(_) => {
+            StepResult::PreparedAttributes => {
                 metrics::PIPELINE_STEPS.with_label_values(&["success"]).inc();
-                info!(target: "loop", "Stepped derivation pipeline");
+                info!(target: "loop", "Prepared attributes");
             }
-            Err(e) => {
+            StepResult::AdvancedOrigin => {
+                metrics::PIPELINE_STEPS.with_label_values(&["origin_advance"]).inc();
+                info!(target: "loop", "Advanced origin");
+            }
+            StepResult::OriginAdvanceErr(e) => {
+                metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
+                error!(target: "loop", "Error advancing origin: {:?}", e);
+            }
+            StepResult::StepFailed(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
-                debug!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
+                error!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
             }
         }
 
         // Peek at the next prepared attributes and validate them.
         if let Some(attributes) = pipeline.peek() {
             match validator.validate(attributes).await {
-                Ok(true) => {
-                    info!(target: LOG_TARGET, "Validated payload attributes");
-                }
+                Ok(true) => info!(target: LOG_TARGET, "Validated payload attributes"),
                 Ok(false) => {
                     error!(target: LOG_TARGET, "Failed payload validation: {}", attributes.parent.block_info.hash);
                     metrics::FAILED_PAYLOAD_DERIVATION.inc();

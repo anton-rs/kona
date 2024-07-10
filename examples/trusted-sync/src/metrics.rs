@@ -8,6 +8,22 @@ use lazy_static::lazy_static;
 use prometheus::{register_gauge_vec, register_int_counter};
 
 lazy_static! {
+    /// Tracks the starting L2 block number.
+    pub static ref START_L2_BLOCK: IntCounter =
+        register_int_counter!("trusted_sync_start_l2_block", "Starting L2 block number").expect("Failed to register start L2 block metric");
+
+    /// Tracks the genesis L2 block number.
+    pub static ref GENESIS_L2_BLOCK: IntCounter =
+        register_int_counter!("trusted_sync_genesis_l2_block", "Genesis L2 block number").expect("Failed to register genesis L2 block metric");
+
+    /// Tracks the Chain ID currently being synced.
+    pub static ref CHAIN_ID: IntCounter =
+        register_int_counter!("trusted_sync_chain_id", "Chain ID").expect("Failed to register chain ID metric");
+
+    /// Tracks the Chain ID for the consensus layer.
+    pub static ref CONSENSUS_CHAIN_ID: IntCounter =
+        register_int_counter!("trusted_sync_consensus_chain_id", "Consensus Chain ID").expect("Failed to register consensus chain ID metric");
+
     /// Tracks the number of failed payload derivations.
     pub static ref FAILED_PAYLOAD_DERIVATION: IntCounter =
         register_int_counter!("trusted_sync_failed_payload_derivation", "Number of failed payload derivations")
