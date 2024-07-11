@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+#[cfg(not(feature = "no-io"))]
 pub mod io;
 
 pub mod malloc;

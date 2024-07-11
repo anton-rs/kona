@@ -16,3 +16,6 @@ spin.workspace = true
 
 # external
 linked_list_allocator = "0.10.5"
+
+[features]
+no-io = []

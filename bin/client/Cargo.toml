@@ -41,6 +41,7 @@ serde_json = "1.0.117"
 
 [features]
 tracing-subscriber = ["dep:tracing-subscriber"]
+no-io = ["kona-common/no-io", "kona-preimage/no-io"]
 
 [[bin]]
 name = "kona"

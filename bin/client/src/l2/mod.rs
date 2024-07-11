@@ -6,5 +6,7 @@ pub use trie_hinter::TrieDBHintWriter;
 mod chain_provider;
 pub use chain_provider::OracleL2ChainProvider;
 
+#[cfg(not(feature = "no-io"))]
 mod precompiles;
+#[cfg(not(feature = "no-io"))]
 pub use precompiles::FPVMPrecompileOverride;
