@@ -39,5 +39,5 @@ jobs:
           file: examples/trusted-sync/Dockerfile
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }},trusted-sync:${{ github.event.inputs.customTag }}
+          tags: ${{ steps.meta.outputs.tags }},ethereum-optimism/kona/trusted-sync:${{ github.event.inputs.customTag }}
           labels: ${{ steps.meta.outputs.labels }}
