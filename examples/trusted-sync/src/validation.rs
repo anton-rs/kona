@@ -80,11 +80,14 @@ impl OnlineValidator {
     }
 
     /// Validates the given [`L2AttributesWithParent`].
-    pub async fn validate(&self, attributes: &L2AttributesWithParent) -> Result<bool> {
+    pub async fn validate(
+        &self,
+        attributes: &L2AttributesWithParent,
+    ) -> Result<(bool, L2PayloadAttributes)> {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
         match self.get_payload(tag).await {
-            Ok(payload) => Ok(attributes.attributes == payload),
+            Ok(payload) => Ok((attributes.attributes == payload, payload)),
             Err(e) => {
                 error!(target: "validation", "Failed to fetch payload for block {}: {:?}", expected, e);
                 Err(e)

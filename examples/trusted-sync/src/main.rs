@@ -133,9 +133,9 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         // Peek at the next prepared attributes and validate them.
         if let Some(attributes) = pipeline.peek() {
             match validator.validate(attributes).await {
-                Ok(true) => info!(target: LOG_TARGET, "Validated payload attributes"),
-                Ok(false) => {
-                    error!(target: LOG_TARGET, "Failed payload validation: {}", attributes.parent.block_info.hash);
+                Ok((true, _)) => info!(target: LOG_TARGET, "Validated payload attributes"),
+                Ok((false, expected)) => {
+                    error!(target: LOG_TARGET, "Failed payload validation. Derived payload attributes: {:?}, Expected: {:?}", attributes, expected);
                     metrics::FAILED_PAYLOAD_DERIVATION.inc();
                     let _ = pipeline.next(); // Take the attributes and continue
                     continue;
