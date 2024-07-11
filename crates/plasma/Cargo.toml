@@ -1,7 +1,7 @@
 [package]
 name = "kona-plasma"
 description = "Plasma Data Availability Adapter"
-version = "0.0.1"
+version = "0.0.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -17,8 +17,8 @@ alloy-primitives = { workspace = true, features = ["rlp"] }
 async-trait.workspace = true
 
 # Local
-kona-primitives = { path = "../primitives", version = "0.0.1" }
-kona-derive = { path = "../derive", version = "0.0.2" }
+kona-primitives = { path = "../primitives", version = "0.0.2" }
+kona-derive = { path = "../derive", version = "0.0.3" }
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }

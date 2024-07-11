@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2](https://github.com/ethereum-optimism/kona/compare/kona-executor-v0.0.1...kona-executor-v0.0.2) - 2024-07-11
+
+### Added
+- *(executor)* `StatelessL2BlockExecutor` benchmarks ([#350](https://github.com/ethereum-optimism/kona/pull/350))
+- *(executor)* Generic precompile overrides ([#340](https://github.com/ethereum-optimism/kona/pull/340))
+- *(executor)* Builder pattern for `StatelessL2BlockExecutor` ([#339](https://github.com/ethereum-optimism/kona/pull/339))
+
 ## [0.0.1](https://github.com/ethereum-optimism/kona/releases/tag/kona-executor-v0.0.1) - 2024-06-22
 
 ### Other
