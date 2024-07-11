@@ -2,6 +2,11 @@ name: Publish Trusted Sync Binary Image
 
 on:
   workflow_dispatch:
+    inputs:
+      customTag:
+        description: 'Custom Docker Image Tag (keep empty for latest)'
+        required: false
+        default: 'latest'
 
 env:
   REGISTRY: ghcr.io
@@ -34,5 +39,5 @@ jobs:
           file: examples/trusted-sync/Dockerfile
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }},ethereum-optimism/kona/trusted-sync:${{ github.event.inputs.customTag }}
           labels: ${{ steps.meta.outputs.labels }}
