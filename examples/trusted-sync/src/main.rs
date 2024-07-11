@@ -97,10 +97,25 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         // Update the reference l2 head.
         match l2_provider.latest_block_number().await {
             Ok(latest) => {
+                let prev = metrics::REFERENCE_L2_HEAD.get();
                 metrics::REFERENCE_L2_HEAD.set(latest as i64);
+                if latest as i64 > prev {
+                    let time = match std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|s| s.as_secs())
+                    {
+                        Ok(time) => time,
+                        Err(e) => {
+                            error!(target: LOG_TARGET, "Failed to get latest timestamp in seconds: {:?}", e);
+                            continue;
+                        }
+                    };
+                    metrics::LATEST_REF_SAFE_HEAD_UPDATE.set(time as i64);
+                }
             }
             Err(e) => {
                 warn!(target: LOG_TARGET, "Failed to fetch latest reference l2 safe head: {:?}", e);
+                continue; // retry the reference fetch.
             }
         }
         if advance_cursor_flag {

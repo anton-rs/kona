@@ -44,6 +44,13 @@ lazy_static! {
     pub static ref REFERENCE_L2_HEAD: IntGauge =
         register_int_gauge!("trusted_sync_reference_l2_head", "Reference L2 head").expect("Failed to register reference L2 head metric");
 
+    /// Tracks the latest reference l2 safe head update.
+    pub static ref LATEST_REF_SAFE_HEAD_UPDATE: IntGauge = register_int_gauge!(
+        "trusted_sync_latest_ref_safe_head_update",
+        "Latest reference L2 safe head update"
+    )
+    .expect("Failed to register latest reference L2 safe head update metric");
+
     /// Tracks the number of pipeline steps.
     pub static ref PIPELINE_STEPS: GaugeVec = {
         let opts = opts!("trusted_sync_pipeline_steps", "Number of pipeline steps");
