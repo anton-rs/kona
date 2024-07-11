@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kona_derive::online::*;
 use std::sync::Arc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 mod cli;
 mod metrics;
@@ -79,7 +79,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         .l2_block_info_by_number(start)
         .await
         .expect("Failed to fetch genesis L2 block info for pipeline cursor");
-    metrics::SAFE_L2_HEAD.inc_by(cursor.block_info.number);
+    metrics::SAFE_L2_HEAD.set(cursor.block_info.number as i64);
     let tip = l1_provider
         .block_info_by_number(cursor.l1_origin.number)
         .await
@@ -94,13 +94,19 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     // Continuously step on the pipeline and validate payloads.
     let mut advance_cursor_flag = false;
     loop {
-        info!(target: LOG_TARGET, "Validated payload attributes number {}", metrics::DERIVED_ATTRIBUTES_COUNT.get());
-        info!(target: LOG_TARGET, "Pending l2 safe head num: {}", cursor.block_info.number);
+        // Update the reference l2 head.
+        match l2_provider.latest_block_number().await {
+            Ok(latest) => {
+                metrics::REFERENCE_L2_HEAD.set(latest as i64);
+            }
+            Err(e) => {
+                warn!(target: LOG_TARGET, "Failed to fetch latest reference l2 safe head: {:?}", e);
+            }
+        }
         if advance_cursor_flag {
             match l2_provider.l2_block_info_by_number(cursor.block_info.number + 1).await {
                 Ok(bi) => {
                     cursor = bi;
-                    metrics::SAFE_L2_HEAD.inc();
                     advance_cursor_flag = false;
                 }
                 Err(e) => {
@@ -111,6 +117,8 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 }
             }
         }
+        info!(target: LOG_TARGET, "Validated payload attributes number {}", metrics::DERIVED_ATTRIBUTES_COUNT.get());
+        info!(target: LOG_TARGET, "Pending l2 safe head num: {}", cursor.block_info.number);
         match pipeline.step(cursor).await {
             StepResult::PreparedAttributes => {
                 metrics::PIPELINE_STEPS.with_label_values(&["success"]).inc();
@@ -161,11 +169,13 @@ async fn sync(cli: cli::Cli) -> Result<()> {
 
         // If we validated payload attributes, we should advance the cursor.
         advance_cursor_flag = true;
+        let derived = attributes.parent.block_info.number as i64 + 1;
+        metrics::SAFE_L2_HEAD.set(derived);
         metrics::DERIVED_ATTRIBUTES_COUNT.inc();
         println!(
             "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
             metrics::DERIVED_ATTRIBUTES_COUNT.get(),
-            attributes.parent.block_info.number + 1,
+            derived,
             attributes.attributes.timestamp,
             pipeline.origin().unwrap().number,
         );
