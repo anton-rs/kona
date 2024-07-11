@@ -122,7 +122,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             }
             StepResult::OriginAdvanceErr(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
-                warn!(target: "loop", "Error advancing origin: {:?}", e);
+                warn!(target: "loop", "Could not advance origin: {:?}", e);
             }
             StepResult::StepFailed(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
