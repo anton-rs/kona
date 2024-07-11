@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kona_derive::online::*;
 use std::sync::Arc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 mod cli;
 mod metrics;
@@ -122,7 +122,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             }
             StepResult::OriginAdvanceErr(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
-                error!(target: "loop", "Error advancing origin: {:?}", e);
+                warn!(target: "loop", "Error advancing origin: {:?}", e);
             }
             StepResult::StepFailed(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
