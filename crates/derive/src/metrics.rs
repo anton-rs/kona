@@ -13,7 +13,7 @@ const RESPONSE_TIME_CUSTOM_BUCKETS: &[f64; 18] = &[
     0.1, 0.2, 0.5, 0.8, 1.0,
 ];
 
-const FRAME_COUNT_BUCKETS: &[f64; 8] = &[1.0, 2.0, 5.0, 20.0, 50.0, 200.0, 500.0, 1000.0];
+const FRAME_COUNT_BUCKETS: &[f64; 10] = &[1.0, 2.0, 3.0, 5.0, 8.0, 10.0, 12.0, 15.0, 18.0, 20.0];
 
 lazy_static! {
     /// Tracks the L1 origin for the L1 Traversal Stage.
