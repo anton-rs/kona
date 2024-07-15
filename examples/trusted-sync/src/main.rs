@@ -103,12 +103,15 @@ async fn sync(cli: cli::Cli) -> Result<()> {
 
                 // Check if we have drift - walk back in case of a re-org.
                 let drift = latest as i64 - cursor.block_info.number as i64;
-                if drift > 200 && cursor.block_info.number as i64 > metrics::DRIFT_WALKBACK.get() {
+                if drift > 500 && cursor.block_info.number as i64 > metrics::DRIFT_WALKBACK.get() {
                     metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
                     warn!(target: LOG_TARGET, "Detected drift of over {} blocks, walking back", drift);
                     cursor =
                         l2_provider.l2_block_info_by_number(cursor.block_info.number - 10).await?;
                     advance_cursor_flag = false;
+                    if let Err(e) = pipeline.reset(cursor.block_info).await {
+                        error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
+                    }
                     let timestamp = match std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .map(|s| s.as_secs())
