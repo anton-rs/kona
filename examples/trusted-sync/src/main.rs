@@ -58,12 +58,21 @@ async fn sync(cli: cli::Cli) -> Result<()> {
 
     let mut start =
         cli.start_l2_block.filter(|n| *n >= cfg.genesis.l2.number).unwrap_or(cfg.genesis.l2.number);
+    debug!(target: LOG_TARGET, "Genesis L2 block number: {}", cfg.genesis.l2.number);
 
     // If the start block from tip cli flag is specified, find the latest l2 block number
     // and subtract the specified number of blocks to get the start block number.
     if let Some(blocks) = cli.start_blocks_from_tip {
-        start = l2_provider.latest_block_number().await?.saturating_sub(blocks);
-        info!(target: LOG_TARGET, "Starting {} blocks from tip at L2 block number: {}", blocks, start);
+        let latest = l2_provider.latest_block_number().await?;
+        debug!(target: LOG_TARGET, "Fetched latest block number: {}", latest);
+        start = if latest < cfg.genesis.l2.number {
+            warn!(target: LOG_TARGET, "latest l2 block number prior to genesis. Reverting to genesis. ({} < {})", latest, cfg.genesis.l2.number);
+            cfg.genesis.l2.number
+        } else {
+            let sub_tip = latest.saturating_sub(blocks);
+            info!(target: LOG_TARGET, "Starting {} blocks from tip at L2 block number: {}", blocks, sub_tip);
+            sub_tip
+        };
     }
     metrics::START_L2_BLOCK.inc_by(start);
     println!("Starting from L2 block number: {}", metrics::START_L2_BLOCK.get());
