@@ -44,6 +44,14 @@ lazy_static! {
     pub static ref REFERENCE_L2_HEAD: IntGauge =
         register_int_gauge!("trusted_sync_reference_l2_head", "Reference L2 head").expect("Failed to register reference L2 head metric");
 
+    /// Tracks the block number when a drift walkback last happened.
+    pub static ref DRIFT_WALKBACK: IntGauge =
+        register_int_gauge!("trusted_sync_drift_walkback", "Latest drift walkback").expect("Failed to register drift walkback metric");
+
+    /// Tracks the timestamp of the last drift walkback.
+    pub static ref DRIFT_WALKBACK_TIMESTAMP: IntGauge =
+        register_int_gauge!("trusted_sync_drift_walkback_timestamp", "Timestamp of the last drift walkback").expect("Failed to register drift walkback timestamp metric");
+
     /// Tracks the latest reference l2 safe head update.
     pub static ref LATEST_REF_SAFE_HEAD_UPDATE: IntGauge = register_int_gauge!(
         "trusted_sync_latest_ref_safe_head_update",
