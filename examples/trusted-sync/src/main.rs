@@ -88,9 +88,11 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
 
-    // Reset the failed payload derivation metric to 0 so it can be queried.
+    // Reset metrics so they can be queried. 
     metrics::FAILED_PAYLOAD_DERIVATION.reset();
     metrics::DRIFT_WALKBACK.set(0);
+    metrics::DRIFT_WALKBACK_TIMESTAMP.set(0);
+    metrics::DERIVED_ATTRIBUTES_COUNT.reset();
 
     // Continuously step on the pipeline and validate payloads.
     let mut advance_cursor_flag = false;
@@ -100,10 +102,21 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             Ok(latest) => {
                 let prev = metrics::REFERENCE_L2_HEAD.get();
                 metrics::REFERENCE_L2_HEAD.set(latest as i64);
+                let timestamp = match std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|s| s.as_secs())
+                {
+                    Ok(time) => time,
+                    Err(e) => {
+                        error!(target: LOG_TARGET, "Failed to get latest timestamp in seconds: {:?}", e);
+                        continue;
+                    }
+                };
 
                 // Check if we have drift - walk back in case of a re-org.
+                // Wait for at least 500 drift and 5 minutes since the last walkback.
                 let drift = latest as i64 - cursor.block_info.number as i64;
-                if drift > 500 && cursor.block_info.number as i64 > metrics::DRIFT_WALKBACK.get() {
+                if drift > 500 && timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300 {
                     metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
                     warn!(target: LOG_TARGET, "Detected drift of over {} blocks, walking back", drift);
                     cursor =
@@ -112,32 +125,13 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     if let Err(e) = pipeline.reset(cursor.block_info).await {
                         error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                     }
-                    let timestamp = match std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|s| s.as_secs())
-                    {
-                        Ok(time) => time,
-                        Err(e) => {
-                            error!(target: LOG_TARGET, "Failed to get latest timestamp in seconds: {:?}", e);
-                            continue;
-                        }
-                    };
+                    
                     metrics::DRIFT_WALKBACK_TIMESTAMP.set(timestamp as i64);
                 }
 
                 // Update the timestamp
                 if latest as i64 > prev {
-                    let time = match std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|s| s.as_secs())
-                    {
-                        Ok(time) => time,
-                        Err(e) => {
-                            error!(target: LOG_TARGET, "Failed to get latest timestamp in seconds: {:?}", e);
-                            continue;
-                        }
-                    };
-                    metrics::LATEST_REF_SAFE_HEAD_UPDATE.set(time as i64);
+                    metrics::LATEST_REF_SAFE_HEAD_UPDATE.set(timestamp as i64);
                 }
             }
             Err(e) => {
