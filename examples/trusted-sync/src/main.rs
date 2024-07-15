@@ -85,10 +85,11 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         .await
         .expect("Failed to fetch genesis L1 block info for pipeline tip");
     let validator = validation::OnlineValidator::new_http(l2_rpc_url.clone(), &cfg);
+    let genesis_l2_block_number = cfg.genesis.l2.number;
     let mut pipeline =
         new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
 
-    // Reset metrics so they can be queried. 
+    // Reset metrics so they can be queried.
     metrics::FAILED_PAYLOAD_DERIVATION.reset();
     metrics::DRIFT_WALKBACK.set(0);
     metrics::DRIFT_WALKBACK_TIMESTAMP.set(0);
@@ -113,25 +114,38 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     }
                 };
 
-                // Check if we have drift - walk back in case of a re-org.
-                // Wait for at least 500 drift and 5 minutes since the last walkback.
-                let drift = latest as i64 - cursor.block_info.number as i64;
-                if drift > 500 && timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300 {
-                    metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
-                    warn!(target: LOG_TARGET, "Detected drift of over {} blocks, walking back", drift);
-                    cursor =
-                        l2_provider.l2_block_info_by_number(cursor.block_info.number - 10).await?;
-                    advance_cursor_flag = false;
-                    if let Err(e) = pipeline.reset(cursor.block_info).await {
-                        error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
-                    }
-                    
-                    metrics::DRIFT_WALKBACK_TIMESTAMP.set(timestamp as i64);
-                }
-
                 // Update the timestamp
                 if latest as i64 > prev {
                     metrics::LATEST_REF_SAFE_HEAD_UPDATE.set(timestamp as i64);
+                }
+
+                // Don't check drift if we're within 10 blocks of origin.
+                if cursor.block_info.number - genesis_l2_block_number <= 10 {
+                    warn!(target: LOG_TARGET, "Can't walk back further. Cursor: {}, Genesis: {}", cursor.block_info.number, genesis_l2_block_number);
+                } else {
+                    // Check if we have drift - walk back in case of a re-org.
+                    // Wait for at least 500 drift and 5 minutes since the last walkback.
+                    let drift = latest as i64 - cursor.block_info.number as i64;
+                    if drift > 500 &&
+                        timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300
+                    {
+                        metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
+                        warn!(target: LOG_TARGET, "Detected drift of over {} blocks, walking back", drift);
+                        cursor = if let Ok(c) =
+                            l2_provider.l2_block_info_by_number(cursor.block_info.number - 10).await
+                        {
+                            c
+                        } else {
+                            error!(target: LOG_TARGET, "Failed to get walkback block info by number: {}", cursor.block_info.number - 10);
+                            continue;
+                        };
+                        advance_cursor_flag = false;
+                        if let Err(e) = pipeline.reset(cursor.block_info).await {
+                            error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
+                        }
+
+                        metrics::DRIFT_WALKBACK_TIMESTAMP.set(timestamp as i64);
+                    }
                 }
             }
             Err(e) => {
