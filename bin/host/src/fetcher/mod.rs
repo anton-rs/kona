@@ -219,6 +219,19 @@ where
                         sidecar.blob[(i as usize) << 5..(i as usize + 1) << 5].to_vec(),
                     );
                 }
+
+                // Write the KZG Proof as the 4096th element.
+                blob_key[72..].copy_from_slice((FIELD_ELEMENTS_PER_BLOB).to_be_bytes().as_ref());
+                let blob_key_hash = keccak256(blob_key.as_ref());
+
+                kv_write_lock.set(
+                    PreimageKey::new(*blob_key_hash, PreimageKeyType::Keccak256).into(),
+                    blob_key.into(),
+                );
+                kv_write_lock.set(
+                    PreimageKey::new(*blob_key_hash, PreimageKeyType::Blob).into(),
+                    sidecar.kzg_proof.to_vec(),
+                );
             }
             HintType::L1Precompile => {
                 // Validate the hint data length.
