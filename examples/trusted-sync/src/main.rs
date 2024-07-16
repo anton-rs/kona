@@ -129,7 +129,11 @@ async fn sync(cli: cli::Cli) -> Result<()> {
 
                     // If walkback isn't enabled, jump to 10 blocks less than the reference l2
                     // head.
+<<<<<<< HEAD
                     if drift > cli.drift_threshold as i64 && !cli.enable_reorg_walkback {
+=======
+                    if drift > 500 && !cli.enable_reorg_walkback {
+>>>>>>> c786ecf (disable walkback by default)
                         cursor = if let Ok(c) =
                             l2_provider.l2_block_info_by_number(latest - 10).await
                         {
@@ -142,7 +146,11 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                         if let Err(e) = pipeline.reset(cursor.block_info).await {
                             error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                         }
+<<<<<<< HEAD
                     } else if drift > cli.drift_threshold as i64 &&
+=======
+                    } else if drift > 500 &&
+>>>>>>> c786ecf (disable walkback by default)
                         timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300
                     {
                         metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
