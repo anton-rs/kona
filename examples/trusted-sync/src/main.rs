@@ -66,7 +66,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         info!(target: LOG_TARGET, "Starting {} blocks from tip at L2 block number: {}", blocks, start);
     }
     metrics::START_L2_BLOCK.inc_by(start);
-    println!("Starting from L2 block number: {}", metrics::START_L2_BLOCK.get());
+    info!(target: LOG_TARGET, "Starting from L2 block number: {}", metrics::START_L2_BLOCK.get());
 
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
@@ -126,7 +126,23 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     // Check if we have drift - walk back in case of a re-org.
                     // Wait for at least 500 drift and 5 minutes since the last walkback.
                     let drift = latest as i64 - cursor.block_info.number as i64;
-                    if drift > 500 &&
+
+                    // If walkback isn't enabled, jump to 10 blocks less than the reference l2
+                    // head.
+                    if drift > 500 && !cli.enable_reorg_walkback {
+                        cursor = if let Ok(c) =
+                            l2_provider.l2_block_info_by_number(latest - 10).await
+                        {
+                            c
+                        } else {
+                            error!(target: LOG_TARGET, "Failed to get walkback block info by number: {}", latest - 10);
+                            continue;
+                        };
+                        advance_cursor_flag = false;
+                        if let Err(e) = pipeline.reset(cursor.block_info).await {
+                            error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
+                        }
+                    } else if drift > 500 &&
                         timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300
                     {
                         metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);

@@ -43,6 +43,9 @@ pub struct Cli {
     /// Start blocks from tip.
     #[clap(long, help = "Number of blocks prior to tip to start from")]
     pub start_blocks_from_tip: Option<u64>,
+    /// Enable walking back if re-orgs occur and the pipeline gets stuck.
+    #[clap(long, help = "Enable walking back if re-orgs occur and the pipeline gets stuck")]
+    pub enable_reorg_walkback: bool,
 }
 
 impl Cli {
