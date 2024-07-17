@@ -43,6 +43,17 @@ pub struct Cli {
     /// Start blocks from tip.
     #[clap(long, help = "Number of blocks prior to tip to start from")]
     pub start_blocks_from_tip: Option<u64>,
+    /// Enable walking back if re-orgs occur and the pipeline gets stuck.
+    #[clap(long, help = "Enable walking back if re-orgs occur and the pipeline gets stuck")]
+    pub enable_reorg_walkback: bool,
+    /// Parameterized threshold amount of blocks to drift from before fast-forwarding or walking
+    /// back.
+    #[clap(
+        long,
+        default_value_t = 500,
+        help = "Parameterized threshold amount of blocks to drift from before fast-forwarding or walking back"
+    )]
+    pub drift_threshold: u64,
 }
 
 impl Cli {
