@@ -46,7 +46,6 @@ pub struct Cli {
     /// Enable walking back if re-orgs occur and the pipeline gets stuck.
     #[clap(long, help = "Enable walking back if re-orgs occur and the pipeline gets stuck")]
     pub enable_reorg_walkback: bool,
-<<<<<<< HEAD
     /// Parameterized threshold amount of blocks to drift from before fast-forwarding or walking
     /// back.
     #[clap(
@@ -55,8 +54,6 @@ pub struct Cli {
         help = "Parameterized threshold amount of blocks to drift from before fast-forwarding or walking back"
     )]
     pub drift_threshold: u64,
-=======
->>>>>>> c786ecf (disable walkback by default)
 }
 
 impl Cli {
