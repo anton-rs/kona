@@ -127,7 +127,8 @@ where
     ) -> StageResult<()> {
         self.prev.reset(block_info, system_config).await?;
         self.queue = VecDeque::default();
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["frame-queue"]);
+        Ok(())
     }
 }
 

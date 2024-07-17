@@ -453,7 +453,8 @@ where
         self.l1_blocks.clear();
         self.l1_blocks.push(base);
         self.next_spans.clear();
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["batch-queue"]);
+        Ok(())
     }
 }
 

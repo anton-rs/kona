@@ -258,7 +258,8 @@ where
         self.prev.reset(block_info, system_config).await?;
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["channel-bank"]);
+        Ok(())
     }
 }
 

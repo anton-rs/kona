@@ -129,7 +129,8 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
         self.block = Some(base);
         self.done = false;
         self.system_config = cfg.clone();
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["l1-traversal"]);
+        Ok(())
     }
 }
 

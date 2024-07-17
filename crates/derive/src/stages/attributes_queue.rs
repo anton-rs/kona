@@ -209,10 +209,10 @@ where
         system_config: &SystemConfig,
     ) -> StageResult<()> {
         self.prev.reset(block_info, system_config).await?;
-        info!(target: "attributes-queue", "resetting attributes queue");
         self.batch = None;
         self.is_last_in_span = false;
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["attributes-queue"]);
+        Ok(())
     }
 }
 

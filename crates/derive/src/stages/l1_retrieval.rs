@@ -134,6 +134,7 @@ where
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
         self.data = Some(self.provider.open_data(&base).await?);
+        crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
         Ok(())
     }
 }

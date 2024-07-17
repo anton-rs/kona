@@ -115,9 +115,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 };
 
                 // Update the timestamp
-                if latest as i64 > prev {
-                    metrics::LATEST_REF_SAFE_HEAD_UPDATE.set(timestamp as i64);
-                }
+                metrics::LATEST_REF_SAFE_HEAD_UPDATE.set(timestamp as i64);
 
                 // Don't check drift if we're within 10 blocks of origin.
                 if cursor.block_info.number - genesis_l2_block_number <= 10 {
@@ -130,12 +128,14 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     // If walkback isn't enabled, jump to 10 blocks less than the reference l2
                     // head.
                     if drift > cli.drift_threshold as i64 && !cli.enable_reorg_walkback {
+                        metrics::FAST_FORWARD_BLOCK.set(cursor.block_info.number as i64);
+                        metrics::FAST_FORWARD_TIMESTAMP.set(timestamp as i64);
                         cursor = if let Ok(c) =
-                            l2_provider.l2_block_info_by_number(latest - 10).await
+                            l2_provider.l2_block_info_by_number(latest - 100).await
                         {
                             c
                         } else {
-                            error!(target: LOG_TARGET, "Failed to get walkback block info by number: {}", latest - 10);
+                            error!(target: LOG_TARGET, "Failed to get block info by number: {}", latest - 100);
                             continue;
                         };
                         advance_cursor_flag = false;
@@ -147,8 +147,9 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     {
                         metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
                         warn!(target: LOG_TARGET, "Detected drift of over {} blocks, walking back", drift);
-                        cursor = if let Ok(c) =
-                            l2_provider.l2_block_info_by_number(cursor.block_info.number - 10).await
+                        cursor = if let Ok(c) = l2_provider
+                            .l2_block_info_by_number(cursor.block_info.number - 100)
+                            .await
                         {
                             c
                         } else {

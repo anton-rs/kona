@@ -52,6 +52,14 @@ lazy_static! {
     pub static ref DRIFT_WALKBACK_TIMESTAMP: IntGauge =
         register_int_gauge!("trusted_sync_drift_walkback_timestamp", "Timestamp of the last drift walkback").expect("Failed to register drift walkback timestamp metric");
 
+    /// Tracks the block number when a fast forward last happened.
+    pub static ref FAST_FORWARD_BLOCK: IntGauge =
+        register_int_gauge!("trusted_sync_fast_forward_block", "Latest fast forward block").expect("Failed to register fast forward metric");
+
+    /// Tracks the timestamp of the last fast forward.
+    pub static ref FAST_FORWARD_TIMESTAMP: IntGauge =
+        register_int_gauge!("trusted_sync_fast_forward_timestamp", "Timestamp of the latest fast forward block").expect("Failed to register fast forward timestamp metric");
+
     /// Tracks the latest reference l2 safe head update.
     pub static ref LATEST_REF_SAFE_HEAD_UPDATE: IntGauge = register_int_gauge!(
         "trusted_sync_latest_ref_safe_head_update",

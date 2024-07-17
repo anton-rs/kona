@@ -129,6 +129,7 @@ where
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
         self.next_channel();
+        crate::inc!(STAGE_RESETS, &["channel-reader"]);
         Ok(())
     }
 }
