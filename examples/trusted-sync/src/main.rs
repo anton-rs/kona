@@ -101,7 +101,6 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         // Update the reference l2 head.
         match l2_provider.latest_block_number().await {
             Ok(latest) => {
-                let prev = metrics::REFERENCE_L2_HEAD.get();
                 metrics::REFERENCE_L2_HEAD.set(latest as i64);
                 let timestamp = match std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
