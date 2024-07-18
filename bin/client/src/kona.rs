@@ -18,9 +18,6 @@ use kona_primitives::L2AttributesWithParent;
 
 extern crate alloc;
 
-/// The size of the LRU cache in the oracle.
-const ORACLE_LRU_SIZE: usize = 1024;
-
 #[client_entry(100_000_000)]
 fn main() -> Result<()> {
     #[cfg(feature = "tracing-subscriber")]
@@ -37,7 +34,7 @@ fn main() -> Result<()> {
         //                          PROLOGUE                          //
         ////////////////////////////////////////////////////////////////
 
-        let oracle = Arc::new(CachingOracle::new(ORACLE_LRU_SIZE));
+        let oracle = Arc::new(CachingOracle::new(None));
         let boot = Arc::new(BootInfo::load(oracle.as_ref()).await?);
         let l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
         let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());

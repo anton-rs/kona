@@ -7,9 +7,8 @@ use crate::ORACLE_READER;
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::Result;
 use async_trait::async_trait;
-use core::num::NonZeroUsize;
 use kona_preimage::{PreimageKey, PreimageOracleClient};
-use lru::LruCache;
+use revm::primitives::HashMap;
 use spin::Mutex;
 
 /// A wrapper around an [OracleReader] that stores a configurable number of responses in an
@@ -19,7 +18,7 @@ use spin::Mutex;
 #[derive(Debug, Clone)]
 pub struct CachingOracle {
     /// The spin-locked cache that stores the responses from the oracle.
-    cache: Arc<Mutex<LruCache<PreimageKey, Vec<u8>>>>,
+    cache: Arc<Mutex<HashMap<PreimageKey, Vec<u8>>>>,
 }
 
 impl CachingOracle {
@@ -27,12 +26,12 @@ impl CachingOracle {
     /// responses in the cache.
     ///
     /// [OracleReader]: kona_preimage::OracleReader
-    pub fn new(cache_size: usize) -> Self {
-        Self {
-            cache: Arc::new(Mutex::new(LruCache::new(
-                NonZeroUsize::new(cache_size).expect("N must be greater than 0"),
-            ))),
-        }
+    pub fn new(prebuilt_preimage: Option<HashMap<PreimageKey, Vec<u8>>>) -> Self {
+        let map = match prebuilt_preimage {
+            Some(map) => map,
+            None => HashMap::new(),
+        };
+        Self { cache: Arc::new(Mutex::new(map)) }
     }
 }
 
@@ -44,7 +43,7 @@ impl PreimageOracleClient for CachingOracle {
             Ok(value.clone())
         } else {
             let value = ORACLE_READER.get(key).await?;
-            cache_lock.put(key, value.clone());
+            cache_lock.insert(key, value.clone());
             Ok(value)
         }
     }
@@ -58,7 +57,7 @@ impl PreimageOracleClient for CachingOracle {
             Ok(())
         } else {
             ORACLE_READER.get_exact(key, buf).await?;
-            cache_lock.put(key, buf.to_vec());
+            cache_lock.insert(key, buf.to_vec());
             Ok(())
         }
     }
