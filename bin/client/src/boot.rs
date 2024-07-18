@@ -6,6 +6,8 @@ use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use kona_primitives::RollupConfig;
 
+use crate::devnet_rollup_config::OP_DEVNET_CONFIG;
+
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
 
@@ -89,8 +91,13 @@ impl BootInfo {
                 .try_into()
                 .map_err(|_| anyhow!("Failed to convert L2 chain ID to u64"))?,
         );
-        let rollup_config = RollupConfig::from_l2_chain_id(chain_id)
-            .ok_or_else(|| anyhow!("Failed to get rollup config for L2 Chain ID: {chain_id}"))?;
+
+        let rollup_config = if chain_id == 901 {
+            OP_DEVNET_CONFIG
+        } else {
+            RollupConfig::from_l2_chain_id(chain_id)
+                .ok_or_else(|| anyhow!("Failed to get rollup config for L2 Chain ID: {chain_id}"))?
+        };
 
         Ok(Self { l1_head, l2_output_root, l2_claim, l2_claim_block, chain_id, rollup_config })
     }
