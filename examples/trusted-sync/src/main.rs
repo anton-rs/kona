@@ -87,13 +87,15 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let validator = validation::OnlineValidator::new_http(l2_rpc_url.clone(), &cfg);
     let genesis_l2_block_number = cfg.genesis.l2.number;
     let mut pipeline =
-        new_online_pipeline(cfg, l1_provider, dap, l2_provider.clone(), attributes, tip);
+        new_online_pipeline(cfg, l1_provider.clone(), dap, l2_provider.clone(), attributes, tip);
 
     // Reset metrics so they can be queried.
     metrics::FAILED_PAYLOAD_DERIVATION.reset();
     metrics::DRIFT_WALKBACK.set(0);
     metrics::DRIFT_WALKBACK_TIMESTAMP.set(0);
     metrics::DERIVED_ATTRIBUTES_COUNT.reset();
+    metrics::FAST_FORWARD_BLOCK.set(0);
+    metrics::FAST_FORWARD_TIMESTAMP.set(0);
 
     // Continuously step on the pipeline and validate payloads.
     let mut advance_cursor_flag = false;
@@ -129,39 +131,47 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     if drift > cli.drift_threshold as i64 && !cli.enable_reorg_walkback {
                         metrics::FAST_FORWARD_BLOCK.set(cursor.block_info.number as i64);
                         metrics::FAST_FORWARD_TIMESTAMP.set(timestamp as i64);
-                        cursor = if let Ok(c) =
-                            l2_provider.l2_block_info_by_number(latest - 100).await
-                        {
-                            c
+                        if let Ok(c) = l2_provider.l2_block_info_by_number(latest - 100).await {
+                            let l1_block_info = l1_provider
+                                .block_info_by_number(c.l1_origin.number)
+                                .await
+                                .expect("Failed to fetch L1 block info for fast forward");
+                            info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
+                            if let Err(e) = pipeline.reset(l1_block_info).await {
+                                error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
+                                continue;
+                            }
+                            cursor = c;
                         } else {
                             error!(target: LOG_TARGET, "Failed to get block info by number: {}", latest - 100);
                             continue;
-                        };
-                        advance_cursor_flag = false;
-                        if let Err(e) = pipeline.reset(cursor.block_info).await {
-                            error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                         }
                     } else if drift > cli.drift_threshold as i64 &&
                         timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300
                     {
                         metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
+                        metrics::DRIFT_WALKBACK_TIMESTAMP.set(timestamp as i64);
                         warn!(target: LOG_TARGET, "Detected drift of over {} blocks, walking back", drift);
-                        cursor = if let Ok(c) = l2_provider
+                        if let Ok(c) = l2_provider
                             .l2_block_info_by_number(cursor.block_info.number - 100)
                             .await
                         {
-                            c
+                            let l1_block_info = l1_provider
+                                .block_info_by_number(c.l1_origin.number)
+                                .await
+                                .expect("Failed to fetch L1 block info for fast forward");
+                            info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
+                            if let Err(e) = pipeline.reset(l1_block_info).await {
+                                error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
+                                continue;
+                            }
+                            cursor = c;
                         } else {
                             error!(target: LOG_TARGET, "Failed to get walkback block info by number: {}", cursor.block_info.number - 10);
                             continue;
-                        };
-                        advance_cursor_flag = false;
-                        if let Err(e) = pipeline.reset(cursor.block_info).await {
-                            error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                         }
-
-                        metrics::DRIFT_WALKBACK_TIMESTAMP.set(timestamp as i64);
                     }
+                    advance_cursor_flag = false;
                 }
             }
             Err(e) => {
