@@ -443,9 +443,6 @@ where
 {
     async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, system_config).await?;
-        // Copy over the Origin from the next stage.
-        // It is set in the engine queue (two stages away)
-        // such that the L2 Safe Head origin is the progress.
         self.origin = Some(base);
         self.batches.clear();
         // Include the new origin as an origin to build on.

@@ -142,6 +142,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 continue;
                             }
                             cursor = c;
+                            advance_cursor_flag = false;
                         } else {
                             error!(target: LOG_TARGET, "Failed to get block info by number: {}", latest - 100);
                             continue;
@@ -166,12 +167,12 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 continue;
                             }
                             cursor = c;
+                            advance_cursor_flag = false;
                         } else {
                             error!(target: LOG_TARGET, "Failed to get walkback block info by number: {}", cursor.block_info.number - 10);
                             continue;
                         }
                     }
-                    advance_cursor_flag = false;
                 }
             }
             Err(e) => {
