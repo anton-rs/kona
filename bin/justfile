@@ -1,0 +1,85 @@
+set fallback := true
+
+# Default recipe to display help information
+default:
+  @just --list
+
+# Run the client program natively with the host program attached.
+run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc verbosity:
+  #!/usr/bin/env bash
+
+  L1_NODE_ADDRESS="{{l1_rpc}}"
+  L1_BEACON_ADDRESS="{{l1_beacon_rpc}}"
+  L2_NODE_ADDRESS="{{l2_rpc}}"
+  OP_NODE_ADDRESS="{{rollup_node_rpc}}"
+  CLIENT_BIN_PATH="./target/riscv64gc-unknown-none-elf/release-client-lto/kona"
+
+  L2_BLOCK_NUMBER={{block_number}}
+  echo "Fetching configuration for block #$L2_BLOCK_NUMBER..."
+
+  # Get output root for block
+  L2_CLAIM=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $L2_BLOCK_NUMBER) | jq -r .outputRoot)
+
+  # Get the info for the previous block
+  L2_OUTPUT_ROOT=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) | jq -r .outputRoot)
+  L2_HEAD=$(cast block --rpc-url $L2_NODE_ADDRESS $((L2_BLOCK_NUMBER - 1)) -j | jq -r .hash)
+  L1_ORIGIN_NUM=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) | jq -r .blockRef.l1origin.number)
+  L1_HEAD=$(cast block --rpc-url $L1_NODE_ADDRESS $((L1_ORIGIN_NUM + 30)) -j | jq -r .hash)
+  L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_NODE_ADDRESS)
+
+  CLIENT_BIN_PATH="./target/release-client-lto/kona"
+  EXPORTING_STORE_JSON_PATH="./bin/preimages/${L2_BLOCK_NUMBER}_preimages.json"
+
+  # Move to the workspace root
+  cd $(git rev-parse --show-toplevel)
+
+  echo "Building client program..."
+  cargo build --bin kona --profile release-client-lto --features tracing-subscriber
+  echo "Running host program with native client program..."
+  cargo r --bin kona-host --release -- \
+    --l1-head $L1_HEAD \
+    --l2-head $L2_HEAD \
+    --l2-claim $L2_CLAIM \
+    --l2-output-root $L2_OUTPUT_ROOT \
+    --l2-block-number $L2_BLOCK_NUMBER \
+    --l2-chain-id $L2_CHAIN_ID \
+    --l1-node-address $L1_NODE_ADDRESS \
+    --l1-beacon-address $L1_BEACON_ADDRESS \
+    --l2-node-address $L2_NODE_ADDRESS \
+    --exec $CLIENT_BIN_PATH \
+    --data-dir ./data \
+    --json-path $EXPORTING_STORE_JSON_PATH \
+    {{verbosity}}
+
+# Run the client program natively with the host program attached, in offline mode.
+run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l2_chain_id verbosity:
+  #!/usr/bin/env bash
+
+  CLIENT_BIN_PATH="./target/release-client-lto/kona"
+
+  L2_BLOCK_NUMBER={{block_number}}
+  L2_CLAIM={{l2_claim}}
+  L2_OUTPUT_ROOT={{l2_output_root}}
+  L2_HEAD={{l2_head}}
+  L1_HEAD={{l1_head}}
+  L2_CHAIN_ID={{l2_chain_id}}
+
+  EXPORTING_STORE_JSON_PATH="./bin/preimages/${L2_BLOCK_NUMBER}_preimages.json"
+
+  # Move to the workspace root
+  cd $(git rev-parse --show-toplevel)
+
+  echo "Building client program..."
+  cargo build --bin kona --profile release-client-lto --features tracing-subscriber
+  echo "Running host program with native client program..."
+  cargo r --bin kona-host --release -- \
+    --l1-head $L1_HEAD \
+    --l2-head $L2_HEAD \
+    --l2-claim $L2_CLAIM \
+    --l2-output-root $L2_OUTPUT_ROOT \
+    --l2-block-number $L2_BLOCK_NUMBER \
+    --l2-chain-id $L2_CHAIN_ID \
+    --exec $CLIENT_BIN_PATH \
+    --data-dir ./data \
+    --json-path $EXPORTING_STORE_JSON_PATH \
+    {{verbosity}}

@@ -1,7 +1,7 @@
 //! This module contains the [KeyValueStore] trait and concrete implementations of it.
 
 use alloy_primitives::B256;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
 mod mem;
@@ -26,4 +26,10 @@ pub trait KeyValueStore {
 
     /// Set the value associated with the given key.
     fn set(&mut self, key: B256, value: Vec<u8>);
+
+    /// Export store as a `HashMap`.
+    fn export(&self) -> HashMap<B256, Vec<u8>>;
+
+    /// Export store to json file.
+    fn export_json(&self);
 }

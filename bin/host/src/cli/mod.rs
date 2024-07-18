@@ -52,6 +52,9 @@ pub struct HostCli {
     /// The Data Directory for preimage data storage. Default uses in-memory storage.
     #[clap(long)]
     pub data_dir: Option<PathBuf>,
+    /// The Data Directory for preimage data storage. Default uses in-memory storage.
+    #[clap(long)]
+    pub json_path: Option<PathBuf>,
     /// Run the specified client program as a separate process detached from the host. Default is
     /// to run the client program in the host process.
     #[clap(long)]
@@ -72,15 +75,17 @@ impl HostCli {
     /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is
     /// configured to be created.
     pub fn construct_kv_store(&self) -> SharedKeyValueStore {
-        let local_kv_store = LocalKeyValueStore::new(self.clone());
+        let local_kv_store = LocalKeyValueStore::new(self.clone(), self.json_path.clone());
 
         let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = self.data_dir {
-            let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
-            let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
+            let disk_kv_store = DiskKeyValueStore::new(data_dir.clone(), self.json_path.clone());
+            let split_kv_store =
+                SplitKeyValueStore::new(local_kv_store, disk_kv_store, self.json_path.clone());
             Arc::new(RwLock::new(split_kv_store))
         } else {
-            let mem_kv_store = MemoryKeyValueStore::new();
-            let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
+            let mem_kv_store = MemoryKeyValueStore::new(self.json_path.clone());
+            let split_kv_store =
+                SplitKeyValueStore::new(local_kv_store, mem_kv_store, self.json_path.clone());
             Arc::new(RwLock::new(split_kv_store))
         };
 

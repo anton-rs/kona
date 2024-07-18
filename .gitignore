@@ -6,3 +6,6 @@ target/
 
 # Environment Variables
 .env
+
+# Output files
+bin/preimages/

@@ -2220,6 +2220,7 @@ dependencies = [
  "reqwest",
  "revm",
  "serde",
+ "serde_json",
  "tempfile",
  "tokio",
  "tracing",

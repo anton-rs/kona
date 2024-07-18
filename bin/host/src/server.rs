@@ -64,6 +64,10 @@ where
         let hint_router = tokio::task::spawn(hinter_fut);
         tokio::try_join!(server, hint_router).map_err(|e| anyhow!(e))?;
 
+        let kv_lock = self.kv_store.read().await;
+        kv_lock.export_json();
+        drop(kv_lock);
+
         Ok(())
     }
 
