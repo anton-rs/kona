@@ -27,7 +27,7 @@ pub trait Pipeline: OriginProvider + Iterator<Item = L2AttributesWithParent> {
     fn peek(&self) -> Option<&L2AttributesWithParent>;
 
     /// Resets the pipeline on the next [Pipeline::step] call.
-    async fn reset(&mut self, origin: BlockInfo) -> anyhow::Result<()>;
+    async fn reset(&mut self, l2_block_info: BlockInfo, origin: BlockInfo) -> anyhow::Result<()>;
 
     /// Attempts to progress the pipeline.
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult;

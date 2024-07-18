@@ -137,7 +137,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 .await
                                 .expect("Failed to fetch L1 block info for fast forward");
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
-                            if let Err(e) = pipeline.reset(l1_block_info).await {
+                            if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                                 continue;
                             }
@@ -162,7 +162,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 .await
                                 .expect("Failed to fetch L1 block info for fast forward");
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
-                            if let Err(e) = pipeline.reset(l1_block_info).await {
+                            if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                                 continue;
                             }
