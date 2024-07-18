@@ -67,6 +67,7 @@ where
 {
     /// Create a new [AttributesQueue] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["attributes-queue"]);
         Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 

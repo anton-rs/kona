@@ -47,6 +47,7 @@ where
     ///
     /// [L1Retrieval]: crate::stages::L1Retrieval
     pub fn new(prev: P) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["frame-queue"]);
         Self { prev, queue: VecDeque::new() }
     }
 }

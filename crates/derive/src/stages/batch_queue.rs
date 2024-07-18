@@ -80,6 +80,7 @@ where
 {
     /// Creates a new [BatchQueue] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P, fetcher: BF) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["batch-queue"]);
         Self {
             cfg,
             prev,

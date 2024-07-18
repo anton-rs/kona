@@ -54,4 +54,8 @@ macro_rules! set {
         #[cfg(feature = "metrics")]
         $crate::metrics::$metric.set($value);
     };
+    ($metric:ident, $value:expr, $labels:expr) => {
+        #[cfg(feature = "metrics")]
+        $crate::metrics::$metric.with_label_values($labels).set($value as f64);
+    };
 }

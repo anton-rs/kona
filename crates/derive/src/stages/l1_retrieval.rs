@@ -60,6 +60,7 @@ where
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
     pub fn new(prev: P, provider: DAP) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["l1-retrieval"]);
         Self { prev, provider, data: None }
     }
 }
