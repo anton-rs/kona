@@ -56,7 +56,7 @@ fn main() -> Result<()> {
 
         let precompile_overrides =
             FPVMPrecompileOverride::<OracleL2ChainProvider, TrieDBHintWriter>::default();
-        let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
+        let mut executor = StatelessL2BlockExecutor::builder(boot.rollup_config.clone())
             .with_parent_header(driver.take_l2_safe_head_header())
             .with_fetcher(l2_provider)
             .with_hinter(TrieDBHintWriter)

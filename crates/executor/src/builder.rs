@@ -9,14 +9,14 @@ use revm::StateBuilder;
 
 /// The builder pattern for the [StatelessL2BlockExecutor].
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutorBuilder<'a, F, H, PO>
+pub struct StatelessL2BlockExecutorBuilder<F, H, PO>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
     PO: PrecompileOverride<F, H>,
 {
     /// The [RollupConfig].
-    config: &'a RollupConfig,
+    config: RollupConfig,
     /// The parent [Header] to begin execution from.
     parent_header: Option<Sealed<Header>>,
     /// The precompile overrides to use during execution.
@@ -27,14 +27,14 @@ where
     hinter: Option<H>,
 }
 
-impl<'a, F, H, PO> StatelessL2BlockExecutorBuilder<'a, F, H, PO>
+impl<'a, F, H, PO> StatelessL2BlockExecutorBuilder<F, H, PO>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
     PO: PrecompileOverride<F, H>,
 {
     /// Instantiate a new builder with the given [RollupConfig].
-    pub fn with_config(config: &'a RollupConfig) -> Self {
+    pub fn with_config(config: RollupConfig) -> Self {
         Self {
             config,
             parent_header: None,
@@ -69,7 +69,7 @@ where
     }
 
     /// Build the [StatelessL2BlockExecutor] from the builder configuration.
-    pub fn build(self) -> Result<StatelessL2BlockExecutor<'a, F, H, PO>> {
+    pub fn build(self) -> Result<StatelessL2BlockExecutor<F, H, PO>> {
         let fetcher = self.fetcher.ok_or(anyhow::anyhow!("Fetcher not set"))?;
         let hinter = self.hinter.ok_or(anyhow::anyhow!("Hinter not set"))?;
         let parent_header = self.parent_header.unwrap_or_else(|| {

@@ -77,7 +77,7 @@ fn op_mainnet_exec_bench(
 
     // Bench the block execution.
     bencher.iter(|| {
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(rollup_config.clone())
             .with_parent_header(pre_state_header.clone().seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new(data_folder))
             .with_hinter(NoopTrieDBHinter)

@@ -42,28 +42,28 @@ use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_enve
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F, H, PO>
+pub struct StatelessL2BlockExecutor<F, H, PO>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
     PO: PrecompileOverride<F, H>,
 {
     /// The [RollupConfig].
-    config: &'a RollupConfig,
+    config: RollupConfig,
     /// The inner state database component.
     state: State<TrieDB<F, H>>,
     /// Phantom data for the precompile overrides.
     _phantom: core::marker::PhantomData<PO>,
 }
 
-impl<'a, F, H, PO> StatelessL2BlockExecutor<'a, F, H, PO>
+impl<F, H, PO> StatelessL2BlockExecutor<F, H, PO>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
     PO: PrecompileOverride<F, H>,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
-    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H, PO> {
+    pub fn builder(config: RollupConfig) -> StatelessL2BlockExecutorBuilder<F, H, PO> {
         StatelessL2BlockExecutorBuilder::with_config(config)
     }
 
@@ -92,7 +92,7 @@ where
         // Prepare the `revm` environment.
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.timestamp),
-            self.config,
+            &self.config,
             self.state.database.parent_block_header(),
             &payload,
         );
@@ -113,7 +113,7 @@ where
         // Apply the pre-block EIP-4788 contract call.
         pre_block_beacon_root_contract_call(
             &mut self.state,
-            self.config,
+            &self.config,
             block_number,
             &initialized_cfg,
             &initialized_block_env,
@@ -121,7 +121,7 @@ where
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        ensure_create2_deployer_canyon(&mut self.state, self.config, payload.timestamp)?;
+        ensure_create2_deployer_canyon(&mut self.state, &self.config, payload.timestamp)?;
 
         let mut cumulative_gas_used = 0u64;
         let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(payload.transactions.len());
@@ -238,7 +238,7 @@ where
         let state_root = self.state.database.state_root(&bundle)?;
 
         let transactions_root = Self::compute_transactions_root(payload.transactions.as_slice());
-        let receipts_root = Self::compute_receipts_root(&receipts, self.config, payload.timestamp);
+        let receipts_root = Self::compute_receipts_root(&receipts, &self.config, payload.timestamp);
         debug!(
             target: "client_executor",
             "Computed transactions root: {transactions_root} | receipts root: {receipts_root}",
@@ -717,7 +717,7 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #120794431's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(rollup_config)
             .with_parent_header(header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_120794432_exec"))
             .with_hinter(NoopTrieDBHinter)
