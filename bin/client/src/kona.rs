@@ -5,16 +5,8 @@
 #![no_std]
 #![cfg_attr(any(target_arch = "mips", target_arch = "riscv64"), no_main)]
 
-use alloc::sync::Arc;
-use alloy_consensus::Header;
-use kona_client::{
-    l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
-    l2::{FPVMPrecompileOverride, OracleL2ChainProvider, TrieDBHintWriter},
-    BootInfo, CachingOracle,
-};
+use kona_client::scenario::Scenario;
 use kona_common_proc::client_entry;
-use kona_executor::StatelessL2BlockExecutor;
-use kona_primitives::L2AttributesWithParent;
 
 extern crate alloc;
 
@@ -33,44 +25,20 @@ fn main() -> Result<()> {
         ////////////////////////////////////////////////////////////////
         //                          PROLOGUE                          //
         ////////////////////////////////////////////////////////////////
-
-        let oracle = Arc::new(CachingOracle::new(None));
-        let boot = Arc::new(BootInfo::load(oracle.as_ref()).await?);
-        let l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
-        let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
-        let beacon = OracleBlobProvider::new(oracle.clone());
+        let mut scenario = Scenario::new(None).await?;
 
         ////////////////////////////////////////////////////////////////
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
-
-        let mut driver = DerivationDriver::new(
-            boot.as_ref(),
-            oracle.as_ref(),
-            beacon,
-            l1_provider,
-            l2_provider.clone(),
-        )
-        .await?;
-        let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
-
-        let precompile_overrides =
-            FPVMPrecompileOverride::<OracleL2ChainProvider, TrieDBHintWriter>::default();
-        let mut executor = StatelessL2BlockExecutor::builder(boot.rollup_config.clone())
-            .with_parent_header(driver.take_l2_safe_head_header())
-            .with_fetcher(l2_provider)
-            .with_hinter(TrieDBHintWriter)
-            .with_precompile_overrides(precompile_overrides)
-            .build()?;
-        let Header { number, .. } = *executor.execute_payload(attributes)?;
-        let output_root = executor.compute_output_root()?;
+        let (attributes, l2_safe_head_header) = scenario.derive().await?;
+        let number = scenario.execute_block(attributes, l2_safe_head_header).await?;
+        let output_root = scenario.compute_output_root().await?;
 
         ////////////////////////////////////////////////////////////////
         //                          EPILOGUE                          //
         ////////////////////////////////////////////////////////////////
-
-        assert_eq!(number, boot.l2_claim_block);
-        assert_eq!(output_root, boot.l2_claim);
+        assert_eq!(number, scenario.boot.l2_claim_block);
+        assert_eq!(output_root, scenario.boot.l2_claim);
 
         tracing::info!(
             target: "client",

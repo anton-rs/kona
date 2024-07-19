@@ -22,3 +22,6 @@ pub use boot::{
     L2_OUTPUT_ROOT_KEY, L2_ROLLUP_CONFIG_KEY,
 };
 mod devnet_rollup_config;
+
+/// Scenario of the client program.
+pub mod scenario;
