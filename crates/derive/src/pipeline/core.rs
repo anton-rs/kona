@@ -75,12 +75,16 @@ where
 
     /// Resets the pipelien by calling the [`ResettableStage::reset`] method.
     /// This will bubble down the stages all the way to the `L1Traversal` stage.
-    async fn reset(&mut self, block_info: BlockInfo) -> anyhow::Result<()> {
+    async fn reset(
+        &mut self,
+        l2_block_info: BlockInfo,
+        l1_block_info: BlockInfo,
+    ) -> anyhow::Result<()> {
         let system_config = self
             .l2_chain_provider
-            .system_config_by_number(block_info.number, Arc::clone(&self.rollup_config))
+            .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
             .await?;
-        match self.attributes.reset(block_info, &system_config).await {
+        match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
             Err(StageError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
             Err(err) => {

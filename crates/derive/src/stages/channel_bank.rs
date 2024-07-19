@@ -55,6 +55,7 @@ where
 {
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["channel-bank"]);
         Self { cfg, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
@@ -258,7 +259,8 @@ where
         self.prev.reset(block_info, system_config).await?;
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["channel-bank"]);
+        Ok(())
     }
 }
 

@@ -60,6 +60,7 @@ where
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
     pub fn new(prev: P, provider: DAP) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["l1-retrieval"]);
         Self { prev, provider, data: None }
     }
 }
@@ -134,6 +135,7 @@ where
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
         self.data = Some(self.provider.open_data(&base).await?);
+        crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
         Ok(())
     }
 }

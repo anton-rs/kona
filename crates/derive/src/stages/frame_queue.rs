@@ -47,6 +47,7 @@ where
     ///
     /// [L1Retrieval]: crate::stages::L1Retrieval
     pub fn new(prev: P) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["frame-queue"]);
         Self { prev, queue: VecDeque::new() }
     }
 }
@@ -127,7 +128,8 @@ where
     ) -> StageResult<()> {
         self.prev.reset(block_info, system_config).await?;
         self.queue = VecDeque::default();
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["frame-queue"]);
+        Ok(())
     }
 }
 

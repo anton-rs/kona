@@ -80,6 +80,7 @@ where
 {
     /// Creates a new [BatchQueue] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P, fetcher: BF) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["batch-queue"]);
         Self {
             cfg,
             prev,
@@ -442,9 +443,6 @@ where
 {
     async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, system_config).await?;
-        // Copy over the Origin from the next stage.
-        // It is set in the engine queue (two stages away)
-        // such that the L2 Safe Head origin is the progress.
         self.origin = Some(base);
         self.batches.clear();
         // Include the new origin as an origin to build on.
@@ -453,7 +451,8 @@ where
         self.l1_blocks.clear();
         self.l1_blocks.push(base);
         self.next_spans.clear();
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["batch-queue"]);
+        Ok(())
     }
 }
 

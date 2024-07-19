@@ -16,6 +16,12 @@ const RESPONSE_TIME_CUSTOM_BUCKETS: &[f64; 18] = &[
 const FRAME_COUNT_BUCKETS: &[f64; 10] = &[1.0, 2.0, 3.0, 5.0, 8.0, 10.0, 12.0, 15.0, 18.0, 20.0];
 
 lazy_static! {
+    /// Tracks stage resets.
+    pub static ref STAGE_RESETS: GaugeVec = {
+        let opts = opts!("kona_derive_stage_resets", "Number of times various stages are reset");
+        register_gauge_vec!(opts, &["stage"]).expect("Stage reset metric failed to register")
+    };
+
     /// Tracks the L1 origin for the L1 Traversal Stage.
     pub static ref ORIGIN_GAUGE: IntGauge = register_int_gauge!(
         "kona_derive_origin_gauge",

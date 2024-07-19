@@ -53,6 +53,7 @@ where
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["channel-reader"]);
         Self { prev, next_batch: None, cfg: cfg.clone() }
     }
 
@@ -129,6 +130,7 @@ where
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
         self.next_channel();
+        crate::inc!(STAGE_RESETS, &["channel-reader"]);
         Ok(())
     }
 }

@@ -50,6 +50,7 @@ impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
 impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
     pub fn new(data_source: F, cfg: Arc<RollupConfig>) -> Self {
+        crate::set!(STAGE_RESETS, 0, &["l1-traversal"]);
         Self {
             block: Some(BlockInfo::default()),
             data_source,
@@ -129,7 +130,8 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
         self.block = Some(base);
         self.done = false;
         self.system_config = cfg.clone();
-        Err(StageError::Eof)
+        crate::inc!(STAGE_RESETS, &["l1-traversal"]);
+        Ok(())
     }
 }
 
