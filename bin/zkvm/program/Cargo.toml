@@ -1,0 +1,9 @@
+[workspace]
+[package]
+version = "0.1.0"
+name = "fibonacci-program"
+edition = "2021"
+
+[dependencies]
+alloy-sol-types = "0.7.2"
+sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testnet" }
