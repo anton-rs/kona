@@ -45,7 +45,7 @@ where
                 .genesis
                 .system_config
                 .as_ref()
-                .map(|sc| sc.batcher_addr)
+                .map(|sc| sc.batcher_address)
                 .unwrap_or_default(),
             batch_inbox_address: cfg.batch_inbox_address,
         }

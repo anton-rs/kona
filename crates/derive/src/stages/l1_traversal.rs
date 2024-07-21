@@ -34,7 +34,7 @@ pub struct L1Traversal<Provider: ChainProvider> {
 #[async_trait]
 impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
     fn batcher_addr(&self) -> Address {
-        self.system_config.batcher_addr
+        self.system_config.batcher_address
     }
 
     async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>> {

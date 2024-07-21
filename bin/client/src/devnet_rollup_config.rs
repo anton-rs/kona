@@ -17,7 +17,7 @@ pub(crate) const OP_DEVNET_CONFIG: RollupConfig = RollupConfig {
         },
         l2_time: 1721283024,
         system_config: Some(SystemConfig {
-            batcher_addr: address!("3c44cdddb6a900fa2b585dd299e03d12fa4293bc"),
+            batcher_address: address!("3c44cdddb6a900fa2b585dd299e03d12fa4293bc"),
             overhead: uint!(0x834_U256),
             scalar: uint!(0xf4240_U256),
             gas_limit: 30_000_000_u64,
