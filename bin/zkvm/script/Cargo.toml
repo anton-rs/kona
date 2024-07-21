@@ -1,7 +1,7 @@
 [workspace]
 [package]
 version = "0.1.0"
-name = "fibonacci-script"
+name = "script"
 edition = "2021"
 default-run = "prove"
 
@@ -14,12 +14,24 @@ name = "vkey"
 path = "src/bin/vkey.rs"
 
 [dependencies]
+# workspace
+alloy-primitives = { version = "0.7.6", default-features = false }
+kona-preimage = { path = "../../../crates/preimage", version = "0.0.2", features = ["serde"] }
+kona-client = { path = "../../client", version = "0.1.0" }
+revm = { git = "https://github.com/bluealloy/revm", tag = "v37", version = "10.0.0", default-features = false }
+
 sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testnet" }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
 alloy-sol-types = "0.7.2"
+tokio = { version = "1.37.0", features = ["full"] }
+anyhow = "1.0.86"
 
 [build-dependencies]
 sp1-helper = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testnet" }
+
+[features]
+default = ["solo-client"]
+solo-client = ["kona-preimage/solo-client"]
