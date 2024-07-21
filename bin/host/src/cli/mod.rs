@@ -62,9 +62,18 @@ pub struct HostCli {
     /// Run in pre-image server mode without executing any client program. Defaults to `false`.
     #[clap(long)]
     pub server: bool,
+    /// Run in client mode with pre-image json file. Defaults to `false`.
+    #[clap(long)]
+    pub client: bool,
 }
 
 impl HostCli {
+    pub fn ensure_no_mode_conflict(self) -> Self {
+        if self.server && self.client {
+            panic!("Cannot run in both server and prover mode.");
+        }
+        self
+    }
     /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() ||

@@ -7,17 +7,21 @@ use crate::{
     cli::{init_tracing_subscriber, HostCli},
     server::PreimageServer,
 };
+use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use command_fds::{CommandFdExt, FdMapping};
 use fetcher::Fetcher;
 use futures::FutureExt;
+use kona_client::scenario::Scenario;
 use kona_common::FileDescriptor;
 use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider};
-use kona_preimage::{HintReader, OracleServer, PipeHandle};
+use kona_preimage::{HintReader, OracleServer, PipeHandle, PreimageKey};
 use kv::KeyValueStore;
 use std::{
-    io::{stderr, stdin, stdout},
+    collections::HashMap,
+    fs::File,
+    io::{stderr, stdin, stdout, BufReader},
     os::fd::AsFd,
     panic::AssertUnwindSafe,
     sync::Arc,
@@ -36,16 +40,38 @@ mod util;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    let cfg = HostCli::parse();
+    let cfg = HostCli::parse().ensure_no_mode_conflict();
     init_tracing_subscriber(cfg.v)?;
 
-    if cfg.server {
-        start_server(cfg).await?;
+    if cfg.client {
+        start_solo_client(&cfg).await?;
     } else {
-        start_server_and_native_client(cfg).await?;
+        if cfg.server {
+            start_server(cfg).await?;
+        } else {
+            start_server_and_native_client(cfg).await?;
+        }
     }
 
     info!("Exiting host program.");
+    Ok(())
+}
+
+async fn start_solo_client(cfg: &HostCli) -> Result<()> {
+    let json_file = File::open(cfg.json_path.clone().unwrap()).unwrap();
+    let reader = BufReader::new(json_file);
+    let parsed: HashMap<B256, Vec<u8>> = serde_json::from_reader(reader).unwrap();
+    let prebuilt_preimage: HashMap<PreimageKey, Vec<u8>> =
+        parsed.into_iter().map(|(k, v)| (PreimageKey::try_from(*k).ok().unwrap(), v)).collect();
+
+    let mut client = Scenario::new(Some(prebuilt_preimage)).await?;
+    let (attributes, l2_safe_head_header) = client.derive().await?;
+    let number = client.execute_block(attributes, l2_safe_head_header).await?;
+    let output_root = client.compute_output_root().await?;
+
+    assert_eq!(number, client.boot.l2_claim_block);
+    assert_eq!(output_root, client.boot.l2_claim);
+
     Ok(())
 }
 

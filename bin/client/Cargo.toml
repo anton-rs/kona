@@ -41,6 +41,7 @@ serde_json = "1.0.117"
 
 [features]
 tracing-subscriber = ["dep:tracing-subscriber"]
+solo-client = ["kona-preimage/solo-client"]
 
 [[bin]]
 name = "kona"

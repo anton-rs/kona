@@ -11,13 +11,21 @@ use tracing::{error, trace};
 /// the host.
 #[derive(Debug, Clone, Copy)]
 pub struct HintWriter {
+    #[cfg(not(feature = "solo-client"))]
     pipe_handle: PipeHandle,
 }
 
 impl HintWriter {
     /// Create a new [HintWriter] from a [PipeHandle].
+    #[cfg(not(feature = "solo-client"))]
     pub const fn new(pipe_handle: PipeHandle) -> Self {
         Self { pipe_handle }
+    }
+
+    /// Create a new [HintWriter] from a [PipeHandle].
+    #[cfg(feature = "solo-client")]
+    pub const fn new(_: PipeHandle) -> Self {
+        Self {}
     }
 }
 
@@ -25,6 +33,7 @@ impl HintWriter {
 impl HintWriterClient for HintWriter {
     /// Write a hint to the host. This will overwrite any existing hint in the pipe, and block until
     /// all data has been written.
+    #[cfg(not(feature = "solo-client"))]
     async fn write(&self, hint: &str) -> Result<()> {
         // Form the hint into a byte buffer. The format is a 4-byte big-endian length prefix
         // followed by the hint string.
@@ -45,6 +54,13 @@ impl HintWriterClient for HintWriter {
 
         trace!(target: "hint_writer", "Received hint acknowledgement");
 
+        Ok(())
+    }
+
+    /// Write a hint to the host. This will overwrite any existing hint in the pipe, and block until
+    /// all data has been written.
+    #[cfg(feature = "solo-client")]
+    async fn write(&self, _: &str) -> Result<()> {
         Ok(())
     }
 }

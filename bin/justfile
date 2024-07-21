@@ -127,3 +127,35 @@ run-client-native-offline-auto block_number l1_rpc l1_beacon_rpc l2_rpc rollup_n
     --data-dir ./data \
     --json-path $EXPORTING_STORE_JSON_PATH \
     {{verbosity}}
+
+# Run the client program natively with the host program attached.
+run-client-solo block_number verbosity:
+  #!/usr/bin/env bash
+
+  # Get the info for the previous block
+  L2_OUTPUT_ROOT="0x0000000000000000000000000000000000000000000000000000000000000000"
+  L2_HEAD="0x0000000000000000000000000000000000000000000000000000000000000000"
+  L1_ORIGIN_NUM="0x0000000000000000000000000000000000000000000000000000000000000000"
+  L1_HEAD="0x0000000000000000000000000000000000000000000000000000000000000000"
+  L2_CHAIN_ID="0"
+  L2_CLAIM="0x0000000000000000000000000000000000000000000000000000000000000000"
+  L2_BLOCK_NUMBER={{block_number}}
+  
+  CLIENT_BIN_PATH="./target/release-client-lto/kona"
+  IMPORTING_STORE_JSON_PATH="./bin/preimages/${L2_BLOCK_NUMBER}_preimages.json"
+
+  # Move to the workspace root
+  cd $(git rev-parse --show-toplevel)
+
+  # cargo build --bin kona --profile release-client-lto --features tracing-subscriber,solo-client
+  echo "Running host program as native client program..."
+  cargo r --bin kona-host --release --features solo-client -- \
+    --l1-head $L1_HEAD \
+    --l2-head $L2_HEAD \
+    --l2-claim $L2_CLAIM \
+    --l2-output-root $L2_OUTPUT_ROOT \
+    --l2-block-number $L2_BLOCK_NUMBER \
+    --l2-chain-id $L2_CHAIN_ID \
+    --client \
+    --json-path $IMPORTING_STORE_JSON_PATH \
+    {{verbosity}}
