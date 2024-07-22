@@ -1,5 +1,5 @@
 #![no_std]
-#![cfg_attr(any(target_arch = "mips", target_arch = "riscv64"), no_main)]
+#![cfg_attr(any(target_arch = "mips", target_arch = "riscv64", target_os = "zkvm"), no_main)]
 
 use kona_common::io;
 use kona_common_proc::client_entry;

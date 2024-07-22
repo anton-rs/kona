@@ -9,6 +9,12 @@
 sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::{sol, SolType};
+use kona_client::scenario::Scenario;
+use kona_preimage::PreimageKey;
+use revm::primitives::HashMap;
+
+extern crate alloc;
+use alloc::vec::Vec;
 
 /// The public values encoded as a tuple that can be easily deserialized inside Solidity.
 type PublicValuesTuple = sol! {
@@ -20,26 +26,20 @@ pub fn main() {
     //
     // Behind the scenes, this compiles down to a custom system call which handles reading inputs
     // from the prover.
-    let n = sp1_zkvm::io::read::<u32>();
+    let prebuilt_preimage = sp1_zkvm::io::read::<HashMap<PreimageKey, Vec<u8>>>();
 
-    if n > 186 {
-        panic!(
-            "This fibonacci program doesn't support n > 186, as it would overflow a 32-bit integer."
-        );
-    }
+    kona_common::block_on(async move {
+    let mut client = Scenario::new(Some(prebuilt_preimage)).await.unwrap();
+    let (attributes, l2_safe_head_header) = client.derive().await.unwrap();
+    let number = client.execute_block(attributes, l2_safe_head_header).await.unwrap();
+    let output_root = client.compute_output_root().await.unwrap();
 
-    // Compute the n'th fibonacci number, using normal Rust code.
-    let mut a = 0u32;
-    let mut b = 1u32;
-    for _ in 0..n {
-        let c = a + b;
-        a = b;
-        b = c;
-    }
+    assert_eq!(number, client.boot.l2_claim_block);
+    assert_eq!(output_root, client.boot.l2_claim);
+    });
+    // // Encocde the public values of the program.
+    // let bytes = PublicValuesTuple::abi_encode(&(n, a, b));
 
-    // Encocde the public values of the program.
-    let bytes = PublicValuesTuple::abi_encode(&(n, a, b));
-
-    // Commit to the public values of the program.
-    sp1_zkvm::io::commit_slice(&bytes);
+    // // Commit to the public values of the program.
+    // sp1_zkvm::io::commit_slice(&bytes);
 }

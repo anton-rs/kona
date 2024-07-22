@@ -43,7 +43,7 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
         }
 
         cfg_if::cfg_if! {
-            if #[cfg(any(target_arch = "mips", target_arch = "riscv64"))] {
+            if #[cfg(any(target_arch = "mips", target_arch = "riscv64", target_os = "zkvm"))] {
                 const HEAP_SIZE: usize = #heap_size;
 
                 #[no_mangle]
