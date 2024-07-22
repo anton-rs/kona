@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kona_derive::{online::*, types::StageError};
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 mod cli;
 mod metrics;
@@ -194,15 +194,15 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 }
             }
         }
-        info!(target: LOG_TARGET, "Stepping on cursor block number: {}", cursor.block_info.number);
+        trace!(target: LOG_TARGET, "Stepping on cursor block number: {}", cursor.block_info.number);
         match pipeline.step(cursor).await {
             StepResult::PreparedAttributes => {
                 metrics::PIPELINE_STEPS.with_label_values(&["success"]).inc();
-                info!(target: "loop", "Prepared attributes");
+                trace!(target: "loop", "Prepared attributes");
             }
             StepResult::AdvancedOrigin => {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance"]).inc();
-                info!(target: "loop", "Advanced origin");
+                trace!(target: "loop", "Advanced origin");
             }
             StepResult::OriginAdvanceErr(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
@@ -211,7 +211,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             StepResult::StepFailed(e) => match e {
                 StageError::NotEnoughData => {
                     metrics::PIPELINE_STEPS.with_label_values(&["not_enough_data"]).inc();
-                    info!(target: "loop", "Not enough data to step derivation pipeline");
+                    debug!(target: "loop", "Not enough data to step derivation pipeline");
                 }
                 _ => {
                     metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
@@ -223,7 +223,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         // Peek at the next prepared attributes and validate them.
         if let Some(attributes) = pipeline.peek() {
             match validator.validate(attributes).await {
-                Ok((true, _)) => info!(target: LOG_TARGET, "Validated payload attributes"),
+                Ok((true, _)) => trace!(target: LOG_TARGET, "Validated payload attributes"),
                 Ok((false, expected)) => {
                     error!(target: LOG_TARGET, "Failed payload validation. Derived payload attributes: {:?}, Expected: {:?}", attributes, expected);
                     metrics::FAILED_PAYLOAD_DERIVATION.inc();

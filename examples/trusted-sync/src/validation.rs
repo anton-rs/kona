@@ -58,6 +58,7 @@ impl OnlineValidator {
                 txs.push(tx);
             } else {
                 warn!(target: "validation", "Failed to fetch transaction: {:?}", tx);
+                return Err(anyhow::anyhow!("Failed to fetch transaction"));
             }
         }
         Ok((block.header, txs))
