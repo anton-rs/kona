@@ -25,3 +25,6 @@ pub(crate) mod cannon;
 
 #[cfg(target_arch = "riscv64")]
 pub(crate) mod asterisc;
+
+#[cfg(target_os = "zkvm")]
+pub(crate) mod zkvm;
