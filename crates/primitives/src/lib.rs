@@ -5,10 +5,15 @@
 #![no_std]
 
 // Re-export superchain-primitives.
+#[cfg(not(feature = "serde"))]
 pub use superchain_primitives::*;
 
 // Re-export alloy-primitives.
 pub use alloy_primitives;
+
+// Re-export superchain bindings if the `serde` feature is enabled
+#[cfg(feature = "serde")]
+pub use superchain_registry::*;
 
 extern crate alloc;
 
@@ -39,3 +44,15 @@ pub use payload::{
 
 pub mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
+
+/// Retrieves the [RollupConfig] for the given `chain_id`.
+pub fn config_from_chain_id(chain_id: u64) -> anyhow::Result<RollupConfig> {
+    if cfg!(feature = "serde") {
+        superchain_registry::ROLLUP_CONFIGS
+            .get(&chain_id)
+            .ok_or_else(|| anyhow::anyhow!("Unknown chain ID: {}", chain_id))
+            .cloned()
+    } else {
+        superchain_primitives::rollup_config_from_chain_id(chain_id)
+    }
+}

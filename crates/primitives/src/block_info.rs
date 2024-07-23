@@ -148,7 +148,7 @@ impl L1BlockInfoTx {
                 base_fee: l1_header.base_fee_per_gas.unwrap_or(0) as u64,
                 block_hash: l1_header.hash_slow(),
                 sequence_number,
-                batcher_address: system_config.batcher_addr,
+                batcher_address: system_config.batcher_address,
                 blob_base_fee: l1_header.blob_fee().unwrap_or(1),
                 blob_base_fee_scalar,
                 base_fee_scalar,
@@ -160,7 +160,7 @@ impl L1BlockInfoTx {
                 base_fee: l1_header.base_fee_per_gas.unwrap_or(0) as u64,
                 block_hash: l1_header.hash_slow(),
                 sequence_number,
-                batcher_address: system_config.batcher_addr,
+                batcher_address: system_config.batcher_address,
                 l1_fee_overhead: system_config.overhead,
                 l1_fee_scalar: system_config.scalar,
             }))
@@ -472,7 +472,7 @@ mod test {
         assert_eq!(l1_info.base_fee, l1_header.base_fee_per_gas.unwrap_or(0) as u64);
         assert_eq!(l1_info.block_hash, l1_header.hash_slow());
         assert_eq!(l1_info.sequence_number, sequence_number);
-        assert_eq!(l1_info.batcher_address, system_config.batcher_addr);
+        assert_eq!(l1_info.batcher_address, system_config.batcher_address);
         assert_eq!(l1_info.l1_fee_overhead, system_config.overhead);
         assert_eq!(l1_info.l1_fee_scalar, system_config.scalar);
     }
@@ -503,7 +503,7 @@ mod test {
         assert_eq!(l1_info.base_fee, l1_header.base_fee_per_gas.unwrap_or(0) as u64);
         assert_eq!(l1_info.block_hash, l1_header.hash_slow());
         assert_eq!(l1_info.sequence_number, sequence_number);
-        assert_eq!(l1_info.batcher_address, system_config.batcher_addr);
+        assert_eq!(l1_info.batcher_address, system_config.batcher_address);
         assert_eq!(l1_info.blob_base_fee, l1_header.blob_fee().unwrap_or(1));
 
         let scalar = system_config.scalar.to_be_bytes::<32>();
