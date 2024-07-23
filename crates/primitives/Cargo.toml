@@ -22,7 +22,7 @@ superchain-primitives = { version = "0.2", default-features = false }
 alloy-sol-types = { version = "0.7.6", default-features = false }
 
 # `serde` feature dependencies
-superchain-registry = { version = "0.2", default-features = false, optional = true }
+superchain-registry = { version = "0.2.2", default-features = false, optional = true }
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]

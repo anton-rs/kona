@@ -17,7 +17,7 @@ alloy-primitives = { workspace = true, features = ["rlp"] }
 async-trait.workspace = true
 
 # Local
-kona-primitives = { path = "../primitives", version = "0.0.1" }
+kona-primitives = { path = "../primitives", version = "0.0.1", default-features = false }
 kona-derive = { path = "../derive", version = "0.0.2" }
 
 # `serde` feature dependencies

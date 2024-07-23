@@ -324,17 +324,6 @@ dependencies = [
 
 [[package]]
 name = "alloy-genesis"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bca15afde1b6d15e3fc1c97421262b1bbb37aee45752e3c8b6d6f13f776554ff"
-dependencies = [
- "alloy-primitives",
- "alloy-serde 0.1.4",
- "serde",
-]
-
-[[package]]
-name = "alloy-genesis"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20cb76c8a3913f2466c5488f3a915e3a15d15596bdc935558c1a9be75e9ec508"
@@ -412,11 +401,11 @@ dependencies = [
 
 [[package]]
 name = "alloy-node-bindings"
-version = "0.1.4"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "494b2fb0276a78ec13791446a417c2517eee5c8e8a8c520ae0681975b8056e5c"
+checksum = "77a2864b3470d3c74bf50a70f4a5f3e87a7359870878a268be829d7caff42f13"
 dependencies = [
- "alloy-genesis 0.1.4",
+ "alloy-genesis",
  "alloy-primitives",
  "k256",
  "serde_json",
@@ -574,16 +563,6 @@ dependencies = [
  "tower",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "alloy-rpc-types"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "184a7a42c7ba9141cc9e76368356168c282c3bc3d9e5d78f3556bdfe39343447"
-dependencies = [
- "alloy-rpc-types-eth 0.1.4",
- "alloy-serde 0.1.4",
 ]
 
 [[package]]
@@ -2409,13 +2388,13 @@ dependencies = [
  "alloy-eips 0.2.0",
  "alloy-node-bindings",
  "alloy-primitives",
- "alloy-provider 0.1.4",
+ "alloy-provider 0.2.0",
  "alloy-rlp",
- "alloy-rpc-client 0.1.4",
- "alloy-rpc-types 0.1.4",
+ "alloy-rpc-client 0.2.0",
+ "alloy-rpc-types",
  "alloy-sol-types",
- "alloy-transport 0.1.4",
- "alloy-transport-http 0.1.4",
+ "alloy-transport 0.2.0",
+ "alloy-transport-http 0.2.0",
  "anyhow",
  "async-trait",
  "brotli",
@@ -2471,7 +2450,7 @@ dependencies = [
  "alloy-provider 0.2.0",
  "alloy-rlp",
  "alloy-rpc-client 0.2.0",
- "alloy-rpc-types 0.2.0",
+ "alloy-rpc-types",
  "alloy-transport-http 0.2.0",
  "anyhow",
  "async-trait",
@@ -2500,7 +2479,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-provider 0.2.0",
  "alloy-rlp",
- "alloy-rpc-types 0.2.0",
+ "alloy-rpc-types",
  "alloy-transport-http 0.2.0",
  "alloy-trie",
  "anyhow",
@@ -4214,7 +4193,7 @@ checksum = "b82ed8be21bf40a5103f855c93c7d15091536adfb0aa0a862e6b7c1f93d16c99"
 dependencies = [
  "alloy-consensus 0.2.0",
  "alloy-eips 0.2.0",
- "alloy-genesis 0.2.0",
+ "alloy-genesis",
  "alloy-primitives",
  "alloy-sol-types",
  "anyhow",
@@ -4696,9 +4675,9 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "alloy-primitives",
- "alloy-provider 0.1.4",
- "alloy-rpc-types 0.1.4",
- "alloy-transport 0.1.4",
+ "alloy-provider 0.2.0",
+ "alloy-rpc-types",
+ "alloy-transport 0.2.0",
  "anyhow",
  "clap",
  "kona-derive",

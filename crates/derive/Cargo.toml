@@ -25,7 +25,7 @@ async-trait.workspace = true
 revm = { workspace = true, optional = true }
 
 # Local
-kona-primitives = { path = "../primitives", version = "0.0.1" }
+kona-primitives = { path = "../primitives", version = "0.0.1", default-features = false }
 
 # External
 alloy-sol-types = { version = "0.7.6", default-features = false }
@@ -41,10 +41,10 @@ serde = { version = "1.0.203", default-features = false, features = ["derive"], 
 # `online` feature dependencies
 c-kzg = { version = "1.0.2", default-features = false, optional = true }
 sha2 = { version = "0.10.8", default-features = false, optional = true }
-alloy-transport = { version = "0.1", default-features = false, optional = true }
-alloy-provider = { version = "0.1", default-features = false, optional = true }
-alloy-transport-http = { version = "0.1", optional = true } 
-alloy-rpc-types = { version = "0.1", default-features = false, optional = true }
+alloy-transport = { version = "0.2", default-features = false, optional = true }
+alloy-provider = { version = "0.2", default-features = false, optional = true }
+alloy-transport-http = { version = "0.2", optional = true } 
+alloy-rpc-types = { version = "0.2", default-features = false, optional = true }
 serde_json = { version = "1.0.94", default-features = false, optional = true }
 reqwest = { version = "0.12.4", default-features = false, optional = true }
 
@@ -53,16 +53,16 @@ lazy_static = { version = "1.5.0", optional = true }
 prometheus = { version = "0.13.4", features = ["process"], optional = true }
 
 # `test-utils` feature dependencies
-alloy-node-bindings = { version = "0.1", default-features = false, optional = true }
+alloy-node-bindings = { version = "0.2", default-features = false, optional = true }
 tracing-subscriber = { version = "0.3.18", optional = true }
-alloy-rpc-client = { version = "0.1", default-features = false, optional = true }
+alloy-rpc-client = { version = "0.2", default-features = false, optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.38", features = ["full"] }
 proptest = "1.4.0"
 tracing-subscriber = "0.3.18"
-alloy-node-bindings = { version = "0.1", default-features = false }
-alloy-rpc-client = { version = "0.1", default-features = false }
+alloy-node-bindings = { version = "0.2", default-features = false }
+alloy-rpc-client = { version = "0.2", default-features = false }
 serde_json = { version = "1.0.117", default-features = false }
 
 [features]
