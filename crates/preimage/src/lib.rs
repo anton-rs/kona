@@ -5,7 +5,9 @@
 #![no_std]
 
 #[cfg(all(feature = "serde", feature = "rkyv"))]
-compile_error!("serde and rkyv are mutually exclusive feature flags and cannot be enabled together");
+compile_error!(
+    "serde and rkyv are mutually exclusive feature flags and cannot be enabled together"
+);
 
 extern crate alloc;
 

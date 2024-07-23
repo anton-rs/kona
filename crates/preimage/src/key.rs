@@ -2,10 +2,10 @@
 //! the preimage oracle.
 
 use alloy_primitives::{B256, U256};
-#[cfg(feature = "serde")]
-use serde::{Deserialize as SerdeDeserialize, SerdeSerialize};
 #[cfg(feature = "rkyv")]
-use rkyv::{Archive, RkyvDeserialize, RkyvSerialize};
+use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
+#[cfg(feature = "serde")]
+use serde::{Deserialize as SerdeDeserialize, Serialize as SerdeSerialize};
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
