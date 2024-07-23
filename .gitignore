@@ -9,3 +9,4 @@ target/
 
 # Output files
 bin/preimages/
+data/
