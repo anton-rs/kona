@@ -2332,6 +2332,7 @@ dependencies = [
  "cfg-if",
  "kona-common",
  "rkyv",
+ "serde",
  "tempfile",
  "tokio",
  "tracing",

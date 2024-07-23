@@ -100,7 +100,7 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
             header,
             body: transactions,
             withdrawals: self.boot_info.rollup_config.is_canyon_active(timestamp).then(Vec::new),
-            ..Default::default()
+        ..Default::default()
         };
         Ok(optimism_block.into())
     }
