@@ -8,7 +8,7 @@ use super::KeyValueStore;
 
 /// A split implementation of the [KeyValueStore] trait that splits between two separate
 /// [KeyValueStore]s.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SplitKeyValueStore<L, R>
 where
     L: KeyValueStore,
