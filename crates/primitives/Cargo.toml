@@ -17,7 +17,7 @@ alloy-eips.workspace = true
 op-alloy-consensus.workspace = true
 
 # Superchain Registry
-superchain-primitives = { version = "0.1.1", default-features = false }
+superchain-primitives = { version = "=0.1.1", default-features = false }
 
 # Alloy Types
 alloy-sol-types = { version = "0.7.6", default-features = false }
