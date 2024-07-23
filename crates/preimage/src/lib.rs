@@ -4,11 +4,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![no_std]
 
-#[cfg(all(feature = "serde", feature = "rkyv"))]
-compile_error!(
-    "serde and rkyv are mutually exclusive feature flags and cannot be enabled together"
-);
-
 extern crate alloc;
 
 mod key;
