@@ -36,7 +36,7 @@ where
     F: TrieDBFetcher,
     H: TrieDBHinter,
 {
-    fn set_precompiles(handler: &mut EvmHandler<'_, (), &mut State<TrieDB<F, H>>>) {
+    fn set_precompiles(handler: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>) {
         let spec_id = handler.cfg.spec_id;
 
         handler.pre_execution.load_precompiles = Arc::new(move || {

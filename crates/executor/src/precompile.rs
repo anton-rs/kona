@@ -10,7 +10,7 @@ where
     H: TrieDBHinter,
 {
     /// Set the precompiles to use during execution.
-    fn set_precompiles(handler: &mut EvmHandler<'_, (), &mut State<TrieDB<F, H>>>);
+    fn set_precompiles(handler: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>);
 }
 
 /// Default implementation of [PrecompileOverride], which does not override any precompiles.
@@ -22,7 +22,7 @@ where
     F: TrieDBFetcher,
     H: TrieDBHinter,
 {
-    fn set_precompiles(_: &mut EvmHandler<'_, (), &mut State<TrieDB<F, H>>>) {
+    fn set_precompiles(_: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>) {
         // Do nothing
     }
 }

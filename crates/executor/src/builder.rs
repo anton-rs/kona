@@ -5,7 +5,6 @@ use alloy_consensus::{Header, Sealable, Sealed};
 use anyhow::Result;
 use kona_derive::types::RollupConfig;
 use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
-use revm::StateBuilder;
 
 /// The builder pattern for the [StatelessL2BlockExecutor].
 #[derive(Debug)]
@@ -78,11 +77,10 @@ where
         });
 
         let trie_db = TrieDB::new(parent_header.state_root, parent_header, fetcher, hinter);
-        let state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
 
         Ok(StatelessL2BlockExecutor {
             config: self.config,
-            state,
+            trie_db,
             _phantom: core::marker::PhantomData::<PO>,
         })
     }
