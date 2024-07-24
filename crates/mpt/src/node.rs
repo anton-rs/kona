@@ -198,11 +198,12 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not insert the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully inserted at the given path.
-    pub fn insert<F: TrieDBFetcher>(
+    pub fn insert<F: TrieDBFetcher, H: TrieDBHinter>(
         &mut self,
         path: &Nibbles,
         value: Bytes,
         fetcher: &F,
+        hinter: &H,
     ) -> Result<()> {
         match self {
             TrieNode::Empty => {
@@ -252,7 +253,7 @@ impl TrieNode {
             TrieNode::Extension { prefix, node } => {
                 let shared_extension_nibbles = path.common_prefix_length(prefix);
                 if shared_extension_nibbles == prefix.len() {
-                    node.insert(&path.slice(shared_extension_nibbles..), value, fetcher)?;
+                    node.insert(&path.slice(shared_extension_nibbles..), value, fetcher, hinter)?;
                     return Ok(());
                 }
 
@@ -293,13 +294,19 @@ impl TrieNode {
             TrieNode::Branch { stack } => {
                 // Follow the branch node to the next node in the path.
                 let branch_nibble = path[0] as usize;
-                stack[branch_nibble].insert(&path.slice(BRANCH_NODE_NIBBLES..), value, fetcher)
+                stack[branch_nibble].insert(
+                    &path.slice(BRANCH_NODE_NIBBLES..),
+                    value,
+                    fetcher,
+                    hinter,
+                )
             }
-            TrieNode::Blinded { .. } => {
+            TrieNode::Blinded { commitment } => {
                 // If a blinded node is approached, reveal the node and continue the insertion
                 // recursion.
+                hinter.hint_trie_node(*commitment)?;
                 self.unblind(fetcher)?;
-                self.insert(path, value, fetcher)
+                self.insert(path, value, fetcher, hinter)
             }
         }
     }
@@ -807,8 +814,11 @@ mod test {
     fn test_insert_static() {
         let mut node = TrieNode::Empty;
         let noop_fetcher = NoopTrieDBFetcher;
-        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), &noop_fetcher).unwrap();
-        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), &noop_fetcher).unwrap();
+        let noop_hinter = NoopTrieDBHinter;
+        node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), &noop_fetcher, &noop_hinter)
+            .unwrap();
+        node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), &noop_fetcher, &noop_hinter)
+            .unwrap();
 
         let expected = TrieNode::Extension {
             prefix: Nibbles::from_nibbles([0, 1, 2, 3, 4]),
@@ -850,7 +860,7 @@ mod test {
 
             for key in keys {
                 hb.add_leaf(Nibbles::unpack(key), key.as_ref());
-                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher, &NoopTrieDBHinter).unwrap();
             }
 
             node.blind();
@@ -876,7 +886,7 @@ mod test {
                 if !deleted_keys.contains(&key) {
                     hb.add_leaf(Nibbles::unpack(key), key.as_ref());
                 }
-                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher, &NoopTrieDBHinter).unwrap();
             }
 
             // Delete the keys that were randomly selected from the trie node.

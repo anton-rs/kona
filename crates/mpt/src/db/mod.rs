@@ -267,7 +267,12 @@ where
             trie_account.encode(&mut account_buf);
 
             // Insert or update the account in the trie.
-            self.root_node.insert(&account_path, account_buf.into(), &self.fetcher)?;
+            self.root_node.insert(
+                &account_path,
+                account_buf.into(),
+                &self.fetcher,
+                &self.hinter,
+            )?;
         }
 
         Ok(())
@@ -305,7 +310,7 @@ where
             storage_root.delete(&hashed_slot_key, fetcher, hinter)?;
         } else {
             // Otherwise, update the storage slot.
-            storage_root.insert(&hashed_slot_key, rlp_buf.into(), fetcher)?;
+            storage_root.insert(&hashed_slot_key, rlp_buf.into(), fetcher, hinter)?;
         }
 
         Ok(())
