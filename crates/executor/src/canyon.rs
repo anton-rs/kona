@@ -23,7 +23,7 @@ const CREATE_2_DEPLOYER_BYTECODE: [u8; 1584] = hex!("608060405260043610610043576
 /// deployer contract. This is done by directly setting the code of the create2 deployer account
 /// prior to executing any transactions on the timestamp activation of the fork.
 pub(crate) fn ensure_create2_deployer_canyon<F, H>(
-    db: &mut State<TrieDB<F, H>>,
+    db: &mut State<&mut TrieDB<F, H>>,
     config: &RollupConfig,
     timestamp: u64,
 ) -> Result<()>

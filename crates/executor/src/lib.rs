@@ -51,7 +51,7 @@ where
     /// The [RollupConfig].
     config: &'a RollupConfig,
     /// The inner state database component.
-    state: State<TrieDB<F, H>>,
+    trie_db: TrieDB<F, H>,
     /// Phantom data for the precompile overrides.
     _phantom: core::marker::PhantomData<PO>,
 }
@@ -65,11 +65,6 @@ where
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
     pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H, PO> {
         StatelessL2BlockExecutorBuilder::with_config(config)
-    }
-
-    /// Returns a reference to the current [State] database of the executor.
-    pub fn state_ref(&self) -> &State<TrieDB<F, H>> {
-        &self.state
     }
 
     /// Executes the given block, returning the resulting state root.
@@ -93,7 +88,7 @@ where
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.timestamp),
             self.config,
-            self.state.database.parent_block_header(),
+            self.trie_db.parent_block_header(),
             &payload,
         );
         let initialized_cfg = self.evm_cfg_env(payload.timestamp);
@@ -110,9 +105,12 @@ where
             tx_len = payload.transactions.len()
         );
 
+        let mut state =
+            State::builder().with_database(&mut self.trie_db).with_bundle_update().build();
+
         // Apply the pre-block EIP-4788 contract call.
         pre_block_beacon_root_contract_call(
-            &mut self.state,
+            &mut state,
             self.config,
             block_number,
             &initialized_cfg,
@@ -121,7 +119,7 @@ where
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        ensure_create2_deployer_canyon(&mut self.state, self.config, payload.timestamp)?;
+        ensure_create2_deployer_canyon(&mut state, self.config, payload.timestamp)?;
 
         let mut cumulative_gas_used = 0u64;
         let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(payload.transactions.len());
@@ -130,7 +128,7 @@ where
         // Construct the block-scoped EVM with the given configuration.
         // The transaction environment is set within the loop for each transaction.
         let mut evm = Evm::builder()
-            .with_db(&mut self.state)
+            .with_db(&mut state)
             .with_env_with_handler_cfg(EnvWithHandlerCfg::new_with_cfg_env(
                 initialized_cfg.clone(),
                 initialized_block_env.clone(),
@@ -229,13 +227,13 @@ where
 
         // Merge all state transitions into the cache state.
         debug!(target: "client_executor", "Merging state transitions");
-        self.state.merge_transitions(BundleRetention::Reverts);
+        state.merge_transitions(BundleRetention::Reverts);
 
         // Take the bundle state.
-        let bundle = self.state.take_bundle();
+        let bundle = state.take_bundle();
 
         // Recompute the header roots.
-        let state_root = self.state.database.state_root(&bundle)?;
+        let state_root = state.database.state_root(&bundle)?;
 
         let transactions_root = Self::compute_transactions_root(payload.transactions.as_slice());
         let receipts_root = Self::compute_receipts_root(&receipts, self.config, payload.timestamp);
@@ -257,7 +255,7 @@ where
             .config
             .is_ecotone_active(payload.timestamp)
             .then(|| {
-                let parent_header = self.state.database.parent_block_header();
+                let parent_header = state.database.parent_block_header();
                 let excess_blob_gas = if self.config.is_ecotone_active(parent_header.timestamp) {
                     let parent_excess_blob_gas = parent_header.excess_blob_gas.unwrap_or_default();
                     let parent_blob_gas_used = parent_header.blob_gas_used.unwrap_or_default();
@@ -273,7 +271,7 @@ where
 
         // Construct the new header.
         let header = Header {
-            parent_hash: self.state.database.parent_block_header().seal(),
+            parent_hash: state.database.parent_block_header().seal(),
             ommers_hash: EMPTY_OMMER_ROOT_HASH,
             beneficiary: payload.fee_recipient,
             state_root,
@@ -308,9 +306,9 @@ where
         );
 
         // Update the parent block hash in the state database.
-        self.state.database.set_parent_block_header(header);
+        state.database.set_parent_block_header(header);
 
-        Ok(self.state.database.parent_block_header())
+        Ok(state.database.parent_block_header())
     }
 
     /// Computes the current output root of the executor, based on the parent header and the
@@ -331,27 +329,26 @@ where
             address!("4200000000000000000000000000000000000016");
 
         // Fetch the L2 to L1 message passer account from the cache or underlying trie.
-        let storage_root =
-            match self.state.database.storage_roots().get(&L2_TO_L1_MESSAGE_PASSER_ADDRESS) {
-                Some(storage_root) => storage_root
-                    .blinded_commitment()
-                    .ok_or(anyhow!("Account storage root is unblinded"))?,
-                None => {
-                    self.state
-                        .database
-                        .get_trie_account(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)?
-                        .ok_or(anyhow!("L2 to L1 message passer account not found in trie"))?
-                        .storage_root
-                }
-            };
+        let storage_root = match self.trie_db.storage_roots().get(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)
+        {
+            Some(storage_root) => storage_root
+                .blinded_commitment()
+                .ok_or(anyhow!("Account storage root is unblinded"))?,
+            None => {
+                self.trie_db
+                    .get_trie_account(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)?
+                    .ok_or(anyhow!("L2 to L1 message passer account not found in trie"))?
+                    .storage_root
+            }
+        };
 
-        let parent_header = self.state.database.parent_block_header();
+        let parent_header = self.trie_db.parent_block_header();
 
         info!(
             target: "client_executor",
             "Computing output root | Version: {version} | State root: {state_root} | Storage root: {storage_root} | Block hash: {hash}",
             version = OUTPUT_ROOT_VERSION,
-            state_root = self.state.database.parent_block_header().state_root,
+            state_root = self.trie_db.parent_block_header().state_root,
             hash = parent_header.seal(),
         );
 
@@ -742,7 +739,7 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(
-            l2_block_executor.state.database.parent_block_header().seal(),
+            l2_block_executor.trie_db.parent_block_header().seal(),
             expected_header.hash_slow()
         );
     }
@@ -800,7 +797,7 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(
-            l2_block_executor.state.database.parent_block_header().seal(),
+            l2_block_executor.trie_db.parent_block_header().seal(),
             expected_header.hash_slow()
         );
     }
@@ -865,7 +862,7 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(
-            l2_block_executor.state.database.parent_block_header().seal(),
+            l2_block_executor.trie_db.parent_block_header().seal(),
             expected_header.hash_slow()
         );
     }
@@ -924,7 +921,7 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(
-            l2_block_executor.state.database.parent_block_header().seal(),
+            l2_block_executor.trie_db.parent_block_header().seal(),
             expected_header.hash_slow()
         );
     }
@@ -992,7 +989,7 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(
-            l2_block_executor.state.database.parent_block_header().seal(),
+            l2_block_executor.trie_db.parent_block_header().seal(),
             expected_header.hash_slow()
         );
     }
@@ -1065,7 +1062,7 @@ mod test {
 
         assert_eq!(produced_header, expected_header);
         assert_eq!(
-            l2_block_executor.state.database.parent_block_header().seal(),
+            l2_block_executor.trie_db.parent_block_header().seal(),
             expected_header.hash_slow()
         );
     }
