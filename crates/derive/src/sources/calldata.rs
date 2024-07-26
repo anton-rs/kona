@@ -1,7 +1,7 @@
 //! CallData Source
 
 use crate::{
-    traits::{AsyncIterator, ChainProvider, SignedRecoverable},
+    traits::{AsyncIterator, ChainProvider},
     types::{BlockInfo, StageError, StageResult},
 };
 use alloc::{boxed::Box, collections::VecDeque};
@@ -71,7 +71,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                 if to != self.batch_inbox_address {
                     return None;
                 }
-                if tx.recover_public_key().ok()? != self.signer {
+                if tx.recover_signer().ok()? != self.signer {
                     return None;
                 }
                 Some(data.to_vec().into())

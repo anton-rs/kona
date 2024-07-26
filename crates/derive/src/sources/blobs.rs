@@ -1,7 +1,7 @@
 //! Blob Data Source
 
 use crate::{
-    traits::{AsyncIterator, BlobProvider, ChainProvider, SignedRecoverable},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
     types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -84,7 +84,7 @@ where
                 index += blob_hashes.map_or(0, |h| h.len());
                 continue;
             }
-            if tx.recover_public_key().unwrap_or_default() != self.signer {
+            if tx.recover_signer().unwrap_or_default() != self.signer {
                 index += blob_hashes.map_or(0, |h| h.len());
                 continue;
             }
