@@ -10,9 +10,6 @@ use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::Result;
 use async_trait::async_trait;
 
-#[cfg(feature = "k256")]
-use crate::traits::SignedRecoverable;
-
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
 pub struct CalldataSource<CP>
@@ -75,8 +72,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                 if to != self.batch_inbox_address {
                     return None;
                 }
-                #[cfg(feature = "k256")]
-                if tx.recover_public_key().ok()? != self.signer {
+                if tx.recover_signer().ok()? != self.signer {
                     return None;
                 }
                 Some(data.to_vec().into())

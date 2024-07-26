@@ -11,9 +11,6 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use tracing::warn;
 
-#[cfg(feature = "k256")]
-use crate::traits::SignedRecoverable;
-
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
 pub struct BlobSource<F, B>
@@ -88,8 +85,7 @@ where
                 index += blob_hashes.map_or(0, |h| h.len());
                 continue;
             }
-            #[cfg(feature = "k256")]
-            if tx.recover_public_key().unwrap_or_default() != self.signer {
+            if tx.recover_signer().unwrap_or_default() != self.signer {
                 index += blob_hashes.map_or(0, |h| h.len());
                 continue;
             }
