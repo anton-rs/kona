@@ -8,6 +8,8 @@ on:
   #   - cron: "0 5 * * 1"
 env:
   CARGO_TERM_COLOR: always
+  ASTERISC_TAG: v1.0.0
+  OP_PROGRAM_TAG: xyz
   L1_RPC: https://ci-sepolia-l1.optimism.io
   L1_BEACON: https://ci-sepolia-beacon.optimism.io
   L2_RPC: https://ci-sepolia-l2.optimism.io
@@ -78,11 +80,70 @@ jobs:
     needs: gather-inputs
     name: "Asterisc + kona (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      OUT_WITNESS_HASH: ${{ steps.export-witness-hash.outputs.OUT_WITNESS_HASH }}
+    env:
+      CLIENT_BIN_PATH: ./target/riscv64gc-unknown-none-elf/release-client-lto/kona
+      HOST_BIN_PATH: ./target/release/kona-host
     steps:
-      - name: Dummy
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install `just`
+        uses: taiki-e/install-action@just
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Clone `asterisc` repository
         run: |
-          # TODO: Run the Asterisc and Kona programs on the OP Sepolia L2 chain
-          echo "Dummy step"
+          git clone https://github.com/ethereum-optimism/asterisc.git
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.6"
+          cache-dependency-path: |
+            asterisc/go.sum
+      - name: Build `asterisc`
+        run: |
+          cd asterisc && git checkout $ASTERISC_TAG && make build-rvgo
+          mv ./rvgo/bin/asterisc /usr/local/bin/
+      - name: Build `kona-host` binary
+        run: |
+          cargo build --bin kona-host --release
+      - name: Build `kona-client` binary
+        run: |
+          just build-asterisc --bin kona --profile release-client-lto
+      - name: Load `kona-client` binary into `asterisc` state format
+        run: |
+          asterisc load-elf --path=$CLIENT_BIN_PATH
+      - name: Run `kona-client` on `asterisc`
+        run: |
+          asterisc run \
+            --info-at '%10000000' \
+            --proof-at never \
+            --input ./state.json \
+            -- \
+            $HOST_BIN_PATH \
+            --l1-head "${{ needs.gather-inputs.outputs.L1_HEAD }}" \
+            --l2-head "${{ needs.gather-inputs.outputs.L2_HEAD }}" \
+            --l2-claim "${{ needs.gather-inputs.outputs.L2_CLAIM }}" \
+            --l2-output-root "${{ needs.gather-inputs.outputs.L2_OUTPUT_ROOT }}" \
+            --l2-block-number "${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }}" \
+            --l2-chain-id "${{ needs.gather-inputs.outputs.L2_CHAIN_ID }}" \
+            --l1-node-address $L1_RPC \
+            --l1-beacon-address $L1_BEACON \
+            --l2-node-address $L2_RPC \
+            --server \
+            -vvv
+      - name: Export `out.json` state witness hash
+        id: export-witness-hash
+        run: |
+          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ' | xargs printf "%02x")
+          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH" >> "$GITHUB_OUTPUT"
   check-results:
     needs: [run-cannon-op-program, run-asterisc-kona]
     name: Check Results
