@@ -1,7 +1,7 @@
 //! CallData Source
 
 use crate::{
-    traits::{AsyncIterator, ChainProvider, SignedRecoverable},
+    traits::{AsyncIterator, ChainProvider},
     types::{BlockInfo, StageError, StageResult},
 };
 use alloc::{boxed::Box, collections::VecDeque};
@@ -9,6 +9,9 @@ use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::Result;
 use async_trait::async_trait;
+
+#[cfg(feature = "k256")]
+use crate::traits::SignedRecoverable;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
@@ -23,6 +26,7 @@ where
     /// Block Ref
     block_ref: BlockInfo,
     /// The L1 Signer.
+    #[allow(dead_code)] // Allow dead code for non-k256 builds.
     signer: Address,
     /// Current calldata.
     calldata: VecDeque<Bytes>,
@@ -71,6 +75,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                 if to != self.batch_inbox_address {
                     return None;
                 }
+                #[cfg(feature = "k256")]
                 if tx.recover_public_key().ok()? != self.signer {
                     return None;
                 }

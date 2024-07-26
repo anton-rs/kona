@@ -29,7 +29,7 @@ kona-common-proc = { path = "../../crates/common-proc", version = "0.0.2" }
 kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
 kona-primitives = { path = "../../crates/primitives", version = "0.0.1" }
 kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
-kona-derive = { path = "../../crates/derive", default-features = false, version = "0.0.2" }
+kona-derive = { path = "../../crates/derive", default-features = false, features = ["k256"], version = "0.0.2" }
 kona-executor = { path = "../../crates/executor", version = "0.0.1" }
 
 # external

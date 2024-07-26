@@ -1,7 +1,7 @@
 //! Blob Data Source
 
 use crate::{
-    traits::{AsyncIterator, BlobProvider, ChainProvider, SignedRecoverable},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
     types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -10,6 +10,9 @@ use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use tracing::warn;
+
+#[cfg(feature = "k256")]
+use crate::traits::SignedRecoverable;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
@@ -27,6 +30,7 @@ where
     /// Block Ref
     block_ref: BlockInfo,
     /// The L1 Signer.
+    #[allow(dead_code)] // Allow dead code for non-k256 builds.
     signer: Address,
     /// Data.
     data: Vec<BlobData>,
@@ -84,6 +88,7 @@ where
                 index += blob_hashes.map_or(0, |h| h.len());
                 continue;
             }
+            #[cfg(feature = "k256")]
             if tx.recover_public_key().unwrap_or_default() != self.signer {
                 index += blob_hashes.map_or(0, |h| h.len());
                 continue;
