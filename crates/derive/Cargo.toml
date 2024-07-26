@@ -10,11 +10,11 @@ homepage.workspace = true
 
 [dependencies]
 # Workspace Alloy Dependencies
-alloy-consensus.workspace = true
-alloy-primitives = { workspace = true, features = ["rlp"] }
-alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-eips.workspace = true
-op-alloy-consensus.workspace = true
+alloy-rlp = { workspace = true, features = ["derive"] }
+alloy-consensus = { workspace = true, features = ["k256"] }
+alloy-primitives = { workspace = true, features = ["rlp", "k256"] }
+op-alloy-consensus = { workspace = true, features = ["k256"] }
 
 # Other Workspace Dependencies
 lru.workspace = true
@@ -66,7 +66,7 @@ alloy-rpc-client = { version = "0.1", default-features = false }
 serde_json = { version = "1.0.117", default-features = false }
 
 [features]
-default = ["serde", "k256"]
+default = ["serde"]
 serde = [
   "dep:serde",
   "kona-primitives/serde",
@@ -74,7 +74,6 @@ serde = [
   "alloy-consensus/serde",
   "op-alloy-consensus/serde"
 ]
-k256 = ["alloy-primitives/k256", "alloy-consensus/k256", "op-alloy-consensus/k256"]
 metrics = ["dep:prometheus", "dep:lazy_static"]
 online = [
   "dep:serde_json",
