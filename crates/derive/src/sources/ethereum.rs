@@ -147,7 +147,7 @@ mod tests {
         assert!(matches!(data_iter, EthereumDataSourceVariant::Calldata(_)));
 
         // Should successfully retrieve a calldata batch from the block
-        let calldata_batch = data_iter.next().await.unwrap().unwrap();
+        let calldata_batch = data_iter.next().await.unwrap();
         assert_eq!(calldata_batch.len(), 119823);
     }
 }

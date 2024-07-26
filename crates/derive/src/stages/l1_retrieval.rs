@@ -94,14 +94,13 @@ where
             self.data = Some(self.provider.open_data(&next).await?);
         }
 
-        let data = self.data.as_mut().expect("Cannot be None").next().await.ok_or(StageError::Eof);
-        match data {
-            Ok(Ok(data)) => Ok(data),
-            Err(StageError::Eof) | Ok(Err(StageError::Eof)) => {
+        match self.data.as_mut().expect("Cannot be None").next().await {
+            Ok(data) => Ok(data),
+            Err(StageError::Eof) => {
                 self.data = None;
                 Err(StageError::Eof)
             }
-            Ok(Err(e)) | Err(e) => Err(e),
+            Err(e) => Err(e),
         }
     }
 }

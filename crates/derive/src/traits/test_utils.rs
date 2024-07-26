@@ -30,8 +30,8 @@ pub struct TestIter {
 impl AsyncIterator for TestIter {
     type Item = Bytes;
 
-    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
-        Some(self.results.pop().unwrap_or_else(|| Err(StageError::Eof)))
+    async fn next(&mut self) -> StageResult<Self::Item> {
+        self.results.pop().unwrap_or_else(|| Err(StageError::Eof))
     }
 }
 

@@ -56,7 +56,7 @@ where
 {
     type Item = Bytes;
 
-    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
+    async fn next(&mut self) -> StageResult<Self::Item> {
         // Process origin syncs the challenge contract events and updates the local challenge states
         // before we can proceed to fetch the input data. This function can be called multiple times
         // for the same origin and noop if the origin was already processed. It is also called if
@@ -67,14 +67,14 @@ where
             }
             Some(Err(PlasmaError::ReorgRequired)) => {
                 tracing::error!("new expired challenge");
-                return Some(StageResult::Err(StageError::Reset(ResetError::NewExpiredChallenge)));
+                return StageResult::Err(StageError::Reset(ResetError::NewExpiredChallenge));
             }
             Some(Err(e)) => {
                 tracing::error!("failed to advance plasma L1 origin: {:?}", e);
-                return Some(StageResult::Err(StageError::Temporary(anyhow::anyhow!(
+                return StageResult::Err(StageError::Temporary(anyhow::anyhow!(
                     "failed to advance plasma L1 origin: {:?}",
                     e
-                ))));
+                )));
             }
             None => {
                 tracing::warn!("l1 origin advance returned None");
@@ -88,21 +88,21 @@ where
                 Ok(d) => d,
                 Err(e) => {
                     tracing::warn!("failed to pull next data from the plasma source iterator");
-                    return Some(Err(StageError::Custom(anyhow!(e))));
+                    return Err(StageError::Custom(anyhow!(e)));
                 }
             };
 
             // If the data is empty,
             if data.is_empty() {
                 tracing::warn!("empty data from plasma source");
-                return Some(Err(StageError::Custom(anyhow!(PlasmaError::NotEnoughData))));
+                return Err(StageError::Custom(anyhow!(PlasmaError::NotEnoughData)));
             }
 
             // If the tx data type is not plasma, we forward it downstream to let the next
             // steps validate and potentially parse it as L1 DA inputs.
             if data[0] != TX_DATA_VERSION_1 {
                 tracing::info!("non-plasma tx data, forwarding downstream");
-                return Some(Ok(data));
+                return Ok(data);
             }
 
             // Validate that the batcher inbox data is a commitment.
@@ -130,7 +130,7 @@ where
                 // DA manager continued syncing origins detached from the pipeline
                 // origin.
                 tracing::warn!("challenge for a new previously derived commitment expired");
-                return Some(Err(StageError::Reset(ResetError::ReorgRequired)));
+                return Err(StageError::Reset(ResetError::ReorgRequired));
             }
             Some(Err(PlasmaError::ChallengeExpired)) => {
                 // This commitment was challenged and the challenge expired.
@@ -141,30 +141,30 @@ where
             }
             Some(Err(PlasmaError::MissingPastWindow)) => {
                 tracing::warn!("missing past window, skipping batch");
-                return Some(Err(StageError::Critical(anyhow::anyhow!(
+                return Err(StageError::Critical(anyhow::anyhow!(
                     "data for commitment {:?} not available",
                     commitment
-                ))));
+                )));
             }
             Some(Err(PlasmaError::ChallengePending)) => {
                 // Continue stepping without slowing down.
                 tracing::debug!("plasma challenge pending, proceeding");
-                return Some(Err(StageError::NotEnoughData));
+                return Err(StageError::NotEnoughData);
             }
             Some(Err(e)) => {
                 // Return temporary error so we can keep retrying.
-                return Some(Err(StageError::Temporary(anyhow::anyhow!(
+                return Err(StageError::Temporary(anyhow::anyhow!(
                     "failed to fetch input data with comm {:?} from da service: {:?}",
                     commitment,
                     e
-                ))));
+                )));
             }
             None => {
                 // Return temporary error so we can keep retrying.
-                return Some(Err(StageError::Temporary(anyhow::anyhow!(
+                return Err(StageError::Temporary(anyhow::anyhow!(
                     "failed to fetch input data with comm {:?} from da service",
                     commitment
-                ))));
+                )));
             }
         };
 
@@ -179,7 +179,7 @@ where
         // Reset the commitment so we can fetch the next one from the source at the next iteration.
         self.commitment = None;
 
-        return Some(Ok(data));
+        return Ok(data);
     }
 }
 
@@ -207,7 +207,7 @@ mod tests {
 
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
-        let err = plasma_source.next().await.unwrap().unwrap_err();
+        let err = plasma_source.next().await.unwrap_err();
         assert_eq!(err, StageError::Reset(ResetError::NewExpiredChallenge));
     }
 
@@ -223,7 +223,7 @@ mod tests {
 
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
-        let err = plasma_source.next().await.unwrap().unwrap_err();
+        let err = plasma_source.next().await.unwrap_err();
         matches!(err, StageError::Temporary(_));
     }
 
@@ -236,7 +236,7 @@ mod tests {
 
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
-        let err = plasma_source.next().await.unwrap().unwrap_err();
+        let err = plasma_source.next().await.unwrap_err();
         assert_eq!(err, StageError::Custom(anyhow!(PlasmaError::NotEnoughData)));
     }
 
@@ -253,7 +253,7 @@ mod tests {
 
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
-        let err = plasma_source.next().await.unwrap().unwrap_err();
+        let err = plasma_source.next().await.unwrap_err();
         assert_eq!(err, StageError::Custom(anyhow!(PlasmaError::NotEnoughData)));
 
         let logs = trace_store.get_by_level(Level::WARN);
@@ -275,7 +275,7 @@ mod tests {
 
         let mut plasma_source = PlasmaSource::new(chain_provider, input_fetcher, source, id);
 
-        let data = plasma_source.next().await.unwrap().unwrap();
+        let data = plasma_source.next().await.unwrap();
         assert_eq!(data, first);
 
         let logs = trace_store.get_by_level(Level::INFO);
