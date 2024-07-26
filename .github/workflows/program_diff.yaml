@@ -75,7 +75,7 @@ jobs:
     env:
       CLIENT_BIN_PATH: ./op-program/bin/op-program-client.elf
     outputs:
-      OUT_WITNESS_HASH: ${{ steps.export-witness-hash.outputs.OUT_WITNESS_HASH }}
+      OUT_WITNESS_STATUS: ${{ steps.export-witness-status-byte.outputs.OUT_WITNESS_STATUS }}
     steps:
       - name: Install jq
         uses: dcarbone/install-jq-action@v2.1.0
@@ -118,19 +118,19 @@ jobs:
             --l1 $L1_RPC \
             --l1.beacon $L1_BEACON \
             --l2 $L2_RPC \
-      - name: Export `out.json` state witness hash
-        id: export-witness-hash
+      - name: Export `out.json` state witness status byte
+        id: export-witness-status-byte
         run: |
-          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ')
-          echo "OUT_WITNESS_HASH=$(echo $OUT_WITNESS_HASH | xargs printf "%02x")"
-          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH" >> "$GITHUB_OUTPUT"
+          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash)
+          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH"
+          echo "OUT_WITNESS_STATUS=${OUT_WITNESS_HASH:2:2}" >> "$GITHUB_OUTPUT"
   run-asterisc-kona:
     needs: gather-inputs
     name: "Asterisc + kona (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
-      OUT_WITNESS_HASH: ${{ steps.export-witness-hash.outputs.OUT_WITNESS_HASH }}
+      OUT_WITNESS_STATUS: ${{ steps.export-witness-status-byte.outputs.OUT_WITNESS_STATUS }}
     env:
       CLIENT_BIN_PATH: ./target/riscv64gc-unknown-none-elf/release-client-lto/kona
       HOST_BIN_PATH: ./target/release/kona-host
@@ -187,12 +187,12 @@ jobs:
             --l1-beacon-address $L1_BEACON \
             --l2-node-address $L2_RPC \
             -vv
-      - name: Export `out.json` state witness hash
-        id: export-witness-hash
+      - name: Export `out.json` state witness status byte
+        id: export-witness-status-byte
         run: |
-          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ')
-          echo "OUT_WITNESS_HASH=$(echo $OUT_WITNESS_HASH | xargs printf "%02x")"
-          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH" >> "$GITHUB_OUTPUT"
+          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash)
+          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH"
+          echo "OUT_WITNESS_STATUS=${OUT_WITNESS_HASH:2:2}" >> "$GITHUB_OUTPUT"
   check-results:
     needs: [run-cannon-op-program, run-asterisc-kona]
     name: Check Results
@@ -200,15 +200,12 @@ jobs:
     steps:
       - name: Compare program results
         run: |
-          ASTERISC_KONA_SW=$(echo "${{ needs.run-asterisc-kona.outputs.OUT_WITNESS_HASH }}" | xargs printf "%02x")
-          CANNON_OP_PROGRAM_SW=$(echo "${{ needs.run-cannon-op-program.outputs.OUT_WITNESS_HASH }}" | xargs printf "%02x")
-          echo "Asterisc/Kona State Witness Hash: $ASTERISC_KONA_SW"
-          echo "Cannon/op-program State Witness Hash: $CANNON_OP_PROGRAM_SW"
+          ASTERISC_KONA_SW="${{ needs.run-asterisc-kona.outputs.OUT_WITNESS_STATUS }}"
+          CANNON_OP_PROGRAM_SW="${{ needs.run-cannon-op-program.outputs.OUT_WITNESS_STATUS }}"
+          echo "Asterisc/Kona State Witness Status Byte: $ASTERISC_KONA_SW"
+          echo "Cannon/op-program State Witness Status Byte: $CANNON_OP_PROGRAM_SW"
 
-          STATUS_BYTE_CANNON=${CANNON_OP_PROGRAM_SW:0:2}
-          STATUS_BYTE_ASTERISC=${ASTERISC_KONA_SW:0:2}
-
-          if [ "$STATUS_BYTE_CANNON" != "$STATUS_BYTE_ASTERISC" ]; then
+          if [ "$ASTERISC_KONA_SW" != "$CANNON_OP_PROGRAM_SW" ]; then
             echo "State witness status bytes differ!"
             exit 1
           fi
