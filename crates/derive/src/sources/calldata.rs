@@ -23,7 +23,6 @@ where
     /// Block Ref
     block_ref: BlockInfo,
     /// The L1 Signer.
-    #[allow(dead_code)] // Allow dead code for non-k256 builds.
     signer: Address,
     /// Current calldata.
     calldata: VecDeque<Bytes>,
