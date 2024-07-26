@@ -17,23 +17,33 @@ jobs:
     name: Gather Input Parameters
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      L2_BLOCK_NUMBER: ${{ steps.fetch-inputs.outputs.L2_BLOCK_NUMBER }}
+      L2_CLAIM: ${{ steps.fetch-inputs.outputs.L2_CLAIM }}
+      L2_OUTPUT_ROOT: ${{ steps.fetch-inputs.outputs.L2_OUTPUT_ROOT }}
+      L2_HEAD: ${{ steps.fetch-inputs.outputs.L2_HEAD }}
+      L1_ORIGIN_NUM: ${{ steps.fetch-inputs.outputs.L1_ORIGIN_NUM }}
+      L1_HEAD: ${{ steps.fetch-inputs.outputs.L1_HEAD }}
+      L2_CHAIN_ID: ${{ steps.fetch-inputs.outputs.L2_CHAIN_ID }}
     steps:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
       - name: Install jq
         uses: dcarbone/install-jq-action@v2.1.0
       - name: Fetch input parameters
+        id: fetch-inputs
         run: |
           #!/bin/bash
 
-          # Fetch the safe head of the L2 chain
-          L2_BLOCK_NUMBER=$(cast block safe -j --rpc-url $L2_RPC | jq -r .number | cast 2d)
+          # Fetch the finalized head of the L2 chain
+          L2_BLOCK_NUMBER=$(cast block finalized -j --rpc-url $L2_RPC | jq -r .number | cast 2d)
+          STARTING_L2_BLOCK_NUMBER=$((L2_BLOCK_NUMBER - 1))
 
           # Fetch the program inputs
           L2_CLAIM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .outputRoot)
-          L2_OUTPUT_ROOT=$(cast rpc "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) --rpc-url $L2_RPC | jq -r .outputRoot)
-          L2_HEAD=$(cast block $((L2_BLOCK_NUMBER - 1)) -j --rpc-url $L2_RPC | jq -r .hash)
-          L1_ORIGIN_NUM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) --rpc-url $L2_RPC | jq -r .blockRef.l1origin.number)
+          L2_OUTPUT_ROOT=$(cast rpc "optimism_outputAtBlock" $(cast 2h $STARTING_L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .outputRoot)
+          L2_HEAD=$(cast block $STARTING_L2_BLOCK_NUMBER -j --rpc-url $L2_RPC | jq -r .hash)
+          L1_ORIGIN_NUM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $STARTING_L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .blockRef.l1origin.number)
           L1_HEAD=$(cast block $((L1_ORIGIN_NUM + 30)) -j --rpc-url $L1_RPC | jq -r .hash)
           L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_RPC)
 
@@ -47,4 +57,38 @@ jobs:
           echo "Starting L2 Output Root L1 origin: $L1_ORIGIN_NUM"
           echo "L1 head (block #$((L1_ORIGIN_NUM + 30))): $L1_HEAD"
 
-          # TODO: Export into GitHub env to forward to next task.
+          # Export all gathered inputs to the job's output
+          echo "L2_BLOCK_NUMBER=$L2_BLOCK_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "L2_CLAIM=$L2_CLAIM" >> "$GITHUB_OUTPUT"
+          echo "L2_OUTPUT_ROOT=$L2_OUTPUT_ROOT" >> "$GITHUB_OUTPUT"
+          echo "L2_HEAD=$L2_HEAD" >> "$GITHUB_OUTPUT"
+          echo "L1_ORIGIN_NUM=$L1_ORIGIN_NUM" >> "$GITHUB_OUTPUT"
+          echo "L1_HEAD=$L1_HEAD" >> "$GITHUB_OUTPUT"
+          echo "L2_CHAIN_ID=$L2_CHAIN_ID" >> "$GITHUB_OUTPUT"
+  run-cannon-op-program:
+    needs: gather-inputs
+    name: "Cannon + op-program (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dummy
+        run: |
+          # TODO: Run the Cannon and OP Program on the OP Sepolia L2 chain
+          echo "Dummy step"
+  run-asterisc-kona:
+    needs: gather-inputs
+    name: "Asterisc + kona (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dummy
+        run: |
+          # TODO: Run the Asterisc and Kona programs on the OP Sepolia L2 chain
+          echo "Dummy step"
+  check-results:
+    needs: [run-cannon-op-program, run-asterisc-kona]
+    name: Check Results
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dummy
+        run: |
+          # TODO: Consume results from previous steps, check for equivalent opinion on the state transition.
+          echo "Dummy step"
