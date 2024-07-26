@@ -71,6 +71,7 @@ jobs:
     needs: gather-inputs
     name: "Cannon + op-program (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       CLIENT_BIN_PATH: ./op-program/bin/op-program-client.elf
     outputs:
@@ -120,7 +121,8 @@ jobs:
       - name: Export `out.json` state witness hash
         id: export-witness-hash
         run: |
-          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ' | xargs printf "%02x")
+          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ')
+          echo "OUT_WITNESS_HASH=$(echo $OUT_WITNESS_HASH | xargs printf "%02x")"
           echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH" >> "$GITHUB_OUTPUT"
   run-asterisc-kona:
     needs: gather-inputs
@@ -188,7 +190,8 @@ jobs:
       - name: Export `out.json` state witness hash
         id: export-witness-hash
         run: |
-          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ' | xargs printf "%02x")
+          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash | tr -d '[], ')
+          echo "OUT_WITNESS_HASH=$(echo $OUT_WITNESS_HASH | xargs printf "%02x")"
           echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH" >> "$GITHUB_OUTPUT"
   check-results:
     needs: [run-cannon-op-program, run-asterisc-kona]
@@ -197,8 +200,8 @@ jobs:
     steps:
       - name: Compare program results
         run: |
-          ASTERISC_KONA_SW="${{ needs.run-asterisc-kona.outputs.OUT_WITNESS_HASH }}"
-          CANNON_OP_PROGRAM_SW="${{ needs.run-cannon-op-program.outputs.OUT_WITNESS_HASH }}"
+          ASTERISC_KONA_SW=$(echo "${{ needs.run-asterisc-kona.outputs.OUT_WITNESS_HASH }}" | xargs printf "%02x")
+          CANNON_OP_PROGRAM_SW=$(echo "${{ needs.run-cannon-op-program.outputs.OUT_WITNESS_HASH }}" | xargs printf "%02x")
           echo "Asterisc/Kona State Witness Hash: $ASTERISC_KONA_SW"
           echo "Cannon/op-program State Witness Hash: $CANNON_OP_PROGRAM_SW"
 
