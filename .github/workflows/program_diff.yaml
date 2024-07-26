@@ -1,0 +1,50 @@
+name: Scheduled FPP Differential Test
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+  # schedule:
+  #   # Runs "at 05:00, only on Monday" (see https://crontab.guru)
+  #   - cron: "0 5 * * 1"
+env:
+  CARGO_TERM_COLOR: always
+  L1_RPC: https://ci-sepolia-l1.optimism.io
+  L1_BEACON: https://ci-sepolia-beacon.optimism.io
+  L2_RPC: https://ci-sepolia-l2.optimism.io
+
+jobs:
+  gather-inputs:
+    name: Gather Input Parameters
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
+      - name: Fetch input parameters
+        run: |
+          #!/bin/bash
+
+          # Fetch the safe head of the L2 chain
+          L2_BLOCK_NUMBER=$(cast block safe -j --rpc-url $L2_RPC | jq -r .number | cast 2d)
+
+          # Fetch the program inputs
+          L2_CLAIM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .outputRoot)
+          L2_OUTPUT_ROOT=$(cast rpc "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) --rpc-url $L2_RPC | jq -r .outputRoot)
+          L2_HEAD=$(cast block $((L2_BLOCK_NUMBER - 1)) -j --rpc-url $L2_RPC | jq -r .hash)
+          L1_ORIGIN_NUM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $((L2_BLOCK_NUMBER - 1))) --rpc-url $L2_RPC | jq -r .blockRef.l1origin.number)
+          L1_HEAD=$(cast block $((L1_ORIGIN_NUM + 30)) -j --rpc-url $L1_RPC | jq -r .hash)
+          L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_RPC)
+
+          # Print all gathered inputs
+          echo "===== [ PROGRAM INPUTS ] ====="
+          echo "L2 Chain ID: $L2_CHAIN_ID"
+          echo "L2 block number: $L2_BLOCK_NUMBER"
+          echo "L2 claim: $L2_CLAIM"
+          echo "Starting L2 Output Root: $L2_OUTPUT_ROOT"
+          echo "Starting L2 head: $L2_HEAD"
+          echo "Starting L2 Output Root L1 origin: $L1_ORIGIN_NUM"
+          echo "L1 head (block #$((L1_ORIGIN_NUM + 30))): $L1_HEAD"
+
+          # TODO: Export into GitHub env to forward to next task.
