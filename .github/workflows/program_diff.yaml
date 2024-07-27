@@ -2,10 +2,9 @@ name: Scheduled FPP Differential Test
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-  # schedule:
-  #   # Runs "at 05:00, only on Monday" (see https://crontab.guru)
-  #   - cron: "0 5 * * 1"
+  schedule:
+    # Runs every 12 hours, on the hour.
+    - cron: "0 */12 * * * "
 env:
   CARGO_TERM_COLOR: always
   ASTERISC_TAG: v1.0.0
