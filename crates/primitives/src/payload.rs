@@ -218,7 +218,7 @@ impl L2ExecutionPayloadEnvelope {
         };
 
         Ok(SystemConfig {
-            batcher_addr: l1_info.batcher_address(),
+            batcher_address: l1_info.batcher_address(),
             overhead: l1_info.l1_fee_overhead(),
             scalar: l1_fee_scalar,
             gas_limit: execution_payload.gas_limit as u64,

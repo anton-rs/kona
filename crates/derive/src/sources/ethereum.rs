@@ -45,7 +45,7 @@ where
                 .genesis
                 .system_config
                 .as_ref()
-                .map(|sc| sc.batcher_addr)
+                .map(|sc| sc.batcher_address)
                 .unwrap_or_default(),
             batch_inbox_address: cfg.batch_inbox_address,
         }
@@ -133,8 +133,7 @@ mod tests {
         let block_ref = BlockInfo { number: 10, ..Default::default() };
 
         let mut cfg = RollupConfig::default();
-        cfg.genesis.system_config =
-            Some(SystemConfig { batcher_addr: batcher_address, ..Default::default() });
+        cfg.genesis.system_config = Some(SystemConfig { batcher_address, ..Default::default() });
         cfg.batch_inbox_address = batch_inbox;
 
         // load a test batcher transaction
