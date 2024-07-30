@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kona_derive::{online::*, types::StageError};
 use std::sync::Arc;
+use superchain_registry::ROLLUP_CONFIGS;
 use tracing::{debug, error, info, trace, warn};
 
 mod cli;
@@ -46,8 +47,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let l2_chain_id =
         l2_provider.chain_id().await.expect("Failed to fetch chain ID from L2 provider");
     metrics::CHAIN_ID.inc_by(l2_chain_id);
-    let cfg = RollupConfig::from_l2_chain_id(l2_chain_id)
-        .expect("Failed to fetch rollup config from L2 chain ID");
+    let cfg = ROLLUP_CONFIGS.get(&l2_chain_id).expect("Failed to get rollup config from the superchain registry for the provider's l2 chain id").clone();
     let cfg = Arc::new(cfg);
     metrics::GENESIS_L2_BLOCK.inc_by(cfg.genesis.l2.number);
 
