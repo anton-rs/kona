@@ -243,9 +243,16 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
             return Ok(Vec::new());
         }
 
+        // Extract the genesis timestamp and slot interval from the primary provider.
+        let slot = S::slot(
+            self.primary.genesis_time.expect("Genesis Config Loaded"),
+            self.primary.slot_interval.expect("Config Spec Loaded"),
+            block_ref.timestamp,
+        )
+        .map_err(BlobProviderError::Slot)?;
+
         // Fetch blob sidecars for the given block reference and blob hashes.
-        let sidecars =
-            self.fallback.beacon_blob_side_cars(block_ref.timestamp, blob_hashes).await?;
+        let sidecars = self.fallback.beacon_blob_side_cars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
         let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
