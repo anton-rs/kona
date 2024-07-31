@@ -22,7 +22,9 @@ mod alloy_providers;
 pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider};
 
 mod blob_provider;
-pub use blob_provider::{OnlineBlobProvider, OnlineBlobProviderWithFallback, SimpleSlotDerivation};
+pub use blob_provider::{
+    BlobSidecarProvider, OnlineBlobProvider, OnlineBlobProviderWithFallback, SimpleSlotDerivation,
+};
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
