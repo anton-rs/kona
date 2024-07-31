@@ -39,6 +39,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let l1_rpc_url = cli.l1_rpc_url()?;
     let l2_rpc_url = cli.l2_rpc_url()?;
     let beacon_url = cli.beacon_url()?;
+    let blob_archiver_url = cli.blob_archiver_url()?;
 
     // Query for the L2 Chain ID
     let mut l2_provider =
@@ -74,7 +75,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let beacon_client = OnlineBeaconClient::new_http(beacon_url);
     let blob_provider =
         OnlineBlobProvider::<_, SimpleSlotDerivation>::new(beacon_client, None, None);
-    let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
+    let blob_archiver = OnlineBeaconClient::new_http(blob_archiver_url);
+    let blob_provider_with_fallback =
+        OnlineBlobProviderWithFallback::new(blob_provider, blob_archiver);
+    let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider_with_fallback, &cfg);
     let mut cursor = l2_provider
         .l2_block_info_by_number(start)
         .await

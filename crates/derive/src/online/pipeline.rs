@@ -2,8 +2,8 @@
 
 use super::{
     AlloyChainProvider, AlloyL2ChainProvider, BlockInfo, DerivationPipeline, EthereumDataSource,
-    OnlineBeaconClient, OnlineBlobProvider, PipelineBuilder, RollupConfig, SimpleSlotDerivation,
-    StatefulAttributesBuilder,
+    OnlineBeaconClient, OnlineBlobProviderWithFallback, PipelineBuilder, RollupConfig,
+    SimpleSlotDerivation, StatefulAttributesBuilder,
 };
 use alloc::sync::Arc;
 // Pipeline internal stages aren't re-exported at the module-level.
@@ -18,7 +18,7 @@ pub type OnlinePipeline =
 /// An `online` Ethereum data source.
 pub type OnlineDataProvider = EthereumDataSource<
     AlloyChainProvider,
-    OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
+    OnlineBlobProviderWithFallback<OnlineBeaconClient, OnlineBeaconClient, SimpleSlotDerivation>,
 >;
 
 /// An `online` payload attributes builder for the `AttributesQueue` stage of the derivation
