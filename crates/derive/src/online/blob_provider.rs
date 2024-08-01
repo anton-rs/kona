@@ -5,7 +5,7 @@ use crate::{
     traits::BlobProvider,
     types::{APIBlobSidecar, Blob, BlobProviderError, BlobSidecar, BlockInfo, IndexedBlobHash},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use anyhow::{anyhow, ensure};
 use async_trait::async_trait;
 use core::marker::PhantomData;
