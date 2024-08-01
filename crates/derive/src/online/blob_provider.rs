@@ -353,8 +353,8 @@ where
 /// The fallback provider is optional and can be set using the [Self::with_fallback] method.
 ///
 /// Two convenience methods are available for initializing the providers from beacon client URLs:
-/// - [Self::with_primary_beacon_client_url] for the primary beacon client.
-/// - [Self::with_fallback_beacon_client_url] for the fallback beacon client.
+/// - [Self::with_primary] for the primary beacon client.
+/// - [Self::with_fallback] for the fallback beacon client.
 #[derive(Debug, Clone)]
 pub struct OnlineBlobProviderBuilder<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation> {
     beacon_client: Option<B>,
