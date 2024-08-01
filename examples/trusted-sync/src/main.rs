@@ -92,6 +92,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     // Reset metrics so they can be queried.
     metrics::FAILED_PAYLOAD_DERIVATION.reset();
     metrics::DRIFT_WALKBACK.set(0);
+    metrics::RETRIES.reset();
     metrics::DRIFT_WALKBACK_TIMESTAMP.set(0);
     metrics::DERIVED_ATTRIBUTES_COUNT.reset();
     metrics::FAST_FORWARD_BLOCK.set(0);
@@ -99,6 +100,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
 
     // Continuously step on the pipeline and validate payloads.
     let mut advance_cursor_flag = false;
+    let mut retries = 0;
     loop {
         // Update the reference l2 head.
         match l2_provider.latest_block_number().await {
@@ -226,6 +228,20 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 Ok((true, _)) => trace!(target: LOG_TARGET, "Validated payload attributes"),
                 Ok((false, expected)) => {
                     error!(target: LOG_TARGET, "Failed payload validation. Derived payload attributes: {:?}, Expected: {:?}", attributes, expected);
+                    // Attempt to re-validate payload attributes if we haven't reached the retry
+                    // limit. Since validation didn't error, either this is hit
+                    // because:
+                    // - The payload attributes are actually invalid
+                    // - Validation returned a flakey result (e.g. `debug_getRawTransaction` returns
+                    //   empty bytes which has been seen on multiple occurances)
+                    if retries < cli.invalid_payload_retries {
+                        retries += 1;
+                        metrics::RETRIES.inc();
+                        // Back-off for a few seconds before retrying.
+                        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        continue;
+                    }
+                    retries = 0;
                     metrics::FAILED_PAYLOAD_DERIVATION.inc();
                     let _ = pipeline.next(); // Take the attributes and continue
                     continue;
@@ -240,6 +256,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             debug!(target: LOG_TARGET, "No attributes to validate");
             continue;
         };
+        retries = 0;
 
         // Take the next attributes from the pipeline since they're valid.
         let attributes = if let Some(attributes) = pipeline.next() {

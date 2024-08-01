@@ -72,6 +72,10 @@ lazy_static! {
         let opts = opts!("trusted_sync_pipeline_steps", "Number of pipeline steps");
         register_gauge_vec!(opts, &["status"]).expect("Failed to register pipeline steps metric")
     };
+
+    /// Tracks the number of retries for invalid payloads.
+    pub static ref RETRIES: IntCounter =
+        register_int_counter!("trusted_sync_validation_retries", "Invalid Payload Retries").expect("Failed to register retries metric");
 }
 
 /// Starts the metrics server.
