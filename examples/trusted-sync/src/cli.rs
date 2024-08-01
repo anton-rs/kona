@@ -54,6 +54,13 @@ pub struct Cli {
         help = "Parameterized threshold amount of blocks to drift from before fast-forwarding or walking back"
     )]
     pub drift_threshold: u64,
+    /// Number of failed payload validation retries before recording an invalid payload attributes.
+    #[clap(
+        long,
+        default_value_t = 3,
+        help = "Number of failed payload validation retries before recording an invalid payload attributes"
+    )]
+    pub invalid_payload_retries: u64,
 }
 
 impl Cli {
