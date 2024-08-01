@@ -40,5 +40,5 @@ pub trait AsyncIterator {
 
     /// Returns the next item in the iterator, or [crate::types::StageError::Eof] if the iterator is
     /// exhausted.
-    async fn next(&mut self) -> Option<StageResult<Self::Item>>;
+    async fn next(&mut self) -> StageResult<Self::Item>;
 }

@@ -30,7 +30,7 @@ where
 {
     type Item = Bytes;
 
-    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
+    async fn next(&mut self) -> StageResult<Self::Item> {
         match self {
             EthereumDataSourceVariant::Calldata(c) => c.next().await,
             EthereumDataSourceVariant::Blob(b) => b.next().await,

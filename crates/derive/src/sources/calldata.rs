@@ -88,10 +88,10 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
     type Item = Bytes;
 
-    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
+    async fn next(&mut self) -> StageResult<Self::Item> {
         if self.load_calldata().await.is_err() {
-            return Some(Err(StageError::BlockFetch(self.block_ref.hash)));
+            return Err(StageError::BlockFetch(self.block_ref.hash));
         }
-        Some(self.calldata.pop_front().ok_or(StageError::Eof))
+        self.calldata.pop_front().ok_or(StageError::Eof)
     }
 }

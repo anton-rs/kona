@@ -161,9 +161,9 @@ where
     }
 
     /// Extracts the next data from the source.
-    fn next_data(&mut self) -> Result<BlobData, Option<Result<Bytes, StageError>>> {
+    fn next_data(&mut self) -> Result<BlobData, Result<Bytes, StageError>> {
         if self.data.is_empty() {
-            return Err(Some(Err(StageError::Eof)));
+            return Err(Err(StageError::Eof));
         }
 
         Ok(self.data.remove(0))
@@ -178,23 +178,23 @@ where
 {
     type Item = Bytes;
 
-    async fn next(&mut self) -> Option<StageResult<Self::Item>> {
+    async fn next(&mut self) -> StageResult<Self::Item> {
         if self.load_blobs().await.is_err() {
-            return Some(Err(StageError::BlockFetch(self.block_ref.hash)));
+            return Err(StageError::BlockFetch(self.block_ref.hash));
         }
 
         let next_data = match self.next_data() {
             Ok(d) => d,
             Err(e) => return e,
         };
-        if next_data.calldata.is_some() {
-            return Some(Ok(next_data.calldata.unwrap()));
+        if let Some(c) = next_data.calldata {
+            return Ok(c);
         }
 
         // Decode the blob data to raw bytes.
         // Otherwise, ignore blob and recurse next.
         match next_data.decode() {
-            Ok(d) => Some(Ok(d)),
+            Ok(d) => Ok(d),
             Err(_) => {
                 warn!(target: "blob-source", "Failed to decode blob data, skipping");
                 self.next().await
