@@ -7,6 +7,7 @@ use reqwest::Url;
 const L1_RPC_URL: &str = "L1_RPC_URL";
 const L2_RPC_URL: &str = "L2_RPC_URL";
 const BEACON_URL: &str = "BEACON_URL";
+const BLOB_ARCHIVER_URL: &str = "BLOB_ARCHIVER_URL";
 const METRICS_URL: &str = "METRICS_URL";
 const DEFAULT_METRICS_SERVER_ADDR: &str = "0.0.0.0";
 const DEFAULT_METRICS_SERVER_PORT: u16 = 9000;
@@ -28,6 +29,9 @@ pub struct Cli {
     /// The Beacon URL
     #[clap(long, short)]
     pub beacon_url: Option<String>,
+    /// The Blob Archiver URL
+    #[clap(long, short = 'B')]
+    pub blob_archiver_url: Option<String>,
     /// The l2 block to start from.
     #[clap(long, short, help = "Starting l2 block, defaults to chain genesis if none specified")]
     pub start_l2_block: Option<u64>,
@@ -111,5 +115,11 @@ impl Cli {
         } else {
             std::env::var(BEACON_URL).map_err(|e| anyhow!(e))?
         })
+    }
+
+    /// Returns the blob archiver url from CLI or environment variable.
+    /// If neither is set, returns None.
+    pub fn blob_archiver_url(&self) -> Option<String> {
+        self.blob_archiver_url.clone().or_else(|| std::env::var(BLOB_ARCHIVER_URL).ok())
     }
 }
