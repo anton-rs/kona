@@ -110,11 +110,9 @@ impl Cli {
         })
     }
 
-    pub fn blob_archiver_url(&self) -> Result<String> {
-        Ok(if let Some(s) = self.blob_archiver_url.clone() {
-            s
-        } else {
-            std::env::var(BLOB_ARCHIVER_URL).map_err(|e| anyhow!(e))?
-        })
+    /// Returns the blob archiver url from CLI or environment variable.
+    /// If neither is set, returns None.
+    pub fn blob_archiver_url(&self) -> Option<String> {
+        self.blob_archiver_url.clone().or_else(|| std::env::var(BLOB_ARCHIVER_URL).ok())
     }
 }

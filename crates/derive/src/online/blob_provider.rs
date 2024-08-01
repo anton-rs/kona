@@ -405,7 +405,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
     }
 
     /// Adds a fallback blob provider to the builder. This is optional.
-    pub fn with_fallback(mut self, fallback: F) -> Self {
+    pub fn with_fallback_provider(mut self, fallback: F) -> Self {
         self.fallback = Some(fallback);
         self
     }
@@ -420,7 +420,7 @@ impl<F: BlobSidecarProvider, S: SlotDerivation + Sync>
     OnlineBlobProviderBuilder<OnlineBeaconClient, F, S>
 {
     /// Adds a primary [OnlineBeaconClient] to the builder using the specified HTTP URL.
-    pub fn with_primary_beacon_client_url(mut self, url: String) -> Self {
+    pub fn with_primary(mut self, url: String) -> Self {
         self.beacon_client = Some(OnlineBeaconClient::new_http(url));
         self
     }
@@ -430,8 +430,8 @@ impl<B: BeaconClient + Send + Sync, S: SlotDerivation + Sync>
     OnlineBlobProviderBuilder<B, OnlineBeaconClient, S>
 {
     /// Adds a fallback [OnlineBeaconClient] to the builder using the specified HTTP URL.
-    pub fn with_fallback_beacon_client_url(mut self, url: String) -> Self {
-        self.fallback = Some(OnlineBeaconClient::new_http(url));
+    pub fn with_fallback(mut self, maybe_url: Option<String>) -> Self {
+        self.fallback = maybe_url.map(OnlineBeaconClient::new_http);
         self
     }
 }

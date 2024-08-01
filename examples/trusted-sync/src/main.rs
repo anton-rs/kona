@@ -39,7 +39,6 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let l1_rpc_url = cli.l1_rpc_url()?;
     let l2_rpc_url = cli.l2_rpc_url()?;
     let beacon_url = cli.beacon_url()?;
-    let blob_archiver_url = cli.blob_archiver_url().ok();
 
     // Query for the L2 Chain ID
     let mut l2_provider =
@@ -72,14 +71,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
-    let blob_provider = if let Some(blob_archiver_url) = blob_archiver_url {
-        OnlineBlobProviderBuilder::new()
-            .with_primary_beacon_client_url(beacon_url)
-            .with_fallback_beacon_client_url(blob_archiver_url)
-            .build()
-    } else {
-        OnlineBlobProviderBuilder::new().with_primary_beacon_client_url(beacon_url).build()
-    };
+    let blob_provider = OnlineBlobProviderBuilder::new()
+        .with_primary(beacon_url)
+        .with_fallback(cli.blob_archiver_url())
+        .build();
     let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
     let mut cursor = l2_provider
         .l2_block_info_by_number(start)
