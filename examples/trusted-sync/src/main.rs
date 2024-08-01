@@ -72,13 +72,11 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     let mut l2_provider = AlloyL2ChainProvider::new_http(l2_rpc_url.clone(), cfg.clone());
     let attributes =
         StatefulAttributesBuilder::new(cfg.clone(), l2_provider.clone(), l1_provider.clone());
-    let beacon_client = OnlineBeaconClient::new_http(beacon_url);
-    let blob_provider =
-        OnlineBlobProvider::<_, SimpleSlotDerivation>::new(beacon_client, None, None);
-    let blob_archiver = OnlineBeaconClient::new_http(blob_archiver_url);
-    let blob_provider_with_fallback =
-        OnlineBlobProviderWithFallback::new(blob_provider, blob_archiver);
-    let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider_with_fallback, &cfg);
+    let blob_provider = OnlineBlobProviderBuilder::new()
+        .with_primary_beacon_client_url(beacon_url)
+        .with_fallback_beacon_client_url(blob_archiver_url)
+        .build();
+    let dap = EthereumDataSource::new(l1_provider.clone(), blob_provider, &cfg);
     let mut cursor = l2_provider
         .l2_block_info_by_number(start)
         .await
