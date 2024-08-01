@@ -3,7 +3,7 @@
 //!
 //! [L2PayloadAttributes]: kona_derive::types::L2PayloadAttributes
 
-use super::{OracleBlobProvider, OracleL1ChainProvider};
+use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
@@ -16,7 +16,7 @@ use kona_derive::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{ChainProvider, L2ChainProvider},
+    traits::{BlobProvider, ChainProvider, L2ChainProvider},
 };
 use kona_mpt::TrieDBFetcher;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
@@ -24,12 +24,12 @@ use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
 use tracing::{info, warn};
 
 /// An oracle-backed derivation pipeline.
-pub type OraclePipeline<O> =
-    DerivationPipeline<OracleAttributesQueue<OracleDataProvider<O>, O>, OracleL2ChainProvider<O>>;
+pub type OraclePipeline<O, B> =
+    DerivationPipeline<OracleAttributesQueue<OracleDataProvider<O, B>, O>, OracleL2ChainProvider<O>>;
 
 /// An oracle-backed Ethereum data source.
-pub type OracleDataProvider<O> =
-    EthereumDataSource<OracleL1ChainProvider<O>, OracleBlobProvider<O>>;
+pub type OracleDataProvider<O, B> =
+    EthereumDataSource<OracleL1ChainProvider<O>, B>;
 
 /// An oracle-backed payload attributes builder for the `AttributesQueue` stage of the derivation
 /// pipeline.
@@ -55,16 +55,24 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
 ///
 /// [L2PayloadAttributes]: kona_derive::types::L2PayloadAttributes
 #[derive(Debug)]
-pub struct DerivationDriver<O: CommsClient + Send + Sync + Debug> {
+pub struct DerivationDriver<O, B>
+where
+    O: CommsClient + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone
+{
     /// The current L2 safe head.
     l2_safe_head: L2BlockInfo,
     /// The header of the L2 safe head.
     l2_safe_head_header: Sealed<Header>,
     /// The inner pipeline.
-    pipeline: OraclePipeline<O>,
+    pipeline: OraclePipeline<O, B>,
 }
 
-impl<O: CommsClient + Send + Sync + Debug> DerivationDriver<O> {
+impl<O, B> DerivationDriver<O, B>
+where
+    O: CommsClient + Send + Sync + Debug,
+    B: BlobProvider + Clone + Send + Sync + Debug
+{
     /// Returns the current L2 safe head [L2BlockInfo].
     pub fn l2_safe_head(&self) -> &L2BlockInfo {
         &self.l2_safe_head
@@ -94,7 +102,7 @@ impl<O: CommsClient + Send + Sync + Debug> DerivationDriver<O> {
     pub async fn new(
         boot_info: &BootInfo,
         caching_oracle: &O,
-        blob_provider: OracleBlobProvider<O>,
+        blob_provider: B,
         mut chain_provider: OracleL1ChainProvider<O>,
         mut l2_chain_provider: OracleL2ChainProvider<O>,
     ) -> Result<Self> {
