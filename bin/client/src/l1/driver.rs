@@ -24,12 +24,13 @@ use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
 use tracing::{info, warn};
 
 /// An oracle-backed derivation pipeline.
-pub type OraclePipeline<O, B> =
-    DerivationPipeline<OracleAttributesQueue<OracleDataProvider<O, B>, O>, OracleL2ChainProvider<O>>;
+pub type OraclePipeline<O, B> = DerivationPipeline<
+    OracleAttributesQueue<OracleDataProvider<O, B>, O>,
+    OracleL2ChainProvider<O>,
+>;
 
 /// An oracle-backed Ethereum data source.
-pub type OracleDataProvider<O, B> =
-    EthereumDataSource<OracleL1ChainProvider<O>, B>;
+pub type OracleDataProvider<O, B> = EthereumDataSource<OracleL1ChainProvider<O>, B>;
 
 /// An oracle-backed payload attributes builder for the `AttributesQueue` stage of the derivation
 /// pipeline.
@@ -58,7 +59,7 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
 pub struct DerivationDriver<O, B>
 where
     O: CommsClient + Send + Sync + Debug,
-    B: BlobProvider + Send + Sync + Debug + Clone
+    B: BlobProvider + Send + Sync + Debug + Clone,
 {
     /// The current L2 safe head.
     l2_safe_head: L2BlockInfo,
@@ -71,7 +72,7 @@ where
 impl<O, B> DerivationDriver<O, B>
 where
     O: CommsClient + Send + Sync + Debug,
-    B: BlobProvider + Clone + Send + Sync + Debug
+    B: BlobProvider + Send + Sync + Debug + Clone,
 {
     /// Returns the current L2 safe head [L2BlockInfo].
     pub fn l2_safe_head(&self) -> &L2BlockInfo {
