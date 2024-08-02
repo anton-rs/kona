@@ -135,10 +135,13 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                         metrics::FAST_FORWARD_BLOCK.set(cursor.block_info.number as i64);
                         metrics::FAST_FORWARD_TIMESTAMP.set(timestamp as i64);
                         if let Ok(c) = l2_provider.l2_block_info_by_number(latest - 100).await {
-                            let l1_block_info = l1_provider
+                            let Ok(l1_block_info) = l1_provider
                                 .block_info_by_number(c.l1_origin.number)
                                 .await
-                                .expect("Failed to fetch L1 block info for fast forward");
+                                else {
+                                    error!(target: LOG_TARGET, "Failed to fetch L2 block info for fast forward");
+                                    continue;
+                                };
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
                             if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
@@ -160,10 +163,13 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                             .l2_block_info_by_number(cursor.block_info.number - 100)
                             .await
                         {
-                            let l1_block_info = l1_provider
+                            let Ok(l1_block_info) = l1_provider
                                 .block_info_by_number(c.l1_origin.number)
                                 .await
-                                .expect("Failed to fetch L1 block info for fast forward");
+                                else {
+                                    error!(target: LOG_TARGET, "Failed to fetch L2 block info for walkback");
+                                    continue;
+                                };
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
                             if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
