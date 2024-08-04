@@ -38,4 +38,4 @@ clap = { version = "4.5.4", features = ["derive", "env"] }
 serde = { version = "1.0.198", features = ["derive"] }
 tracing-subscriber = "0.3.18"
 command-fds = { version = "0.3", features = ["tokio"] }
-tempfile = "3.10"
+os_pipe = "1.2.1"

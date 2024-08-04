@@ -24,13 +24,13 @@ use kona_preimage::{HintReader, OracleServer, PipeHandle};
 use kv::KeyValueStore;
 use std::{
     io::{stderr, stdin, stdout},
-    os::fd::AsFd,
+    os::fd::{AsFd, AsRawFd},
     panic::AssertUnwindSafe,
     sync::Arc,
 };
 use tokio::{process::Command, sync::RwLock, task};
 use tracing::{error, info};
-use types::NativePipeFiles;
+use util::Pipe;
 
 /// Starts the [PreimageServer] in the primary thread. In this mode, the host program has been
 /// invoked by the Fault Proof VM and the client program is running in the parent process.
@@ -78,7 +78,9 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
 /// Starts the [PreimageServer] and the client program in separate threads. The client program is
 /// ran natively in this mode.
 pub async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
-    let (preimage_pipe, hint_pipe, files) = util::create_native_pipes()?;
+    let hint_pipe = util::bidirectional_pipe()?;
+    let preimage_pipe = util::bidirectional_pipe()?;
+
     let kv_store = cfg.construct_kv_store();
 
     let fetcher = if !cfg.is_offline() {
@@ -106,20 +108,24 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
     };
 
     // Create the server and start it.
-    let server_task =
-        task::spawn(start_native_preimage_server(kv_store, fetcher, preimage_pipe, hint_pipe));
+    let server_task = task::spawn(start_native_preimage_server(
+        kv_store,
+        fetcher,
+        hint_pipe.host,
+        preimage_pipe.host,
+    ));
 
     // Start the client program in a separate child process.
-    let program_task = task::spawn(start_native_client_program(cfg, files));
+    let program_task =
+        task::spawn(start_native_client_program(cfg, hint_pipe.client, preimage_pipe.client));
 
     // Execute both tasks and wait for them to complete.
     info!("Starting preimage server and client program.");
-    tokio::try_join!(
-        util::flatten_join_result(server_task),
-        util::flatten_join_result(program_task)
-    )
-    .map_err(|e| anyhow!(e))?;
-    info!("Preimage server and client program have joined.");
+    tokio::select!(
+        r = util::flatten_join_result(server_task) => r?,
+        r = util::flatten_join_result(program_task) => r?
+    );
+    info!(target: "kona_host", "Preimage server and client program have exited.");
 
     Ok(())
 }
@@ -129,14 +135,20 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
 pub async fn start_native_preimage_server<KV>(
     kv_store: Arc<RwLock<KV>>,
     fetcher: Option<Arc<RwLock<Fetcher<KV>>>>,
-    preimage_pipe: PipeHandle,
-    hint_pipe: PipeHandle,
+    hint_pipe: Pipe,
+    preimage_pipe: Pipe,
 ) -> Result<()>
 where
     KV: KeyValueStore + Send + Sync + ?Sized + 'static,
 {
-    let oracle_server = OracleServer::new(preimage_pipe);
-    let hint_reader = HintReader::new(hint_pipe);
+    let hint_reader = HintReader::new(PipeHandle::new(
+        FileDescriptor::Wildcard(hint_pipe.read.as_raw_fd() as usize),
+        FileDescriptor::Wildcard(hint_pipe.write.as_raw_fd() as usize),
+    ));
+    let oracle_server = OracleServer::new(PipeHandle::new(
+        FileDescriptor::Wildcard(preimage_pipe.read.as_raw_fd() as usize),
+        FileDescriptor::Wildcard(preimage_pipe.write.as_raw_fd() as usize),
+    ));
 
     let server = PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher);
     AssertUnwindSafe(server.start())
@@ -151,7 +163,6 @@ where
             anyhow!("Preimage server exited with an error: {:?}", e)
         })?;
 
-    info!("Preimage server has exited.");
     Ok(())
 }
 
@@ -167,20 +178,45 @@ where
 /// ## Returns
 /// - `Ok(())` if the client program exits successfully.
 /// - `Err(_)` if the client program exits with a non-zero status.
-pub async fn start_native_client_program(cfg: HostCli, files: NativePipeFiles) -> Result<()> {
+pub async fn start_native_client_program(
+    cfg: HostCli,
+    hint_pipe: Pipe,
+    preimage_pipe: Pipe,
+) -> Result<()> {
     // Map the file descriptors to the standard streams and the preimage oracle and hint
     // reader's special file descriptors.
     let mut command =
         Command::new(cfg.exec.ok_or_else(|| anyhow!("No client program binary path specified."))?);
     command
         .fd_mappings(vec![
-            FdMapping { parent_fd: stdin().as_fd().try_clone_to_owned().unwrap(), child_fd: 0 },
-            FdMapping { parent_fd: stdout().as_fd().try_clone_to_owned().unwrap(), child_fd: 1 },
-            FdMapping { parent_fd: stderr().as_fd().try_clone_to_owned().unwrap(), child_fd: 2 },
-            FdMapping { parent_fd: files.hint_writ.into(), child_fd: 3 },
-            FdMapping { parent_fd: files.hint_read.into(), child_fd: 4 },
-            FdMapping { parent_fd: files.preimage_writ.into(), child_fd: 5 },
-            FdMapping { parent_fd: files.preimage_read.into(), child_fd: 6 },
+            FdMapping {
+                parent_fd: stdin().as_fd().try_clone_to_owned().unwrap(),
+                child_fd: FileDescriptor::StdIn.into(),
+            },
+            FdMapping {
+                parent_fd: stdout().as_fd().try_clone_to_owned().unwrap(),
+                child_fd: FileDescriptor::StdOut.into(),
+            },
+            FdMapping {
+                parent_fd: stderr().as_fd().try_clone_to_owned().unwrap(),
+                child_fd: FileDescriptor::StdErr.into(),
+            },
+            FdMapping {
+                parent_fd: hint_pipe.read.into(),
+                child_fd: FileDescriptor::HintRead.into(),
+            },
+            FdMapping {
+                parent_fd: hint_pipe.write.into(),
+                child_fd: FileDescriptor::HintWrite.into(),
+            },
+            FdMapping {
+                parent_fd: preimage_pipe.read.into(),
+                child_fd: FileDescriptor::PreimageRead.into(),
+            },
+            FdMapping {
+                parent_fd: preimage_pipe.write.into(),
+                child_fd: FileDescriptor::PreimageWrite.into(),
+            },
         ])
         .expect("No errors may occur when mapping file descriptors.");
 
@@ -198,6 +234,5 @@ pub async fn start_native_client_program(cfg: HostCli, files: NativePipeFiles) -
         return Err(anyhow!("Client program exited with a non-zero status."));
     }
 
-    info!(target: "client_program", "Client program has exited.");
     Ok(())
 }
