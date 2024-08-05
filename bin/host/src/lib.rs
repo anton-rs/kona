@@ -8,7 +8,6 @@ pub mod fetcher;
 pub mod kv;
 pub mod preimage;
 pub mod server;
-pub mod types;
 pub mod util;
 
 pub use cli::{init_tracing_subscriber, HostCli};

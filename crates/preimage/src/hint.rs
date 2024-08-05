@@ -105,38 +105,11 @@ mod test {
     extern crate std;
 
     use super::*;
+    use crate::test_utils::bidirectional_pipe;
     use alloc::{sync::Arc, vec::Vec};
     use kona_common::FileDescriptor;
-    use std::{fs::File, os::fd::AsRawFd};
-    use tempfile::tempfile;
+    use std::os::fd::AsRawFd;
     use tokio::sync::Mutex;
-
-    /// Test struct containing the [HintReader] and [HintWriter]. The [File]s are stored in this
-    /// struct so that they are not dropped until the end of the test.
-    #[derive(Debug)]
-    struct ClientAndHost {
-        hint_writer: HintWriter,
-        hint_reader: HintReader,
-        _read_file: File,
-        _write_file: File,
-    }
-
-    /// Helper for creating a new [HintReader] and [HintWriter] for testing. The file channel is
-    /// over two temporary files.
-    fn client_and_host() -> ClientAndHost {
-        let (read_file, write_file) = (tempfile().unwrap(), tempfile().unwrap());
-        let (read_fd, write_fd) = (
-            FileDescriptor::Wildcard(read_file.as_raw_fd().try_into().unwrap()),
-            FileDescriptor::Wildcard(write_file.as_raw_fd().try_into().unwrap()),
-        );
-        let client_handle = PipeHandle::new(read_fd, write_fd);
-        let host_handle = PipeHandle::new(write_fd, read_fd);
-
-        let hint_writer = HintWriter::new(client_handle);
-        let hint_reader = HintReader::new(host_handle);
-
-        ClientAndHost { hint_writer, hint_reader, _read_file: read_file, _write_file: write_file }
-    }
 
     struct TestRouter {
         incoming_hints: Arc<Mutex<Vec<String>>>,
@@ -154,24 +127,35 @@ mod test {
     async fn test_hint_client_and_host() {
         const MOCK_DATA: &str = "test-hint 0xfacade";
 
-        let sys = client_and_host();
-        let (hint_writer, hint_reader) = (sys.hint_writer, sys.hint_reader);
         let incoming_hints = Arc::new(Mutex::new(Vec::new()));
+        let hint_pipe = bidirectional_pipe().unwrap();
 
-        let client = tokio::task::spawn(async move { hint_writer.write(MOCK_DATA).await });
+        let client = tokio::task::spawn(async move {
+            let hint_writer = HintWriter::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+            ));
+
+            hint_writer.write(MOCK_DATA).await
+        });
         let host = tokio::task::spawn({
             let incoming_hints_ref = Arc::clone(&incoming_hints);
             async move {
                 let router = TestRouter { incoming_hints: incoming_hints_ref };
-                hint_reader.next_hint(&router).await.unwrap();
 
-                let mut hints = incoming_hints.lock().await;
-                assert_eq!(hints.len(), 1);
-                hints.remove(0)
+                let hint_reader = HintReader::new(PipeHandle::new(
+                    FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
+                    FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+                ));
+                hint_reader.next_hint(&router).await.unwrap();
             }
         });
 
-        let (_, h) = tokio::join!(client, host);
-        assert_eq!(h.unwrap(), MOCK_DATA);
+        let _ = tokio::join!(client, host);
+        let mut hints = incoming_hints.lock().await;
+
+        assert_eq!(hints.len(), 1);
+        let h = hints.remove(0);
+        assert_eq!(h, MOCK_DATA);
     }
 }

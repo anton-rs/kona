@@ -23,3 +23,6 @@ pub use traits::{
     CommsClient, HintReaderServer, HintRouter, HintWriterClient, PreimageFetcher,
     PreimageOracleClient, PreimageOracleServer,
 };
+
+#[cfg(test)]
+mod test_utils;

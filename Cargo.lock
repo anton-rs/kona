@@ -2332,9 +2332,9 @@ dependencies = [
  "async-trait",
  "cfg-if",
  "kona-common",
+ "os_pipe",
  "rkyv",
  "serde",
- "tempfile",
  "tokio",
  "tracing",
 ]
