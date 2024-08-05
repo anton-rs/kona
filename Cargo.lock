@@ -2173,7 +2173,6 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "linked_list_allocator",
- "spin",
 ]
 
 [[package]]
@@ -2271,10 +2270,10 @@ dependencies = [
  "kona-derive",
  "kona-mpt",
  "kona-preimage",
+ "os_pipe",
  "reqwest",
  "revm",
  "serde",
- "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2333,9 +2332,9 @@ dependencies = [
  "async-trait",
  "cfg-if",
  "kona-common",
+ "os_pipe",
  "rkyv",
  "serde",
- "tempfile",
  "tokio",
  "tracing",
 ]
@@ -2758,6 +2757,16 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "os_pipe"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ffd2b0a5634335b135d5728d84c5e0fd726954b87111f7506a61c502280d982"
+dependencies = [
+ "libc",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4754,6 +4763,15 @@ name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+dependencies = [
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets 0.52.6",
 ]

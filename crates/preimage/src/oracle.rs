@@ -132,47 +132,13 @@ mod test {
     extern crate std;
 
     use super::*;
-    use crate::PreimageKeyType;
+    use crate::{test_utils::bidirectional_pipe, PreimageKeyType};
     use alloc::sync::Arc;
     use alloy_primitives::keccak256;
     use anyhow::anyhow;
     use kona_common::FileDescriptor;
-    use std::{collections::HashMap, fs::File, os::fd::AsRawFd};
-    use tempfile::tempfile;
+    use std::{collections::HashMap, os::fd::AsRawFd};
     use tokio::sync::Mutex;
-
-    /// Test struct containing the [OracleReader] and a [OracleServer] for the host, plus the open
-    /// [File]s. The [File]s are stored in this struct so that they are not dropped until the
-    /// end of the test.
-    #[derive(Debug)]
-    struct ClientAndHost {
-        oracle_reader: OracleReader,
-        oracle_server: OracleServer,
-        _read_file: File,
-        _write_file: File,
-    }
-
-    /// Helper for creating a new [OracleReader] and [OracleServer] for testing. The file channel is
-    /// over two temporary files.
-    fn client_and_host() -> ClientAndHost {
-        let (read_file, write_file) = (tempfile().unwrap(), tempfile().unwrap());
-        let (read_fd, write_fd) = (
-            FileDescriptor::Wildcard(read_file.as_raw_fd().try_into().unwrap()),
-            FileDescriptor::Wildcard(write_file.as_raw_fd().try_into().unwrap()),
-        );
-        let client_handle = PipeHandle::new(read_fd, write_fd);
-        let host_handle = PipeHandle::new(write_fd, read_fd);
-
-        let oracle_reader = OracleReader::new(client_handle);
-        let oracle_server = OracleServer::new(host_handle);
-
-        ClientAndHost {
-            oracle_reader,
-            oracle_server,
-            _read_file: read_file,
-            _write_file: write_file,
-        }
-    }
 
     struct TestFetcher {
         preimages: Arc<Mutex<HashMap<PreimageKey, Vec<u8>>>>,
@@ -202,20 +168,23 @@ mod test {
             Arc::new(Mutex::new(preimages))
         };
 
-        let sys = client_and_host();
-        let (oracle_reader, oracle_server) = (sys.oracle_reader, sys.oracle_server);
+        let preimage_pipe = bidirectional_pipe().unwrap();
 
         let client = tokio::task::spawn(async move {
+            let oracle_reader = OracleReader::new(PipeHandle::new(
+                FileDescriptor::Wildcard(preimage_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(preimage_pipe.client.write.as_raw_fd() as usize),
+            ));
             let contents_a = oracle_reader.get(key_a).await.unwrap();
             let contents_b = oracle_reader.get(key_b).await.unwrap();
 
-            // Drop the file descriptors to close the pipe, stopping the host's blocking loop on
-            // waiting for client requests.
-            drop(sys);
-
             (contents_a, contents_b)
         });
-        let host = tokio::task::spawn(async move {
+        tokio::task::spawn(async move {
+            let oracle_server = OracleServer::new(PipeHandle::new(
+                FileDescriptor::Wildcard(preimage_pipe.host.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(preimage_pipe.host.write.as_raw_fd() as usize),
+            ));
             let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
 
             loop {
@@ -225,8 +194,8 @@ mod test {
             }
         });
 
-        let (client, _) = tokio::join!(client, host);
-        let (contents_a, contents_b) = client.unwrap();
+        let (c,) = tokio::join!(client);
+        let (contents_a, contents_b) = c.unwrap();
         assert_eq!(contents_a, MOCK_DATA_A);
         assert_eq!(contents_b, MOCK_DATA_B);
     }

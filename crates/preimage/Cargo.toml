@@ -23,7 +23,7 @@ serde = { version = "1.0.203", features = ["derive"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.38.0", features = ["full"] }
-tempfile = "3.10.1"
+os_pipe = "1.2.1"
 
 [features]
 default = []
