@@ -17,7 +17,8 @@ alloy-eips.workspace = true
 op-alloy-consensus.workspace = true
 
 # Superchain Registry
-superchain-primitives = { version = "0.2", default-features = false }
+# superchain-primitives = { version = "0.2", default-features = false }
+superchain-primitives = { git = "https://github.com/ethereum-optimism/superchain-registry", branch = "refcell/rust-granite", default-features = false }
 
 # Alloy Types
 alloy-sol-types = { version = "0.7.6", default-features = false }

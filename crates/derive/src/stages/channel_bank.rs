@@ -88,7 +88,9 @@ where
         });
 
         // Check if the channel is not timed out. If it has, ignore the frame.
-        if current_channel.open_block_number() + self.cfg.channel_timeout < origin.number {
+        if current_channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
+            origin.number
+        {
             warn!(target: "channel-bank", "Channel {:?} timed out", frame.id);
             return Ok(());
         }
@@ -130,7 +132,8 @@ where
         let first = self.channel_queue[0];
         let channel = self.channels.get(&first).ok_or(StageError::ChannelNotFound)?;
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
-        if channel.open_block_number() + self.cfg.channel_timeout < origin.number {
+        if channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) < origin.number
+        {
             warn!(target: "channel-bank", "Channel {:?} timed out", first);
             crate::observe!(CHANNEL_TIMEOUTS, (origin.number - channel.open_block_number()) as f64);
             self.channels.remove(&first);
@@ -172,7 +175,8 @@ where
         let channel = self.channels.get(&channel_id).ok_or(StageError::ChannelNotFound)?;
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
 
-        let timed_out = channel.open_block_number() + self.cfg.channel_timeout < origin.number;
+        let timed_out = channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
+            origin.number;
         if timed_out || !channel.is_ready() {
             return Err(StageError::Eof);
         }
