@@ -43,7 +43,7 @@ which has the objective of verifying claims about the state of an [OP Stack][op-
 
 ![op-program-architecture](../assets/op-program-fpp.svg)
 
-In this program, execution and derivation of the L2 chain is performed within it, and ultimately the claimed state of the L2 chain is verified in the [prologue](../prologue.md) stage.
+In this program, execution and derivation of the L2 chain is performed within it, and ultimately the claimed state of the L2 chain is verified in the [prologue](./prologue.md) stage.
 
 It communicates with the `host` for two reasons:
 
