@@ -285,6 +285,5 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             attributes.attributes.timestamp,
             pipeline.origin().map(|n| n.number),
         );
-        debug!(target: LOG_TARGET, "attributes: {:#?}", attributes);
     }
 }
