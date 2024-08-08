@@ -1,6 +1,7 @@
 //! Fixture providers using data from the derivation test fixture.
 
 use anyhow::Result;
+use std::sync::Arc;
 use alloy_eips::eip2718::Decodable2718;
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
@@ -8,7 +9,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use kona_derive::{
     traits::{ChainProvider, L2ChainProvider},
-    types::{L2BlockInfo, SystemConfig, L2ExecutionPayloadEnvelope, BlockInfo},
+    types::{L2BlockInfo, RollupConfig, SystemConfig, L2ExecutionPayload, L2ExecutionPayloadEnvelope, BlockInfo},
 };
 use op_test_vectors::derivation::DerivationFixture;
 
@@ -79,35 +80,45 @@ pub struct FixtureL2Provider {
 #[async_trait]
 impl L2ChainProvider for FixtureL2Provider {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
-        let Some(l2_block) = self.inner.l2_blocks.find(|b| b.header.number == number) else {
-            return Err(anyhow!("Block not found"));
-        };
-        Ok(L2BlockInfo {
-            number: l2_block.header.number,
-            hash: l2_block.header.hash_slow(),
-            parent_hash: l2_block.header.parent_hash,
-            timestamp: l2_block.header.timestamp,
-        })
+        self.inner.l2_block_infos.get(number).cloned().ok_or_else(|| anyhow!("Block not found"))
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
-        let Some(payload) = self.inner.l2_payloads.find(|p| p.header.number == number) else {
+        let l2_block = self.l2_block_info_by_number(number).await?;
+        let Some(payload) = self.inner.l2_payloads.get(&number) else {
             return Err(anyhow!("Payload not found"));
         };
         Ok(L2ExecutionPayloadEnvelope {
-            parent_beacon_block_root: 
-            execution_payload: payload.clone()
+            parent_beacon_block_root: payload.parent_beacon_block_root,
+            execution_payload: L2ExecutionPayload {
+                parent_hash: l2_block.block_info.parent_hash,
+                fee_recipient: payload.fee_recipient,
+                prev_randao: payload.prev_randao,
+                block_number: l2_block.block_info.number,
+                gas_limit: payload.gas_limit.unwrap_or_default() as u128,
+                timestamp: l2_block.block_info.timestamp,
+                block_hash: l2_block.block_info.hash,
+                transactions: payload.transactions.clone().into_iter().map(|tx| tx.0).collect(),
+                withdrawals: payload.withdrawals.clone(),
+                // These fields aren't used in derivation for span batch checking anyways.
+                state_root: Default::default(),
+                receipts_root: Default::default(),
+                logs_bloom: Default::default(),
+                gas_used: Default::default(),
+                extra_data: Default::default(),
+                base_fee_per_gas: Default::default(),
+                deserialized_transactions: Default::default(),
+                blob_gas_used: Default::default(),
+                excess_blob_gas: Default::default(),
+            },
         })
     }
 
     async fn system_config_by_number(
         &mut self,
         number: u64,
-        rollup_config: Arc<RollupConfig>,
+        _: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
-        let Some(l2_block) = self.inner.l2_blocks.find(|b| b.header.number == number) else {
-            return Err(anyhow!("Block not found"));
-        };
-        Ok(l2_block.system_config.clone())
+        self.inner.l2_system_configs.get(&number).cloned().ok_or_else(|| anyhow!("System config not found"))
     }
 }
