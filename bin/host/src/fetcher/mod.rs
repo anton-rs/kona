@@ -162,22 +162,18 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
+                let index_data_bytes: [u8; 8] = hint_data[32..40]
+                    .try_into()
+                    .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?;
+                let timestamp_data_bytes: [u8; 8] = hint_data[40..48]
+                    .try_into()
+                    .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?;
                 let hash: B256 = hint_data[0..32]
                     .as_ref()
                     .try_into()
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
-                let index = u64::from_be_bytes(
-                    hint_data[32..40]
-                        .as_ref()
-                        .try_into()
-                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
-                );
-                let timestamp = u64::from_be_bytes(
-                    hint_data[40..48]
-                        .as_ref()
-                        .try_into()
-                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
-                );
+                let index = u64::from_be_bytes(index_data_bytes);
+                let timestamp = u64::from_be_bytes(timestamp_data_bytes);
 
                 let partial_block_ref = BlockInfo { timestamp, ..Default::default() };
                 let indexed_hash = IndexedBlobHash { index: index as usize, hash };
