@@ -283,7 +283,7 @@ checksum = "5b515e82c8468ddb6ff8db21c78a5997442f113fd8471fd5b2261b2602dd0c67"
 version = "0.1.25"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01828af9e8fb20a85b1caf6570d84ee93595d6cbd9e8ea96bda3a4e27a55a4fa"
+checksum = "5b515e82c8468ddb6ff8db21c78a5997442f113fd8471fd5b2261b2602dd0c67"
 dependencies = [
  "num_enum",
  "serde",
@@ -3891,10 +3891,12 @@ dependencies = [
  "async-trait",
  "clap",
  "color-eyre",
+ "foundry-fork-db",
  "futures",
- "kona-derive 0.0.2",
+ "kona-derive 0.0.2 (git+https://github.com/ethereum-optimism/kona?rev=4e57dd35ea08b31d0baa293c7a12165f28e6cd92)",
  "op-test-vectors",
  "reqwest",
+ "revm-inspectors",
  "serde_json",
  "tokio",
  "tracing",
@@ -4694,7 +4696,7 @@ dependencies = [
 [[package]]
 name = "op-test-vectors"
 version = "0.2.0"
-source = "git+https://github.com/ethereum-optimism/op-test-vectors?branch=refcell/from-l2#b09bf6235e21350ff545ba7a2c579fd749de05e1"
+source = "git+https://github.com/ethereum-optimism/op-test-vectors?branch=refcell/from-l2#6375e0545e3c7b0b3136ad32fa42238e72b02077"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",

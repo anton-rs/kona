@@ -1,17 +1,19 @@
 //! Fixture providers using data from the derivation test fixture.
 
-use anyhow::Result;
-use std::sync::Arc;
-use alloy_eips::eip2718::Decodable2718;
 use alloy_consensus::{Header, Receipt, TxEnvelope};
+use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::B256;
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::{
     traits::{ChainProvider, L2ChainProvider},
-    types::{L2BlockInfo, RollupConfig, SystemConfig, L2ExecutionPayload, L2ExecutionPayloadEnvelope, BlockInfo},
+    types::{
+        BlockInfo, L2BlockInfo, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RollupConfig,
+        SystemConfig,
+    },
 };
 use op_test_vectors::derivation::DerivationFixture;
+use std::sync::Arc;
 
 /// An L1Provider using the fixture data from the derivation test fixture.
 #[derive(Debug, Clone)]
@@ -19,10 +21,17 @@ pub struct FixtureL1Provider {
     inner: DerivationFixture,
 }
 
+impl From<DerivationFixture> for FixtureL1Provider {
+    fn from(inner: DerivationFixture) -> Self {
+        Self { inner }
+    }
+}
+
 #[async_trait]
 impl ChainProvider for FixtureL1Provider {
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
-        let Some(l1_block) = self.inner.l1_blocks.iter().find(|b| b.header.hash_slow() == hash) else {
+        let Some(l1_block) = self.inner.l1_blocks.iter().find(|b| b.header.hash_slow() == hash)
+        else {
             return Err(anyhow!("Block not found"));
         };
         Ok(l1_block.header.clone())
@@ -41,7 +50,8 @@ impl ChainProvider for FixtureL1Provider {
     }
 
     async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>> {
-        let Some(l1_block) = self.inner.l1_blocks.iter().find(|b| b.header.hash_slow() == hash) else {
+        let Some(l1_block) = self.inner.l1_blocks.iter().find(|b| b.header.hash_slow() == hash)
+        else {
             return Err(anyhow!("Block not found"));
         };
         Ok(l1_block.receipts.clone())
@@ -51,7 +61,8 @@ impl ChainProvider for FixtureL1Provider {
         &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
-        let Some(l1_block) = self.inner.l1_blocks.iter().find(|b| b.header.hash_slow() == hash) else {
+        let Some(l1_block) = self.inner.l1_blocks.iter().find(|b| b.header.hash_slow() == hash)
+        else {
             return Err(anyhow!("Block not found"));
         };
         let mut decoded = Vec::with_capacity(l1_block.transactions.len());
@@ -77,10 +88,16 @@ pub struct FixtureL2Provider {
     inner: DerivationFixture,
 }
 
+impl From<DerivationFixture> for FixtureL2Provider {
+    fn from(inner: DerivationFixture) -> Self {
+        Self { inner }
+    }
+}
+
 #[async_trait]
 impl L2ChainProvider for FixtureL2Provider {
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
-        self.inner.l2_block_infos.get(number).cloned().ok_or_else(|| anyhow!("Block not found"))
+        self.inner.l2_block_infos.get(&number).cloned().ok_or_else(|| anyhow!("Block not found"))
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
@@ -119,6 +136,10 @@ impl L2ChainProvider for FixtureL2Provider {
         number: u64,
         _: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
-        self.inner.l2_system_configs.get(&number).cloned().ok_or_else(|| anyhow!("System config not found"))
+        self.inner
+            .l2_system_configs
+            .get(&number)
+            .cloned()
+            .ok_or_else(|| anyhow!("System config not found"))
     }
 }

@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
 use op_test_vectors::derivation::DerivationFixture;
-use tracing::{debug, trace, warn, Level};
+use tracing::{debug, error, info, trace, warn, Level};
 
 /// Main CLI
 #[derive(Parser, Clone, Debug)]
@@ -46,8 +46,19 @@ impl Cli {
     }
 
     /// Executes a given derivation test fixture.
-    pub async fn exec(&self, _name: String, _fixture: DerivationFixture) -> Result<()> {
-        unimplemented!()
+    pub async fn exec(&self, name: String, fixture: DerivationFixture) -> Result<()> {
+        info!(target: "exec", "Running test: {}", name);
+        let pipeline = crate::pipeline::new_runner_pipeline(fixture.clone()).await?;
+        match crate::runner::run(pipeline, fixture).await {
+            Ok(_) => {
+                info!(target: "exec", "[PASS] {}", name);
+                Ok(())
+            }
+            Err(e) => {
+                error!(target: "exec", "[FAIL] {}", name);
+                Err(e)
+            }
+        }
     }
 
     /// Get [DerivationFixture]s to run.
