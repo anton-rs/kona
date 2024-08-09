@@ -550,17 +550,7 @@ where
                 env.data = tx.input.clone();
                 env.chain_id = Some(tx.chain_id);
                 env.nonce = Some(tx.nonce);
-                env.access_list = tx
-                    .access_list
-                    .0
-                    .iter()
-                    .map(|l| {
-                        (
-                            l.address,
-                            l.storage_keys.iter().map(|k| U256::from_be_bytes(k.0)).collect(),
-                        )
-                    })
-                    .collect();
+                env.access_list = tx.access_list.to_vec();
                 env.blob_hashes.clear();
                 env.max_fee_per_blob_gas.take();
                 env.optimism = OptimismFields {
@@ -587,17 +577,7 @@ where
                 env.data = tx.input.clone();
                 env.chain_id = Some(tx.chain_id);
                 env.nonce = Some(tx.nonce);
-                env.access_list = tx
-                    .access_list
-                    .0
-                    .iter()
-                    .map(|l| {
-                        (
-                            l.address,
-                            l.storage_keys.iter().map(|k| U256::from_be_bytes(k.0)).collect(),
-                        )
-                    })
-                    .collect();
+                env.access_list = tx.access_list.to_vec();
                 env.blob_hashes.clear();
                 env.max_fee_per_blob_gas.take();
                 env.optimism = OptimismFields {

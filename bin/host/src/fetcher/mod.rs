@@ -7,7 +7,9 @@ use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, Block
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::Decodable;
-use alloy_rpc_types::{Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind};
+use alloy_rpc_types::{
+    Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
+};
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
 use kona_derive::{
@@ -502,7 +504,7 @@ where
     }
 
     /// Stores a list of [BlockTransactions] in the key-value store.
-    async fn store_transactions(&self, transactions: BlockTransactions) -> Result<()> {
+    async fn store_transactions(&self, transactions: BlockTransactions<Transaction>) -> Result<()> {
         match transactions {
             BlockTransactions::Full(transactions) => {
                 let encoded_transactions = transactions

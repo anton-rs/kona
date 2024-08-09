@@ -147,6 +147,7 @@ fn fill_tx_env_with_system_contract_call(
         // `gas_price` field, which we need to be zero
         gas_priority_fee: None,
         access_list: Vec::new(),
+        authorization_list: None,
         // blob fields can be None for this tx
         blob_hashes: Vec::new(),
         max_fee_per_blob_gas: None,
