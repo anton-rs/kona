@@ -377,22 +377,19 @@ where
         }
     }
 
-    fn block_hash(&mut self, block_number: U256) -> Result<B256, Self::Error> {
-        // The block number is guaranteed to be within the range of a u64.
-        let u64_block_number: u64 = block_number.to();
-
+    fn block_hash(&mut self, block_number: u64) -> Result<B256, Self::Error> {
         // Copy the current header
         let mut header = self.parent_block_header.inner().clone();
 
         // Check if the block number is in range. If not, we can fail early.
-        if u64_block_number > header.number ||
-            header.number.saturating_sub(u64_block_number) > BLOCK_HASH_HISTORY as u64
+        if block_number > header.number ||
+            header.number.saturating_sub(block_number) > BLOCK_HASH_HISTORY as u64
         {
             return Ok(B256::default());
         }
 
         // Walk back the block headers to the desired block number.
-        while header.number > u64_block_number {
+        while header.number > block_number {
             header = self.fetcher.header_by_hash(header.parent_hash)?;
         }
 
