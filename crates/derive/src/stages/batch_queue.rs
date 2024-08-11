@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
     types::{
         Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
         SingleBatch, StageError, StageResult, SystemConfig,
@@ -43,7 +43,7 @@ pub trait BatchQueueProvider {
 #[derive(Debug)]
 pub struct BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + PreviousStage + Debug,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
@@ -75,7 +75,7 @@ where
 
 impl<P, BF> BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + PreviousStage + Debug,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
@@ -248,7 +248,7 @@ where
 #[async_trait]
 impl<P, BF> OriginAdvancer for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     async fn advance_origin(&mut self) -> StageResult<()> {
@@ -259,7 +259,7 @@ where
 #[async_trait]
 impl<P, BF> AttributesProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     /// Returns the next valid batch upon the given safe head.
@@ -417,7 +417,7 @@ where
 
 impl<P, BF> OriginProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + PreviousStage + Debug,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
     BF: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
@@ -425,20 +425,10 @@ where
     }
 }
 
-impl<P, BF> PreviousStage for BatchQueue<P, BF>
-where
-    P: BatchQueueProvider + PreviousStage + Send + Debug,
-    BF: L2ChainProvider + Send + Debug,
-{
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(&self.prev))
-    }
-}
-
 #[async_trait]
 impl<P, BF> ResettableStage for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + PreviousStage + Send + Debug,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> StageResult<()> {

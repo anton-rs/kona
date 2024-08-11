@@ -2,7 +2,7 @@
 
 use crate::{
     stages::L1RetrievalProvider,
-    traits::{ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
     types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
@@ -115,12 +115,6 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
 impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
     fn origin(&self) -> Option<BlockInfo> {
         self.block
-    }
-}
-
-impl<F: ChainProvider + Send> PreviousStage for L1Traversal<F> {
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        None
     }
 }
 

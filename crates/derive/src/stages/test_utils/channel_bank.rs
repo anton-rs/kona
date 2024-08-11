@@ -2,7 +2,7 @@
 
 use crate::{
     stages::ChannelBankProvider,
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
     types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -48,11 +48,5 @@ impl ChannelBankProvider for MockChannelBankProvider {
 impl ResettableStage for MockChannelBankProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
         Ok(())
-    }
-}
-
-impl PreviousStage for MockChannelBankProvider {
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(self))
     }
 }

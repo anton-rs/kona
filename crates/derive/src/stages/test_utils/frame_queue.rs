@@ -2,7 +2,7 @@
 
 use crate::{
     stages::FrameQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -49,11 +49,5 @@ impl FrameQueueProvider for MockFrameQueueProvider {
 impl ResettableStage for MockFrameQueueProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
         Ok(())
-    }
-}
-
-impl PreviousStage for MockFrameQueueProvider {
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(self))
     }
 }

@@ -3,7 +3,7 @@
 use crate::{
     params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
     stages::ChannelReaderProvider,
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
     types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -37,7 +37,7 @@ pub trait ChannelBankProvider {
 #[derive(Debug)]
 pub struct ChannelBank<P>
 where
-    P: ChannelBankProvider + PreviousStage + Debug,
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// The rollup configuration.
     cfg: Arc<RollupConfig>,
@@ -51,7 +51,7 @@ where
 
 impl<P> ChannelBank<P>
 where
-    P: ChannelBankProvider + PreviousStage + Debug,
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
@@ -188,7 +188,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for ChannelBank<P>
 where
-    P: ChannelBankProvider + PreviousStage + Send + Debug,
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn advance_origin(&mut self) -> StageResult<()> {
         self.prev.advance_origin().await
@@ -198,7 +198,7 @@ where
 #[async_trait]
 impl<P> ChannelReaderProvider for ChannelBank<P>
 where
-    P: ChannelBankProvider + PreviousStage + Send + Debug,
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
@@ -230,26 +230,17 @@ where
 
 impl<P> OriginProvider for ChannelBank<P>
 where
-    P: ChannelBankProvider + PreviousStage + Debug,
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
     }
 }
 
-impl<P> PreviousStage for ChannelBank<P>
-where
-    P: ChannelBankProvider + PreviousStage + Debug + Send,
-{
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(&self.prev))
-    }
-}
-
 #[async_trait]
 impl<P> ResettableStage for ChannelBank<P>
 where
-    P: ChannelBankProvider + PreviousStage + Send + Debug,
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn reset(
         &mut self,

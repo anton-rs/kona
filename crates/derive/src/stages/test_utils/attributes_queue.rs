@@ -2,7 +2,7 @@
 
 use crate::{
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
     types::{
         BlockID, BlockInfo, BuilderError, L2BlockInfo, L2PayloadAttributes, SingleBatch,
         StageError, StageResult, SystemConfig,
@@ -60,12 +60,6 @@ impl OriginAdvancer for MockAttributesProvider {
 impl ResettableStage for MockAttributesProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
         Ok(())
-    }
-}
-
-impl PreviousStage for MockAttributesProvider {
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(self))
     }
 }
 
