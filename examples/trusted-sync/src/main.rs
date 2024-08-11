@@ -278,7 +278,8 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         let derived = attributes.parent.block_info.number as i64 + 1;
         metrics::SAFE_L2_HEAD.set(derived);
         metrics::DERIVED_ATTRIBUTES_COUNT.inc();
-        println!(
+        info!(
+            target: LOG_TARGET,
             "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {:?}]",
             metrics::DERIVED_ATTRIBUTES_COUNT.get(),
             derived,
