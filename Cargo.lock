@@ -1262,9 +1262,9 @@ dependencies = [
 
 [[package]]
 name = "cpufeatures"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53fe5e26ff1b7aef8bca9c6080520cfb8d9333c7568e1829cef191a9723e5504"
+checksum = "51e852e6dc9a5bed1fae92dd2375037bf2b768725bf3be87811edee3249d09ad"
 dependencies = [
  "libc",
 ]
@@ -2541,9 +2541,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4569e456d394deccd22ce1c1913e6ea0e54519f577285001215d33557431afe4"
+checksum = "80e04d1dcff3aae0704555fe5fee3bcfaf3d1fdf8a7e521d5b9d2b42acb52cec"
 dependencies = [
  "hermit-abi",
  "libc",
@@ -3793,18 +3793,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.206"
+version = "1.0.207"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b3e4cd94123dd520a128bcd11e34d9e9e423e7e3e50425cb1b4b1e3549d0284"
+checksum = "5665e14a49a4ea1b91029ba7d3bca9f299e1f7cfa194388ccc20f14743e784f2"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.206"
+version = "1.0.207"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fabfb6138d2383ea8208cf98ccf69cdfb1aff4088460681d84189aa259762f97"
+checksum = "6aea2634c86b0e8ef2cfdc0c340baede54ec27b1e46febd7f80dffb2aa44a00e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4074,7 +4074,8 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "superchain-primitives"
 version = "0.2.1"
-source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=main#60e1d6ecf392546edd5081a3272090254292b7c5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e35d3e5f7fc00a05e56c9bede517d19c8d91f8686169a585100c1e201183e3c7"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -4089,7 +4090,8 @@ dependencies = [
 [[package]]
 name = "superchain-registry"
 version = "0.2.3"
-source = "git+https://github.com/ethereum-optimism/superchain-registry?branch=main#60e1d6ecf392546edd5081a3272090254292b7c5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22952107022e3fc5d2d0a4ebca1ac199d3e863b53261b9fae9ac3ed5f8e6dea5"
 dependencies = [
  "hashbrown 0.14.5",
  "lazy_static",
