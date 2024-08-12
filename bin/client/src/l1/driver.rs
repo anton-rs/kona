@@ -199,8 +199,12 @@ where
         let safe_header = l2_chain_provider.header_by_hash(safe_hash)?;
         let safe_head_info = l2_chain_provider.l2_block_info_by_number(safe_header.number).await?;
 
-        let l1_origin =
-            chain_provider.block_info_by_number(safe_head_info.l1_origin.number).await?;
+        let l1_origin = chain_provider
+            .block_info_by_number(
+                safe_head_info.l1_origin.number +
+                    boot_info.rollup_config.channel_timeout(safe_head_info.block_info.timestamp),
+            )
+            .await?;
 
         Ok((l1_origin, safe_head_info, Sealed::new_unchecked(safe_header, safe_hash)))
     }
