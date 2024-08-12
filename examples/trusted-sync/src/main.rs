@@ -246,9 +246,11 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                         continue;
                     }
+                    warn!(target: LOG_TARGET, "Failed to validate payload attributes after {} retries", retries);
                     retries = 0;
                     metrics::FAILED_PAYLOAD_DERIVATION.inc();
                     let _ = pipeline.next(); // Take the attributes and continue
+                    warn!(target: LOG_TARGET, "Consumed payload attributes and continuing");
                     continue;
                 }
                 Err(e) => {
@@ -276,13 +278,13 @@ async fn sync(cli: cli::Cli) -> Result<()> {
         let derived = attributes.parent.block_info.number as i64 + 1;
         metrics::SAFE_L2_HEAD.set(derived);
         metrics::DERIVED_ATTRIBUTES_COUNT.inc();
-        println!(
-            "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {}]",
+        info!(
+            target: LOG_TARGET,
+            "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {:?}]",
             metrics::DERIVED_ATTRIBUTES_COUNT.get(),
             derived,
             attributes.attributes.timestamp,
-            pipeline.origin().unwrap().number,
+            pipeline.origin().map(|n| n.number),
         );
-        debug!(target: LOG_TARGET, "attributes: {:#?}", attributes);
     }
 }

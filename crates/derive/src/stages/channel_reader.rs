@@ -198,7 +198,11 @@ impl BatchReader {
         let decompressed_reader = &mut self.decompressed.as_slice()[self.cursor..].as_ref();
         let bytes = Bytes::decode(decompressed_reader).ok()?;
         crate::set!(BATCH_COMPRESSION_RATIO, (raw_len as i64) * 100 / bytes.len() as i64);
-        let batch = Batch::decode(&mut bytes.as_ref(), cfg).unwrap();
+        let Ok(batch) = Batch::decode(&mut bytes.as_ref(), cfg) else {
+            error!(target: "batch-reader", "Failed to decode batch, skipping batch");
+            crate::inc!(BATCH_READER_ERRORS, &["failed_to_decode_batch"]);
+            return None;
+        };
 
         // Confirm that brotli decompression was performed *after* the Fjord hardfork.
         if brotli_used && !cfg.is_fjord_active(batch.timestamp()) {
