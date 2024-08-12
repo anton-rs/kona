@@ -24,9 +24,3 @@ pub trait OriginAdvancer {
     /// This method is the equivalent of the reference implementation `advance_l1_block`.
     async fn advance_origin(&mut self) -> StageResult<()>;
 }
-
-/// Provides a method for accessing a previous stage.
-pub trait PreviousStage: ResettableStage + OriginAdvancer + OriginProvider {
-    /// Returns the previous stage.
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>>;
-}

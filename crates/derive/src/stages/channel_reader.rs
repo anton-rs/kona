@@ -2,7 +2,7 @@
 
 use crate::{
     stages::{decompress_brotli, BatchQueueProvider},
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
     types::{Batch, BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 
@@ -37,7 +37,7 @@ pub trait ChannelReaderProvider {
 #[derive(Debug)]
 pub struct ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// The previous stage of the derivation pipeline.
     prev: P,
@@ -49,7 +49,7 @@ where
 
 impl<P> ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
@@ -76,7 +76,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + Send + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn advance_origin(&mut self) -> StageResult<()> {
         self.prev.advance_origin().await
@@ -86,7 +86,7 @@ where
 #[async_trait]
 impl<P> BatchQueueProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + Send + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn next_batch(&mut self) -> StageResult<Batch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
@@ -115,7 +115,7 @@ where
 
 impl<P> OriginProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -125,22 +125,13 @@ where
 #[async_trait]
 impl<P> ResettableStage for ChannelReader<P>
 where
-    P: ChannelReaderProvider + PreviousStage + Debug + Send,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;
         self.next_channel();
         crate::inc!(STAGE_RESETS, &["channel-reader"]);
         Ok(())
-    }
-}
-
-impl<P> PreviousStage for ChannelReader<P>
-where
-    P: ChannelReaderProvider + PreviousStage + Send + Debug,
-{
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(&self.prev))
     }
 }
 

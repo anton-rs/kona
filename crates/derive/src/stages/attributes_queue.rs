@@ -1,7 +1,7 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    traits::{NextAttributes, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
     types::{
         BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, ResetError,
         RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
@@ -45,7 +45,7 @@ pub trait AttributesProvider {
 #[derive(Debug)]
 pub struct AttributesQueue<P, AB>
 where
-    P: AttributesProvider + PreviousStage + Debug,
+    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// The rollup config.
@@ -62,7 +62,7 @@ where
 
 impl<P, AB> AttributesQueue<P, AB>
 where
-    P: AttributesProvider + PreviousStage + Debug,
+    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
@@ -153,20 +153,10 @@ where
     }
 }
 
-impl<P, AB> PreviousStage for AttributesQueue<P, AB>
-where
-    P: AttributesProvider + PreviousStage + Send + Debug,
-    AB: AttributesBuilder + Send + Debug,
-{
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(&self.prev))
-    }
-}
-
 #[async_trait]
 impl<P, AB> OriginAdvancer for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + PreviousStage + Debug + Send,
+    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
     AB: AttributesBuilder + Debug + Send,
 {
     async fn advance_origin(&mut self) -> StageResult<()> {
@@ -177,7 +167,7 @@ where
 #[async_trait]
 impl<P, AB> NextAttributes for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + PreviousStage + Debug + Send,
+    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
     AB: AttributesBuilder + Debug + Send,
 {
     async fn next_attributes(
@@ -190,7 +180,7 @@ where
 
 impl<P, AB> OriginProvider for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + PreviousStage + Debug,
+    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
     AB: AttributesBuilder + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
@@ -201,7 +191,7 @@ where
 #[async_trait]
 impl<P, AB> ResettableStage for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + PreviousStage + Send + Debug,
+    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
     async fn reset(

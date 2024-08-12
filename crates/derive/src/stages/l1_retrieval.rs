@@ -3,8 +3,7 @@
 use crate::{
     stages::FrameQueueProvider,
     traits::{
-        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, PreviousStage,
-        ResettableStage,
+        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
     },
     types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
@@ -40,7 +39,7 @@ pub trait L1RetrievalProvider {
 pub struct L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + PreviousStage,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
 {
     /// The previous stage in the pipeline.
     pub prev: P,
@@ -53,7 +52,7 @@ where
 impl<DAP, P> L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + PreviousStage,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
 {
     /// Creates a new [L1Retrieval] stage with the previous [L1Traversal] stage and given
     /// [DataAvailabilityProvider].
@@ -69,7 +68,7 @@ where
 impl<DAP, P> OriginAdvancer for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + PreviousStage + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
 {
     async fn advance_origin(&mut self) -> StageResult<()> {
         self.prev.advance_origin().await
@@ -80,7 +79,7 @@ where
 impl<DAP, P> FrameQueueProvider for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + PreviousStage + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
 {
     type Item = DAP::Item;
 
@@ -108,20 +107,10 @@ where
 impl<DAP, P> OriginProvider for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + PreviousStage,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
-    }
-}
-
-impl<DAP, P> PreviousStage for L1Retrieval<DAP, P>
-where
-    DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + PreviousStage + Send,
-{
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(&self.prev))
     }
 }
 
@@ -129,7 +118,7 @@ where
 impl<DAP, P> ResettableStage for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + PreviousStage + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.prev.reset(base, cfg).await?;

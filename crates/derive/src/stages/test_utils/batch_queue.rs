@@ -2,7 +2,7 @@
 
 use crate::{
     stages::batch_queue::BatchQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
     types::{Batch, BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -48,11 +48,5 @@ impl OriginAdvancer for MockBatchQueueProvider {
 impl ResettableStage for MockBatchQueueProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
         Ok(())
-    }
-}
-
-impl PreviousStage for MockBatchQueueProvider {
-    fn previous(&self) -> Option<Box<&dyn PreviousStage>> {
-        Some(Box::new(self))
     }
 }
