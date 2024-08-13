@@ -115,6 +115,15 @@ where
                 }
                 StepResult::AdvancedOrigin
             }
+            Err(StageError::FailedToDecodeBatch) => {
+                // Bubble up the batch decoding error so that the client
+                // may attempt to re-run derivation starting `channel_timeout`
+                // L1 blocks before the l1 origin. This follows consensus as
+                // opposed to batcher policy which attempts to open and
+                // close a channel within a single L1 block.
+                trace!(target: "pipeline", "Pipeline failed to decode batch");
+                StepResult::FailedToDecodeBatch
+            }
             Err(err) => {
                 warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
                 StepResult::StepFailed(err)

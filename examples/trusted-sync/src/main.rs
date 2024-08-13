@@ -225,6 +225,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     error!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
                 }
             },
+            StepResult::FailedToDecodeBatch => {
+                metrics::PIPELINE_STEPS.with_label_values(&["failed_to_decode_batch"]).inc();
+                warn!(target: "loop", "Failed to decode batch");
+            }
         }
 
         // Peek at the next prepared attributes and validate them.

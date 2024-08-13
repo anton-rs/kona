@@ -33,6 +33,8 @@ pub enum StageError {
     ChannelNotFound,
     /// Missing L1 origin.
     MissingOrigin,
+    /// Failed to decode a batch from channel data.
+    FailedToDecodeBatch,
     /// Failed to build the [L2PayloadAttributes] for the next batch.
     ///
     /// [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
@@ -65,6 +67,7 @@ impl PartialEq<StageError> for StageError {
         matches!(
             (self, other),
             (StageError::Eof, StageError::Eof) |
+                (StageError::FailedToDecodeBatch, StageError::FailedToDecodeBatch) |
                 (StageError::Temporary(_), StageError::Temporary(_)) |
                 (StageError::Critical(_), StageError::Critical(_)) |
                 (StageError::NotEnoughData, StageError::NotEnoughData) |
@@ -99,6 +102,7 @@ impl Display for StageError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             StageError::Eof => write!(f, "End of file"),
+            StageError::FailedToDecodeBatch => write!(f, "Failed to decode batch"),
             StageError::Temporary(e) => write!(f, "Temporary error: {}", e),
             StageError::Critical(e) => write!(f, "Critical error: {}", e),
             StageError::NotEnoughData => write!(f, "Not enough data"),

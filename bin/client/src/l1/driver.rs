@@ -67,6 +67,10 @@ where
     l2_safe_head_header: Sealed<Header>,
     /// The inner pipeline.
     pipeline: OraclePipeline<O, B>,
+    /// The channel timeout to walk back the pipeline origin.
+    walkback: Option<u64>,
+    /// Handle to the l1 chain provider used to fetch the new pipeline origin.
+    chain_provider: OracleL1ChainProvider<O>,
 }
 
 impl<O, B> DerivationDriver<O, B>
@@ -124,17 +128,20 @@ where
             l2_chain_provider.clone(),
             chain_provider.clone(),
         );
-        let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider, &cfg);
+        let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider.clone(), &cfg);
         let pipeline = PipelineBuilder::new()
             .rollup_config(cfg)
             .dap_source(dap)
-            .l2_chain_provider(l2_chain_provider)
-            .chain_provider(chain_provider)
+            .l2_chain_provider(l2_chain_provider.clone())
+            .chain_provider(chain_provider.clone())
             .builder(attributes)
             .origin(l1_origin)
             .build();
 
-        Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
+        let walkback =
+            Some(boot_info.rollup_config.channel_timeout(l2_safe_head.block_info.timestamp));
+
+        Ok(Self { l2_safe_head, l2_safe_head_header, pipeline, walkback, chain_provider })
     }
 
     /// Produces the disputed [L2AttributesWithParent] payload, directly after the starting L2
@@ -157,6 +164,15 @@ where
                 }
                 StepResult::StepFailed(e) => {
                     warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e)
+                }
+                StepResult::FailedToDecodeBatch => {
+                    let Some(walkback) = self.walkback else {
+                        warn!(target: "client_derivation_driver", "Failed to decode batch");
+                        continue;
+                    };
+                    let origin = self.l2_safe_head.block_info.timestamp - walkback;
+                    let l1_info = self.chain_provider.block_info_by_number(origin).await?;
+                    self.pipeline.reset(self.l2_safe_head.block_info, l1_info).await?;
                 }
             }
 

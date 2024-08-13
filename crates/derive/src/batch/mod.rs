@@ -1,6 +1,7 @@
 //! This module contains the batch types for the OP Stack derivation pipeline: [SpanBatch] &
 //! [SingleBatch].
 
+use alloc::boxed::Box;
 use alloy_rlp::{Buf, Decodable};
 use kona_primitives::{block::BlockInfo, L2BlockInfo, RollupConfig};
 
@@ -65,7 +66,7 @@ pub enum Batch {
     /// A single batch
     Single(SingleBatch),
     /// Span Batches
-    Span(SpanBatch),
+    Span(Box<SpanBatch>),
 }
 
 impl Batch {
@@ -98,7 +99,7 @@ impl Batch {
                 let span_batch = raw_span_batch
                     .derive(cfg.block_time, cfg.genesis.l2_time, cfg.l2_chain_id)
                     .map_err(DecodeError::SpanBatchError)?;
-                Ok(Batch::Span(span_batch))
+                Ok(Batch::Span(Box::new(span_batch)))
             }
         }
     }

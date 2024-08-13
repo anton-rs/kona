@@ -59,6 +59,9 @@ pub(crate) async fn run(
                     error!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
                 }
             },
+            StepResult::FailedToDecodeBatch => {
+                error!(target: "loop", "Failed to decode batch");
+            }
         }
 
         // Take the next attributes from the pipeline.

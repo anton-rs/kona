@@ -346,6 +346,7 @@ where
             Err(StageError::Eof) => out_of_data = true,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
+                // Bubbles up any other errors like batches failing to be decoded.
                 return Err(e);
             }
         }
@@ -506,7 +507,7 @@ mod tests {
         let mut reader = new_batch_reader();
         let cfg = Arc::new(RollupConfig::default());
         let mut batch_vec: Vec<StageResult<Batch>> = vec![];
-        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+        while let Ok(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
         let mut mock = MockBatchQueueProvider::new(batch_vec);
@@ -546,7 +547,7 @@ mod tests {
         let mut batch_vec: Vec<StageResult<Batch>> = vec![];
         let mut batch_txs: Vec<Bytes> = vec![];
         let mut second_batch_txs: Vec<Bytes> = vec![];
-        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+        while let Ok(batch) = reader.next_batch(cfg.as_ref()) {
             if let Batch::Span(span) = &batch {
                 let bys = span.batches[0]
                     .transactions

@@ -19,6 +19,8 @@ pub enum StepResult {
     OriginAdvanceErr(StageError),
     /// Step failed.
     StepFailed(StageError),
+    /// Failed to decode a batch.
+    FailedToDecodeBatch,
 }
 
 /// This trait defines the interface for interacting with the derivation pipeline.

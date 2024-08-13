@@ -1,6 +1,6 @@
 [package]
 name = "trusted-sync"
-version = "0.1.0"
+version = "0.1.1"
 publish = false
 description = "Derives and validates payloads using a trusted source"
 edition.workspace = true
