@@ -8,7 +8,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   ASTERISC_TAG: v1.0.0
-  OP_PROGRAM_TAG: op-program/v1.2.0
+  OP_PROGRAM_TAG: op-program/v1.3.0-rc.3
   L1_RPC: https://ci-sepolia-l1.optimism.io
   L1_BEACON: https://ci-sepolia-beacon.optimism.io
   L2_RPC: https://ci-sepolia-l2.optimism.io
