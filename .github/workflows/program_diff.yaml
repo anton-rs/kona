@@ -120,9 +120,32 @@ jobs:
       - name: Export `out.json` state witness status byte
         id: export-witness-status-byte
         run: |
-          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash)
-          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH"
-          echo "OUT_WITNESS_STATUS=${OUT_WITNESS_HASH:2:2}" >> "$GITHUB_OUTPUT"
+          vm_status() {
+              local exited=$1
+              local exit_code=$2
+
+              if [ "$exited" = "false" ]; then
+                  echo "3"
+                  return
+              fi
+
+              case $exit_code in
+                  0)
+                      echo "0"
+                      ;;
+                  1)
+                      echo "1"
+                      ;;
+                  *)
+                      echo "2"
+                      ;;
+              esac
+          }
+
+          EXITED=$(cat ./out.json | jq -r .exited)
+          EXIT_CODE=$(cat ./out.json | jq -r .exit)
+          STATUS=$(vm_status $EXITED $EXIT_CODE)
+          echo "OUT_WITNESS_STATUS=$STATUS" >> "$GITHUB_OUTPUT"
   run-asterisc-kona:
     needs: gather-inputs
     name: "Asterisc + kona (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
@@ -189,9 +212,32 @@ jobs:
       - name: Export `out.json` state witness status byte
         id: export-witness-status-byte
         run: |
-          OUT_WITNESS_HASH=$(cat ./out.json | jq -r .stateHash)
-          echo "OUT_WITNESS_HASH=$OUT_WITNESS_HASH"
-          echo "OUT_WITNESS_STATUS=${OUT_WITNESS_HASH:2:2}" >> "$GITHUB_OUTPUT"
+          vm_status() {
+              local exited=$1
+              local exit_code=$2
+
+              if [ "$exited" = "false" ]; then
+                  echo "3"
+                  return
+              fi
+
+              case $exit_code in
+                  0)
+                      echo "0"
+                      ;;
+                  1)
+                      echo "1"
+                      ;;
+                  *)
+                      echo "2"
+                      ;;
+              esac
+          }
+
+          EXITED=$(cat ./out.json | jq -r .exited)
+          EXIT_CODE=$(cat ./out.json | jq -r .exit)
+          STATUS=$(vm_status $EXITED $EXIT_CODE)
+          echo "OUT_WITNESS_STATUS=$STATUS" >> "$GITHUB_OUTPUT"
   check-results:
     needs: [run-cannon-op-program, run-asterisc-kona]
     name: Check Results
