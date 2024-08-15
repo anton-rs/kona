@@ -1,0 +1,258 @@
+name: Scheduled FPP Differential Test
+on:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    # Runs every 12 hours, on the hour.
+    - cron: "0 */12 * * * "
+env:
+  CARGO_TERM_COLOR: always
+  ASTERISC_TAG: v1.0.0
+  OP_PROGRAM_TAG: op-program/v1.3.0-rc.3
+  L1_RPC: https://ci-sepolia-l1.optimism.io
+  L1_BEACON: https://ci-sepolia-beacon.optimism.io
+  L2_RPC: https://ci-sepolia-l2.optimism.io
+
+jobs:
+  gather-inputs:
+    name: Gather Input Parameters
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      L2_BLOCK_NUMBER: ${{ steps.fetch-inputs.outputs.L2_BLOCK_NUMBER }}
+      L2_CLAIM: ${{ steps.fetch-inputs.outputs.L2_CLAIM }}
+      L2_OUTPUT_ROOT: ${{ steps.fetch-inputs.outputs.L2_OUTPUT_ROOT }}
+      L2_HEAD: ${{ steps.fetch-inputs.outputs.L2_HEAD }}
+      L1_ORIGIN_NUM: ${{ steps.fetch-inputs.outputs.L1_ORIGIN_NUM }}
+      L1_HEAD: ${{ steps.fetch-inputs.outputs.L1_HEAD }}
+      L2_CHAIN_ID: ${{ steps.fetch-inputs.outputs.L2_CHAIN_ID }}
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
+      - name: Fetch input parameters
+        id: fetch-inputs
+        run: |
+          #!/bin/bash
+
+          # Fetch the finalized head of the L2 chain
+          L2_BLOCK_NUMBER=$(cast block finalized -j --rpc-url $L2_RPC | jq -r .number | cast 2d)
+          STARTING_L2_BLOCK_NUMBER=$((L2_BLOCK_NUMBER - 1))
+
+          # Fetch the program inputs
+          L2_CLAIM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .outputRoot)
+          L2_OUTPUT_ROOT=$(cast rpc "optimism_outputAtBlock" $(cast 2h $STARTING_L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .outputRoot)
+          L2_HEAD=$(cast block $STARTING_L2_BLOCK_NUMBER -j --rpc-url $L2_RPC | jq -r .hash)
+          L1_ORIGIN_NUM=$(cast rpc "optimism_outputAtBlock" $(cast 2h $STARTING_L2_BLOCK_NUMBER) --rpc-url $L2_RPC | jq -r .blockRef.l1origin.number)
+          L1_HEAD=$(cast block $((L1_ORIGIN_NUM + 30)) -j --rpc-url $L1_RPC | jq -r .hash)
+          L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_RPC)
+
+          # Print all gathered inputs
+          echo "===== [ PROGRAM INPUTS ] ====="
+          echo "L2 Chain ID: $L2_CHAIN_ID"
+          echo "L2 block number: $L2_BLOCK_NUMBER"
+          echo "L2 claim: $L2_CLAIM"
+          echo "Starting L2 Output Root: $L2_OUTPUT_ROOT"
+          echo "Starting L2 head: $L2_HEAD"
+          echo "Starting L2 Output Root L1 origin: $L1_ORIGIN_NUM"
+          echo "L1 head (block #$((L1_ORIGIN_NUM + 30))): $L1_HEAD"
+
+          # Export all gathered inputs to the job's output
+          echo "L2_BLOCK_NUMBER=$L2_BLOCK_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "L2_CLAIM=$L2_CLAIM" >> "$GITHUB_OUTPUT"
+          echo "L2_OUTPUT_ROOT=$L2_OUTPUT_ROOT" >> "$GITHUB_OUTPUT"
+          echo "L2_HEAD=$L2_HEAD" >> "$GITHUB_OUTPUT"
+          echo "L1_ORIGIN_NUM=$L1_ORIGIN_NUM" >> "$GITHUB_OUTPUT"
+          echo "L1_HEAD=$L1_HEAD" >> "$GITHUB_OUTPUT"
+          echo "L2_CHAIN_ID=$L2_CHAIN_ID" >> "$GITHUB_OUTPUT"
+  run-cannon-op-program:
+    needs: gather-inputs
+    name: "Cannon + op-program (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CLIENT_BIN_PATH: ./op-program/bin/op-program-client.elf
+    outputs:
+      OUT_WITNESS_STATUS: ${{ steps.export-witness-status-byte.outputs.OUT_WITNESS_STATUS }}
+    steps:
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
+      - name: Clone OP monorepo
+        run: |
+          git clone https://github.com/ethereum-optimism/optimism.git .
+          git checkout $OP_PROGRAM_TAG
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.6"
+          cache-dependency-path: |
+            go.sum
+      - name: Build `cannon` binary
+        run: |
+          cd cannon && make
+          mv ./bin/cannon /usr/local/bin/
+      - name: Build `op-program` host & client binaries
+        run: |
+          cd op-program && make
+          mv ./bin/op-program /usr/local/bin/
+      - name: Load `op-program` binary into `cannon` state format
+        run: |
+          cannon load-elf --path=$CLIENT_BIN_PATH
+      - name: Run `op-program` on `cannon`
+        run: |
+          cannon run \
+            --info-at '%10000000' \
+            --proof-at never \
+            --input ./state.json \
+            -- \
+            op-program \
+            --server \
+            --l1.head "${{ needs.gather-inputs.outputs.L1_HEAD }}" \
+            --l2.head "${{ needs.gather-inputs.outputs.L2_HEAD }}" \
+            --l2.claim "${{ needs.gather-inputs.outputs.L2_CLAIM }}" \
+            --l2.outputroot "${{ needs.gather-inputs.outputs.L2_OUTPUT_ROOT }}" \
+            --l2.blocknumber "${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }}" \
+            --network op-sepolia \
+            --l1 $L1_RPC \
+            --l1.beacon $L1_BEACON \
+            --l2 $L2_RPC \
+      - name: Export `out.json` state witness status byte
+        id: export-witness-status-byte
+        run: |
+          vm_status() {
+              local exited=$1
+              local exit_code=$2
+
+              if [ "$exited" = "false" ]; then
+                  echo "3"
+                  return
+              fi
+
+              case $exit_code in
+                  0)
+                      echo "0"
+                      ;;
+                  1)
+                      echo "1"
+                      ;;
+                  *)
+                      echo "2"
+                      ;;
+              esac
+          }
+
+          EXITED=$(cat ./out.json | jq -r .exited)
+          EXIT_CODE=$(cat ./out.json | jq -r .exit)
+          STATUS=$(vm_status $EXITED $EXIT_CODE)
+          echo "OUT_WITNESS_STATUS=$STATUS" >> "$GITHUB_OUTPUT"
+  run-asterisc-kona:
+    needs: gather-inputs
+    name: "Asterisc + kona (L2 Block ${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      OUT_WITNESS_STATUS: ${{ steps.export-witness-status-byte.outputs.OUT_WITNESS_STATUS }}
+    env:
+      CLIENT_BIN_PATH: ./target/riscv64gc-unknown-none-elf/release-client-lto/kona
+      HOST_BIN_PATH: ./target/release/kona-host
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install `just`
+        uses: taiki-e/install-action@just
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Clone `asterisc` repository
+        run: |
+          git clone https://github.com/ethereum-optimism/asterisc.git
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.6"
+          cache-dependency-path: |
+            asterisc/go.sum
+      - name: Build `asterisc`
+        run: |
+          cd asterisc && git checkout $ASTERISC_TAG && make build-rvgo
+          mv ./rvgo/bin/asterisc /usr/local/bin/
+      - name: Build `kona-host` binary
+        run: |
+          cargo build --bin kona-host --release
+      - name: Build `kona-client` binary
+        run: |
+          just build-asterisc --bin kona --profile release-client-lto
+      - name: Load `kona-client` binary into `asterisc` state format
+        run: |
+          asterisc load-elf --path=$CLIENT_BIN_PATH
+      - name: Run `kona-client` on `asterisc`
+        run: |
+          asterisc run \
+            --info-at '%10000000' \
+            --proof-at never \
+            --input ./state.json \
+            -- \
+            $HOST_BIN_PATH \
+            --l1-head "${{ needs.gather-inputs.outputs.L1_HEAD }}" \
+            --l2-head "${{ needs.gather-inputs.outputs.L2_HEAD }}" \
+            --l2-claim "${{ needs.gather-inputs.outputs.L2_CLAIM }}" \
+            --l2-output-root "${{ needs.gather-inputs.outputs.L2_OUTPUT_ROOT }}" \
+            --l2-block-number "${{ needs.gather-inputs.outputs.L2_BLOCK_NUMBER }}" \
+            --l2-chain-id "${{ needs.gather-inputs.outputs.L2_CHAIN_ID }}" \
+            --server \
+            --l1-node-address $L1_RPC \
+            --l1-beacon-address $L1_BEACON \
+            --l2-node-address $L2_RPC \
+            -vv
+      - name: Export `out.json` state witness status byte
+        id: export-witness-status-byte
+        run: |
+          vm_status() {
+              local exited=$1
+              local exit_code=$2
+
+              if [ "$exited" = "false" ]; then
+                  echo "3"
+                  return
+              fi
+
+              case $exit_code in
+                  0)
+                      echo "0"
+                      ;;
+                  1)
+                      echo "1"
+                      ;;
+                  *)
+                      echo "2"
+                      ;;
+              esac
+          }
+
+          EXITED=$(cat ./out.json | jq -r .exited)
+          EXIT_CODE=$(cat ./out.json | jq -r .exit)
+          STATUS=$(vm_status $EXITED $EXIT_CODE)
+          echo "OUT_WITNESS_STATUS=$STATUS" >> "$GITHUB_OUTPUT"
+  check-results:
+    needs: [run-cannon-op-program, run-asterisc-kona]
+    name: Check Results
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare program results
+        run: |
+          ASTERISC_KONA_SW="${{ needs.run-asterisc-kona.outputs.OUT_WITNESS_STATUS }}"
+          CANNON_OP_PROGRAM_SW="${{ needs.run-cannon-op-program.outputs.OUT_WITNESS_STATUS }}"
+          echo "Asterisc/Kona State Witness Status Byte: $ASTERISC_KONA_SW"
+          echo "Cannon/op-program State Witness Status Byte: $CANNON_OP_PROGRAM_SW"
+
+          if [ "$ASTERISC_KONA_SW" != "$CANNON_OP_PROGRAM_SW" ]; then
+            echo "State witness status bytes differ!"
+            exit 1
+          fi
+
+          echo "State witness status bytes match!"
