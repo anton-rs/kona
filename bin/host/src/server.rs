@@ -63,7 +63,10 @@ where
         // Spawn tasks for the futures and wait for them to complete.
         let server = tokio::task::spawn(server_fut);
         let hint_router = tokio::task::spawn(hinter_fut);
-        tokio::try_join!(server, hint_router).map_err(|e| anyhow!(e))?;
+        tokio::select! {
+            s = server => s.map_err(|e| anyhow!(e))?,
+            h = hint_router => h.map_err(|e| anyhow!(e))?,
+        }
 
         Ok(())
     }
