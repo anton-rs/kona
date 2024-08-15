@@ -29,4 +29,4 @@ serde = { version = "1.0.198", features = ["derive"] }
 alloy-provider = { version = "0.2", default-features = false }
 alloy-rpc-types = { version = "0.2" }
 alloy-transport = { version = "0.2", default-features = false }
-superchain-registry = { git = "https://github.com/ethereum-optimism/superchain-registry", branch = "main" }
+superchain-registry = "0.2.3"
