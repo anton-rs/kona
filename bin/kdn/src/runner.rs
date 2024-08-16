@@ -17,13 +17,13 @@ const LOG_TARGET: &str = "runner";
 
 /// Runs the pipeline.
 pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Result<()> {
-    let cursor_num =
-        fixture.l2_block_infos.keys().min().ok_or_else(|| anyhow!("No blocks found"))?;
-    let mut cursor =
-        *fixture.l2_block_infos.get(cursor_num).ok_or_else(|| anyhow!("No block info found"))?;
+    let mut cursor = *fixture
+        .l2_block_infos
+        .get(&fixture.l2_cursor_start)
+        .ok_or_else(|| anyhow!("No block info found"))?;
     let mut l2_provider = FixtureL2Provider::from(fixture.clone());
     let mut advance_cursor_flag = false;
-    let end = fixture.l2_block_infos.keys().max().ok_or_else(|| anyhow!("No blocks found"))?;
+    let end = fixture.l2_cursor_end;
     loop {
         if advance_cursor_flag {
             match l2_provider.l2_block_info_by_number(cursor.block_info.number + 1).await {
@@ -38,6 +38,10 @@ pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Re
                     continue;
                 }
             }
+        }
+        if (cursor.block_info.number + 1) >= end {
+            info!(target: LOG_TARGET, "All payload attributes successfully validated");
+            break;
         }
         trace!(target: LOG_TARGET, "Stepping on cursor block number: {}", cursor.block_info.number);
         match pipeline.step(cursor).await {
@@ -58,12 +62,11 @@ pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Re
 
         // Take the next attributes from the pipeline.
         let Some(attributes) = pipeline.next() else {
-            error!(target: LOG_TARGET, "Must have valid attributes");
             continue;
         };
 
         // Validate the attributes against the reference.
-        let Some(expected) = fixture.l2_payloads.get(&cursor.block_info.number) else {
+        let Some(expected) = fixture.l2_payloads.get(&(cursor.block_info.number + 1)) else {
             return Err(anyhow!("No expected payload found"));
         };
         if attributes.attributes != *expected {
@@ -72,10 +75,7 @@ pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Re
             debug!(target: LOG_TARGET, "Actual: {:?}", attributes);
             return Err(anyhow!("Attributes do not match expected"));
         }
-        if cursor.block_info.number == *end {
-            info!(target: LOG_TARGET, "All payload attributes successfully validated");
-            break;
-        }
+        advance_cursor_flag = true;
     }
     Ok(())
 }

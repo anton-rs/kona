@@ -102,7 +102,11 @@ impl L2ChainProvider for FixtureL2Provider {
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
         let l2_block = self.l2_block_info_by_number(number).await?;
-        let Some(payload) = self.inner.l2_payloads.get(&number) else {
+        let mut payload = self.inner.l2_payloads.get(&number);
+        if payload.is_none() {
+            payload = self.inner.ref_payloads.get(&number);
+        }
+        let Some(payload) = payload else {
             return Err(anyhow!("Payload not found"));
         };
         Ok(L2ExecutionPayloadEnvelope {
