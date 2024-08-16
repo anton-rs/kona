@@ -4,7 +4,8 @@ use alloc::sync::Arc;
 use kona_executor::PrecompileOverride;
 use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
 use revm::{
-    handler::register::EvmHandler, precompile::PrecompileSpecId, ContextPrecompiles, State,
+    handler::register::EvmHandler, precompile::PrecompileSpecId, primitives::SpecId,
+    ContextPrecompiles, State,
 };
 
 mod bn128_pair;
@@ -50,6 +51,13 @@ where
                 kzg_point_eval::FPVM_KZG_POINT_EVAL,
             ];
             ctx_precompiles.extend(override_precompiles);
+
+            if spec_id.is_enabled_in(SpecId::FJORD) {
+                ctx_precompiles.extend([
+                    // EIP-7212: secp256r1 P256verify
+                    revm::precompile::secp256r1::P256VERIFY,
+                ]);
+            }
 
             ctx_precompiles
         });
