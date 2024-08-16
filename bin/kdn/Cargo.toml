@@ -36,4 +36,4 @@ reqwest = "0.12"
 futures = "0.3"
 color-eyre = "0.6" # For op-test-vector dependency
 clap = { version = "4", features = ["derive", "env"] }
-op-test-vectors = { git = "https://github.com/ethereum-optimism/op-test-vectors", branch = "refcell/from-l2" }
+op-test-vectors = { git = "https://github.com/ethereum-optimism/op-test-vectors", branch = "main" }

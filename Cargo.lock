@@ -4755,7 +4755,7 @@ dependencies = [
 [[package]]
 name = "op-test-vectors"
 version = "0.2.0"
-source = "git+https://github.com/ethereum-optimism/op-test-vectors?branch=refcell/from-l2#67de1ef6e0ebf225bd9d5f2d39e38c27b6c2eded"
+source = "git+https://github.com/ethereum-optimism/op-test-vectors?branch=main#75f4fa604cd7f78b7e4ccfae746f345882e5366a"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
