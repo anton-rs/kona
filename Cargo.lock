@@ -2521,16 +2521,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
-name = "minimal"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cfg-if",
- "kona-common",
- "kona-common-proc",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3934,18 +3924,6 @@ name = "simdutf8"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27f6278552951f1f2b8cf9da965d10969b2efdea95a6ec47987ab46edfe263a"
-
-[[package]]
-name = "simple-revm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cfg-if",
- "kona-common",
- "kona-common-proc",
- "kona-preimage",
- "revm",
-]
 
 [[package]]
 name = "slab"
