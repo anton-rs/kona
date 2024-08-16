@@ -1,12 +1,12 @@
-# `kd8n`
+# `kdn`
 
-`kd8n`, or _Kona Derivation_, is a binary runner for [`kona-derive`][kd] against
+`kdn`, or _Kona Derivation_, is a binary runner for [`kona-derive`][kd] against
 the [`op-test-vectors`][opt] test suite.
 
 It can be run over specific derivation test fixtures or the entire [`op-test-vectors`][opt]
 test suite.
 
-The design of `kd8n` is inspired by [`revme`][revme].
+The design of `kdn` is inspired by [`revme`][revme].
 
 [kd]: ../../crates/derive
 [opt]: https://github.com/ethereum-optimism/op-test-vectors
@@ -17,5 +17,5 @@ The design of `kd8n` is inspired by [`revme`][revme].
 Run all [`op-test-vectors`][opt] derivation test fixtures against `kona-derive`.
 
 ```bash
-$ kd8n --all
+$ kdn --all
 ```

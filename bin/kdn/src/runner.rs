@@ -3,21 +3,24 @@
 //! The runner that executes the pipeline and validates the output given the test fixtures.
 
 use anyhow::{anyhow, Result};
+use kona_derive::{
+    pipeline::StepResult,
+    traits::{L2ChainProvider, Pipeline},
+    types::StageError,
+};
 use op_test_vectors::derivation::DerivationFixture;
-use kona_derive::pipeline::StepResult;
-use kona_derive::types::StageError;
-use kona_derive::traits::{L2ChainProvider, Pipeline};
-use tracing::{error, debug, info, warn, trace};
+use tracing::{debug, error, info, trace, warn};
 
-use crate::providers::FixtureL2Provider;
-use crate::pipeline::RunnerPipeline;
+use crate::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
 
 const LOG_TARGET: &str = "runner";
 
 /// Runs the pipeline.
 pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Result<()> {
-    let cursor_num = fixture.l2_block_infos.keys().min().ok_or_else(|| anyhow!("No blocks found"))?;
-    let mut cursor = *fixture.l2_block_infos.get(cursor_num).ok_or_else(|| anyhow!("No block info found"))?;
+    let cursor_num =
+        fixture.l2_block_infos.keys().min().ok_or_else(|| anyhow!("No blocks found"))?;
+    let mut cursor =
+        *fixture.l2_block_infos.get(cursor_num).ok_or_else(|| anyhow!("No block info found"))?;
     let mut l2_provider = FixtureL2Provider::from(fixture.clone());
     let mut advance_cursor_flag = false;
     let end = fixture.l2_block_infos.keys().max().ok_or_else(|| anyhow!("No blocks found"))?;
@@ -40,7 +43,9 @@ pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Re
         match pipeline.step(cursor).await {
             StepResult::PreparedAttributes => trace!(target: "loop", "Prepared attributes"),
             StepResult::AdvancedOrigin => trace!(target: "loop", "Advanced origin"),
-            StepResult::OriginAdvanceErr(e) => warn!(target: "loop", "Could not advance origin: {:?}", e),
+            StepResult::OriginAdvanceErr(e) => {
+                warn!(target: "loop", "Could not advance origin: {:?}", e)
+            }
             StepResult::StepFailed(e) => match e {
                 StageError::NotEnoughData => {
                     debug!(target: "loop", "Not enough data to step derivation pipeline");

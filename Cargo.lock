@@ -3881,7 +3881,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kd8n"
+name = "kdn"
 version = "0.1.0"
 dependencies = [
  "alloy-consensus",
