@@ -174,19 +174,6 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
-                let hash_data_bytes: [u8; 32] = hint_data[0..32]
-                    .try_into()
-                    .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
-                let index_data_bytes: [u8; 8] = hint_data[32..40]
-                    .try_into()
-                    .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?;
-                let timestamp_data_bytes: [u8; 8] = hint_data[40..48]
-                    .try_into()
-                    .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?;
-
-                let hash: B256 = hash_data_bytes.into();
-                let index = u64::from_be_bytes(index_data_bytes);
-                let timestamp = u64::from_be_bytes(timestamp_data_bytes);
                 let data = &hint_data[0..32];
                 let hash: B256 =
                     data.try_into().map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
