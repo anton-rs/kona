@@ -51,7 +51,7 @@ impl Cli {
         let pipeline = crate::pipeline::new_runner_pipeline(fixture.clone()).await?;
         match crate::runner::run(pipeline, fixture).await {
             Ok(_) => {
-                info!(target: "exec", "[PASS] {}", name);
+                println!("[PASS] {}", name);
                 Ok(())
             }
             Err(e) => {
