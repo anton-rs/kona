@@ -3,12 +3,14 @@
 //! The runner that executes the pipeline and validates the output given the test fixtures.
 
 use anyhow::{anyhow, Result};
-use kona_derive::{
-    pipeline::StepResult,
-    traits::{L2ChainProvider, Pipeline},
-    types::StageError,
+use op_test_vectors::{
+    derivation::DerivationFixture,
+    kona_derive::{
+        pipeline::StepResult,
+        traits::{L2ChainProvider, Pipeline},
+        types::StageError,
+    },
 };
-use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn};
 
 use crate::{pipeline::RunnerPipeline, providers::FixtureL2Provider};

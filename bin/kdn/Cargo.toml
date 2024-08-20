@@ -18,10 +18,6 @@ alloy-primitives.workspace = true
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
 
-# Local
-kona-derive = { git = "https://github.com/ethereum-optimism/kona", rev = "4e57dd35ea08b31d0baa293c7a12165f28e6cd92", features = ["online"] }
-# kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
-
 # We have to temporarily pin these dependencies since they don't specify a minor version
 # in foundry and the new minor version bumps the revm dep version, causing breaking changes.
 # The solution here is to bump kona's revm dependency to v13 so this can be removed.

@@ -1,16 +1,18 @@
 //! The pipeline module contains the pipeline logic for the test runner.
 
 use anyhow::{anyhow, Result};
-use kona_derive::{
-    pipeline::{DerivationPipeline, PipelineBuilder},
-    sources::EthereumDataSource,
-    stages::{
-        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
-        L1Traversal, StatefulAttributesBuilder,
+use op_test_vectors::{
+    derivation::DerivationFixture,
+    kona_derive::{
+        pipeline::{DerivationPipeline, PipelineBuilder},
+        sources::EthereumDataSource,
+        stages::{
+            AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+            L1Traversal, StatefulAttributesBuilder,
+        },
+        traits::ChainProvider,
     },
-    traits::ChainProvider,
 };
-use op_test_vectors::derivation::DerivationFixture;
 use std::sync::Arc;
 use tracing::info;
 
