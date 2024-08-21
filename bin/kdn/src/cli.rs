@@ -2,8 +2,11 @@
 
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
+use include_directory::{include_directory, Dir, DirEntry};
 use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn, Level};
+
+static OP_TEST_VECTORS: Dir<'_> = include_directory!("$CARGO_MANIFEST_DIR/op-test-vectors");
 
 /// Main CLI
 #[derive(Parser, Clone, Debug)]
@@ -112,8 +115,12 @@ impl Cli {
     pub fn get_tests() -> Result<Vec<String>> {
         let paths = std::fs::read_dir("../op-test-vectors/fixtures/derivation/").unwrap();
         let mut tests = Vec::with_capacity(paths.size_hint().0);
-        for path in paths {
-            let path = path.unwrap().path();
+        for path in OP_TEST_VECTORS.entries() {
+            let DirEntry::File(f) = path else {
+                debug!(target: "get_tests", "Skipping non-file: {:?}", path);
+                continue;
+            };
+            let path = f.path();
             tests.push(path.to_str().unwrap().to_string());
         }
         Ok(tests)
