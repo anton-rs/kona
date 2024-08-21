@@ -46,6 +46,7 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
             if #[cfg(any(target_arch = "mips", target_arch = "riscv64"))] {
                 const HEAP_SIZE: usize = #heap_size;
 
+                #[doc = "Program entry point"]
                 #[no_mangle]
                 pub extern "C" fn _start() {
                     kona_common::alloc_heap!(HEAP_SIZE);
