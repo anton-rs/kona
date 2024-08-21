@@ -2,11 +2,11 @@
 
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
-use include_directory::{include_directory, Dir, DirEntry};
+use include_directory::{include_directory, Dir, DirEntry, File};
 use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn, Level};
 
-static OP_TEST_VECTORS: Dir<'_> = include_directory!("$CARGO_MANIFEST_DIR/op-test-vectors");
+static OP_TEST_VECTORS: Dir<'_> = include_directory!("$CARGO_MANIFEST_DIR/op-test-vectors/fixtures/derivation/");
 
 /// Main CLI
 #[derive(Parser, Clone, Debug)]
@@ -73,12 +73,13 @@ impl Cli {
         // Parse derivation test fixtures
         let tests = available_tests
             .iter()
-            .map(|path| {
-                let fixture_str = std::fs::read_to_string(path).map_err(|e| anyhow!(e))?;
+            .map(|f| {
+                let path = f.path().to_str().ok_or_else(|| anyhow!("Failed to convert path to string"))?;
+                let fixture_str = f.contents_utf8().ok_or_else(|| anyhow!("Failed to read file contents"))?;
                 debug!("Parsing test fixture: {}", path);
                 Ok((
                     path.to_string(),
-                    serde_json::from_str::<DerivationFixture>(&fixture_str)
+                    serde_json::from_str::<DerivationFixture>(fixture_str)
                         .map_err(|e| anyhow!(e))?,
                 ))
             })
@@ -112,16 +113,14 @@ impl Cli {
     }
 
     /// Get a list of available tests in the `op-test-vectors` git submodule.
-    pub fn get_tests() -> Result<Vec<String>> {
-        let paths = std::fs::read_dir("../op-test-vectors/fixtures/derivation/").unwrap();
-        let mut tests = Vec::with_capacity(paths.size_hint().0);
+    pub fn get_tests() -> Result<Vec<File<'static>>> {
+        let mut tests = Vec::with_capacity(OP_TEST_VECTORS.entries().len());
         for path in OP_TEST_VECTORS.entries() {
             let DirEntry::File(f) = path else {
                 debug!(target: "get_tests", "Skipping non-file: {:?}", path);
                 continue;
             };
-            let path = f.path();
-            tests.push(path.to_str().unwrap().to_string());
+            tests.push(f.clone());
         }
         Ok(tests)
     }
