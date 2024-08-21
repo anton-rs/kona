@@ -1,0 +1,36 @@
+[package]
+name = "kdn"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+exclude = ["op-test-vectors"]
+
+[dependencies]
+# Workspace
+anyhow.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-eips.workspace = true
+
+# We have to temporarily pin these dependencies since they don't specify a minor version
+# in foundry and the new minor version bumps the revm dep version, causing breaking changes.
+# The solution here is to bump kona's revm dependency to v13 so this can be removed.
+revm-inspectors = "=0.5.5"
+foundry-fork-db = "=0.2.0"
+
+# External
+serde_json = { version = "1.0.117", default-features = false }
+tracing-subscriber = "0.3.18"
+tokio = { version = "1", features = ["full"] }
+reqwest = "0.12"
+futures = "0.3"
+color-eyre = "0.6" # For op-test-vector dependency
+clap = { version = "4", features = ["derive", "env"] }
+op-test-vectors = { git = "https://github.com/ethereum-optimism/op-test-vectors", branch = "main" }
+include_directory = "0.1.1"
