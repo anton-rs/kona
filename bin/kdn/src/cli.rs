@@ -6,7 +6,8 @@ use include_directory::{include_directory, Dir, DirEntry, File};
 use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn, Level};
 
-static OP_TEST_VECTORS: Dir<'_> = include_directory!("$CARGO_MANIFEST_DIR/op-test-vectors/fixtures/derivation/");
+static OP_TEST_VECTORS: Dir<'_> =
+    include_directory!("$CARGO_MANIFEST_DIR/op-test-vectors/fixtures/derivation/");
 
 /// Main CLI
 #[derive(Parser, Clone, Debug)]
@@ -74,8 +75,10 @@ impl Cli {
         let tests = available_tests
             .iter()
             .map(|f| {
-                let path = f.path().to_str().ok_or_else(|| anyhow!("Failed to convert path to string"))?;
-                let fixture_str = f.contents_utf8().ok_or_else(|| anyhow!("Failed to read file contents"))?;
+                let path =
+                    f.path().to_str().ok_or_else(|| anyhow!("Failed to convert path to string"))?;
+                let fixture_str =
+                    f.contents_utf8().ok_or_else(|| anyhow!("Failed to read file contents"))?;
                 debug!("Parsing test fixture: {}", path);
                 Ok((
                     path.to_string(),
