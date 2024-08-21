@@ -4198,6 +4198,7 @@ dependencies = [
  "reqwest",
  "revm 13.0.0",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
