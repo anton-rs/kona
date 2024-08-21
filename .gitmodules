@@ -1,4 +1,0 @@
-[submodule "bin/kdn/op-test-vectors"]
-	path = bin/kdn/op-test-vectors
-	url = https://github.com/ethereum-optimism/op-test-vectors
-  branch = "refcell/from-l2"
