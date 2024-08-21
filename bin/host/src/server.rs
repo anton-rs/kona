@@ -85,8 +85,7 @@ where
             P: PreimageOracleServer,
         {
             loop {
-                // TODO: More granular error handling. Some errors here are expected, such as the
-                // client closing the pipe, while others are not and should throw.
+                // Break the loop on any error. An error in this path indicates a closed pipe.
                 if server.next_preimage_request(fetcher).await.is_err() {
                     break;
                 }
@@ -110,8 +109,7 @@ where
             H: HintReaderServer,
         {
             loop {
-                // TODO: More granular error handling. Some errors here are expected, such as the
-                // client closing the pipe, while others are not and should throw.
+                // Break the loop on any error. An error in this path indicates a closed pipe.
                 if server.next_hint(router).await.is_err() {
                     break;
                 }
