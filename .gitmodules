@@ -1,3 +1,3 @@
-[submodule "bin/kdn/op-test-vectors"]
-	path = bin/kdn/op-test-vectors
-	url = https://github.com/ethereum-optimism/op-test-vectors
+[submodule "bin/kdn/tests"]
+	path = bin/kdn/tests
+	url = https://github.com/ethereum-optimism/tests
