@@ -7,7 +7,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 publish = false
-exclude = ["op-test-vectors"]
+exclude = ["tests"]
 
 [dependencies]
 # Workspace
@@ -32,5 +32,5 @@ reqwest = "0.12"
 futures = "0.3"
 color-eyre = "0.6" # For op-test-vector dependency
 clap = { version = "4", features = ["derive", "env"] }
-op-test-vectors = { git = "https://github.com/ethereum-optimism/op-test-vectors", branch = "main" }
+op-test-vectors = { git = "https://github.com/ethereum-optimism/tests", branch = "main" }
 include_directory = "0.1.1"

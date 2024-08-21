@@ -6,8 +6,8 @@ use include_directory::{include_directory, Dir, DirEntry, File};
 use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn, Level};
 
-static OP_TEST_VECTORS: Dir<'_> =
-    include_directory!("$CARGO_MANIFEST_DIR/op-test-vectors/fixtures/derivation/");
+static TEST_FIXTURES: Dir<'_> =
+    include_directory!("$CARGO_MANIFEST_DIR/tests/fixtures/derivation/");
 
 /// Main CLI
 #[derive(Parser, Clone, Debug)]
@@ -115,10 +115,10 @@ impl Cli {
         Ok(fixtures)
     }
 
-    /// Get a list of available tests in the `op-test-vectors` git submodule.
+    /// Get a list of available tests in the `tests` git submodule.
     pub fn get_tests() -> Result<Vec<File<'static>>> {
-        let mut tests = Vec::with_capacity(OP_TEST_VECTORS.entries().len());
-        for path in OP_TEST_VECTORS.entries() {
+        let mut tests = Vec::with_capacity(TEST_FIXTURES.entries().len());
+        for path in TEST_FIXTURES.entries() {
             let DirEntry::File(f) = path else {
                 debug!(target: "get_tests", "Skipping non-file: {:?}", path);
                 continue;
