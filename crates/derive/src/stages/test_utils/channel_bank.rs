@@ -33,6 +33,10 @@ impl OriginProvider for MockChannelBankProvider {
 #[async_trait]
 impl OriginAdvancer for MockChannelBankProvider {
     async fn advance_origin(&mut self) -> StageResult<()> {
+        self.block_info = self.block_info.map(|mut bi| {
+            bi.number += 1;
+            bi
+        });
         Ok(())
     }
 }
