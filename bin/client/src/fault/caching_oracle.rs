@@ -3,7 +3,7 @@
 //!
 //! [OracleReader]: kona_preimage::OracleReader
 
-use crate::{HINT_WRITER, ORACLE_READER};
+use super::{HINT_WRITER, ORACLE_READER};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -17,7 +17,7 @@ use spin::Mutex;
 ///
 /// [OracleReader]: kona_preimage::OracleReader
 #[derive(Debug, Clone)]
-pub struct CachingOracle {
+pub(crate) struct CachingOracle {
     /// The spin-locked cache that stores the responses from the oracle.
     cache: Arc<Mutex<LruCache<PreimageKey, Vec<u8>>>>,
 }
@@ -27,7 +27,7 @@ impl CachingOracle {
     /// responses in the cache.
     ///
     /// [OracleReader]: kona_preimage::OracleReader
-    pub fn new(cache_size: usize) -> Self {
+    pub(crate) fn new(cache_size: usize) -> Self {
         Self {
             cache: Arc::new(Mutex::new(LruCache::new(
                 NonZeroUsize::new(cache_size).expect("N must be greater than 0"),

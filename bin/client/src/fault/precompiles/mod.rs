@@ -14,7 +14,7 @@ mod kzg_point_eval;
 
 /// The [PrecompileOverride] implementation for the FPVM-accelerated precompiles.
 #[derive(Debug)]
-pub struct FPVMPrecompileOverride<F, H>
+pub(crate) struct FPVMPrecompileOverride<F, H>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,

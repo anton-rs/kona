@@ -5,18 +5,21 @@
 #![no_std]
 #![cfg_attr(any(target_arch = "mips", target_arch = "riscv64"), no_main)]
 
+extern crate alloc;
+
 use alloc::sync::Arc;
 use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
-    l2::{FPVMPrecompileOverride, OracleL2ChainProvider},
-    BootInfo, CachingOracle,
+    l2::OracleL2ChainProvider,
+    BootInfo,
 };
 use kona_common_proc::client_entry;
 use kona_executor::StatelessL2BlockExecutor;
 use kona_primitives::L2AttributesWithParent;
 
-extern crate alloc;
+pub(crate) mod fault;
+use fault::{CachingOracle, FPVMPrecompileOverride};
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
