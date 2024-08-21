@@ -4803,7 +4803,7 @@ dependencies = [
 [[package]]
 name = "op-test-vectors"
 version = "0.2.0"
-source = "git+https://github.com/ethereum-optimism/tests?branch=main#822a8aa005e1e24f93260dbd415566b4f0399870"
+source = "git+https://github.com/ethereum-optimism/tests?branch=main#4886f8469252a2de196b5f5546627f6c19f241a0"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -6758,9 +6758,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "superchain-primitives"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e35d3e5f7fc00a05e56c9bede517d19c8d91f8686169a585100c1e201183e3c7"
+checksum = "f92c0bb828219b159e625b816e9248adafb028eabb86917b0dfbca9c658c0990"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -6774,9 +6774,9 @@ dependencies = [
 
 [[package]]
 name = "superchain-registry"
-version = "0.2.4"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8bc04d4a4f1433b23e7d734537d72eaf4d4698affcce4ef42ef3fc844ee4aa3"
+checksum = "acc582cdafa06eb8593303a94cc216d6f54ae6c10fabf80f4c13cb7ea6e127ff"
 dependencies = [
  "hashbrown 0.14.5",
  "lazy_static",
