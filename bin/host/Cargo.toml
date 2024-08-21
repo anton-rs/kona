@@ -21,10 +21,10 @@ async-trait.workspace = true
 
 # local
 kona-client = { path = "../client", version = "0.1.0" }
-kona-common = { path = "../../crates/common", version = "0.0.2" }
-kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
-kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
-kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
+kona-common = { path = "../../crates/common", version = "0.0.3" }
+kona-preimage = { path = "../../crates/preimage", version = "0.0.3" }
+kona-mpt = { path = "../../crates/mpt", version = "0.0.3" }
+kona-derive = { path = "../../crates/derive", version = "0.0.3", features = ["online"] }
 
 # external
 alloy-provider = { version = "0.2" } 

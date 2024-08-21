@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/ethereum-optimism/kona/compare/kona-mpt-v0.0.2...kona-mpt-v0.0.3) - 2024-08-21
+
+### Added
+- *(mpt)* `TrieNode` benchmarks ([#351](https://github.com/ethereum-optimism/kona/pull/351))
+
+### Fixed
+- *(deps)* Bump Alloy Dependencies ([#409](https://github.com/ethereum-optimism/kona/pull/409))
+
+### Other
+- *(deps)* Bump revm version to v13 ([#422](https://github.com/ethereum-optimism/kona/pull/422))
+
 ## [0.0.2](https://github.com/ethereum-optimism/kona/compare/kona-mpt-v0.0.1...kona-mpt-v0.0.2) - 2024-06-22
 
 ### Added
