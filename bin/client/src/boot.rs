@@ -5,6 +5,7 @@ use alloy_primitives::{B256, U256};
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use kona_primitives::RollupConfig;
+use tracing::warn;
 
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
@@ -89,8 +90,21 @@ impl BootInfo {
                 .try_into()
                 .map_err(|_| anyhow!("Failed to convert L2 chain ID to u64"))?,
         );
-        let rollup_config = RollupConfig::from_l2_chain_id(chain_id)
-            .ok_or_else(|| anyhow!("Failed to get rollup config for L2 Chain ID: {chain_id}"))?;
+
+        // Attempt to load the rollup config from the chain ID. If there is no config for the chain,
+        // fall back to loading the config from the preimage oracle.
+        let rollup_config = if let Some(config) = RollupConfig::from_l2_chain_id(chain_id) {
+            config
+        } else {
+            warn!(
+                target: "boot-loader",
+                "No rollup config found for chain ID {}, falling back to preimage oracle. This is insecure in production without additional validation!",
+                chain_id
+            );
+            let ser_cfg = oracle.get(PreimageKey::new_local(L2_ROLLUP_CONFIG_KEY.to())).await?;
+            serde_json::from_slice(&ser_cfg)
+                .map_err(|e| anyhow!("Failed to deserialize rollup config: {}", e))?
+        };
 
         Ok(Self { l1_head, l2_output_root, l2_claim, l2_claim_block, chain_id, rollup_config })
     }

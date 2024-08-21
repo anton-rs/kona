@@ -5,7 +5,9 @@ use crate::kv::{
     SplitKeyValueStore,
 };
 use alloy_primitives::B256;
+use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
+use kona_derive::types::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
@@ -59,6 +61,9 @@ pub struct HostCli {
     /// Run in pre-image server mode without executing any client program. Defaults to `false`.
     #[clap(long)]
     pub server: bool,
+    /// Path to rollup config
+    #[clap(long)]
+    pub rollup_config_path: Option<PathBuf>,
 }
 
 impl HostCli {
@@ -85,5 +90,22 @@ impl HostCli {
         };
 
         kv_store
+    }
+
+    /// Reads the [RollupConfig] from the file system and returns it as a string.
+    pub fn read_rollup_config(&self) -> Result<RollupConfig> {
+        let path = self.rollup_config_path.as_ref().ok_or_else(|| {
+            anyhow::anyhow!(
+                "No rollup config path provided. Please provide a path to the rollup config."
+            )
+        })?;
+
+        // Read the serialized config from the file system.
+        let ser_config = std::fs::read_to_string(path)
+            .map_err(|e| anyhow!("Error reading RollupConfig file: {e}"))?;
+
+        // Deserialize the config and return it.
+        serde_json::from_str(&ser_config)
+            .map_err(|e| anyhow!("Error deserializing RollupConfig: {e}"))
     }
 }
