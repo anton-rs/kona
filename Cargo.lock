@@ -5759,6 +5759,7 @@ dependencies = [
  "c-kzg",
  "cfg-if",
  "k256",
+ "kzg-rs",
  "once_cell",
  "p256",
  "revm-primitives 8.0.0",
