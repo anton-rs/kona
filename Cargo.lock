@@ -4229,26 +4229,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kona-plasma"
-version = "0.0.1"
-dependencies = [
- "alloy-consensus",
- "alloy-primitives",
- "alloy-provider",
- "alloy-transport-http",
- "anyhow",
- "async-trait",
- "kona-derive 0.0.2",
- "kona-primitives 0.0.1",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "kona-preimage"
 version = "0.0.2"
 dependencies = [
