@@ -64,7 +64,7 @@ impl Cli {
         }
     }
 
-    /// Get [DerivationFixture]s to run.
+    /// Get [crate::LocalDerivationFixture]s to run.
     pub fn get_fixtures(&self) -> Result<Vec<(String, crate::LocalDerivationFixture)>> {
         // Get available derivation test fixtures
         let available_tests = Self::get_tests()?;
