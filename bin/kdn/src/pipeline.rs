@@ -1,17 +1,14 @@
 //! The pipeline module contains the pipeline logic for the test runner.
 
 use anyhow::{anyhow, Result};
-use op_test_vectors::{
-    derivation::DerivationFixture,
-    kona_derive::{
-        pipeline::{DerivationPipeline, PipelineBuilder},
-        sources::EthereumDataSource,
-        stages::{
-            AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
-            L1Traversal, StatefulAttributesBuilder,
-        },
-        traits::ChainProvider,
+use kona_derive::{
+    pipeline::{DerivationPipeline, PipelineBuilder},
+    sources::EthereumDataSource,
+    stages::{
+        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+        L1Traversal, StatefulAttributesBuilder,
     },
+    traits::ChainProvider,
 };
 use std::sync::Arc;
 use tracing::info;
@@ -42,7 +39,7 @@ pub type RunnerAttributesQueue<DAP> = AttributesQueue<
 >;
 
 /// Creates a new [DerivationPipeline] given the [DerivationFixture].
-pub async fn new_runner_pipeline(fixture: DerivationFixture) -> Result<RunnerPipeline> {
+pub async fn new_runner_pipeline(fixture: crate::LocalDerivationFixture) -> Result<RunnerPipeline> {
     let mut l1_provider = FixtureL1Provider::from(fixture.clone());
     let l2_provider = FixtureL2Provider::from(fixture.clone());
     let blob_provider = BlobFixtureProvider::from(fixture.clone());
