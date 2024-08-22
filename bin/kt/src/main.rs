@@ -17,10 +17,11 @@ pub type LocalDerivationFixture = op_test_vectors::derivation::DerivationFixture
 pub mod cli;
 pub use cli::Cli;
 
-pub mod providers;
+pub(crate) mod cli;
+pub(crate) mod dn;
+pub(crate) mod traits;
 
-pub mod pipeline;
-
-pub mod runner;
-
-pub mod blobs;
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    cli::Cli::parse().init_telemetry()?.run().await
+}

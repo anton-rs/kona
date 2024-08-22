@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 /// An L1Provider using the fixture data from the derivation test fixture.
 #[derive(Debug, Clone)]
-pub struct FixtureL1Provider {
-    inner: crate::LocalDerivationFixture,
+pub(crate) struct FixtureL1Provider {
+    inner: DerivationFixture,
 }
 
 impl From<crate::LocalDerivationFixture> for FixtureL1Provider {
@@ -83,8 +83,8 @@ impl ChainProvider for FixtureL1Provider {
 
 /// An L2Provider using the fixture data from the derivation test fixture.
 #[derive(Debug, Clone)]
-pub struct FixtureL2Provider {
-    inner: crate::LocalDerivationFixture,
+pub(crate) struct FixtureL2Provider {
+    inner: DerivationFixture,
 }
 
 impl From<crate::LocalDerivationFixture> for FixtureL2Provider {
