@@ -2,22 +2,19 @@
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use op_test_vectors::{
-    derivation::DerivationFixture,
-    kona_derive::{
-        traits::BlobProvider,
-        types::{Blob, BlobProviderError, BlockInfo, IndexedBlobHash},
-    },
+use kona_derive::{
+    traits::BlobProvider,
+    types::{Blob, BlobProviderError, BlockInfo, IndexedBlobHash},
 };
 
 /// A blob fixture provider.
 #[derive(Debug, Clone)]
-pub struct BlobFixtureProvider {
-    inner: DerivationFixture,
+pub(crate) struct BlobFixtureProvider {
+    inner: crate::LocalDerivationFixture,
 }
 
-impl From<DerivationFixture> for BlobFixtureProvider {
-    fn from(inner: DerivationFixture) -> Self {
+impl From<crate::LocalDerivationFixture> for BlobFixtureProvider {
+    fn from(inner: crate::LocalDerivationFixture) -> Self {
         Self { inner }
     }
 }

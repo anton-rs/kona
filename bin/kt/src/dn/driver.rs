@@ -2,23 +2,22 @@
 //!
 //! The runner that executes the pipeline and validates the output given the test fixtures.
 
+use super::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
 use anyhow::{anyhow, Result};
-use op_test_vectors::{
-    derivation::DerivationFixture,
-    kona_derive::{
-        pipeline::StepResult,
-        traits::{L2ChainProvider, Pipeline},
-        types::StageError,
-    },
+use kona_derive::{
+    pipeline::StepResult,
+    traits::{L2ChainProvider, Pipeline},
+    types::StageError,
 };
 use tracing::{debug, error, info, trace, warn};
-
-use crate::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
 
 const LOG_TARGET: &str = "runner";
 
 /// Runs the pipeline.
-pub async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Result<()> {
+pub(crate) async fn run(
+    mut pipeline: RunnerPipeline,
+    fixture: crate::LocalDerivationFixture,
+) -> Result<()> {
     let mut cursor = *fixture
         .l2_block_infos
         .get(&fixture.l2_cursor_start)

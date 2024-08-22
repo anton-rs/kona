@@ -1,39 +1,36 @@
 //! The pipeline module contains the pipeline logic for the test runner.
 
+use super::{
+    blobs::BlobFixtureProvider,
+    providers::{FixtureL1Provider, FixtureL2Provider},
+};
 use anyhow::{anyhow, Result};
-use op_test_vectors::{
-    derivation::DerivationFixture,
-    kona_derive::{
-        pipeline::{DerivationPipeline, PipelineBuilder},
-        sources::EthereumDataSource,
-        stages::{
-            AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
-            L1Traversal, StatefulAttributesBuilder,
-        },
-        traits::ChainProvider,
+use kona_derive::{
+    pipeline::{DerivationPipeline, PipelineBuilder},
+    sources::EthereumDataSource,
+    stages::{
+        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+        L1Traversal, StatefulAttributesBuilder,
     },
+    traits::ChainProvider,
 };
 use std::sync::Arc;
 use tracing::info;
 
-use crate::{
-    blobs::BlobFixtureProvider,
-    providers::{FixtureL1Provider, FixtureL2Provider},
-};
-
 /// The test runner derivation pipeline.
-pub type RunnerPipeline =
+pub(crate) type RunnerPipeline =
     DerivationPipeline<RunnerAttributesQueue<RunnerDataProvider>, FixtureL2Provider>;
 
 /// A test runner Ethereum data provider.
-pub type RunnerDataProvider = EthereumDataSource<FixtureL1Provider, BlobFixtureProvider>;
+pub(crate) type RunnerDataProvider = EthereumDataSource<FixtureL1Provider, BlobFixtureProvider>;
 
 /// A test runner payload attributes builder for the `AttributesQueue` stage of the derivation
 /// pipeline.
-pub type RunnerAttributesBuilder = StatefulAttributesBuilder<FixtureL1Provider, FixtureL2Provider>;
+pub(crate) type RunnerAttributesBuilder =
+    StatefulAttributesBuilder<FixtureL1Provider, FixtureL2Provider>;
 
 /// A test runner attributes queue for the derivation pipeline.
-pub type RunnerAttributesQueue<DAP> = AttributesQueue<
+pub(crate) type RunnerAttributesQueue<DAP> = AttributesQueue<
     BatchQueue<
         ChannelReader<ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<FixtureL1Provider>>>>>,
         FixtureL2Provider,
@@ -41,8 +38,10 @@ pub type RunnerAttributesQueue<DAP> = AttributesQueue<
     RunnerAttributesBuilder,
 >;
 
-/// Creates a new [DerivationPipeline] given the [DerivationFixture].
-pub async fn new_runner_pipeline(fixture: DerivationFixture) -> Result<RunnerPipeline> {
+/// Creates a new [DerivationPipeline] given the [crate::LocalDerivationFixture].
+pub(crate) async fn new_runner_pipeline(
+    fixture: crate::LocalDerivationFixture,
+) -> Result<RunnerPipeline> {
     let mut l1_provider = FixtureL1Provider::from(fixture.clone());
     let l2_provider = FixtureL2Provider::from(fixture.clone());
     let blob_provider = BlobFixtureProvider::from(fixture.clone());

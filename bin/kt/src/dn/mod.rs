@@ -1,59 +1,47 @@
-//! Module for the CLI.
+//! Kona derivation test runner
 
+use crate::{cli::RunnerCfg, traits::TestExecutor};
 use anyhow::{anyhow, Result};
-use clap::{ArgAction, Parser};
+use async_trait::async_trait;
 use include_directory::{include_directory, Dir, DirEntry, File};
-use op_test_vectors::derivation::DerivationFixture;
-use tracing::{debug, error, info, trace, warn, Level};
+use tracing::{debug, error, info, trace, warn};
+
+pub(crate) mod blobs;
+pub(crate) mod driver;
+pub(crate) mod pipeline;
+pub(crate) mod providers;
 
 static TEST_FIXTURES: Dir<'_> =
     include_directory!("$CARGO_MANIFEST_DIR/tests/fixtures/derivation/");
 
-/// Main CLI
-#[derive(Parser, Clone, Debug)]
-#[command(author, version, about, long_about = None)]
-pub struct Cli {
-    /// Specify a test to run.
-    #[clap(long, help = "Run a specific derivation test fixture")]
-    pub test: Option<String>,
-    /// Runs all tests.
-    #[clap(long, help = "Run all derivation tests", conflicts_with = "test")]
-    pub all: bool,
-    /// Verbosity level (0-4)
-    #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
-    pub v: u8,
+/// The [DerivationRunner] struct is a test executor for running derivation tests.
+pub(crate) struct DerivationRunner {
+    cfg: RunnerCfg,
 }
 
-impl Cli {
-    /// Initializes telemtry for the application.
-    pub fn init_telemetry(self) -> Result<Self> {
-        let subscriber = tracing_subscriber::fmt()
-            .with_max_level(match self.v {
-                0 => Level::ERROR,
-                1 => Level::WARN,
-                2 => Level::INFO,
-                3 => Level::DEBUG,
-                _ => Level::TRACE,
-            })
-            .finish();
-        tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))?;
-        Ok(self)
+impl DerivationRunner {
+    /// Create a new [DerivationRunner] instance.
+    pub(crate) fn new(cfg: RunnerCfg) -> Self {
+        Self { cfg }
     }
+}
 
-    /// Parse the CLI arguments and run the command
-    pub async fn run(&self) -> Result<()> {
-        let fixtures = self.get_fixtures()?;
+#[async_trait]
+impl TestExecutor for DerivationRunner {
+    type Fixture = crate::LocalDerivationFixture;
+
+    async fn exec(&self) -> Result<()> {
+        let fixtures = self.get_selected_fixtures()?;
         for (name, fixture) in fixtures {
-            self.exec(name, fixture).await?;
+            self.exec_single(name, fixture).await?;
         }
         Ok(())
     }
 
-    /// Executes a given derivation test fixture.
-    pub async fn exec(&self, name: String, fixture: DerivationFixture) -> Result<()> {
+    async fn exec_single(&self, name: String, fixture: Self::Fixture) -> Result<()> {
         info!(target: "exec", "Running test: {}", name);
-        let pipeline = crate::pipeline::new_runner_pipeline(fixture.clone()).await?;
-        match crate::runner::run(pipeline, fixture).await {
+        let pipeline = pipeline::new_runner_pipeline(fixture.clone()).await?;
+        match driver::run(pipeline, fixture).await {
             Ok(_) => {
                 println!("[PASS] {}", name);
                 Ok(())
@@ -65,10 +53,9 @@ impl Cli {
         }
     }
 
-    /// Get [DerivationFixture]s to run.
-    pub fn get_fixtures(&self) -> Result<Vec<(String, DerivationFixture)>> {
+    fn get_selected_fixtures(&self) -> Result<Vec<(String, Self::Fixture)>> {
         // Get available derivation test fixtures
-        let available_tests = Self::get_tests()?;
+        let available_tests = Self::get_files()?;
         trace!("Available tests: {:?}", available_tests);
 
         // Parse derivation test fixtures
@@ -82,7 +69,7 @@ impl Cli {
                 debug!("Parsing test fixture: {}", path);
                 Ok((
                     path.to_string(),
-                    serde_json::from_str::<DerivationFixture>(fixture_str)
+                    serde_json::from_str::<crate::LocalDerivationFixture>(fixture_str)
                         .map_err(|e| anyhow!(e))?,
                 ))
             })
@@ -90,9 +77,9 @@ impl Cli {
         trace!("Parsed {} tests", tests.len());
 
         // Select the tests to run.
-        let fixtures = if self.all {
+        let fixtures = if self.cfg.all {
             tests
-        } else if let Some(test) = &self.test {
+        } else if let Some(test) = &self.cfg.test {
             let fixture = tests
                 .into_iter()
                 .find(|(path, _)| {
@@ -115,8 +102,7 @@ impl Cli {
         Ok(fixtures)
     }
 
-    /// Get a list of available tests in the `tests` git submodule.
-    pub fn get_tests() -> Result<Vec<File<'static>>> {
+    fn get_files() -> Result<Vec<File<'static>>> {
         let mut tests = Vec::with_capacity(TEST_FIXTURES.entries().len());
         for path in TEST_FIXTURES.entries() {
             let DirEntry::File(f) = path else {
