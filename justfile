@@ -25,7 +25,11 @@ test-online:
 
 # Run derivation test fixtures against `kona-derive`
 test-derivation:
-  cargo run --bin kdn -- --all 
+  cargo run --bin kt -- dn --all 
+
+# Run execution test fixtures against `kona-executor`
+test-execution:
+  cargo run --bin kt -- t8n --all 
 
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc lint-docs
