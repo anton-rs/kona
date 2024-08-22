@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  derivation-fixtures:
+  derivation:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
