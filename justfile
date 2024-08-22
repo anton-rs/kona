@@ -23,6 +23,10 @@ test *args='':
 test-online:
   cargo nextest run --workspace --all --features online
 
+# Run derivation test fixtures against `kona-derive`
+test-derivation:
+  cargo run --bin kdn -- --all 
+
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc lint-docs
 
