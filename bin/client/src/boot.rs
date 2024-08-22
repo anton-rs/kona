@@ -3,6 +3,7 @@
 
 use alloy_primitives::{B256, U256};
 use anyhow::{anyhow, Result};
+use serde::{Deserialize, Serialize};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use kona_primitives::RollupConfig;
 use tracing::warn;
@@ -36,7 +37,7 @@ pub const L2_ROLLUP_CONFIG_KEY: U256 = U256::from_be_slice(&[6]);
 /// **User submitted inputs:**
 /// - `l2_claim`: The L2 output root claim.
 /// - `l2_claim_block`: The L2 claim block number.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BootInfo {
     /// The L1 head hash containing the safe L2 chain data that may reproduce the L2 head hash.
     pub l1_head: B256,
