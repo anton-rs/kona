@@ -2,6 +2,7 @@
 //!
 //! The runner that executes the pipeline and validates the output given the test fixtures.
 
+use super::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
 use anyhow::{anyhow, Result};
 use kona_derive::{
     pipeline::StepResult,
@@ -10,12 +11,10 @@ use kona_derive::{
 };
 use tracing::{debug, error, info, trace, warn};
 
-use crate::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
-
 const LOG_TARGET: &str = "runner";
 
 /// Runs the pipeline.
-pub async fn run(
+pub(crate) async fn run(
     mut pipeline: RunnerPipeline,
     fixture: crate::LocalDerivationFixture,
 ) -> Result<()> {
