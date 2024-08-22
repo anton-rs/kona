@@ -3999,6 +3999,7 @@ dependencies = [
  "foundry-fork-db",
  "futures",
  "include_directory",
+ "kona-derive",
  "op-test-vectors",
  "reqwest",
  "revm-inspectors",
@@ -4040,11 +4041,11 @@ dependencies = [
  "cfg-if",
  "kona-common",
  "kona-common-proc",
- "kona-derive 0.0.2",
+ "kona-derive",
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
- "kona-primitives 0.0.1",
+ "kona-primitives",
  "lru",
  "op-alloy-consensus",
  "revm 13.0.0",
@@ -4097,7 +4098,7 @@ dependencies = [
  "brotli",
  "c-kzg",
  "hashbrown 0.14.5",
- "kona-primitives 0.0.1",
+ "kona-primitives",
  "lazy_static",
  "lru",
  "miniz_oxide 0.7.4",
@@ -4117,41 +4118,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kona-derive"
-version = "0.0.2"
-source = "git+https://github.com/ethereum-optimism/kona?rev=4e57dd35ea08b31d0baa293c7a12165f28e6cd92#4e57dd35ea08b31d0baa293c7a12165f28e6cd92"
-dependencies = [
- "alloc-no-stdlib",
- "alloy-consensus",
- "alloy-eips",
- "alloy-primitives",
- "alloy-provider",
- "alloy-rlp",
- "alloy-rpc-client",
- "alloy-rpc-types",
- "alloy-sol-types",
- "alloy-transport",
- "alloy-transport-http",
- "anyhow",
- "async-trait",
- "brotli",
- "c-kzg",
- "hashbrown 0.14.5",
- "kona-primitives 0.0.1 (git+https://github.com/ethereum-optimism/kona?rev=4e57dd35ea08b31d0baa293c7a12165f28e6cd92)",
- "lru",
- "miniz_oxide 0.7.4",
- "op-alloy-consensus",
- "reqwest",
- "revm 10.0.0",
- "serde",
- "serde_json",
- "sha2",
- "spin",
- "tracing",
- "unsigned-varint",
-]
-
-[[package]]
 name = "kona-executor"
 version = "0.0.1"
 dependencies = [
@@ -4161,7 +4127,7 @@ dependencies = [
  "alloy-rlp",
  "anyhow",
  "criterion",
- "kona-derive 0.0.2",
+ "kona-derive",
  "kona-mpt",
  "op-alloy-consensus",
  "pprof",
@@ -4191,7 +4157,7 @@ dependencies = [
  "futures",
  "kona-client",
  "kona-common",
- "kona-derive 0.0.2",
+ "kona-derive",
  "kona-mpt",
  "kona-preimage",
  "os_pipe",
@@ -4238,8 +4204,8 @@ dependencies = [
  "alloy-transport-http",
  "anyhow",
  "async-trait",
- "kona-derive 0.0.2",
- "kona-primitives 0.0.1",
+ "kona-derive",
+ "kona-primitives",
  "reqwest",
  "serde",
  "serde_json",
@@ -4277,22 +4243,6 @@ dependencies = [
  "op-alloy-consensus",
  "serde",
  "serde_json",
- "superchain-primitives",
-]
-
-[[package]]
-name = "kona-primitives"
-version = "0.0.1"
-source = "git+https://github.com/ethereum-optimism/kona?rev=4e57dd35ea08b31d0baa293c7a12165f28e6cd92#4e57dd35ea08b31d0baa293c7a12165f28e6cd92"
-dependencies = [
- "alloy-consensus",
- "alloy-eips",
- "alloy-primitives",
- "alloy-rlp",
- "alloy-sol-types",
- "anyhow",
- "op-alloy-consensus",
- "serde",
  "superchain-primitives",
 ]
 
@@ -4803,7 +4753,7 @@ dependencies = [
 [[package]]
 name = "op-test-vectors"
 version = "0.2.0"
-source = "git+https://github.com/ethereum-optimism/tests?branch=main#4886f8469252a2de196b5f5546627f6c19f241a0"
+source = "git+https://github.com/ethereum-optimism/tests?branch=main#6f76ea589a831588995c185cad21181f6c7d3e6f"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -4811,7 +4761,6 @@ dependencies = [
  "anvil-core",
  "color-eyre",
  "hashbrown 0.14.5",
- "kona-derive 0.0.2 (git+https://github.com/ethereum-optimism/kona?rev=4e57dd35ea08b31d0baa293c7a12165f28e6cd92)",
  "op-alloy-consensus",
  "op-alloy-rpc-types",
  "serde",
@@ -5737,19 +5686,6 @@ dependencies = [
 
 [[package]]
 name = "revm"
-version = "10.0.0"
-source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
-dependencies = [
- "auto_impl",
- "cfg-if",
- "dyn-clone",
- "revm-interpreter 6.0.0",
- "revm-precompile 8.0.0",
- "serde",
-]
-
-[[package]]
-name = "revm"
 version = "12.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6cfb48bce8ca2113e157bdbddbd5eeb09daac1c903d79ec17085897c38c7c91"
@@ -5796,15 +5732,6 @@ dependencies = [
 
 [[package]]
 name = "revm-interpreter"
-version = "6.0.0"
-source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
-dependencies = [
- "revm-primitives 5.0.0",
- "serde",
-]
-
-[[package]]
-name = "revm-interpreter"
 version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6b0daddea06fc6da5346acc39b32a357bbe3579e9e3d94117d9ae125cd596fc"
@@ -5820,21 +5747,6 @@ source = "git+https://github.com/bluealloy/revm#1ad860469755e3cf71383f45d71c3faa
 dependencies = [
  "revm-primitives 8.0.0",
  "serde",
-]
-
-[[package]]
-name = "revm-precompile"
-version = "8.0.0"
-source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
-dependencies = [
- "aurora-engine-modexp",
- "c-kzg",
- "k256",
- "once_cell",
- "revm-primitives 5.0.0",
- "ripemd",
- "sha2",
- "substrate-bn",
 ]
 
 [[package]]
@@ -5874,26 +5786,6 @@ dependencies = [
  "secp256k1",
  "sha2",
  "substrate-bn",
-]
-
-[[package]]
-name = "revm-primitives"
-version = "5.0.0"
-source = "git+https://github.com/bluealloy/revm?tag=v37#99367b1db2c436359c0155ed8965c19fc5503a1b"
-dependencies = [
- "alloy-primitives",
- "auto_impl",
- "bitflags 2.6.0",
- "bitvec",
- "c-kzg",
- "cfg-if",
- "derive_more",
- "dyn-clone",
- "enumn",
- "hashbrown 0.14.5",
- "hex",
- "once_cell",
- "serde",
 ]
 
 [[package]]
@@ -6886,9 +6778,9 @@ dependencies = [
 
 [[package]]
 name = "system-configuration"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "658bc6ee10a9b4fcf576e9b0819d95ec16f4d2c02d39fd83ac1c8789785c4a42"
+checksum = "3c879d448e9d986b661742763247d3693ed13609438cf3d006f51f5368a5ba6b"
 dependencies = [
  "bitflags 2.6.0",
  "core-foundation",
@@ -7373,7 +7265,7 @@ dependencies = [
  "alloy-transport",
  "anyhow",
  "clap",
- "kona-derive 0.0.2",
+ "kona-derive",
  "lazy_static",
  "prometheus",
  "reqwest",

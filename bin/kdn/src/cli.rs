@@ -3,7 +3,6 @@
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
 use include_directory::{include_directory, Dir, DirEntry, File};
-use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn, Level};
 
 static TEST_FIXTURES: Dir<'_> =
@@ -50,7 +49,7 @@ impl Cli {
     }
 
     /// Executes a given derivation test fixture.
-    pub async fn exec(&self, name: String, fixture: DerivationFixture) -> Result<()> {
+    pub async fn exec(&self, name: String, fixture: crate::LocalDerivationFixture) -> Result<()> {
         info!(target: "exec", "Running test: {}", name);
         let pipeline = crate::pipeline::new_runner_pipeline(fixture.clone()).await?;
         match crate::runner::run(pipeline, fixture).await {
@@ -65,8 +64,8 @@ impl Cli {
         }
     }
 
-    /// Get [DerivationFixture]s to run.
-    pub fn get_fixtures(&self) -> Result<Vec<(String, DerivationFixture)>> {
+    /// Get [crate::LocalDerivationFixture]s to run.
+    pub fn get_fixtures(&self) -> Result<Vec<(String, crate::LocalDerivationFixture)>> {
         // Get available derivation test fixtures
         let available_tests = Self::get_tests()?;
         trace!("Available tests: {:?}", available_tests);
@@ -82,7 +81,7 @@ impl Cli {
                 debug!("Parsing test fixture: {}", path);
                 Ok((
                     path.to_string(),
-                    serde_json::from_str::<DerivationFixture>(fixture_str)
+                    serde_json::from_str::<crate::LocalDerivationFixture>(fixture_str)
                         .map_err(|e| anyhow!(e))?,
                 ))
             })
