@@ -39,7 +39,7 @@ pub(crate) type RunnerAttributesQueue<DAP> = AttributesQueue<
 >;
 
 /// Creates a new [DerivationPipeline] given the [crate::LocalDerivationFixture].
-pub async fn new_runner_pipeline(fixture: crate::LocalDerivationFixture) -> Result<RunnerPipeline> {
+pub(crate) async fn new_runner_pipeline(fixture: crate::LocalDerivationFixture) -> Result<RunnerPipeline> {
     let mut l1_provider = FixtureL1Provider::from(fixture.clone());
     let l2_provider = FixtureL2Provider::from(fixture.clone());
     let blob_provider = BlobFixtureProvider::from(fixture.clone());

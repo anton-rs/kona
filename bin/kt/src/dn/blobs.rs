@@ -9,7 +9,7 @@ use kona_derive::{
 
 /// A blob fixture provider.
 #[derive(Debug, Clone)]
-pub struct BlobFixtureProvider {
+pub(crate) struct BlobFixtureProvider {
     inner: crate::LocalDerivationFixture,
 }
 

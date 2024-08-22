@@ -14,7 +14,10 @@ use tracing::{debug, error, info, trace, warn};
 const LOG_TARGET: &str = "runner";
 
 /// Runs the pipeline.
-pub(crate) async fn run(mut pipeline: RunnerPipeline, fixture: DerivationFixture) -> Result<()> {
+pub(crate) async fn run(
+    mut pipeline: RunnerPipeline,
+    fixture: crate::LocalDerivationFixture,
+) -> Result<()> {
     let mut cursor = *fixture
         .l2_block_infos
         .get(&fixture.l2_cursor_start)

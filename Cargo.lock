@@ -3986,30 +3986,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kdn"
-version = "0.1.0"
-dependencies = [
- "alloy-consensus",
- "alloy-eips",
- "alloy-primitives",
- "anyhow",
- "async-trait",
- "clap",
- "color-eyre",
- "foundry-fork-db",
- "futures",
- "include_directory",
- "kona-derive",
- "op-test-vectors",
- "reqwest",
- "revm-inspectors",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4244,6 +4220,30 @@ dependencies = [
  "serde",
  "serde_json",
  "superchain-primitives",
+]
+
+[[package]]
+name = "kt"
+version = "0.1.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "anyhow",
+ "async-trait",
+ "clap",
+ "color-eyre",
+ "foundry-fork-db",
+ "futures",
+ "include_directory",
+ "kona-derive",
+ "op-test-vectors",
+ "reqwest",
+ "revm-inspectors",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -4,13 +4,12 @@ use crate::{cli::RunnerCfg, traits::TestExecutor};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use include_directory::{include_directory, Dir, DirEntry, File};
-use op_test_vectors::derivation::DerivationFixture;
 use tracing::{debug, error, info, trace, warn};
 
 pub(crate) mod blobs;
 pub(crate) mod pipeline;
 pub(crate) mod providers;
-pub(crate) mod runner;
+pub(crate) mod driver;
 
 static TEST_FIXTURES: Dir<'_> =
     include_directory!("$CARGO_MANIFEST_DIR/tests/fixtures/derivation/");
@@ -29,7 +28,7 @@ impl DerivationRunner {
 
 #[async_trait]
 impl TestExecutor for DerivationRunner {
-    type Fixture = DerivationFixture;
+    type Fixture = crate::LocalDerivationFixture;
 
     async fn exec(&self) -> Result<()> {
         let fixtures = self.get_selected_fixtures()?;
@@ -39,10 +38,10 @@ impl TestExecutor for DerivationRunner {
         Ok(())
     }
 
-    async fn exec_single(&self, name: String, fixture: DerivationFixture) -> Result<()> {
+    async fn exec_single(&self, name: String, fixture: Self::Fixture) -> Result<()> {
         info!(target: "exec", "Running test: {}", name);
         let pipeline = pipeline::new_runner_pipeline(fixture.clone()).await?;
-        match runner::run(pipeline, fixture).await {
+        match driver::run(pipeline, fixture).await {
             Ok(_) => {
                 println!("[PASS] {}", name);
                 Ok(())
@@ -54,7 +53,7 @@ impl TestExecutor for DerivationRunner {
         }
     }
 
-    fn get_selected_fixtures(&self) -> Result<Vec<(String, DerivationFixture)>> {
+    fn get_selected_fixtures(&self) -> Result<Vec<(String, Self::Fixture)>> {
         // Get available derivation test fixtures
         let available_tests = Self::get_files()?;
         trace!("Available tests: {:?}", available_tests);
