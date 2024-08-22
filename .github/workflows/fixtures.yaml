@@ -23,5 +23,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+      - uses: taiki-e/install-action@just
       - name: Run kdn
         run: just test-derivation
