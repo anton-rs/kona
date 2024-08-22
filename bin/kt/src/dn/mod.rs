@@ -7,9 +7,9 @@ use include_directory::{include_directory, Dir, DirEntry, File};
 use tracing::{debug, error, info, trace, warn};
 
 pub(crate) mod blobs;
+pub(crate) mod driver;
 pub(crate) mod pipeline;
 pub(crate) mod providers;
-pub(crate) mod driver;
 
 static TEST_FIXTURES: Dir<'_> =
     include_directory!("$CARGO_MANIFEST_DIR/tests/fixtures/derivation/");
