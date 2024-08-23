@@ -1,7 +1,7 @@
 //! Contains the [DerivationDriver] struct, which handles the [L2PayloadAttributes] derivation
 //! process.
 //!
-//! [L2PayloadAttributes]: kona_derive::types::L2PayloadAttributes
+//! [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
 
 use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
@@ -54,7 +54,7 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
 /// It contains an inner [OraclePipeline] that is used to derive the attributes, backed by
 /// oracle-based data sources.
 ///
-/// [L2PayloadAttributes]: kona_derive::types::L2PayloadAttributes
+/// [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
 #[derive(Debug)]
 pub struct DerivationDriver<O, B>
 where

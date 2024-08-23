@@ -1,14 +1,16 @@
 //! CallData Source
 
-use crate::{
-    traits::{AsyncIterator, ChainProvider},
-    types::{BlockInfo, StageError, StageResult},
-};
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::Result;
 use async_trait::async_trait;
+use kona_primitives::BlockInfo;
+
+use crate::{
+    errors::{StageError, StageResult},
+    traits::{AsyncIterator, ChainProvider},
+};
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]

@@ -1,8 +1,20 @@
 //! This module contains the [Frame] type used within the derivation pipeline.
 
-use crate::params::{ChannelID, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
 use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Result};
+
+use crate::channel::ChannelID;
+
+/// The version of the derivation pipeline.
+pub const DERIVATION_VERSION_0: u8 = 0;
+
+/// Count the tagging info as 200 in terms of buffer size.
+pub const FRAME_OVERHEAD: usize = 200;
+
+/// Frames cannot be larger than 1MB.
+/// Data transactions that carry frames are generally not larger than 128 KB due to L1 network
+/// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
+pub const MAX_FRAME_LEN: usize = 1_000_000;
 
 /// A channel frame is a segment of a channel's data.
 ///

@@ -5,7 +5,7 @@ use alloy_eips::eip4844::Blob;
 use alloy_primitives::FixedBytes;
 
 #[cfg(feature = "online")]
-use crate::types::IndexedBlobHash;
+use crate::IndexedBlobHash;
 #[cfg(feature = "online")]
 use alloy_primitives::B256;
 #[cfg(feature = "online")]

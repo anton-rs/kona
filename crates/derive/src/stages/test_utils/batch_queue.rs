@@ -1,12 +1,14 @@
 //! A mock implementation of the [`BatchQueue`] stage for testing.
 
 use crate::{
+    batch::Batch,
+    errors::{StageError, StageResult},
     stages::batch_queue::BatchQueueProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{Batch, BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, SystemConfig};
 
 /// A mock provider for the [BatchQueue] stage.
 #[derive(Debug, Default)]

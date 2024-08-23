@@ -3,7 +3,9 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
+
+extern crate alloc;
 
 // Re-export superchain-primitives.
 pub use superchain_primitives::*;
@@ -11,7 +13,14 @@ pub use superchain_primitives::*;
 // Re-export alloy-primitives.
 pub use alloy_primitives;
 
-extern crate alloc;
+// Re-export alloy consensus primitives.
+pub use alloy_consensus::{
+    Header, Receipt, Signed, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
+    TxEip4844WithSidecar, TxEnvelope, TxLegacy,
+};
+
+/// Re-export [alloy_eips] eip4844 primitives.
+pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 
 /// Re-export the [Withdrawal] type from the [alloy_eips] crate.
 ///
@@ -40,3 +49,28 @@ pub use payload::{
 
 pub mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
+
+pub mod ecotone;
+pub use ecotone::*;
+
+pub mod fjord;
+pub use fjord::*;
+
+pub mod blob;
+pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
+
+pub mod sidecar;
+pub use sidecar::{
+    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
+    APIVersionResponse, BeaconBlockHeader, BlobSidecar, SignedBeaconBlockHeader,
+    VersionInformation, KZG_COMMITMENT_SIZE, KZG_PROOF_SIZE,
+};
+
+pub mod frame;
+pub use frame::{Frame, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
+
+pub mod channel;
+pub use channel::{
+    Channel, ChannelID, CHANNEL_ID_LENGTH, FJORD_MAX_RLP_BYTES_PER_CHANNEL,
+    MAX_RLP_BYTES_PER_CHANNEL,
+};

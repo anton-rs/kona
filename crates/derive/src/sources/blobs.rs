@@ -1,15 +1,17 @@
 //! Blob Data Source
 
-use crate::{
-    traits::{AsyncIterator, BlobProvider, ChainProvider},
-    types::{BlobData, BlockInfo, IndexedBlobHash, StageError, StageResult},
-};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use kona_primitives::{BlobData, BlockInfo, IndexedBlobHash};
 use tracing::warn;
+
+use crate::{
+    errors::{StageError, StageResult},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
+};
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]

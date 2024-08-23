@@ -7,7 +7,7 @@ use crate::kv::{
 use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
-use kona_derive::types::RollupConfig;
+use kona_primitives::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;

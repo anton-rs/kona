@@ -6,8 +6,10 @@ pub use crate::{
     sources::EthereumDataSource,
     stages::StatefulAttributesBuilder,
     traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
-    types::{BlockInfo, RollupConfig},
 };
+
+// Re-export kona primitives types.
+pub use kona_primitives::{BlockInfo, RollupConfig};
 
 mod pipeline;
 pub use pipeline::{

@@ -1,16 +1,18 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
-use crate::{
-    traits::{NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
-    types::{
-        BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, ResetError,
-        RollupConfig, SingleBatch, StageError, StageResult, SystemConfig,
-    },
-};
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_primitives::{
+    BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig,
+};
 use tracing::info;
+
+use crate::{
+    batch::SingleBatch,
+    errors::{ResetError, StageError, StageResult},
+    traits::{NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
+};
 
 mod deposits;
 pub(crate) use deposits::derive_deposits;
@@ -214,13 +216,14 @@ mod tests {
         RollupConfig, SingleBatch, StageError, StageResult,
     };
     use crate::{
+        errors::BuilderError,
         stages::test_utils::{
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
-        types::{BuilderError, RawTransaction},
     };
     use alloc::{sync::Arc, vec, vec::Vec};
     use alloy_primitives::b256;
+    use kona_primitives::RawTransaction;
 
     fn new_attributes_queue(
         cfg: Option<RollupConfig>,

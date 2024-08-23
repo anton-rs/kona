@@ -1,13 +1,11 @@
 //! Module for working with span batch bits.
 
-use crate::{
-    params::{FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES},
-    types::SpanBatchError,
-};
 use alloc::{vec, vec::Vec};
 use alloy_rlp::Buf;
 use anyhow::Result;
 use core::cmp::Ordering;
+
+use super::{errors::SpanBatchError, FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES};
 
 /// Type for span batch bits.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

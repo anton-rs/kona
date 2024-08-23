@@ -1,12 +1,13 @@
 //! Mock testing utilities for the [ChannelBank] stage.
 
 use crate::{
+    errors::{StageError, StageResult},
     stages::ChannelBankProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{BlockInfo, Frame, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, Frame, SystemConfig};
 
 /// A mock [ChannelBankProvider] for testing the [ChannelBank] stage.
 #[derive(Debug, Default)]

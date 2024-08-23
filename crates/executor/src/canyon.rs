@@ -2,8 +2,8 @@
 
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
 use anyhow::Result;
-use kona_derive::types::RollupConfig;
 use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_primitives::RollupConfig;
 use revm::{
     primitives::{Account, Bytecode, HashMap},
     DatabaseCommit, State,

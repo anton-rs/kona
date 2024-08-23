@@ -1,13 +1,14 @@
 //! Data source
 
-use crate::{
-    sources::{BlobSource, CalldataSource},
-    traits::{AsyncIterator, BlobProvider, ChainProvider},
-    types::StageResult,
-};
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+
+use crate::{
+    errors::StageResult,
+    sources::{BlobSource, CalldataSource},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
+};
 
 /// An enum over the various data sources.
 #[derive(Debug, Clone)]

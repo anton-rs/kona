@@ -1,13 +1,14 @@
 //! Contains the [L1Traversal] stage of the derivation pipeline.
 
 use crate::{
+    errors::{StageError, StageResult},
     stages::L1RetrievalProvider,
     traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
-    types::{BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
 use tracing::warn;
 
 /// The [L1Traversal] stage of the derivation pipeline.

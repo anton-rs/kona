@@ -4,12 +4,12 @@
 use crate::{
     sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},
     traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
-    types::{BlockInfo, RollupConfig},
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, RollupConfig};
 
 /// A factory for creating an Ethereum data source provider.
 #[derive(Debug, Clone, Copy)]

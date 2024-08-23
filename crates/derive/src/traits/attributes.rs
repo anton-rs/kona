@@ -1,8 +1,10 @@
 //! Contains traits for working with payload attributes and their providers.
 
-use crate::types::{L2AttributesWithParent, L2BlockInfo, StageResult};
 use alloc::boxed::Box;
 use async_trait::async_trait;
+use kona_primitives::{L2AttributesWithParent, L2BlockInfo};
+
+use crate::errors::StageResult;
 
 /// [NextAttributes] defines the interface for pulling attributes from
 /// the top level `AttributesQueue` stage of the pipeline.

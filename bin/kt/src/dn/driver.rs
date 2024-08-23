@@ -5,9 +5,9 @@
 use super::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
 use anyhow::{anyhow, Result};
 use kona_derive::{
+    errors::StageError,
     pipeline::StepResult,
     traits::{L2ChainProvider, Pipeline},
-    types::StageError,
 };
 use tracing::{debug, error, info, trace, warn};
 

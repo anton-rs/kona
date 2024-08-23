@@ -1,13 +1,14 @@
 //! Test utilities for the [ChannelReader] stage.
 
 use crate::{
+    errors::{StageError, StageResult},
     stages::ChannelReaderProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, SystemConfig};
 
 /// A mock [ChannelReaderProvider] for testing the [ChannelReader] stage.
 #[derive(Debug, Default)]

@@ -4,7 +4,7 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
 use anyhow::{anyhow, Result};
-use kona_derive::types::{L2PayloadAttributes, RollupConfig};
+use kona_primitives::{L2PayloadAttributes, RollupConfig};
 use revm::{
     primitives::{
         BlockEnv, CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, OptimismFields, TransactTo, TxEnv,

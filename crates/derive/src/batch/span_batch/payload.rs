@@ -1,9 +1,7 @@
 //! Raw Span Batch Payload
 
-use crate::{
-    params::{FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES},
-    types::{SpanBatchBits, SpanBatchError, SpanBatchTransactions, SpanDecodingError},
-};
+use super::{FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES};
+use crate::batch::{SpanBatchBits, SpanBatchError, SpanBatchTransactions, SpanDecodingError};
 use alloc::vec::Vec;
 
 /// Span Batch Payload

@@ -1,16 +1,17 @@
 //! Contains the [L1Retrieval] stage of the derivation pipeline.
 
 use crate::{
+    errors::{StageError, StageResult},
     stages::FrameQueueProvider,
     traits::{
         AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
     },
-    types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::boxed::Box;
 use alloy_primitives::Address;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, SystemConfig};
 
 /// Provides L1 blocks for the [L1Retrieval] stage.
 /// This is the previous stage in the pipeline.
@@ -24,7 +25,7 @@ pub trait L1RetrievalProvider {
     /// [L1Traversal]: crate::stages::L1Traversal
     async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
 
-    /// Returns the batcher [Address] from the [crate::types::SystemConfig].
+    /// Returns the batcher [Address] from the [kona_primitives::SystemConfig].
     fn batcher_addr(&self) -> Address;
 }
 

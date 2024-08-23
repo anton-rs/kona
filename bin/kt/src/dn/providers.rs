@@ -5,12 +5,10 @@ use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_derive::{
-    traits::{ChainProvider, L2ChainProvider},
-    types::{
-        BlockInfo, L2BlockInfo, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RollupConfig,
-        SystemConfig,
-    },
+use kona_derive::traits::{ChainProvider, L2ChainProvider};
+use kona_primitives::{
+    BlockInfo, L2BlockInfo, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RollupConfig,
+    SystemConfig,
 };
 use std::sync::Arc;
 

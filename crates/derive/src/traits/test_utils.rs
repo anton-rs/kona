@@ -1,11 +1,5 @@
 //! Test Utilities for derive traits
 
-use crate::{
-    traits::{
-        AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
-    },
-    types::{Blob, BlobProviderError, IndexedBlobHash, StageError, StageResult},
-};
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{Address, Bytes, B256};
@@ -14,7 +8,15 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
 use kona_primitives::{
-    BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig,
+    Blob, BlockInfo, IndexedBlobHash, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig,
+    SystemConfig,
+};
+
+use crate::{
+    errors::{BlobProviderError, StageError, StageResult},
+    traits::{
+        AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
+    },
 };
 
 /// Mock data iterator

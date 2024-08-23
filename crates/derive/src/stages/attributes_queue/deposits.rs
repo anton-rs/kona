@@ -1,10 +1,9 @@
 //! Contains a helper method to derive deposit transactions from L1 Receipts.
 
-use crate::types::RawTransaction;
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, B256};
-use kona_primitives::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
+use kona_primitives::{decode_deposit, RawTransaction, DEPOSIT_EVENT_ABI_HASH};
 
 /// Derive deposits for transaction receipts.
 ///
@@ -42,9 +41,9 @@ pub(crate) async fn derive_deposits(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::DepositError;
     use alloc::vec;
     use alloy_primitives::{address, Bytes, Log, LogData, U256, U64};
+    use kona_primitives::DepositError;
 
     fn generate_valid_log() -> Log {
         let deposit_contract = address!("1111111111111111111111111111111111111111");
