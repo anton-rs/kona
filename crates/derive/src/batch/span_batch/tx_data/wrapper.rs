@@ -4,7 +4,7 @@ use super::{
     SpanBatchEip1559TransactionData, SpanBatchEip2930TransactionData,
     SpanBatchLegacyTransactionData,
 };
-use crate::types::{SpanBatchError, SpanDecodingError};
+use crate::batch::{SpanBatchError, SpanDecodingError};
 use alloy_consensus::{Transaction, TxEnvelope, TxType};
 use alloy_primitives::{Address, Signature, U256};
 use alloy_rlp::{Bytes, Decodable, Encodable};

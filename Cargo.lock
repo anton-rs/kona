@@ -4055,7 +4055,7 @@ dependencies = [
 
 [[package]]
 name = "kona-derive"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -4095,7 +4095,7 @@ dependencies = [
 
 [[package]]
 name = "kona-executor"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -4103,8 +4103,8 @@ dependencies = [
  "alloy-rlp",
  "anyhow",
  "criterion",
- "kona-derive",
  "kona-mpt",
+ "kona-primitives",
  "op-alloy-consensus",
  "pprof",
  "rand",
@@ -4136,6 +4136,7 @@ dependencies = [
  "kona-derive",
  "kona-mpt",
  "kona-preimage",
+ "kona-primitives",
  "os_pipe",
  "reqwest",
  "revm 13.0.0",
@@ -4188,7 +4189,7 @@ dependencies = [
 
 [[package]]
 name = "kona-primitives"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -4196,10 +4197,16 @@ dependencies = [
  "alloy-rlp",
  "alloy-sol-types",
  "anyhow",
+ "c-kzg",
+ "hashbrown 0.14.5",
  "op-alloy-consensus",
+ "revm 13.0.0",
  "serde",
  "serde_json",
+ "sha2",
+ "spin",
  "superchain-primitives",
+ "tracing",
 ]
 
 [[package]]
@@ -4217,6 +4224,7 @@ dependencies = [
  "futures",
  "include_directory",
  "kona-derive",
+ "kona-primitives",
  "op-test-vectors",
  "reqwest",
  "revm-inspectors",
@@ -7246,6 +7254,7 @@ dependencies = [
  "anyhow",
  "clap",
  "kona-derive",
+ "kona-primitives",
  "lazy_static",
  "prometheus",
  "reqwest",

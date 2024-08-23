@@ -34,4 +34,5 @@ color-eyre = "0.6" # For op-test-vector dependency
 clap = { version = "4", features = ["derive", "env"] }
 op-test-vectors = { git = "https://github.com/ethereum-optimism/tests", branch = "main" }
 include_directory = "0.1.1"
-kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
+kona-primitives = { path = "../../crates/primitives", version = "0.0.2", features = ["online"] }
+kona-derive = { path = "../../crates/derive", version = "0.0.3", features = ["online"] }

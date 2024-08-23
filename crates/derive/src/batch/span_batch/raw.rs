@@ -1,12 +1,10 @@
 //! Raw Span Batch
 
-use crate::types::{
-    BatchType, RawTransaction, RollupConfig, SpanBatchElement, SpanBatchPayload, SpanBatchPrefix,
-    SpanDecodingError,
-};
 use alloc::{vec, vec::Vec};
+use kona_primitives::{RawTransaction, RollupConfig};
 
-use super::{SpanBatch, SpanBatchError};
+use super::{SpanBatch, SpanBatchElement, SpanBatchError, SpanBatchPayload, SpanBatchPrefix};
+use crate::batch::{BatchType, SpanDecodingError};
 
 /// Raw Span Batch
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -178,7 +176,7 @@ mod test {
     #[test]
     fn test_decode_encode_raw_span_batch() {
         // Load in the raw span batch from the `op-node` derivation pipeline implementation.
-        let raw_span_batch_hex = include_bytes!("../../../../testdata/raw_batch.hex");
+        let raw_span_batch_hex = include_bytes!("../../../testdata/raw_batch.hex");
         let cfg = RollupConfig::default();
         let mut raw_span_batch =
             RawSpanBatch::decode(&mut raw_span_batch_hex.as_slice(), &cfg).unwrap();

@@ -2,10 +2,8 @@
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_derive::{
-    traits::BlobProvider,
-    types::{Blob, BlobProviderError, BlockInfo, IndexedBlobHash},
-};
+use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
+use kona_primitives::{Blob, BlockInfo, IndexedBlobHash};
 
 /// A blob fixture provider.
 #[derive(Debug, Clone)]

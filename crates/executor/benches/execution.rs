@@ -5,11 +5,11 @@ use alloy_primitives::{address, b256, hex, Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
-use kona_derive::types::{
-    L2PayloadAttributes, RollupConfig, OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS,
-};
 use kona_executor::{NoPrecompileOverride, StatelessL2BlockExecutor};
 use kona_mpt::{NoopTrieDBHinter, TrieDBFetcher};
+use kona_primitives::{
+    L2PayloadAttributes, RollupConfig, OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS,
+};
 use pprof::criterion::{Output, PProfProfiler};
 use serde::Deserialize;
 use std::collections::HashMap;

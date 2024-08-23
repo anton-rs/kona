@@ -1,7 +1,9 @@
 //! Span Batch Element
 
-use crate::types::{RawTransaction, SingleBatch};
 use alloc::vec::Vec;
+use kona_primitives::RawTransaction;
+
+use crate::batch::SingleBatch;
 
 /// A single batch element is similar to the [SingleBatch] type
 /// but does not contain the parent hash and epoch hash since spans

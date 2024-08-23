@@ -1,10 +1,5 @@
 //! Test Utilities for Online Providers
 
-use super::BeaconClient;
-use crate::types::{
-    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
-    IndexedBlobHash,
-};
 use alloc::{boxed::Box, string::String, vec::Vec};
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
@@ -12,7 +7,13 @@ use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use kona_primitives::{
+    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
+    IndexedBlobHash,
+};
 use reqwest::Client;
+
+use super::BeaconClient;
 
 /// Spawns an Anvil instance and returns a provider and the instance.
 pub fn spawn_anvil() -> (ReqwestProvider<Ethereum>, AnvilInstance) {

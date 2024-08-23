@@ -1,6 +1,6 @@
 //! Stage Utilities
 
-use crate::FJORD_MAX_SPAN_BATCH_BYTES;
+use crate::batch::FJORD_MAX_SPAN_BATCH_BYTES;
 use alloc::{vec, vec::Vec};
 use alloc_no_stdlib::*;
 use anyhow::{ensure, Result};

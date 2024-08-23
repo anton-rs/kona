@@ -1,10 +1,10 @@
 //! This module contains derivation errors thrown within the pipeline.
 
-use super::SpanBatchError;
-use crate::types::{BlockID, Frame};
+use crate::batch::SpanBatchError;
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
+use kona_primitives::{BlockID, Frame};
 
 /// A result type for the derivation pipeline stages.
 pub type StageResult<T> = Result<T, StageError>;
@@ -35,7 +35,7 @@ pub enum StageError {
     MissingOrigin,
     /// Failed to build the [L2PayloadAttributes] for the next batch.
     ///
-    /// [L2PayloadAttributes]: super::L2PayloadAttributes
+    /// [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
     AttributesBuild(BuilderError),
     /// Reset the pipeline.
     Reset(ResetError),
@@ -45,9 +45,9 @@ pub enum StageError {
     ReorgDetected(B256, B256),
     /// Receipt fetching error.
     ReceiptFetch(anyhow::Error),
-    /// [super::BlockInfo] fetching error.
+    /// [kona_primitives::BlockInfo] fetching error.
     BlockInfoFetch(anyhow::Error),
-    /// [super::SystemConfig] update error.
+    /// [kona_primitives::SystemConfig] update error.
     SystemConfigUpdate(anyhow::Error),
     /// Other wildcard error.
     Custom(anyhow::Error),
@@ -260,7 +260,7 @@ pub enum BuilderError {
     BlockMismatchEpochReset(BlockID, BlockID, B256),
     /// [SystemConfig] update failed.
     ///
-    /// [SystemConfig]: crate::types::SystemConfig
+    /// [SystemConfig]: kona_primitives::SystemConfig
     SystemConfigUpdate,
     /// Broken time invariant between L2 and L1.
     BrokenTimeInvariant(BlockID, u64, BlockID, u64),

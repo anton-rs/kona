@@ -1,10 +1,10 @@
 //! This module contains the [SingleBatch] type.
 
 use super::validity::BatchValidity;
-use crate::types::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use alloc::vec::Vec;
 use alloy_primitives::BlockHash;
 use alloy_rlp::{RlpDecodable, RlpEncodable};
+use kona_primitives::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
@@ -169,10 +169,10 @@ impl SingleBatch {
 #[cfg(test)]
 mod tests {
     use super::SingleBatch;
-    use crate::types::RawTransaction;
     use alloc::vec;
     use alloy_primitives::{hex, B256};
     use alloy_rlp::{BytesMut, Decodable, Encodable};
+    use kona_primitives::RawTransaction;
 
     #[test]
     fn test_single_batch_rlp_roundtrip() {

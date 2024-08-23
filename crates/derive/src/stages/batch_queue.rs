@@ -1,18 +1,18 @@
 //! This module contains the `BatchQueue` stage implementation.
 
-use crate::{
-    stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
-    types::{
-        Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, RollupConfig,
-        SingleBatch, StageError, StageResult, SystemConfig,
-    },
-};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig, SystemConfig};
 use tracing::{error, info, warn};
+
+use crate::{
+    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
+    errors::{StageError, StageResult},
+    stages::attributes_queue::AttributesProvider,
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+};
 
 /// Provides [Batch]es for the [BatchQueue] stage.
 #[async_trait]
@@ -66,7 +66,7 @@ where
 
     /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
     ///
-    /// [SpanBatch]: crate::types::SpanBatch
+    /// [SpanBatch]: crate::batch::SpanBatch
     next_spans: Vec<SingleBatch>,
 
     /// Used to validate the batches.
@@ -455,14 +455,14 @@ mod tests {
             test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
         },
         traits::test_utils::TestL2ChainProvider,
-        types::{
-            BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
-            L2ExecutionPayloadEnvelope,
-        },
     };
     use alloc::vec;
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
+    use kona_primitives::{
+        BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
+        L2ExecutionPayloadEnvelope,
+    };
     use op_alloy_consensus::{OpTxType, TxDeposit};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

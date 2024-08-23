@@ -1,15 +1,14 @@
 //! Testing utilities for the attributes queue stage.
 
 use crate::{
+    batch::SingleBatch,
+    errors::{BuilderError, StageError, StageResult},
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{
-        BlockID, BlockInfo, BuilderError, L2BlockInfo, L2PayloadAttributes, SingleBatch,
-        StageError, StageResult, SystemConfig,
-    },
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
+use kona_primitives::{BlockID, BlockInfo, L2BlockInfo, L2PayloadAttributes, SystemConfig};
 
 /// A mock implementation of the [`AttributesBuilder`] for testing.
 #[derive(Debug, Default)]

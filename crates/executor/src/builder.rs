@@ -3,8 +3,8 @@
 use crate::{PrecompileOverride, StatelessL2BlockExecutor};
 use alloy_consensus::{Header, Sealable, Sealed};
 use anyhow::Result;
-use kona_derive::types::RollupConfig;
 use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_primitives::RollupConfig;
 
 /// The builder pattern for the [StatelessL2BlockExecutor].
 #[derive(Debug)]

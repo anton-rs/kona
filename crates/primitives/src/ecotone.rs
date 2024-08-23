@@ -2,12 +2,13 @@
 //!
 //! [Transaction]: alloy_consensus::Transaction
 
-use crate::types::{RawTransaction, UpgradeDepositSource};
 use alloc::{string::String, vec, vec::Vec};
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
 use op_alloy_consensus::{OpTxEnvelope, TxDeposit};
 use spin::Lazy;
+
+use crate::{deposits::UpgradeDepositSource, raw_tx::RawTransaction};
 
 /// The UpdgradeTo Function Signature
 pub const UPDGRADE_TO_FUNC_SIGNATURE: &str = "upgradeTo(address)";

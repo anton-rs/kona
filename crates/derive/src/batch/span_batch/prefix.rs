@@ -1,8 +1,10 @@
 //! Raw Span Batch Prefix
 
-use crate::types::{RollupConfig, SpanBatchError, SpanDecodingError};
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
+use kona_primitives::RollupConfig;
+
+use crate::batch::{SpanBatchError, SpanDecodingError};
 
 /// Span Batch Prefix
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

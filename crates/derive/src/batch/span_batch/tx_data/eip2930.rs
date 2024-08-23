@@ -1,6 +1,6 @@
 //! This module contains the eip2930 transaction data type for a span batch.
 
-use crate::types::{SpanBatchError, SpanDecodingError};
+use crate::batch::{SpanBatchError, SpanDecodingError};
 use alloy_consensus::{SignableTransaction, Signed, TxEip2930, TxEnvelope};
 use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{Address, Signature, TxKind, U256};
@@ -53,7 +53,7 @@ impl SpanBatchEip2930TransactionData {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::SpanBatchTransactionData;
+    use crate::batch::SpanBatchTransactionData;
     use alloc::vec::Vec;
     use alloy_rlp::{Decodable, Encodable};
 

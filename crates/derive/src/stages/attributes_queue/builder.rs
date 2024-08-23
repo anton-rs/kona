@@ -2,17 +2,18 @@
 
 use super::derive_deposits;
 use crate::{
+    errors::BuilderError,
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::{ChainProvider, L2ChainProvider},
-    types::{
-        BlockID, BuilderError, EcotoneTransactionBuilder, FjordTransactionBuilder, L1BlockInfoTx,
-        L2BlockInfo, L2PayloadAttributes, RawTransaction, RollupConfig,
-    },
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_eips::eip2718::Encodable2718;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
+use kona_primitives::{
+    BlockID, EcotoneTransactionBuilder, FjordTransactionBuilder, L1BlockInfoTx, L2BlockInfo,
+    L2PayloadAttributes, RawTransaction, RollupConfig,
+};
 
 /// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.
@@ -182,12 +183,11 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::test_utils::MockSystemConfigL2Fetcher,
-        traits::test_utils::TestChainProvider,
-        types::{BlockInfo, SystemConfig},
+        stages::test_utils::MockSystemConfigL2Fetcher, traits::test_utils::TestChainProvider,
     };
     use alloy_consensus::Header;
     use alloy_primitives::B256;
+    use kona_primitives::{BlockInfo, SystemConfig};
 
     #[tokio::test]
     async fn test_prepare_payload_block_mismatch_epoch_reset() {

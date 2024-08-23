@@ -1,13 +1,14 @@
 //! Mock types for the [FrameQueue] stage.
 
 use crate::{
+    errors::{StageError, StageResult},
     stages::FrameQueueProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{BlockInfo, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use kona_primitives::{BlockInfo, SystemConfig};
 
 /// A mock [FrameQueueProvider] for testing the [FrameQueue] stage.
 #[derive(Debug, Default)]

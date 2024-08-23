@@ -1,13 +1,11 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use crate::{
-    traits::L2ChainProvider,
-    types::{L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig},
-};
+use crate::traits::L2ChainProvider;
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Result;
 use async_trait::async_trait;
 use hashbrown::HashMap;
+use kona_primitives::{L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig};
 
 /// A mock implementation of the [`SystemConfigL2Fetcher`] for testing.
 #[derive(Debug, Default)]

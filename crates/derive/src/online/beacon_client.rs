@@ -1,13 +1,14 @@
 //! Contains an online implementation of the [BeaconClient] trait.
 
-use crate::types::{
-    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
-    IndexedBlobHash,
-};
 use alloc::{boxed::Box, format, string::String, vec::Vec};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use reqwest::Client;
+
+use kona_primitives::{
+    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
+    IndexedBlobHash,
+};
 
 /// The config spec engine api method.
 pub(crate) const SPEC_METHOD: &str = "eth/v1/config/spec";

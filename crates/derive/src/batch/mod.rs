@@ -1,12 +1,10 @@
 //! This module contains the batch types for the OP Stack derivation pipeline: [SpanBatch] &
 //! [SingleBatch].
 
-use super::DecodeError;
-use crate::{
-    traits::L2ChainProvider,
-    types::{BlockInfo, L2BlockInfo, RollupConfig},
-};
 use alloy_rlp::{Buf, Decodable};
+use kona_primitives::{block::BlockInfo, L2BlockInfo, RollupConfig};
+
+use crate::{errors::DecodeError, traits::L2ChainProvider};
 
 mod batch_type;
 pub use batch_type::BatchType;
@@ -19,7 +17,7 @@ pub use span_batch::{
     RawSpanBatch, SpanBatch, SpanBatchBits, SpanBatchEip1559TransactionData,
     SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
     SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchTransactionData,
-    SpanBatchTransactions, SpanDecodingError,
+    SpanBatchTransactions, SpanDecodingError, FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES,
 };
 
 mod single_batch;

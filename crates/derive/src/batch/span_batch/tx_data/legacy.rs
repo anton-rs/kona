@@ -1,6 +1,6 @@
 //! This module contains the legacy transaction data type for a span batch.
 
-use crate::types::{SpanBatchError, SpanDecodingError};
+use crate::batch::{SpanBatchError, SpanDecodingError};
 use alloy_consensus::{SignableTransaction, Signed, TxEnvelope, TxLegacy};
 use alloy_primitives::{Address, Signature, TxKind, U256};
 use alloy_rlp::{Bytes, RlpDecodable, RlpEncodable};
@@ -48,7 +48,7 @@ impl SpanBatchLegacyTransactionData {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::SpanBatchTransactionData;
+    use crate::batch::SpanBatchTransactionData;
     use alloc::vec::Vec;
     use alloy_rlp::{Decodable, Encodable as _};
     // use alloy_primitives::B256;

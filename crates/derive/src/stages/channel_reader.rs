@@ -1,10 +1,12 @@
 //! This module contains the `ChannelReader` struct.
 
 use crate::{
+    batch::Batch,
+    errors::{StageError, StageResult},
     stages::{decompress_brotli, BatchQueueProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{Batch, BlockInfo, RollupConfig, StageError, StageResult, SystemConfig},
 };
+use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;

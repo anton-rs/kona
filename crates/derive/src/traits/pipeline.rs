@@ -1,11 +1,12 @@
 //! Defines the interface for the core derivation pipeline.
 
-use super::OriginProvider;
-use crate::types::StageError;
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::iter::Iterator;
 use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
+
+use super::OriginProvider;
+use crate::errors::StageError;
 
 /// A pipeline error.
 #[derive(Debug)]

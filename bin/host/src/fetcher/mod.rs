@@ -12,11 +12,9 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
-use kona_derive::{
-    online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation},
-    types::{BlockInfo, IndexedBlobHash},
-};
+use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use kona_preimage::{PreimageKey, PreimageKeyType};
+use kona_primitives::{BlockInfo, IndexedBlobHash};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::trace;

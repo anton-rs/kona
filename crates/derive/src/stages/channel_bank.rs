@@ -1,10 +1,10 @@
 //! This module contains the `ChannelBank` struct.
 
 use crate::{
-    params::{ChannelID, MAX_CHANNEL_BANK_SIZE},
+    errors::{StageError, StageResult},
+    params::MAX_CHANNEL_BANK_SIZE,
     stages::ChannelReaderProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
-    types::{BlockInfo, Channel, Frame, RollupConfig, StageError, StageResult, SystemConfig},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, Bytes};
@@ -12,6 +12,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
+use kona_primitives::{BlockInfo, Channel, ChannelID, Frame, RollupConfig, SystemConfig};
 use tracing::{trace, warn};
 
 /// Provides frames for the [ChannelBank] stage.
@@ -301,11 +302,11 @@ mod tests {
         assert!(channel_bank.channels.is_empty());
         assert_eq!(trace_store.lock().iter().filter(|(l, _)| matches!(l, &Level::WARN)).count(), 0);
         assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
-        assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.size(), kona_primitives::frame::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
         // This should fail since the frame is already ingested.
         assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
-        assert_eq!(channel_bank.size(), crate::params::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.size(), kona_primitives::frame::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
         assert_eq!(trace_store.lock().iter().filter(|(l, _)| matches!(l, &Level::WARN)).count(), 1);
     }

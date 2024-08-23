@@ -4,9 +4,7 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, BlockTransactionsKind, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
-use kona_derive::types::{
-    L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig,
-};
+use kona_primitives::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig};
 use std::vec::Vec;
 use tracing::{error, warn};
 

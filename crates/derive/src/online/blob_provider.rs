@@ -1,15 +1,17 @@
 //! Contains an online implementation of the [BlobProvider] trait.
 
-use crate::{
-    online::{BeaconClient, OnlineBeaconClient},
-    traits::BlobProvider,
-    types::{APIBlobSidecar, Blob, BlobProviderError, BlobSidecar, BlockInfo, IndexedBlobHash},
-};
 use alloc::{boxed::Box, string::String, vec::Vec};
 use anyhow::{anyhow, ensure};
 use async_trait::async_trait;
 use core::marker::PhantomData;
+use kona_primitives::{APIBlobSidecar, Blob, BlobSidecar, BlockInfo, IndexedBlobHash};
 use tracing::warn;
+
+use crate::{
+    errors::BlobProviderError,
+    online::{BeaconClient, OnlineBeaconClient},
+    traits::BlobProvider,
+};
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
@@ -454,12 +456,10 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        online::test_utils::MockBeaconClient,
-        types::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse},
-    };
+    use crate::online::test_utils::MockBeaconClient;
     use alloc::vec;
     use alloy_primitives::b256;
+    use kona_primitives::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 
     #[tokio::test]
     async fn test_load_config_succeeds() {

@@ -2,8 +2,10 @@
 //!
 //! [Transaction]: alloy_consensus::Transaction
 
-use crate::types::{
-    upgrade_to_calldata, RawTransaction, UpgradeDepositSource, GAS_PRICE_ORACLE_ADDRESS,
+use crate::{
+    deposits::UpgradeDepositSource,
+    ecotone::{upgrade_to_calldata, GAS_PRICE_ORACLE_ADDRESS},
+    raw_tx::RawTransaction,
 };
 use alloc::{string::String, vec, vec::Vec};
 use alloy_eips::eip2718::Encodable2718;
