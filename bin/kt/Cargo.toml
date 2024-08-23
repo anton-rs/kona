@@ -28,8 +28,6 @@ foundry-fork-db = "=0.2.0"
 serde_json = { version = "1.0.117", default-features = false }
 tracing-subscriber = "0.3.18"
 tokio = { version = "1", features = ["full"] }
-reqwest = "0.12"
-futures = "0.3"
 color-eyre = "0.6" # For op-test-vector dependency
 clap = { version = "4", features = ["derive", "env"] }
 op-test-vectors = { git = "https://github.com/ethereum-optimism/tests", branch = "main" }
