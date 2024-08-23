@@ -3,9 +3,6 @@
 use kona_common::FileDescriptor;
 use kona_preimage::{HintWriter, OracleReader, PipeHandle};
 
-mod caching_oracle;
-pub(crate) use caching_oracle::CachingOracle;
-
 mod precompiles;
 pub(crate) use precompiles::FPVMPrecompileOverride;
 

@@ -12,14 +12,15 @@ use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
     l2::OracleL2ChainProvider,
-    BootInfo,
+    BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
 use kona_executor::StatelessL2BlockExecutor;
+use kona_preimage::{HintWriter, OracleReader};
 use kona_primitives::L2AttributesWithParent;
 
 pub(crate) mod fault;
-use fault::{CachingOracle, FPVMPrecompileOverride};
+use fault::{FPVMPrecompileOverride, HINT_WRITER, ORACLE_READER};
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
@@ -40,7 +41,7 @@ fn main() -> Result<()> {
         //                          PROLOGUE                          //
         ////////////////////////////////////////////////////////////////
 
-        let oracle = Arc::new(CachingOracle::new(ORACLE_LRU_SIZE));
+        let oracle = Arc::new(CachingOracle::new(ORACLE_LRU_SIZE, ORACLE_READER, HINT_WRITER));
         let boot = Arc::new(BootInfo::load(oracle.as_ref()).await?);
         let l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
         let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
@@ -61,8 +62,8 @@ fn main() -> Result<()> {
         let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
         let precompile_overrides = FPVMPrecompileOverride::<
-            OracleL2ChainProvider<CachingOracle>,
-            OracleL2ChainProvider<CachingOracle>,
+            OracleL2ChainProvider<CachingOracle<OracleReader, HintWriter>>,
+            OracleL2ChainProvider<CachingOracle<OracleReader, HintWriter>>,
         >::default();
         let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
             .with_parent_header(driver.take_l2_safe_head_header())
