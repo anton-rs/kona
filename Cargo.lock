@@ -4065,8 +4065,6 @@ dependencies = [
  "alloy-provider",
  "alloy-rlp",
  "alloy-rpc-client",
- "alloy-rpc-types",
- "alloy-sol-types",
  "alloy-transport",
  "alloy-transport-http",
  "anyhow",
