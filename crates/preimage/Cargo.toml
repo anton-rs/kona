@@ -11,7 +11,6 @@ homepage.workspace = true
 [dependencies]
 # workspace
 anyhow.workspace = true
-cfg-if.workspace = true
 tracing.workspace = true
 alloy-primitives.workspace = true
 async-trait.workspace = true

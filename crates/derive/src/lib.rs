@@ -3,6 +3,7 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(any(test, feature = "metrics")), no_std)]
+#![cfg_attr(not(any(test, feature = "test-utils")), warn(unused_crate_dependencies))]
 
 extern crate alloc;
 

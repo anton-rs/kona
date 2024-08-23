@@ -28,7 +28,6 @@ revm = { workspace = true, optional = true }
 kona-primitives = { path = "../primitives", version = "0.0.2" }
 
 # External
-alloy-sol-types = { version = "0.7.6", default-features = false }
 hashbrown = "0.14.5"
 unsigned-varint = "0.8.0"
 miniz_oxide = "0.7.3"
@@ -44,8 +43,6 @@ sha2 = { version = "0.10.8", default-features = false, optional = true }
 alloy-transport = { version = "0.2", default-features = false, optional = true }
 alloy-provider = { version = "0.2", default-features = false, optional = true }
 alloy-transport-http = { version = "0.2", optional = true } 
-alloy-rpc-types = { version = "0.2", default-features = false, optional = true }
-serde_json = { version = "1.0.94", default-features = false, optional = true }
 reqwest = { version = "0.12.4", default-features = false, optional = true }
 
 # `metrics` feature dependencies
@@ -76,12 +73,10 @@ serde = [
 ]
 metrics = ["dep:prometheus", "dep:lazy_static"]
 online = [
-  "dep:serde_json",
   "dep:revm",
   "dep:c-kzg",
   "dep:sha2",
   "dep:alloy-provider",
-  "dep:alloy-rpc-types",
   "dep:alloy-transport",
   "dep:alloy-transport-http",
   "dep:reqwest",
