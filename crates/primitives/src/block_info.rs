@@ -29,6 +29,7 @@ const L1_INFO_DEPOSITOR_ADDRESS: Address = address!("deaddeaddeaddeaddeaddeaddea
 /// transaction on OP Stack chains. This transaction always sits at the top of the block, and alters
 /// the `L1 Block` contract's knowledge of the L1 chain.
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum L1BlockInfoTx {
     /// A Bedrock L1 info transaction
     Bedrock(L1BlockInfoBedrock),
@@ -52,7 +53,8 @@ pub enum L1BlockInfoTx {
 // | 32      | L1FeeOverhead            |
 // | 32      | L1FeeScalar              |
 // +---------+--------------------------+
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1BlockInfoBedrock {
     /// The current L1 origin block number
     pub number: u64,
@@ -89,7 +91,8 @@ pub struct L1BlockInfoBedrock {
 /// | 32      | BlockHash                |
 /// | 32      | BatcherHash              |
 /// +---------+--------------------------+
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1BlockInfoEcotone {
     /// The current L1 origin block number
     pub number: u64,
