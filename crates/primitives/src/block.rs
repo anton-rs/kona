@@ -5,9 +5,9 @@ use alloc::vec::Vec;
 use alloy_consensus::{Header, TxEnvelope};
 use alloy_eips::eip4895::Withdrawal;
 use alloy_primitives::B256;
-
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use op_alloy_consensus::OpTxEnvelope;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
