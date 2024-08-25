@@ -2,7 +2,7 @@
 //!
 //! The runner that executes the pipeline and validates the output given the test fixtures.
 
-use super::{pipeline::RunnerPipeline, providers::FixtureL2Provider};
+use super::{pipeline::RunnerPipeline, providers::FixtureL2Provider, LocalDerivationFixture};
 use anyhow::{anyhow, Result};
 use kona_derive::{
     errors::StageError,
@@ -16,7 +16,7 @@ const LOG_TARGET: &str = "runner";
 /// Runs the pipeline.
 pub(crate) async fn run(
     mut pipeline: RunnerPipeline,
-    fixture: crate::LocalDerivationFixture,
+    fixture: LocalDerivationFixture,
 ) -> Result<()> {
     let mut cursor = *fixture
         .l2_block_infos

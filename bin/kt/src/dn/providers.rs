@@ -1,5 +1,6 @@
 //! Fixture providers using data from the derivation test fixture.
 
+use super::LocalDerivationFixture;
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::B256;
@@ -15,11 +16,11 @@ use std::sync::Arc;
 /// An L1Provider using the fixture data from the derivation test fixture.
 #[derive(Debug, Clone)]
 pub(crate) struct FixtureL1Provider {
-    inner: crate::LocalDerivationFixture,
+    inner: LocalDerivationFixture,
 }
 
-impl From<crate::LocalDerivationFixture> for FixtureL1Provider {
-    fn from(inner: crate::LocalDerivationFixture) -> Self {
+impl From<LocalDerivationFixture> for FixtureL1Provider {
+    fn from(inner: LocalDerivationFixture) -> Self {
         Self { inner }
     }
 }
@@ -82,11 +83,11 @@ impl ChainProvider for FixtureL1Provider {
 /// An L2Provider using the fixture data from the derivation test fixture.
 #[derive(Debug, Clone)]
 pub(crate) struct FixtureL2Provider {
-    inner: crate::LocalDerivationFixture,
+    inner: LocalDerivationFixture,
 }
 
-impl From<crate::LocalDerivationFixture> for FixtureL2Provider {
-    fn from(inner: crate::LocalDerivationFixture) -> Self {
+impl From<LocalDerivationFixture> for FixtureL2Provider {
+    fn from(inner: LocalDerivationFixture) -> Self {
         Self { inner }
     }
 }

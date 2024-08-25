@@ -12,19 +12,10 @@ use revm_inspectors as _;
 use color_eyre as _;
 
 use clap::Parser;
-use kona_primitives::{Blob, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig};
-
-/// A local derivation fixture typed with `kona_derive` types.
-pub type LocalDerivationFixture = op_test_vectors::derivation::DerivationFixture<
-    RollupConfig,
-    L2PayloadAttributes,
-    SystemConfig,
-    L2BlockInfo,
-    Blob,
->;
 
 pub(crate) mod cli;
 pub(crate) mod dn;
+pub(crate) mod t8n;
 pub(crate) mod traits;
 
 #[tokio::main]

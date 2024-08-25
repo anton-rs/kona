@@ -1,35 +1,24 @@
-//! Kona derivation test runner
+//! Kona execution test runner
 
 use crate::{cli::RunnerCfg, traits::TestExecutor};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use executor::OptimismExecutor;
 use include_directory::{include_directory, Dir, DirEntry, File};
-use kona_derive::types::{Blob, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig};
-use tracing::{debug, error, info, trace, warn};
+use op_test_vectors::execution::ExecutionFixture;
+use tracing::{debug, info, trace, warn};
 
-pub(crate) mod blobs;
-pub(crate) mod driver;
-pub(crate) mod pipeline;
-pub(crate) mod providers;
+mod executor;
+mod trie_fetcher;
 
-/// A local derivation fixture typed with `kona_derive` types.
-pub(crate) type LocalDerivationFixture = op_test_vectors::derivation::DerivationFixture<
-    RollupConfig,
-    L2PayloadAttributes,
-    SystemConfig,
-    L2BlockInfo,
-    Blob,
->;
+static TEST_FIXTURES: Dir<'_> = include_directory!("$CARGO_MANIFEST_DIR/tests/fixtures/execution/");
 
-static TEST_FIXTURES: Dir<'_> =
-    include_directory!("$CARGO_MANIFEST_DIR/tests/fixtures/derivation/");
-
-/// The [DerivationRunner] struct is a test executor for running derivation tests.
-pub(crate) struct DerivationRunner {
+/// The [ExecutionRunner] struct is a test executor for running execution tests.
+pub(crate) struct ExecutionRunner {
     cfg: RunnerCfg,
 }
 
-impl DerivationRunner {
+impl ExecutionRunner {
     /// Create a new [DerivationRunner] instance.
     pub(crate) fn new(cfg: RunnerCfg) -> Self {
         Self { cfg }
@@ -37,8 +26,8 @@ impl DerivationRunner {
 }
 
 #[async_trait]
-impl TestExecutor for DerivationRunner {
-    type Fixture = LocalDerivationFixture;
+impl TestExecutor for ExecutionRunner {
+    type Fixture = ExecutionFixture;
 
     async fn exec(&self) -> Result<()> {
         let fixtures = self.get_selected_fixtures()?;
@@ -50,25 +39,17 @@ impl TestExecutor for DerivationRunner {
 
     async fn exec_single(&self, name: String, fixture: Self::Fixture) -> Result<()> {
         info!(target: "exec", "Running test: {}", name);
-        let pipeline = pipeline::new_runner_pipeline(fixture.clone()).await?;
-        match driver::run(pipeline, fixture).await {
-            Ok(_) => {
-                println!("[PASS] {}", name);
-                Ok(())
-            }
-            Err(e) => {
-                error!(target: "exec", "[FAIL] {}", name);
-                Err(e)
-            }
-        }
+        let mut executor = OptimismExecutor::new(&fixture)?;
+        executor.execute_checked()?;
+        Ok(())
     }
 
     fn get_selected_fixtures(&self) -> Result<Vec<(String, Self::Fixture)>> {
-        // Get available derivation test fixtures
+        // Get available execution test fixtures
         let available_tests = Self::get_files()?;
         trace!("Available tests: {:?}", available_tests);
 
-        // Parse derivation test fixtures
+        // Parse execution test fixtures
         let tests = available_tests
             .iter()
             .map(|f| {
@@ -79,7 +60,7 @@ impl TestExecutor for DerivationRunner {
                 debug!("Parsing test fixture: {}", path);
                 Ok((
                     path.to_string(),
-                    serde_json::from_str::<LocalDerivationFixture>(fixture_str)
+                    serde_json::from_str::<ExecutionFixture>(fixture_str)
                         .map_err(|e| anyhow!(e))?,
                 ))
             })

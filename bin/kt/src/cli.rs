@@ -1,6 +1,6 @@
 //! Module for the CLI.
 
-use crate::{dn::DerivationRunner, traits::TestExecutor};
+use crate::{dn::DerivationRunner, t8n::ExecutionRunner, traits::TestExecutor};
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Args, Parser, Subcommand};
 use tracing::Level;
@@ -60,8 +60,9 @@ impl Cli {
                 let runner = DerivationRunner::new(cfg.clone());
                 runner.exec().await
             }
-            KtSubcommand::T8n(_cfg) => {
-                unimplemented!("Execution test runner is not yet implemented.")
+            KtSubcommand::T8n(cfg) => {
+                let runner = ExecutionRunner::new(cfg.clone());
+                runner.exec().await
             }
         }
     }

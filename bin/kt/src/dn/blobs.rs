@@ -1,5 +1,6 @@
 //! Blob Fixture Provider.
 
+use super::LocalDerivationFixture;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
@@ -8,11 +9,11 @@ use kona_primitives::{Blob, BlockInfo, IndexedBlobHash};
 /// A blob fixture provider.
 #[derive(Debug, Clone)]
 pub(crate) struct BlobFixtureProvider {
-    inner: crate::LocalDerivationFixture,
+    inner: LocalDerivationFixture,
 }
 
-impl From<crate::LocalDerivationFixture> for BlobFixtureProvider {
-    fn from(inner: crate::LocalDerivationFixture) -> Self {
+impl From<LocalDerivationFixture> for BlobFixtureProvider {
+    fn from(inner: LocalDerivationFixture) -> Self {
         Self { inner }
     }
 }

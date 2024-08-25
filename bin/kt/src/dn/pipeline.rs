@@ -3,6 +3,7 @@
 use super::{
     blobs::BlobFixtureProvider,
     providers::{FixtureL1Provider, FixtureL2Provider},
+    LocalDerivationFixture,
 };
 use anyhow::{anyhow, Result};
 use kona_derive::{
@@ -38,10 +39,8 @@ pub(crate) type RunnerAttributesQueue<DAP> = AttributesQueue<
     RunnerAttributesBuilder,
 >;
 
-/// Creates a new [DerivationPipeline] given the [crate::LocalDerivationFixture].
-pub(crate) async fn new_runner_pipeline(
-    fixture: crate::LocalDerivationFixture,
-) -> Result<RunnerPipeline> {
+/// Creates a new [DerivationPipeline] given the [LocalDerivationFixture].
+pub(crate) async fn new_runner_pipeline(fixture: LocalDerivationFixture) -> Result<RunnerPipeline> {
     let mut l1_provider = FixtureL1Provider::from(fixture.clone());
     let l2_provider = FixtureL2Provider::from(fixture.clone());
     let blob_provider = BlobFixtureProvider::from(fixture.clone());
