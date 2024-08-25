@@ -36,7 +36,7 @@ tracing-subscriber = "0.3.18"
 tokio = { version = "1", features = ["full"] }
 color-eyre = "0.6" # For op-test-vector dependency
 clap = { version = "4", features = ["derive", "env"] }
-op-test-vectors = { git = "https://github.com/ethereum-optimism/tests", branch = "main" }
+op-test-vectors = { git = "https://github.com/ethereum-optimism/tests", branch = "cl/t8n-reth" }
 include_directory = "0.1.1"
 kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["online"] }
 kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
