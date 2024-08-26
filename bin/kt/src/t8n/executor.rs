@@ -3,12 +3,11 @@
 use super::trie_fetcher::ExecutionFixtureTrieFetcher;
 use alloy_consensus::{Header, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_primitives::{address, Sealable};
-use alloy_rlp::Encodable;
 use anyhow::{ensure, Result};
-use kona_derive::types::{L2PayloadAttributes, OP_MAINNET_CONFIG};
 use kona_executor::{
     NoPrecompileOverride, StatelessL2BlockExecutor, StatelessL2BlockExecutorBuilder,
 };
+use kona_primitives::{L2PayloadAttributes, OP_MAINNET_CONFIG};
 use op_test_vectors::execution::ExecutionFixture;
 
 pub(crate) struct OptimismExecutor<'a> {
@@ -31,10 +30,10 @@ impl<'a> OptimismExecutor<'a> {
 
         // Construct the partial starting header.
         let parent_header = Header {
-            parent_hash: fixture.env.previous_hash,
+            parent_hash: fixture.env.previous_header.hash_slow(),
             ommers_hash: EMPTY_OMMER_ROOT_HASH,
             beneficiary: address!("4200000000000000000000000000000000000011"),
-            state_root: fetcher.root,
+            state_root: fixture.env.previous_header.state_root,
             transactions_root: EMPTY_ROOT_HASH,
             receipts_root: EMPTY_ROOT_HASH,
             withdrawals_root: Some(EMPTY_ROOT_HASH),
@@ -42,6 +41,11 @@ impl<'a> OptimismExecutor<'a> {
             ..Default::default()
         }
         .seal_slow();
+
+        ensure!(
+            fetcher.root == fixture.env.previous_header.state_root,
+            "Computed different state root from fixture allocs vs. fixture prestate header."
+        );
 
         let inner = StatelessL2BlockExecutorBuilder::with_config(&OP_MAINNET_CONFIG)
             .with_parent_header(parent_header)
@@ -55,28 +59,15 @@ impl<'a> OptimismExecutor<'a> {
 
     /// Execute the block in the fixture and check the results.
     pub(crate) fn execute_checked(&mut self) -> Result<()> {
-        // RLP encode the transactions.
-        let encoded_txs = self
-            .fixture
-            .transactions
-            .iter()
-            .map(|tx| {
-                let mut buf = Vec::with_capacity(tx.length());
-                tx.encode(&mut buf);
-                buf.into()
-            })
-            .collect::<Vec<_>>();
-
         // Construct the payload attributes.
         let attrs = L2PayloadAttributes {
             timestamp: self.fixture.env.current_timestamp.to::<u64>(),
             prev_randao: self.fixture.env.current_difficulty.into(),
             fee_recipient: address!("4200000000000000000000000000000000000011"),
-            transactions: encoded_txs,
+            transactions: self.fixture.transactions.clone().into_iter().map(Into::into).collect(),
             no_tx_pool: false,
             gas_limit: Some(self.fixture.env.current_gas_limit.to()),
-            parent_beacon_block_root: Some(Default::default()), /* TODO: We need this in the
-                                                                 * fixture. */
+            parent_beacon_block_root: self.fixture.env.parent_beacon_block_root,
             ..Default::default()
         };
 

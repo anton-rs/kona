@@ -4,10 +4,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-// Temporarily pinned dependencies.
-use foundry_fork_db as _;
-use revm_inspectors as _;
-
 // Used for op-test-vectors
 use color_eyre as _;
 

@@ -1,6 +1,6 @@
 //! [ExecutionFixture]-backed trie fetcher implementation.
 
-use alloy_consensus::Header;
+use alloy_consensus::{Header, EMPTY_ROOT_HASH};
 use alloy_primitives::{b256, keccak256, Address, Bytes, B256, U256};
 use alloy_rlp::Encodable;
 use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
@@ -41,11 +41,9 @@ impl<'a> TrieDBFetcher for ExecutionFixtureTrieFetcher<'a> {
             .alloc
             .iter()
             .find_map(|(_, account)| {
-                if account.code.as_ref().map(keccak256) == Some(code_hash) {
-                    account.code.clone()
-                } else {
-                    None
-                }
+                (account.code.as_ref().map(keccak256) == Some(code_hash))
+                    .then(|| account.code.clone())
+                    .flatten()
             })
             .unwrap_or_default())
     }
@@ -77,32 +75,42 @@ fn state_trie_witness(fixture: &ExecutionFixture) -> Result<(B256, HashMap<B256,
     // First, generate all trie accounts.
     let mut trie_accounts = HashMap::new();
     for (address, account_state) in fixture.alloc.iter() {
-        let slot_nibbles =
-            account_state.storage.keys().map(|k| Nibbles::unpack(*k)).collect::<Vec<_>>();
-        let mut hb = HashBuilder::default().with_proof_retainer(ProofRetainer::new(slot_nibbles));
+        let storage_root = if let Some(storage) = &account_state.storage {
+            let slot_nibbles =
+                storage.keys().map(|k| Nibbles::unpack(keccak256(k))).collect::<Vec<_>>();
+            let mut hb =
+                HashBuilder::default().with_proof_retainer(ProofRetainer::new(slot_nibbles));
 
-        let sorted_storage = account_state.storage.iter().sorted_by_key(|(k, _)| *k);
-        for (slot, value) in sorted_storage {
-            let slot_nibbles = Nibbles::unpack(slot);
-            let mut value_buffer = Vec::with_capacity(value.length());
-            value.encode(&mut value_buffer);
-            hb.add_leaf(slot_nibbles, &value_buffer);
-        }
+            let sorted_storage = storage
+                .iter()
+                .filter(|(_, v)| **v != B256::ZERO)
+                .sorted_by_key(|(k, _)| keccak256(k.as_slice()));
+            for (slot, value) in sorted_storage {
+                let slot_nibbles = Nibbles::unpack(keccak256(slot.as_slice()));
+                let mut value_buf = Vec::with_capacity(value.length());
+                U256::from_be_slice(value.as_slice()).encode(&mut value_buf);
+                hb.add_leaf(slot_nibbles, &value_buf);
+            }
 
-        // Compute the root of the account storage trie.
-        let storage_root = hb.root();
+            // Compute the root of the account storage trie.
+            let root = hb.root();
 
-        // Insert the proofs into the global cache.
-        let proofs = hb.take_proofs();
-        for (_, node) in proofs {
-            let val_hash = keccak256(&node);
-            cache.insert(val_hash, node);
-        }
+            // Insert the proofs into the global cache.
+            let proofs = hb.take_proofs();
+            for (_, node) in proofs {
+                let val_hash = keccak256(&node);
+                cache.insert(val_hash, node);
+            }
+
+            root
+        } else {
+            EMPTY_ROOT_HASH
+        };
 
         // Construct the account trie.
         let trie_account = TrieAccount {
             nonce: account_state.nonce.unwrap_or_default(),
-            balance: account_state.balance.unwrap_or_default(),
+            balance: account_state.balance,
             storage_root,
             code_hash: account_state.code.as_ref().map(keccak256).unwrap_or(EMPTY_HASH),
         };
@@ -110,8 +118,11 @@ fn state_trie_witness(fixture: &ExecutionFixture) -> Result<(B256, HashMap<B256,
         trie_accounts.insert(address, trie_account);
     }
 
-    let hashed_address_nibbles =
-        fixture.alloc.keys().map(|a| Nibbles::unpack(keccak256(a))).collect::<Vec<_>>();
+    let hashed_address_nibbles = fixture
+        .alloc
+        .keys()
+        .map(|addr| Nibbles::unpack(keccak256(addr.as_slice())))
+        .collect::<Vec<_>>();
     let mut hb =
         HashBuilder::default().with_proof_retainer(ProofRetainer::new(hashed_address_nibbles));
 

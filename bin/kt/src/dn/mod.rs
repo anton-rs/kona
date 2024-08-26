@@ -4,7 +4,7 @@ use crate::{cli::RunnerCfg, traits::TestExecutor};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use include_directory::{include_directory, Dir, DirEntry, File};
-use kona_derive::types::{Blob, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig};
+use kona_primitives::{Blob, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig};
 use tracing::{debug, error, info, trace, warn};
 
 pub(crate) mod blobs;

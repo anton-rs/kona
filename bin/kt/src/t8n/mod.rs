@@ -41,6 +41,7 @@ impl TestExecutor for ExecutionRunner {
         info!(target: "exec", "Running test: {}", name);
         let mut executor = OptimismExecutor::new(&fixture)?;
         executor.execute_checked()?;
+        info!(target: "exec", "Test passed: {}", name);
         Ok(())
     }
 

@@ -19,16 +19,11 @@ alloy-consensus.workspace = true
 alloy-eips.workspace = true
 alloy-rlp.workspace = true
 
-# We have to temporarily pin these dependencies since they don't specify a minor version
-# in foundry and the new minor version bumps the revm dep version, causing breaking changes.
-# The solution here is to bump kona's revm dependency to v13 so this can be removed.
-revm-inspectors = "=0.5.5"
-foundry-fork-db = "=0.2.0"
-
 # Local
 kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
 kona-executor = { path = "../../crates/executor", version = "0.0.1" }
 kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
+kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["online"] }
 
 # External
 serde_json = { version = "1.0.117", default-features = false }
@@ -38,7 +33,5 @@ color-eyre = "0.6" # For op-test-vector dependency
 clap = { version = "4", features = ["derive", "env"] }
 op-test-vectors = { git = "https://github.com/ethereum-optimism/tests", branch = "cl/t8n-reth" }
 include_directory = "0.1.1"
-kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["online"] }
-kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
 alloy-trie = "0.4.1"
 itertools = "0.13.0"
