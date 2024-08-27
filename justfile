@@ -13,15 +13,11 @@ default:
   @just --list
 
 # Run all tests
-tests: test test-online test-docs
+tests: test test-docs
 
 # Test for the native target with all features
 test *args='':
   cargo nextest run --workspace --all --all-features $@
-
-# Run online tests
-test-online:
-  cargo nextest run --workspace --all --features online
 
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc lint-docs
