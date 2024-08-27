@@ -26,8 +26,10 @@ const L1_BLOCK_ADDRESS: Address = address!("420000000000000000000000000000000000
 const L1_INFO_DEPOSITOR_ADDRESS: Address = address!("deaddeaddeaddeaddeaddeaddeaddeaddead0001");
 
 /// The [L1BlockInfoTx] enum contains variants for the different versions of the L1 block info
-/// transaction on OP Stack chains. This transaction always sits at the top of the block, and alters
-/// the `L1 Block` contract's knowledge of the L1 chain.
+/// transaction on OP Stack chains.
+///
+/// This transaction always sits at the top of the block, and alters the `L1 Block` contract's
+/// knowledge of the L1 chain.
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum L1BlockInfoTx {

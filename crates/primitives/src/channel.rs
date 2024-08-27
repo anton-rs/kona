@@ -22,6 +22,7 @@ pub type ChannelID = [u8; CHANNEL_ID_LENGTH];
 pub const CHANNEL_ID_LENGTH: usize = 16;
 
 /// A Channel is a set of batches that are split into at least one, but possibly multiple frames.
+///
 /// Frames are allowed to be ingested out of order.
 /// Each frame is ingested one by one. Once a frame with `closed` is added to the channel, the
 /// channel may mark itself as ready for reading once all intervening frames have been added

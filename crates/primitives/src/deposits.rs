@@ -255,6 +255,7 @@ impl L1InfoDepositSource {
 }
 
 /// An upgrade deposit transaction source.
+///
 /// This implements the translation of upgrade-tx identity information to a deposit source-hash,
 /// which makes the deposit uniquely identifiable.
 /// System-upgrade transactions have their own domain for source-hashes,
