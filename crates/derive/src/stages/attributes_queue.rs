@@ -34,9 +34,9 @@ pub trait AttributesProvider {
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [L2PayloadAttributes].
-/// 
-/// The outputted payload attributes cannot be buffered because each batch->attributes transformation
-/// pulls in data about the current L2 safe head.
+///
+/// The outputted payload attributes cannot be buffered because each batch->attributes
+/// transformation pulls in data about the current L2 safe head.
 ///
 /// [AttributesQueue] also buffers batches that have been output because
 /// multiple batches can be created at once.
