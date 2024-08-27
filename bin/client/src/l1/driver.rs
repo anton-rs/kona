@@ -126,7 +126,8 @@ where
         );
         let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider, &cfg);
 
-        // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is captured.
+        // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
+        // captured.
         let channel_timeout =
             boot_info.rollup_config.channel_timeout(l2_safe_head.block_info.timestamp);
         let mut l1_origin_number = l1_origin.number.saturating_sub(channel_timeout);
