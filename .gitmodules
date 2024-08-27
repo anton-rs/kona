@@ -1,3 +1,0 @@
-[submodule "bin/kt/tests"]
-	path = bin/kt/tests
-	url = https://github.com/ethereum-optimism/tests

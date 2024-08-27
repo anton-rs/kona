@@ -23,14 +23,6 @@ test *args='':
 test-online:
   cargo nextest run --workspace --all --features online
 
-# Run derivation test fixtures against `kona-derive`
-test-derivation:
-  cargo run --bin kt -- dn --all 
-
-# Run execution test fixtures against `kona-executor`
-test-execution:
-  cargo run --bin kt -- t8n --all 
-
 # Lint the workspace for all available targets
 lint: lint-native lint-cannon lint-asterisc lint-docs
 
@@ -86,7 +78,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync --exclude kt
+    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-synct
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -95,7 +87,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync --exclude kt
+    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
 
 # Build the `trusted-sync` docker image
 docker-build-ts *args='':
