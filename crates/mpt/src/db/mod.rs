@@ -18,12 +18,14 @@ mod account;
 pub use account::TrieAccount;
 use tracing::debug;
 
-/// A Trie DB that caches open state in-memory. When accounts that don't already exist within the
-/// cached [TrieNode] are queried, the database fetches the preimages of the trie nodes on the path
-/// to the account using the `PreimageFetcher` (`PF` generic) and `CodeHashFetcher` (`CHF` generic).
-/// This allows for data to be fetched in a verifiable manner given an initial trusted state root
-/// as it is needed during execution. In addition, the `HeaderFetcher` (`HF` generic) is used to
-/// fetch block headers, relative to the DB's current block hash, for block hash lookups.
+/// A Trie DB that caches open state in-memory.
+///
+/// When accounts that don't already exist within the cached [TrieNode] are queried, the database
+/// fetches the preimages of the trie nodes on the path to the account using the `PreimageFetcher`
+/// (`PF` generic) and `CodeHashFetcher` (`CHF` generic). This allows for data to be fetched in a
+/// verifiable manner given an initial trusted state root as it is needed during execution. In
+/// addition, the `HeaderFetcher` (`HF` generic) is used to fetch block headers, relative to the
+/// DB's current block hash, for block hash lookups.
 ///
 /// The [TrieDB] is intended to be wrapped by a [State], which is then used by the [revm::Evm] to
 /// capture state transitions during block execution.

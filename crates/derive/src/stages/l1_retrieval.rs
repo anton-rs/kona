@@ -30,6 +30,7 @@ pub trait L1RetrievalProvider {
 }
 
 /// The [L1Retrieval] stage of the derivation pipeline.
+///
 /// For each L1 [BlockInfo] pulled from the [L1Traversal] stage, [L1Retrieval] fetches the
 /// associated data from a specified [DataAvailabilityProvider]. This data is returned as a generic
 /// [DataIter] that can be iterated over.

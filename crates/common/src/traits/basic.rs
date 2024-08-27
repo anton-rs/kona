@@ -5,9 +5,10 @@ use crate::FileDescriptor;
 use anyhow::Result;
 
 /// The [BasicKernelInterface] trait describes the functionality of several core system calls inside
-/// of the FPVM kernel. Commonly, FPVMs delegate IO operations to custom file descriptors in the
-/// `client` program. It is a safe wrapper around the raw system calls available to the `client`
-/// program.
+/// of the FPVM kernel.
+///
+/// Commonly, FPVMs delegate IO operations to custom file descriptors in the `client` program. It is
+/// a safe wrapper around the raw system calls available to the `client` program.
 ///
 /// In cases where the set of system calls defined in this trait need to be extended, an additional
 /// trait should be created that extends this trait.

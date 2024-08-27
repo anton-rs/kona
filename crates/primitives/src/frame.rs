@@ -12,6 +12,7 @@ pub const DERIVATION_VERSION_0: u8 = 0;
 pub const FRAME_OVERHEAD: usize = 200;
 
 /// Frames cannot be larger than 1MB.
+///
 /// Data transactions that carry frames are generally not larger than 128 KB due to L1 network
 /// conditions, but we leave space to grow larger anyway (gas limit allows for more data).
 pub const MAX_FRAME_LEN: usize = 1_000_000;
