@@ -23,7 +23,7 @@ jobs:
           cache-on-failure: true
       - uses: taiki-e/install-action@nextest
       - name: cargo test
-        run: cargo nextest run --release --workspace --all --locked
+        run: cargo nextest run --release --workspace --all --all-features --locked
   cargo-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -75,7 +75,7 @@ jobs:
         with:
           cache-on-failure: true
       - name: build benches
-        run: cargo bench --no-run --workspace --all
+        run: cargo bench --no-run --workspace --all --features test-utils
       - name: chown target
         run: |
           sudo chown -R $(id -u):$(id -g) ./target

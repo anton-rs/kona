@@ -25,7 +25,7 @@ jobs:
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
       - name: cargo llvm-cov
-        run: cargo llvm-cov nextest --locked --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov nextest --locked --workspace --lcov --output-path lcov.info --features test-utils
       - name: Record Rust version
         run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
       - name: Upload to codecov.io
