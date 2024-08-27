@@ -12,11 +12,7 @@ jobs:
     strategy:
       matrix:
         target: ["native", "asterisc"]
-        name:
-          [
-            "OP Mainnet (Ecotone) - Block #122093770",
-            "OP Sepolia (Fjord) - Block #13992475",
-          ]
+        name: ["OP Sepolia (Granite) - Block #16491249"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -48,24 +44,15 @@ jobs:
           mv ./rvgo/bin/asterisc /usr/local/bin/
       - name: Set run environment
         run: |
-          if [[ ${{ contains(matrix.name, 122093770) }} == true ]]; then
-            BLOCK_NUMBER=122093770
+          if [[ ${{ contains(matrix.name, 16491249) }} == true ]]; then
+            BLOCK_NUMBER=16491249
             echo "BLOCK_NUMBER=$BLOCK_NUMBER" >> $GITHUB_ENV
-            echo "L2_CLAIM=0xf31619aa7cdf03e6e51bb5eda528309eff0354172c4a64186622929c76bd58a9" >> $GITHUB_ENV
-            echo "L2_OUTPUT_ROOT=0xec52f62123ab0404c1729fbb34716046cffaba6c47836b353184e231e290c560" >> $GITHUB_ENV
-            echo "L2_HEAD=0xd20e2cad399a964c7bb656c8d32a6e5356a831167cc58a00e60285abf7e94df6" >> $GITHUB_ENV
-            echo "L1_HEAD=0xed32f3f6cdf80c1d755851ad065f4436ff17ff35b7910262f0d22c1e0919a315" >> $GITHUB_ENV
-            echo "L2_CHAIN_ID=10" >> $GITHUB_ENV
-            echo "WITNESS_TAR_NAME=ecotone-op-mainnet-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
-          elif [[ ${{ contains(matrix.name, 13992475) }} == true ]]; then
-            BLOCK_NUMBER=13992475
-            echo "BLOCK_NUMBER=$BLOCK_NUMBER" >> $GITHUB_ENV
-            echo "L2_CLAIM=0xba854e0a3e1e65f8e4b05f39a5ad28c13eac0d5444c7c336b6f7ebabb0f20229" >> $GITHUB_ENV
-            echo "L2_OUTPUT_ROOT=0x59cfca741f06a0e5607e3526e4f9931b8a6a2313b48d8bd0c2242bace6d930f1" >> $GITHUB_ENV
-            echo "L2_HEAD=0x90ec80845a776021ce56b3e87072e8e30d2931c9c67ccaf2a305bd08268178ee" >> $GITHUB_ENV
-            echo "L1_HEAD=0x607b4a4d2bd7e7bced989e4bc471a5ce61335b63881c624c8522f63113a5af86" >> $GITHUB_ENV
+            echo "L2_CLAIM=0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75" >> $GITHUB_ENV
+            echo "L2_OUTPUT_ROOT=0xa548f22e1aa590de7ed271e3eab5b66c6c3db9b8cb0e3f91618516ea9ececde4" >> $GITHUB_ENV
+            echo "L2_HEAD=0x09b298a83baf4c2e3c6a2e355bb09e27e3fdca435080e8754f8749233d7333b2" >> $GITHUB_ENV
+            echo "L1_HEAD=0x33a3e5721faa4dc6f25e75000d9810fd6c41320868f3befcc0c261a71da398e1" >> $GITHUB_ENV
             echo "L2_CHAIN_ID=11155420" >> $GITHUB_ENV
-            echo "WITNESS_TAR_NAME=fjord-op-sepolia-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
+            echo "WITNESS_TAR_NAME=granite-op-sepolia-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
           fi
       - name: Decompress witness data directory
         run: |
