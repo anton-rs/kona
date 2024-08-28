@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kona_derive::{errors::StageError, online::*};
 use std::sync::Arc;
-use superchain_registry::ROLLUP_CONFIGS;
+use superchain::ROLLUP_CONFIGS;
 use tracing::{debug, error, info, trace, warn};
 
 mod cli;
