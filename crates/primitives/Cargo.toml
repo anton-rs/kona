@@ -20,7 +20,7 @@ op-alloy-consensus.workspace = true
 hashbrown = "0.14.5"
 
 # SCR Repo Primitives
-superchain-primitives = { version = "0.2.2", default-features = false }
+superchain-primitives = { version = "0.3.1", default-features = false }
 
 # `serde` feature dependencies
 serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }

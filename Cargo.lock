@@ -4007,10 +4007,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
-name = "superchain-primitives"
-version = "0.2.2"
+name = "superchain"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f92c0bb828219b159e625b816e9248adafb028eabb86917b0dfbca9c658c0990"
+checksum = "2ee828d39917f3e6eb47fdd36fac891ba5bbd440ae8d7b6efb225bf38bdc6d4a"
+dependencies = [
+ "superchain-primitives",
+ "superchain-registry",
+]
+
+[[package]]
+name = "superchain-primitives"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa28a95195192539fa2a3ff607057b08c6ad0839b9edb2aff17917c93c42d661"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -4024,14 +4034,13 @@ dependencies = [
 
 [[package]]
 name = "superchain-registry"
-version = "0.2.6"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acc582cdafa06eb8593303a94cc216d6f54ae6c10fabf80f4c13cb7ea6e127ff"
+checksum = "f944ce94f5faf69172086b26f72f10516ba7152a7222e8f426c7948a68d4629d"
 dependencies = [
  "hashbrown 0.14.5",
  "lazy_static",
  "serde",
- "serde_repr",
  "superchain-primitives",
  "toml",
 ]
@@ -4511,7 +4520,7 @@ dependencies = [
  "prometheus",
  "reqwest",
  "serde",
- "superchain-registry",
+ "superchain",
  "tokio",
  "tracing",
  "tracing-loki",
