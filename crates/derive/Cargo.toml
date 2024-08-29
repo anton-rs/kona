@@ -28,7 +28,7 @@ tracing.workspace = true
 async-trait.workspace = true
 
 # Workspace
-kona-primitives = { path = "../primitives", version = "0.0.1", default-features = false }
+kona-primitives.workspace = true
 
 # `serde` feature dependencies
 serde = { workspace = true, optional = true }

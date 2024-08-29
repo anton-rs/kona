@@ -16,7 +16,7 @@ alloy-primitives.workspace = true
 async-trait.workspace = true
 
 # Workspace
-kona-common = { path = "../common", version = "0.0.2" }
+kona-common.workspace = true
 
 # `rkyv` feature dependencies
 rkyv = { workspace = true, optional = true }
