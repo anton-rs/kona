@@ -73,8 +73,20 @@ where
         self.prepared.front()
     }
 
-    /// Resets the pipelien by calling the [`ResettableStage::reset`] method.
-    /// This will bubble down the stages all the way to the `L1Traversal` stage.
+    /// Resets the pipeline by calling the [`ResettableStage::reset`] method.
+    ///
+    /// During a reset, each stage is recursively called from the top-level
+    /// [crate::stages::AttributesQueue] to the bottom [crate::stages::L1Traversal]
+    /// with a head-recursion pattern. This effectively clears the internal state
+    /// of each stage in the pipeline from bottom on up.
+    ///
+    /// ### Parameters
+    ///
+    /// The `l2_block_info` is the new L2 cursor to step on. It is needed during
+    /// reset to fetch the system config at that block height.
+    ///
+    /// The `l1_block_info` is the new L1 origin set in the [crate::stages::L1Traversal]
+    /// stage.
     async fn reset(
         &mut self,
         l2_block_info: BlockInfo,
@@ -96,9 +108,13 @@ where
     }
 
     /// Attempts to progress the pipeline.
+    ///
+    /// ## Returns
+    ///
     /// A [StageError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
     /// Any other error is critical and the derivation pipeline should be reset.
     /// An error is expected when the underlying source closes.
+    ///
     /// When [DerivationPipeline::step] returns [Ok(())], it should be called again, to continue the
     /// derivation process.
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
