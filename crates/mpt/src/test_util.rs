@@ -54,6 +54,7 @@ pub(crate) async fn get_live_derivable_receipts_list(
                 TxType::Eip2930 => ReceiptEnvelope::Eip2930(consensus_receipt),
                 TxType::Eip1559 => ReceiptEnvelope::Eip1559(consensus_receipt),
                 TxType::Eip4844 => ReceiptEnvelope::Eip4844(consensus_receipt),
+                TxType::Eip7702 => ReceiptEnvelope::Eip7702(consensus_receipt),
             }
         })
         .collect::<Vec<_>>();

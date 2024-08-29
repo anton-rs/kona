@@ -9,9 +9,9 @@ use crate::IndexedBlobHash;
 #[cfg(feature = "online")]
 use alloy_primitives::B256;
 #[cfg(feature = "online")]
-use c_kzg::{Bytes48, KzgProof, KzgSettings};
+use c_kzg::{Bytes48, KzgProof};
 #[cfg(feature = "online")]
-use revm::primitives::kzg::{G1_POINTS, G2_POINTS};
+use revm::primitives::kzg::EnvKzgSettings;
 #[cfg(feature = "online")]
 use sha2::{Digest, Sha256};
 #[cfg(feature = "online")]
@@ -99,8 +99,8 @@ impl BlobSidecar {
         let blob = c_kzg::Blob::from_bytes(self.blob.as_slice()).map_err(how)?;
         let commitment = Bytes48::from_bytes(self.kzg_commitment.as_slice()).map_err(how)?;
         let kzg_proof = Bytes48::from_bytes(self.kzg_proof.as_slice()).map_err(how)?;
-        let settings = KzgSettings::load_trusted_setup(&G1_POINTS.0, &G2_POINTS.0).map_err(how)?;
-        match KzgProof::verify_blob_kzg_proof(&blob, &commitment, &kzg_proof, &settings) {
+        let settings = EnvKzgSettings::Default.get();
+        match KzgProof::verify_blob_kzg_proof(&blob, &commitment, &kzg_proof, settings) {
             Ok(_) => Ok(true),
             Err(e) => {
                 warn!("Failed to verify blob KZG proof: {:?}", e);

@@ -385,7 +385,7 @@ where
 
         // Check if the block number is in range. If not, we can fail early.
         if block_number > header.number ||
-            header.number.saturating_sub(block_number) > BLOCK_HASH_HISTORY as u64
+            header.number.saturating_sub(block_number) > BLOCK_HASH_HISTORY
         {
             return Ok(B256::default());
         }
