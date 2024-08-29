@@ -29,7 +29,7 @@ serde.workspace = true
 
 # Alloy
 superchain.workspace = true
-alloy-rpc-types.workspace = true
+alloy-rpc-types = { workspace = true, features = ["eth"] }
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-provider = { workspace = true, default-features = false }
 alloy-transport = { workspace = true, default-features = false }
