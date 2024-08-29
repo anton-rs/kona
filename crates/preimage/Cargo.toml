@@ -9,20 +9,24 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# workspace
+# General
 anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives.workspace = true
 async-trait.workspace = true
 
-# local
+# Workspace
 kona-common = { path = "../common", version = "0.0.2" }
-rkyv = { version = "0.7.44", optional = true }
-serde = { version = "1.0.203", features = ["derive"], optional = true }
+
+# `rkyv` feature dependencies
+rkyv = { workspace = true, optional = true }
+
+# `serde` feature dependencies
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.38.0", features = ["full"] }
-os_pipe = "1.2.1"
+tokio.workspace = true
+os_pipe.workspace = true
 
 [features]
 default = []

@@ -9,7 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# workspace
+# General
 anyhow.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
@@ -18,17 +18,17 @@ alloy-consensus.workspace = true
 op-alloy-consensus.workspace = true
 revm = { workspace = true, features = ["optimism"] }
 
-# local
+# Workspace
 kona-mpt = { path = "../mpt", version = "0.0.2" }
 kona-primitives = { path = "../primitives", version = "0.0.1", default-features = false }
 
 [dev-dependencies]
 alloy-rlp.workspace = true
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.117"
-rand = "0.8.5"
-criterion = { version = "0.5.1", features = ["html_reports"] }
-pprof = { version = "0.13.0", features = ["criterion", "flamegraph", "frame-pointer"] } 
+serde.workspace = true
+serde_json.workspace = true
+rand.workspace = true
+criterion.workspace = true
+pprof.workspace = true 
 
 [[bench]]
 name = "execution"

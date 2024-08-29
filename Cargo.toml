@@ -40,14 +40,59 @@ lto = "fat"
 anyhow = { version = "1.0.86", default-features = false }
 tracing = { version = "0.1.40", default-features = false }
 cfg-if = "1.0.0"
+hashbrown = "0.14.5"
 spin = { version = "0.9.8", features = ["mutex"] }
 lru = "0.12.3"
 async-trait = "0.1.80"
+lazy_static = "1.5.0"
+tracing-loki = "0.2.5"
+reqwest = "0.12"
+os_pipe = "1.2.1"
+actix-web = "4.8.0"
+rand = "0.8.5"
+futures = { version = "0.3.30", default-features = false }
+prometheus = { version = "0.13.4", features = ["process"] }
+tokio = { version = "1.38", features = ["full"] }
+tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
+clap = { version = "4.5.4", features = ["derive", "env"] }
+sha2 = { version = "0.10.8", default-features = false }
+c-kzg = { version = "1.0.2", default-features = false }
+alloc-no-stdlib = "2.0.4"
+linked_list_allocator = "0.10.5"
+command-fds = { version = "0.3", features = ["tokio"] }
+
+# Encoding
+miniz_oxide = "0.8.0"
+brotli = { version = "6.0.0", default-features = false }
+
+# Testing
+proptest = "1.4"
+criterion = { version = "0.5.1", features = ["html_reports"] }
+pprof = { version = "0.13.0", features = ["criterion", "flamegraph", "frame-pointer"] } 
+
+# Serialization
+rkyv = "0.7.44"
+serde = { version = "1.0.203", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.125", default-features = false }
 
 # Ethereum
+unsigned-varint = "0.8.0"
+revm = { version = "13.0", default-features = false }
+
+# Superchain
+superchain = "0.3.1"
+superchain-primitives = { version = "0.3.1", default-features = false }
+
+# Alloy
+alloy-trie = { version = "0.4.1", default-features = false }
+alloy-provider = { version = "0.2", default-features = false }
 alloy-primitives = { version = "0.7.7", default-features = false }
 alloy-rlp = { version = "0.3.5", default-features = false }
+alloy-rpc-types = { version = "0.2" }
 alloy-consensus = { version = "0.2", default-features = false }
-op-alloy-consensus = { version = "0.1.4", default-features = false }
+alloy-transport = { version = "0.2", default-features = false }
+alloy-transport-http = { version = "0.2" }
 alloy-eips = { version = "0.2", default-features = false }
-revm = { version = "13.0", default-features = false }
+op-alloy-consensus = { version = "0.1.4", default-features = false }
+alloy-node-bindings = { version = "0.2", default-features = false }
+alloy-rpc-client = { version = "0.2", default-features = false }

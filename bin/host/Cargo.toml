@@ -9,17 +9,7 @@ homepage.workspace = true
 publish = false
 
 [dependencies]
-# workspace
-anyhow.workspace = true
-tracing.workspace = true
-alloy-primitives = { workspace = true, features = ["serde"] }
-revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
-alloy-eips.workspace = true
-alloy-consensus.workspace = true
-alloy-rlp.workspace = true
-async-trait.workspace = true
-
-# local
+# Workspace
 kona-client = { path = "../client", version = "0.1.0" }
 kona-common = { path = "../../crates/common", version = "0.0.2" }
 kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
@@ -27,17 +17,27 @@ kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
 kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["online"] }
 kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
 
-# external
-alloy-provider = { version = "0.2" } 
-alloy-transport-http = { version = "0.2" } 
-alloy-rpc-client = { version = "0.2" } 
-alloy-rpc-types = { version = "0.2" } 
-reqwest = "0.12"
-tokio = { version = "1.37.0", features = ["full"] }
-futures = "0.3"
-clap = { version = "4.5.4", features = ["derive", "env"] }
-serde = { version = "1.0.208", features = ["derive"] }
-serde_json = "1.0.125"
-tracing-subscriber = "0.3.18"
-command-fds = { version = "0.3", features = ["tokio"] }
-os_pipe = "1.2.1"
+# Alloy & Revm
+alloy-eips.workspace = true
+alloy-consensus.workspace = true
+alloy-rlp.workspace = true
+alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-provider.workspace = true
+alloy-transport-http.workspace = true 
+alloy-rpc-client.workspace = true 
+alloy-rpc-types.workspace = true
+revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
+
+# General
+anyhow.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+futures.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing-subscriber.workspace = true
+command-fds.workspace = true
+os_pipe.workspace = true

@@ -9,9 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# workspace
 anyhow.workspace = true
 cfg-if.workspace = true
-
-# external
-linked_list_allocator = "0.10.5"
+linked_list_allocator.workspace = true

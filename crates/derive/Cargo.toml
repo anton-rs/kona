@@ -9,54 +9,52 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# Workspace Alloy Dependencies
+# Alloy
 alloy-eips.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256"] }
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 
-# Other Workspace Dependencies
+# General
+hashbrown.workspace = true
+unsigned-varint.workspace = true
+miniz_oxide.workspace = true
+brotli.workspace = true
+alloc-no-stdlib.workspace = true
 lru.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 
-# Local
+# Workspace
 kona-primitives = { path = "../primitives", version = "0.0.1", default-features = false }
 
-# External
-hashbrown = "0.14.5"
-unsigned-varint = "0.8.0"
-miniz_oxide = "0.8.0"
-brotli = { version = "6.0.0", default-features = false }
-alloc-no-stdlib = "2.0.4"
-
 # `serde` feature dependencies
-serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
+serde = { workspace = true, optional = true }
 
 # `online` feature dependencies
-alloy-transport = { version = "0.2", default-features = false, optional = true }
-alloy-provider = { version = "0.2", default-features = false, optional = true }
-reqwest = { version = "0.12.4", default-features = false, optional = true }
+alloy-transport = { workspace = true, optional = true }
+alloy-provider = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
 
 # `metrics` feature dependencies
-lazy_static = { version = "1.5.0", optional = true }
-prometheus = { version = "0.13.4", features = ["process"], optional = true }
+lazy_static = { workspace = true, optional = true }
+prometheus = { workspace = true, optional = true }
 
 # `test-utils` feature dependencies
 spin = { workspace = true, optional = true }
-tracing-subscriber = { version = "0.3.18", optional = true }
-alloy-node-bindings = { version = "0.2", default-features = false, optional = true }
-alloy-transport-http = { version = "0.2", optional = true } 
-alloy-rpc-client = { version = "0.2", default-features = false, optional = true }
+alloy-rpc-client = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+alloy-node-bindings = { workspace = true, optional = true }
+alloy-transport-http = { workspace = true, optional = true } 
 
 [dev-dependencies]
-tokio = { version = "1.38", features = ["full"] }
-proptest = "1.4.0"
-tracing-subscriber = "0.3.18"
-alloy-node-bindings = { version = "0.2", default-features = false }
-serde_json = { version = "1.0.117", default-features = false }
+tokio.workspace = true
+proptest.workspace = true
+tracing-subscriber.workspace = true
+alloy-node-bindings.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["serde"]
