@@ -1,16 +1,39 @@
-[workspace]
-members = ["crates/*", "examples/*", "bin/*"]
-default-members = ["bin/host", "bin/client"]
-exclude = ["fpvm-tests/cannon-rs-tests"]
-resolver = "2"
-
 [workspace.package]
+version = "0.0.0"
 edition = "2021"
 license = "MIT"
+rust-version = "1.80"
 authors = ["clabby", "refcell"]
 repository = "https://github.com/ethereum-optimism/kona"
 homepage = "https://github.com/ethereum-optimism/kona"
-exclude = ["**/target", "benches/", "tests"]
+keywords = ["ethereum", "optimism", "crypto"]
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+exclude = ["**/target"]
+
+[workspace]
+members = ["crates/*", "examples/*", "bin/*"]
+default-members = ["bin/host", "bin/client"]
+
+# Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
+# https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
+resolver = "2"
+
+[profile.dev]
+opt-level = 1
+overflow-checks = false
+
+[profile.bench]
+debug = true
+
+[profile.dev-client]
+inherits = "dev"
+panic = "abort"
+
+[profile.release-client-lto]
+inherits = "release"
+panic = "abort"
+codegen-units = 1
+lto = "fat"
 
 [workspace.dependencies]
 # General
@@ -29,19 +52,4 @@ op-alloy-consensus = { version = "0.1.4", default-features = false }
 alloy-eips = { version = "0.2", default-features = false }
 revm = { version = "13.0", default-features = false }
 
-[profile.dev]
-opt-level = 1
-overflow-checks = false
 
-[profile.bench]
-debug = true
-
-[profile.dev-client]
-inherits = "dev"
-panic = "abort"
-
-[profile.release-client-lto]
-inherits = "release"
-panic = "abort"
-codegen-units = 1
-lto = "fat"
