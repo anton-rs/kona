@@ -22,7 +22,6 @@ unsigned-varint.workspace = true
 miniz_oxide.workspace = true
 brotli.workspace = true
 alloc-no-stdlib.workspace = true
-lru.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
@@ -34,6 +33,7 @@ kona-primitives.workspace = true
 serde = { workspace = true, optional = true }
 
 # `online` feature dependencies
+lru = { workspace = true, optional = true }
 alloy-transport = { workspace = true, optional = true }
 alloy-provider = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
@@ -70,6 +70,7 @@ online = [
   "dep:alloy-provider",
   "dep:alloy-transport",
   "dep:reqwest",
+  "dep:lru",
   "alloy-provider/reqwest",
   "alloy-consensus/serde",
   "kona-primitives/online",
