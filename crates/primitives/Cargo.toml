@@ -12,6 +12,7 @@ homepage.workspace = true
 # General
 anyhow.workspace = true
 spin.workspace = true
+
 hashbrown.workspace = true
 
 # Alloy
@@ -28,6 +29,7 @@ superchain-primitives.workspace = true
 serde = { workspace = true, optional = true }
 
 # `online` feature dependencies
+tracing = { workspace = true, optional = true }
 revm = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 c-kzg = { workspace = true, optional = true }
@@ -38,4 +40,4 @@ serde_json.workspace = true
 [features]
 default = ["serde"]
 serde = ["dep:serde", "superchain-primitives/serde"]
-online = ["dep:c-kzg", "dep:sha2", "dep:revm"]
+online = ["dep:c-kzg", "dep:sha2", "dep:revm", "dep:tracing"]
