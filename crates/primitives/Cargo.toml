@@ -12,7 +12,6 @@ homepage.workspace = true
 # General
 anyhow.workspace = true
 spin.workspace = true
-tracing.workspace = true
 hashbrown.workspace = true
 
 # Alloy
