@@ -51,5 +51,3 @@ alloy-consensus = { version = "0.2", default-features = false }
 op-alloy-consensus = { version = "0.1.4", default-features = false }
 alloy-eips = { version = "0.2", default-features = false }
 revm = { version = "13.0", default-features = false }
-
-
