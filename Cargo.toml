@@ -1,33 +1,22 @@
-[workspace]
-members = ["crates/*", "examples/*", "bin/*"]
-default-members = ["bin/host", "bin/client"]
-exclude = ["fpvm-tests/cannon-rs-tests"]
-resolver = "2"
-
 [workspace.package]
+version = "0.0.0"
 edition = "2021"
 license = "MIT"
+rust-version = "1.80"
 authors = ["clabby", "refcell"]
 repository = "https://github.com/ethereum-optimism/kona"
 homepage = "https://github.com/ethereum-optimism/kona"
-exclude = ["**/target", "benches/", "tests"]
+keywords = ["ethereum", "optimism", "crypto"]
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+exclude = ["**/target"]
 
-[workspace.dependencies]
-# General
-anyhow = { version = "1.0.86", default-features = false }
-tracing = { version = "0.1.40", default-features = false }
-cfg-if = "1.0.0"
-spin = { version = "0.9.8", features = ["mutex"] }
-lru = "0.12.3"
-async-trait = "0.1.80"
+[workspace]
+members = ["crates/*", "examples/*", "bin/*"]
+default-members = ["bin/host", "bin/client"]
 
-# Ethereum
-alloy-primitives = { version = "0.7.7", default-features = false }
-alloy-rlp = { version = "0.3.5", default-features = false }
-alloy-consensus = { version = "0.2", default-features = false }
-op-alloy-consensus = { version = "0.1.4", default-features = false }
-alloy-eips = { version = "0.2", default-features = false }
-revm = { version = "13.0", default-features = false }
+# Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
+# https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
+resolver = "2"
 
 [profile.dev]
 opt-level = 1
@@ -45,3 +34,20 @@ inherits = "release"
 panic = "abort"
 codegen-units = 1
 lto = "fat"
+
+[workspace.dependencies]
+# General
+anyhow = { version = "1.0.86", default-features = false }
+tracing = { version = "0.1.40", default-features = false }
+cfg-if = "1.0.0"
+spin = { version = "0.9.8", features = ["mutex"] }
+lru = "0.12.3"
+async-trait = "0.1.80"
+
+# Ethereum
+alloy-primitives = { version = "0.7.7", default-features = false }
+alloy-rlp = { version = "0.3.5", default-features = false }
+alloy-consensus = { version = "0.2", default-features = false }
+op-alloy-consensus = { version = "0.1.4", default-features = false }
+alloy-eips = { version = "0.2", default-features = false }
+revm = { version = "13.0", default-features = false }
