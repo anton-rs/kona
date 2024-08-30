@@ -10,22 +10,22 @@ publish = false
 
 [dependencies]
 # Workspace
-kona-client = { path = "../client", version = "0.1.0" }
-kona-common = { path = "../../crates/common", version = "0.0.2" }
-kona-preimage = { path = "../../crates/preimage", version = "0.0.2" }
-kona-mpt = { path = "../../crates/mpt", version = "0.0.2" }
-kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["online"] }
-kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["online"] }
+kona-mpt.workspace = true
+kona-client.workspace = true
+kona-common.workspace = true
+kona-preimage.workspace = true
+kona-derive = { workspace = true, features = ["online"] }
+kona-primitives = { workspace = true, features = ["online"] }
 
 # Alloy & Revm
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
 alloy-rlp.workspace = true
-alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-provider.workspace = true
 alloy-transport-http.workspace = true 
 alloy-rpc-client.workspace = true 
 alloy-rpc-types.workspace = true
+alloy-primitives = { workspace = true, features = ["serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 
 # General

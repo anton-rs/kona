@@ -11,8 +11,8 @@ homepage.workspace = true
 
 [dependencies]
 # Workspace
-kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["serde"] }
-kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["serde", "online", "metrics"] }
+kona-primitives = { workspace = true, features = ["serde"] }
+kona-derive = { workspace = true, features = ["serde", "online", "metrics"] }
 
 # General
 anyhow.workspace = true

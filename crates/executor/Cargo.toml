@@ -19,8 +19,8 @@ op-alloy-consensus.workspace = true
 revm = { workspace = true, features = ["optimism"] }
 
 # Workspace
-kona-mpt = { path = "../mpt", version = "0.0.2" }
-kona-primitives = { path = "../primitives", version = "0.0.1", default-features = false }
+kona-mpt.workspace = true
+kona-primitives.workspace = true
 
 [dev-dependencies]
 alloy-rlp.workspace = true
