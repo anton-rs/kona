@@ -9,29 +9,32 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+# General
 anyhow.workspace = true
 spin.workspace = true
 tracing.workspace = true
+hashbrown.workspace = true
+
+# Alloy
+alloy-eips.workspace = true
 alloy-consensus.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-primitives = { workspace = true, features = ["rlp"] }
-alloy-eips.workspace = true
 op-alloy-consensus.workspace = true
-hashbrown = "0.14.5"
 
 # SCR Repo Primitives
-superchain-primitives = { version = "0.3.1", default-features = false }
+superchain-primitives.workspace = true
 
 # `serde` feature dependencies
-serde = { version = "1.0.203", default-features = false, features = ["derive"], optional = true }
+serde = { workspace = true, optional = true }
 
 # `online` feature dependencies
 revm = { workspace = true, optional = true }
-sha2 = { version = "0.10.8", default-features = false, optional = true }
-c-kzg = { version = "1.0.2", default-features = false, optional = true }
+sha2 = { workspace = true, optional = true }
+c-kzg = { workspace = true, optional = true }
 
 [dev-dependencies]
-serde_json = { version = "1.0.117", default-features = false }
+serde_json.workspace = true
 
 [features]
 default = ["serde"]

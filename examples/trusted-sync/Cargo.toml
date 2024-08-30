@@ -10,24 +10,26 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# Workspace Dependencies
-anyhow.workspace = true
-tracing.workspace = true
-alloy-primitives = { workspace = true, features = ["serde"] }
+# Workspace
 kona-primitives = { path = "../../crates/primitives", version = "0.0.1", features = ["serde"] }
 kona-derive = { path = "../../crates/derive", version = "0.0.2", features = ["serde", "online", "metrics"] }
 
-# Custom dependencies
-lazy_static = "1.5.0"
-tracing-loki = "0.2.5"
-reqwest = "0.12"
-actix-web = "4.8.0"
-prometheus = { version = "0.13.4", features = ["process"] }
-tokio = { version = "1.37.0", features = ["full"] }
-tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
-clap = { version = "4.5.4", features = ["derive", "env"] }
-serde = { version = "1.0.198", features = ["derive"] }
-alloy-provider = { version = "0.2", default-features = false }
-alloy-rpc-types = { version = "0.2" }
-alloy-transport = { version = "0.2", default-features = false }
-superchain = "0.3.1"
+# General
+anyhow.workspace = true
+lazy_static.workspace = true
+tracing-loki.workspace = true
+reqwest.workspace = true
+actix-web.workspace = true
+prometheus.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
+serde.workspace = true
+
+# Alloy
+superchain.workspace = true
+alloy-rpc-types.workspace = true
+alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-provider = { workspace = true, default-features = false }
+alloy-transport = { workspace = true, default-features = false }

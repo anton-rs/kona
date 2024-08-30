@@ -12,14 +12,14 @@ homepage.workspace = true
 proc-macro = true
 
 [dependencies]
-# workspace
+# General
 anyhow.workspace = true
 cfg-if.workspace = true
 
-# local
+# Workspace
 kona-common = { path = "../common", version = "0.0.2" }
 
-# external (proc macros)
+# Proc Macros
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
