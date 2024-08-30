@@ -111,4 +111,4 @@ alloy-transport-http = { version = "0.3", default-features = false }
 alloy-eips = { git = "https://github.com/refcell/alloy", branch = "rf/fix/alloy-eips", default-features = false }
 alloy-rpc-client = { version = "0.3", default-features = false }
 alloy-node-bindings = { version = "0.3", default-features = false }
-op-alloy-consensus = { version = "0.2.2", default-features = false }
+op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/fix/derive-more", default-features = false }
