@@ -1,9 +1,8 @@
 set positional-arguments
 alias t := tests
-alias tn := test
-alias l := lint
-alias ln := lint-native
-alias fmt := fmt-native-fix
+alias la := lint-all
+alias l := lint-native
+alias f := fmt-native-fix
 alias b := build
 alias d := docker-build-ts
 alias r := docker-run-ts
@@ -20,7 +19,7 @@ test *args='':
   cargo nextest run --workspace --all --all-features $@
 
 # Lint the workspace for all available targets
-lint: lint-native lint-cannon lint-asterisc lint-docs
+lint-all: lint-native lint-cannon lint-asterisc lint-docs
 
 # Fixes the formatting of the workspace
 fmt-native-fix:
@@ -31,7 +30,7 @@ fmt-native-check:
   cargo +nightly fmt --all -- --check
 
 # Lint the workspace
-lint-native: fmt-native-check
+lint-native: fmt-native-check lint-docs
   cargo +nightly clippy --workspace --all --all-features --all-targets -- -D warnings
 
 # Lint the workspace (mips arch). Currently, only the `kona-common` crate is linted for the `cannon` target, as it is the only crate with architecture-specific code.
