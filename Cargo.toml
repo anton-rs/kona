@@ -93,6 +93,6 @@ alloy-consensus = { version = "0.2", default-features = false }
 alloy-transport = { version = "0.2", default-features = false }
 alloy-transport-http = { version = "0.2" }
 alloy-eips = { version = "0.2", default-features = false }
-op-alloy-consensus = { version = "0.1.4", default-features = false }
 alloy-node-bindings = { version = "0.2", default-features = false }
 alloy-rpc-client = { version = "0.2", default-features = false }
+op-alloy-consensus = { version = "0.1.4", default-features = false }
