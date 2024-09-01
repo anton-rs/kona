@@ -125,7 +125,7 @@ where
                 kv_lock.set(
                     PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
                     raw_header.into(),
-                );
+                )?;
             }
             HintType::L1Transactions => {
                 // Validate the hint data length.
@@ -207,7 +207,7 @@ where
                 kv_write_lock.set(
                     PreimageKey::new(*hash, PreimageKeyType::Sha256).into(),
                     sidecar.kzg_commitment.to_vec(),
-                );
+                )?;
 
                 // Write all the field elements to the key-value store. There should be 4096.
                 // The preimage oracle key for each field element is the keccak256 hash of
@@ -221,11 +221,11 @@ where
                     kv_write_lock.set(
                         PreimageKey::new(*blob_key_hash, PreimageKeyType::Keccak256).into(),
                         blob_key.into(),
-                    );
+                    )?;
                     kv_write_lock.set(
                         PreimageKey::new(*blob_key_hash, PreimageKeyType::Blob).into(),
                         sidecar.blob[(i as usize) << 5..(i as usize + 1) << 5].to_vec(),
-                    );
+                    )?;
                 }
 
                 // Write the KZG Proof as the 4096th element.
@@ -235,11 +235,11 @@ where
                 kv_write_lock.set(
                     PreimageKey::new(*blob_key_hash, PreimageKeyType::Keccak256).into(),
                     blob_key.into(),
-                );
+                )?;
                 kv_write_lock.set(
                     PreimageKey::new(*blob_key_hash, PreimageKeyType::Blob).into(),
                     sidecar.kzg_proof.to_vec(),
-                );
+                )?;
             }
             HintType::L1Precompile => {
                 // Validate the hint data length.
@@ -270,9 +270,11 @@ where
                 kv_lock.set(
                     PreimageKey::new(*input_hash, PreimageKeyType::Keccak256).into(),
                     hint_data.into(),
-                );
-                kv_lock
-                    .set(PreimageKey::new(*input_hash, PreimageKeyType::Precompile).into(), result);
+                )?;
+                kv_lock.set(
+                    PreimageKey::new(*input_hash, PreimageKeyType::Precompile).into(),
+                    result,
+                )?;
             }
             HintType::L2BlockHeader => {
                 // Validate the hint data length.
@@ -297,7 +299,7 @@ where
                 kv_lock.set(
                     PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
                     raw_header.into(),
-                );
+                )?;
             }
             HintType::L2Transactions => {
                 // Validate the hint data length.
@@ -371,7 +373,7 @@ where
 
                 let mut kv_write_lock = self.kv_store.write().await;
                 kv_write_lock
-                    .set(PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(), code.into());
+                    .set(PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(), code.into())?;
             }
             HintType::StartingL2Output => {
                 const OUTPUT_ROOT_VERSION: u8 = 0;
@@ -415,7 +417,7 @@ where
                 kv_write_lock.set(
                     PreimageKey::new(*output_root, PreimageKeyType::Keccak256).into(),
                     raw_output.into(),
-                );
+                )?;
             }
             HintType::L2StateNode => {
                 if hint_data.len() != 32 {
@@ -439,7 +441,7 @@ where
                 kv_write_lock.set(
                     PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
                     preimage.into(),
-                );
+                )?;
             }
             HintType::L2AccountProof => {
                 if hint_data.len() != 8 + 20 {
@@ -463,11 +465,12 @@ where
                 let mut kv_write_lock = self.kv_store.write().await;
 
                 // Write the account proof nodes to the key-value store.
-                proof_response.account_proof.into_iter().for_each(|node| {
+                proof_response.account_proof.into_iter().try_for_each(|node| {
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
-                    kv_write_lock.set(key.into(), node.into());
-                });
+                    kv_write_lock.set(key.into(), node.into())?;
+                    Ok(())
+                })?;
             }
             HintType::L2AccountStorageProof => {
                 if hint_data.len() != 8 + 20 + 32 {
@@ -492,19 +495,21 @@ where
                 let mut kv_write_lock = self.kv_store.write().await;
 
                 // Write the account proof nodes to the key-value store.
-                proof_response.account_proof.into_iter().for_each(|node| {
+                proof_response.account_proof.into_iter().try_for_each(|node| {
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
-                    kv_write_lock.set(key.into(), node.into());
-                });
+                    kv_write_lock.set(key.into(), node.into())?;
+                    Ok(())
+                })?;
 
                 // Write the storage proof nodes to the key-value store.
                 let storage_proof = proof_response.storage_proof.remove(0);
-                storage_proof.proof.into_iter().for_each(|node| {
+                storage_proof.proof.into_iter().try_for_each(|node| {
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
-                    kv_write_lock.set(key.into(), node.into());
-                });
+                    kv_write_lock.set(key.into(), node.into())?;
+                    Ok(())
+                })?;
             }
         }
 
@@ -558,7 +563,7 @@ where
             let value_hash = keccak256(value.as_ref());
             let key = PreimageKey::new(*value_hash, PreimageKeyType::Keccak256);
 
-            kv_write_lock.set(key.into(), value.into());
+            kv_write_lock.set(key.into(), value.into())?;
         }
 
         Ok(())
