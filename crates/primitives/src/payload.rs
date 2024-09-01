@@ -3,9 +3,9 @@
 use alloc::vec::Vec;
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{Address, Bloom, Bytes, B256};
+use alloy_rpc_types::engine::{ExecutionPayloadV1, ExecutionPayloadV2, ExecutionPayloadV3};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
-use alloy_rpc_types::engine::{ExecutionPayloadV1, ExecutionPayloadV2, ExecutionPayloadV3};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -189,9 +189,7 @@ impl From<ExecutionPayloadV3> for L2ExecutionPayload {
             gas_used: payload.payload_inner.payload_inner.gas_used.into(),
             timestamp: payload.payload_inner.payload_inner.timestamp,
             extra_data: payload.payload_inner.payload_inner.extra_data,
-            base_fee_per_gas: convert_uint128(
-                payload.payload_inner.payload_inner.base_fee_per_gas,
-            ),
+            base_fee_per_gas: convert_uint128(payload.payload_inner.payload_inner.base_fee_per_gas),
             block_hash: payload.payload_inner.payload_inner.block_hash,
             transactions: payload.payload_inner.payload_inner.transactions,
             deserialized_transactions: Vec::default(),
