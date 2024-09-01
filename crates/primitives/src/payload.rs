@@ -5,6 +5,7 @@ use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{Address, Bloom, Bytes, B256};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
+use alloy_rpc_types::engine::{ExecutionPayloadV1, ExecutionPayloadV2, ExecutionPayloadV3};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -116,6 +117,89 @@ pub struct L2ExecutionPayload {
         serde(rename = "excessBlobGas", skip_serializing_if = "Option::is_none")
     )]
     pub excess_blob_gas: Option<u128>,
+}
+
+fn convert_uint128(value: alloy_primitives::U256) -> Option<u128> {
+    let bytes = value.to_le_bytes_vec();
+    let bytes: [u8; 16] = bytes.try_into().ok()?;
+    Some(u128::from_le_bytes(bytes))
+}
+
+impl From<ExecutionPayloadV1> for L2ExecutionPayload {
+    fn from(payload: ExecutionPayloadV1) -> Self {
+        L2ExecutionPayload {
+            parent_hash: payload.parent_hash,
+            fee_recipient: payload.fee_recipient,
+            state_root: payload.state_root,
+            receipts_root: payload.receipts_root,
+            logs_bloom: payload.logs_bloom,
+            prev_randao: payload.prev_randao,
+            block_number: payload.block_number,
+            gas_limit: payload.gas_limit.into(),
+            gas_used: payload.gas_used.into(),
+            timestamp: payload.timestamp,
+            extra_data: payload.extra_data,
+            base_fee_per_gas: convert_uint128(payload.base_fee_per_gas),
+            block_hash: payload.block_hash,
+            transactions: payload.transactions,
+            deserialized_transactions: Vec::new(),
+            withdrawals: None,
+            blob_gas_used: None,
+            excess_blob_gas: None,
+        }
+    }
+}
+
+impl From<ExecutionPayloadV2> for L2ExecutionPayload {
+    fn from(payload: ExecutionPayloadV2) -> Self {
+        L2ExecutionPayload {
+            parent_hash: payload.payload_inner.parent_hash,
+            fee_recipient: payload.payload_inner.fee_recipient,
+            state_root: payload.payload_inner.state_root,
+            receipts_root: payload.payload_inner.receipts_root,
+            logs_bloom: payload.payload_inner.logs_bloom,
+            prev_randao: payload.payload_inner.prev_randao,
+            block_number: payload.payload_inner.block_number,
+            gas_limit: payload.payload_inner.gas_limit.into(),
+            gas_used: payload.payload_inner.gas_used.into(),
+            timestamp: payload.payload_inner.timestamp,
+            extra_data: payload.payload_inner.extra_data,
+            base_fee_per_gas: convert_uint128(payload.payload_inner.base_fee_per_gas),
+            block_hash: payload.payload_inner.block_hash,
+            transactions: payload.payload_inner.transactions,
+            deserialized_transactions: Vec::default(),
+            withdrawals: Some(Vec::new()),
+            blob_gas_used: None,
+            excess_blob_gas: None,
+        }
+    }
+}
+
+impl From<ExecutionPayloadV3> for L2ExecutionPayload {
+    fn from(payload: ExecutionPayloadV3) -> Self {
+        L2ExecutionPayload {
+            parent_hash: payload.payload_inner.payload_inner.parent_hash,
+            fee_recipient: payload.payload_inner.payload_inner.fee_recipient,
+            state_root: payload.payload_inner.payload_inner.state_root,
+            receipts_root: payload.payload_inner.payload_inner.receipts_root,
+            logs_bloom: payload.payload_inner.payload_inner.logs_bloom,
+            prev_randao: payload.payload_inner.payload_inner.prev_randao,
+            block_number: payload.payload_inner.payload_inner.block_number,
+            gas_limit: payload.payload_inner.payload_inner.gas_limit.into(),
+            gas_used: payload.payload_inner.payload_inner.gas_used.into(),
+            timestamp: payload.payload_inner.payload_inner.timestamp,
+            extra_data: payload.payload_inner.payload_inner.extra_data,
+            base_fee_per_gas: convert_uint128(
+                payload.payload_inner.payload_inner.base_fee_per_gas,
+            ),
+            block_hash: payload.payload_inner.payload_inner.block_hash,
+            transactions: payload.payload_inner.payload_inner.transactions,
+            deserialized_transactions: Vec::default(),
+            withdrawals: Some(Vec::new()),
+            blob_gas_used: Some(payload.blob_gas_used.into()),
+            excess_blob_gas: Some(payload.excess_blob_gas.into()),
+        }
+    }
 }
 
 impl L2ExecutionPayloadEnvelope {
