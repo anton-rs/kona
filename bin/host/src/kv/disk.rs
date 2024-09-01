@@ -1,7 +1,5 @@
-//! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk.
-//!
-//! Data is stored in a directory, with a separate file for each key. The key is the filename, and
-//! the value is the raw contents of the file.
+//! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk
+//! using [rocksdb].
 
 use super::KeyValueStore;
 use anyhow::{anyhow, Result};
@@ -27,7 +25,7 @@ impl DiskKeyValueStore {
     /// Gets the [Options] for the underlying RocksDB instance.
     fn get_db_options() -> Options {
         let mut options = Options::default();
-        options.set_compression_type(rocksdb::DBCompressionType::Zstd);
+        options.set_compression_type(rocksdb::DBCompressionType::Snappy);
         options.create_if_missing(true);
         options
     }

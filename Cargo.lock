@@ -2522,7 +2522,6 @@ dependencies = [
  "glob",
  "libc",
  "libz-sys",
- "zstd-sys",
 ]
 
 [[package]]
