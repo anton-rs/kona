@@ -26,10 +26,7 @@ use revm::{
 use tracing::{debug, info};
 
 mod builder;
-pub use builder::StatelessL2BlockExecutorBuilder;
-
-mod precompile;
-pub use precompile::{NoPrecompileOverride, PrecompileOverride};
+pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
 
 mod eip4788;
 use eip4788::pre_block_beacon_root_contract_call;
@@ -43,28 +40,26 @@ use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_enve
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F, H, PO>
+pub struct StatelessL2BlockExecutor<'a, F, H>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
-    PO: PrecompileOverride<F, H>,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
     /// The inner state database component.
     trie_db: TrieDB<F, H>,
-    /// Phantom data for the precompile overrides.
-    _phantom: core::marker::PhantomData<PO>,
+    /// The [KonaHandleRegister] to use during execution.
+    handler_register: Option<KonaHandleRegister<F, H>>,
 }
 
-impl<'a, F, H, PO> StatelessL2BlockExecutor<'a, F, H, PO>
+impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
 where
     F: TrieDBFetcher,
     H: TrieDBHinter,
-    PO: PrecompileOverride<F, H>,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
-    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H, PO> {
+    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
         StatelessL2BlockExecutorBuilder::with_config(config)
     }
 
@@ -128,15 +123,22 @@ where
 
         // Construct the block-scoped EVM with the given configuration.
         // The transaction environment is set within the loop for each transaction.
-        let mut evm = Evm::builder()
-            .with_db(&mut state)
-            .with_env_with_handler_cfg(EnvWithHandlerCfg::new_with_cfg_env(
-                initialized_cfg.clone(),
-                initialized_block_env.clone(),
-                Default::default(),
-            ))
-            .append_handler_register(PO::set_precompiles)
-            .build();
+        let mut evm = {
+            let mut base = Evm::builder().with_db(&mut state).with_env_with_handler_cfg(
+                EnvWithHandlerCfg::new_with_cfg_env(
+                    initialized_cfg.clone(),
+                    initialized_block_env.clone(),
+                    Default::default(),
+                ),
+            );
+
+            // If a handler register is provided, append it to the base EVM.
+            if let Some(handler) = self.handler_register {
+                base = base.append_handler_register(handler);
+            }
+
+            base.build()
+        };
 
         // Execute the transactions in the payload.
         let transactions = payload
@@ -223,7 +225,7 @@ where
             cumulative_gas_used = cumulative_gas_used
         );
 
-        // Drop the EVM to rid the exclusive reference to the database.
+        // Drop the EVM to free the exclusive reference to the database.
         drop(evm);
 
         // Merge all state transitions into the cache state.
@@ -699,7 +701,6 @@ mod test {
             .with_parent_header(header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_120794432_exec"))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -753,7 +754,6 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121049889_exec"))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -811,7 +811,6 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121003241_exec"))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -876,7 +875,6 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121057303_exec"))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -935,7 +933,6 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121065789_exec"))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
@@ -1003,7 +1000,6 @@ mod test {
             .with_parent_header(parent_header.seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new("block_121135704_exec"))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
 
