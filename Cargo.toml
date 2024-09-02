@@ -35,10 +35,6 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
-[patch.crates-io]
-# Temporary workaround until `alloy-eips` supports `no_std` compatibility
-alloy-eips = { git = "https://github.com/refcell/alloy", branch = "rf/fix/alloy-eips" }
-
 [workspace.dependencies]
 # Workspace
 kona-client = { path = "bin/client", version = "0.1.0" }
@@ -96,19 +92,19 @@ unsigned-varint = "0.8.0"
 revm = { version = "14.0", default-features = false }
 
 # Superchain
-superchain = { git = "https://github.com/anton-rs/superchain", branch = "rf/fix/alloy-eips" }
-superchain-primitives = { git = "https://github.com/anton-rs/superchain", branch = "rf/fix/alloy-eips", default-features = false }
+superchain = "0.3"
+superchain-primitives = { version = "0.3", default-features = false }
 
 # Alloy
-alloy-rlp = { version = "0.3.8", default-features = false }
-alloy-trie = { version = "0.5.1", default-features = false }
+alloy-rlp = { version = "0.3", default-features = false }
+alloy-trie = { version = "0.5", default-features = false }
 alloy-provider = { version = "0.3", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
 alloy-rpc-types = { version = "0.3", default-features = false }
 alloy-consensus = { version = "0.3", default-features = false }
 alloy-transport = { version = "0.3", default-features = false }
 alloy-transport-http = { version = "0.3", default-features = false }
-alloy-eips = { git = "https://github.com/refcell/alloy", branch = "rf/fix/alloy-eips", default-features = false }
+alloy-eips = { version = "0.3", default-features = false }
 alloy-rpc-client = { version = "0.3", default-features = false }
 alloy-node-bindings = { version = "0.3", default-features = false }
-op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/fix/derive-more", default-features = false }
+op-alloy-consensus = { version = "0.2", default-features = false }
