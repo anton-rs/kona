@@ -1,7 +1,6 @@
 # ref: https://docs.codecov.com/docs/codecovyml-reference
 coverage:
-  # TODO: Raise coverage requirements
-  range: 25..100
+  range: 75..100
   round: down
   precision: 1
   status:
@@ -12,9 +11,9 @@ coverage:
         threshold: 1%
     patch:
       default:
-        # basic
         target: auto
-        threshold: 0%
+        # Avoid false negatives
+        threshold: 1%
         base: auto 
         only_pulls: true
 
