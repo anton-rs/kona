@@ -41,7 +41,7 @@ lint-cannon:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy -p kona-common --all-features --target /mips-unknown-none.json -Zbuild-std -- -D warnings
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo +nightly clippy -p kona-common --all-features --target /mips-unknown-none.json -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the workspace (risc-v arch). Currently, only the `kona-common` crate is linted for the `asterisc` target, as it is the only crate with architecture-specific code.
 lint-asterisc:
@@ -50,7 +50,7 @@ lint-asterisc:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy -p kona-common --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo +nightly clippy -p kona-common --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the Rust documentation
 lint-docs:
@@ -74,7 +74,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -83,7 +83,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
 
 # Build the `trusted-sync` docker image
 docker-build-ts *args='':
