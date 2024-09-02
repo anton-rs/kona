@@ -16,11 +16,10 @@ use kona_client::{
 };
 use kona_common_proc::client_entry;
 use kona_executor::StatelessL2BlockExecutor;
-use kona_preimage::{HintWriter, OracleReader};
 use kona_primitives::L2AttributesWithParent;
 
 pub(crate) mod fault;
-use fault::{FPVMPrecompileOverride, HINT_WRITER, ORACLE_READER};
+use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
@@ -61,15 +60,11 @@ fn main() -> Result<()> {
         .await?;
         let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
-        let precompile_overrides = FPVMPrecompileOverride::<
-            OracleL2ChainProvider<CachingOracle<OracleReader, HintWriter>>,
-            OracleL2ChainProvider<CachingOracle<OracleReader, HintWriter>>,
-        >::default();
         let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
             .with_parent_header(driver.take_l2_safe_head_header())
             .with_fetcher(l2_provider.clone())
             .with_hinter(l2_provider)
-            .with_precompile_overrides(precompile_overrides)
+            .with_handler_register(fpvm_handle_register)
             .build()?;
         let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;

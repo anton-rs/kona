@@ -5,7 +5,7 @@ use alloy_primitives::{address, b256, hex, Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
-use kona_executor::{NoPrecompileOverride, StatelessL2BlockExecutor};
+use kona_executor::StatelessL2BlockExecutor;
 use kona_mpt::{NoopTrieDBHinter, TrieDBFetcher};
 use kona_primitives::{
     L2PayloadAttributes, RollupConfig, OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS,
@@ -81,7 +81,6 @@ fn op_mainnet_exec_bench(
             .with_parent_header(pre_state_header.clone().seal_slow())
             .with_fetcher(TestdataTrieDBFetcher::new(data_folder))
             .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
             .build()
             .unwrap();
         l2_block_executor.execute_payload(payload_attrs.clone()).unwrap();
