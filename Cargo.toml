@@ -43,8 +43,8 @@ kona-common = { path = "crates/common", version = "0.0.2" }
 kona-preimage = { path = "crates/preimage", version = "0.0.2" }
 kona-executor = { path = "crates/executor", version = "0.0.1" }
 kona-common-proc = { path = "crates/common-proc", version = "0.0.2" }
-kona-derive = { path = "crates/derive", version = "0.0.2", default-feature = false }
-kona-primitives = { path = "crates/primitives", version = "0.0.1", default-feature = false }
+kona-derive = { path = "crates/derive", version = "0.0.2", default-features = false }
+kona-primitives = { path = "crates/primitives", version = "0.0.1", default-features = false }
 
 # General
 anyhow = { version = "1.0.86", default-features = false }
