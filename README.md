@@ -16,7 +16,7 @@
 <p align="center">
   <a href="#whats-kona">What's Kona?</a> •
   <a href="#overview">Overview</a> •
-  <a href="https://static.optimism.io/kona/CONTRIBUTING.html">Contributing</a> •
+  <a href="https://anton-rs.github.io/kona/CONTRIBUTING.html">Contributing</a> •
   <a href="#credits">Credits</a>
 </p>
 
