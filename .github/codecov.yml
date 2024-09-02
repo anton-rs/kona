@@ -10,6 +10,13 @@ coverage:
       default:
         # Avoid false negatives
         threshold: 1%
+    patch:
+      default:
+        # basic
+        target: auto
+        threshold: 0%
+        base: auto 
+        only_pulls: true
 
 ignore:
   - "tests"
