@@ -6,10 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1](https://github.com/ethereum-optimism/kona/releases/tag/kona-executor-v0.0.1) - 2024-06-22
+## [0.0.1](https://github.com/anton-rs/kona/releases/tag/kona-executor-v0.0.1) - 2024-06-22
 
 ### Other
-- *(workspace)* Prep release ([#301](https://github.com/ethereum-optimism/kona/pull/301))
-- version dependencies ([#296](https://github.com/ethereum-optimism/kona/pull/296))
-- *(deps)* fast forward op alloy dep ([#267](https://github.com/ethereum-optimism/kona/pull/267))
-- *(workspace)* `kona-executor` ([#259](https://github.com/ethereum-optimism/kona/pull/259))
+- *(workspace)* Prep release ([#301](https://github.com/anton-rs/kona/pull/301))
+- version dependencies ([#296](https://github.com/anton-rs/kona/pull/296))
+- *(deps)* fast forward op alloy dep ([#267](https://github.com/anton-rs/kona/pull/267))
+- *(workspace)* `kona-executor` ([#259](https://github.com/anton-rs/kona/pull/259))

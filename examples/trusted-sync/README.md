@@ -2,7 +2,7 @@
 
 An example that executes the [derivation pipeline][derive] over L1 Blocks and validates payloads using a trusted rpc endpoint.
 
-[derive]: https://github.com/ethereum-optimism/kona/tree/main/crates/derive
+[derive]: https://github.com/anton-rs/kona/tree/main/crates/derive
 
 ## Usage
 
