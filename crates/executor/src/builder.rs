@@ -59,7 +59,7 @@ where
     }
 
     /// Set the [KonaHandleRegister] for execution.
-    pub fn with_handler_register(mut self, handler_register: KonaHandleRegister<F, H>) -> Self {
+    pub fn with_handle_register(mut self, handler_register: KonaHandleRegister<F, H>) -> Self {
         self.handler_register = Some(handler_register);
         self
     }

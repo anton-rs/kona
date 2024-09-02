@@ -64,7 +64,7 @@ fn main() -> Result<()> {
             .with_parent_header(driver.take_l2_safe_head_header())
             .with_fetcher(l2_provider.clone())
             .with_hinter(l2_provider)
-            .with_handler_register(fpvm_handle_register)
+            .with_handle_register(fpvm_handle_register)
             .build()?;
         let Header { number, .. } = *executor.execute_payload(attributes)?;
         let output_root = executor.compute_output_root()?;

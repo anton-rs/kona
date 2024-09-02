@@ -49,7 +49,7 @@ where
     config: &'a RollupConfig,
     /// The inner state database component.
     trie_db: TrieDB<F, H>,
-    /// The [BoxedHandlerRegister] to use during execution.
+    /// The [KonaHandleRegister] to use during execution.
     handler_register: Option<KonaHandleRegister<F, H>>,
 }
 
