@@ -9,15 +9,15 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-# workspace
+# General
 anyhow.workspace = true
 tracing.workspace = true
+
+# Revm + Alloy
+revm.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp.workspace = true
 alloy-consensus.workspace = true
-revm.workspace = true
-
-# External
 alloy-trie.workspace = true
 
 [dev-dependencies]
@@ -28,7 +28,7 @@ tracing-subscriber.workspace = true
 
 alloy-consensus.workspace = true
 alloy-provider.workspace = true
-alloy-rpc-types.workspace = true
+alloy-rpc-types = { workspace = true, features = ["eth"] }
 alloy-transport-http.workspace = true
 
 rand.workspace = true
