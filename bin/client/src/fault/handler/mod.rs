@@ -5,8 +5,9 @@
 use alloc::sync::Arc;
 use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
 use revm::{
-    handler::register::EvmHandler, precompile::PrecompileSpecId, primitives::SpecId,
-    ContextPrecompiles, State,
+    handler::register::EvmHandler,
+    primitives::{spec_to_generic, SpecId},
+    State,
 };
 
 mod bn128_pair;
@@ -25,8 +26,9 @@ pub(crate) fn fpvm_handle_register<F, H>(
     let spec_id = handler.cfg.spec_id;
 
     handler.pre_execution.load_precompiles = Arc::new(move || {
-        let mut ctx_precompiles =
-            ContextPrecompiles::new(PrecompileSpecId::from_spec_id(spec_id)).clone();
+        let mut ctx_precompiles = spec_to_generic!(spec_id, {
+            revm::optimism::load_precompiles::<SPEC, (), &mut State<&mut TrieDB<F, H>>>()
+        });
 
         // Extend with FPVM-accelerated precompiles
         let override_precompiles = [
@@ -35,15 +37,6 @@ pub(crate) fn fpvm_handle_register<F, H>(
             kzg_point_eval::FPVM_KZG_POINT_EVAL,
         ];
         ctx_precompiles.extend(override_precompiles);
-
-        // Ensure the secp256r1 P256verify precompile is enabled in the FJORD spec
-        if spec_id.is_enabled_in(SpecId::FJORD) {
-            ctx_precompiles.extend([
-                // EIP-7212: secp256r1 P256verify
-                revm::precompile::secp256r1::P256VERIFY,
-            ]);
-        }
-
         ctx_precompiles
     });
 }
