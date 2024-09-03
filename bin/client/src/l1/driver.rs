@@ -10,6 +10,7 @@ use alloy_consensus::{Header, Sealed};
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
+    errors::StageError,
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
@@ -163,18 +164,22 @@ where
                 StepResult::AdvancedOrigin => {
                     info!(target: "client_derivation_driver", "Advanced origin")
                 }
-                StepResult::OriginAdvanceErr(e) => {
-                    warn!(target: "client_derivation_driver", "Failed to advance origin: {:?}", e)
-                }
-                StepResult::StepFailed(e) => {
-                    warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e)
+                StepResult::OriginAdvanceErr(e) | StepResult::StepFailed(e) => {
+                    warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e);
+
+                    // Break the loop unless the error signifies that there is not enough data to
+                    // complete the current step. In this case, we retry the step to see if other
+                    // stages can make progress.
+                    if !matches!(e, StageError::NotEnoughData) {
+                        break;
+                    }
                 }
             }
 
             attributes = self.pipeline.next();
         }
 
-        Ok(attributes.expect("Must be some"))
+        Ok(attributes.expect("Failed to derive payload attributes"))
     }
 
     /// Finds the startup information for the derivation pipeline.
