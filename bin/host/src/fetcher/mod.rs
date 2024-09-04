@@ -540,8 +540,8 @@ where
         let mut kv_write_lock = self.kv_store.write().await;
 
         // If the list of nodes is empty, store the empty root hash and exit early.
-        // The `HashBuilder` will not push the preimage of the empty root hash to the `ProofRetainer`
-        // in the event that there are no leaves inserted.
+        // The `HashBuilder` will not push the preimage of the empty root hash to the
+        // `ProofRetainer` in the event that there are no leaves inserted.
         if nodes.is_empty() {
             let empty_key = PreimageKey::new(*EMPTY_ROOT_HASH, PreimageKeyType::Keccak256);
             kv_write_lock.set(empty_key.into(), [EMPTY_STRING_CODE].into());
