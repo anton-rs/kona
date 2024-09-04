@@ -6,6 +6,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.2...kona-derive-v0.0.3) - 2024-09-04
+
+### Added
+- Run cargo hack against workspace ([#485](https://github.com/anton-rs/kona/pull/485))
+- *(workspace)* Workspace Re-exports ([#468](https://github.com/anton-rs/kona/pull/468))
+- *(ci)* Add scheduled FPP differential tests ([#408](https://github.com/anton-rs/kona/pull/408))
+- *(derive+trusted-sync)* online blob provider with fallback ([#410](https://github.com/anton-rs/kona/pull/410))
+- increase granularity ([#365](https://github.com/anton-rs/kona/pull/365))
+- *(derive)* histogram for number of channels for given frame counts ([#337](https://github.com/anton-rs/kona/pull/337))
+- *(derive)* track the current channel size ([#331](https://github.com/anton-rs/kona/pull/331))
+- *(derive)* more stage metrics ([#326](https://github.com/anton-rs/kona/pull/326))
+- *(derive)* Granular Provider Metrics ([#325](https://github.com/anton-rs/kona/pull/325))
+- *(derive)* Stage Level Metrics ([#309](https://github.com/anton-rs/kona/pull/309))
+- *(examples)* Trusted Sync Metrics ([#308](https://github.com/anton-rs/kona/pull/308))
+
+### Fixed
+- downgrade for release plz ([#458](https://github.com/anton-rs/kona/pull/458))
+- *(workspace)* Add Unused Dependency Lint ([#453](https://github.com/anton-rs/kona/pull/453))
+- *(derive)* remove fpvm tests ([#447](https://github.com/anton-rs/kona/pull/447))
+- *(derive)* Granite Hardfork Support ([#420](https://github.com/anton-rs/kona/pull/420))
+- remove data iter option ([#405](https://github.com/anton-rs/kona/pull/405))
+- *(deps)* Bump Alloy Dependencies ([#409](https://github.com/anton-rs/kona/pull/409))
+- *(kona-derive)* Remove SignedRecoverable Shim ([#400](https://github.com/anton-rs/kona/pull/400))
+- *(derive)* Pipeline Reset ([#383](https://github.com/anton-rs/kona/pull/383))
+- *(examples)* Start N Blocks Back from Tip ([#349](https://github.com/anton-rs/kona/pull/349))
+- *(derive)* Unused var w/o `metrics` feature ([#345](https://github.com/anton-rs/kona/pull/345))
+- *(derive)* bind the Pipeline trait to Iterator ([#334](https://github.com/anton-rs/kona/pull/334))
+- *(derive)* prefix all metric names ([#330](https://github.com/anton-rs/kona/pull/330))
+- *(examples)* don't panic on validation fetch failure ([#327](https://github.com/anton-rs/kona/pull/327))
+- *(derive)* Warnings with metrics macro ([#322](https://github.com/anton-rs/kona/pull/322))
+
+### Other
+- *(workspace)* Alloy Version Bumps ([#467](https://github.com/anton-rs/kona/pull/467))
+- *(workspace)* Update for `anton-rs` org transfer ([#474](https://github.com/anton-rs/kona/pull/474))
+- *(workspace)* Hoist Dependencies ([#466](https://github.com/anton-rs/kona/pull/466))
+- *(derive)* reset docs ([#464](https://github.com/anton-rs/kona/pull/464))
+- *(derive)* Remove udeps ([#462](https://github.com/anton-rs/kona/pull/462))
+- *(bin)* Remove `kt` ([#461](https://github.com/anton-rs/kona/pull/461))
+- refactor types out of kona-derive ([#454](https://github.com/anton-rs/kona/pull/454))
+- *(derive)* Channel timeout ([#437](https://github.com/anton-rs/kona/pull/437))
+- *(derive)* remove previous stage trait ([#423](https://github.com/anton-rs/kona/pull/423))
+- *(examples)* Add logs to trusted-sync ([#415](https://github.com/anton-rs/kona/pull/415))
+- *(derive)* refine channel frame count buckets ([#378](https://github.com/anton-rs/kona/pull/378))
+- *(derive)* Remove noisy batch logs ([#329](https://github.com/anton-rs/kona/pull/329))
+- clean up trusted sync loop ([#318](https://github.com/anton-rs/kona/pull/318))
+- *(docs)* Label Cleanup ([#307](https://github.com/anton-rs/kona/pull/307))
+- *(derive)* add targets to stage logs ([#310](https://github.com/anton-rs/kona/pull/310))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.1...kona-derive-v0.0.2) - 2024-06-22
 
 ### Added

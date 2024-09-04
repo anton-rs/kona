@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2](https://github.com/anton-rs/kona/compare/kona-primitives-v0.0.1...kona-primitives-v0.0.2) - 2024-09-04
+
+### Added
+- update superchain registry deps ([#463](https://github.com/anton-rs/kona/pull/463))
+- *(primitives)* `serde` for `L1BlockInfoTx` ([#460](https://github.com/anton-rs/kona/pull/460))
+
+### Fixed
+- *(examples)* Revm Features ([#482](https://github.com/anton-rs/kona/pull/482))
+- *(workspace)* Use published `revm` version ([#459](https://github.com/anton-rs/kona/pull/459))
+- downgrade for release plz ([#458](https://github.com/anton-rs/kona/pull/458))
+- *(workspace)* Add Unused Dependency Lint ([#453](https://github.com/anton-rs/kona/pull/453))
+- fix superchain registry + primitives versions ([#425](https://github.com/anton-rs/kona/pull/425))
+- *(derive)* Granite Hardfork Support ([#420](https://github.com/anton-rs/kona/pull/420))
+- *(deps)* Bump Alloy Dependencies ([#409](https://github.com/anton-rs/kona/pull/409))
+- pin two dependencies due to upstream semver issues ([#391](https://github.com/anton-rs/kona/pull/391))
+
+### Other
+- *(workspace)* Alloy Version Bumps ([#467](https://github.com/anton-rs/kona/pull/467))
+- *(workspace)* Update for `anton-rs` org transfer ([#474](https://github.com/anton-rs/kona/pull/474))
+- *(workspace)* Hoist Dependencies ([#466](https://github.com/anton-rs/kona/pull/466))
+- *(bin)* Remove `kt` ([#461](https://github.com/anton-rs/kona/pull/461))
+- refactor types out of kona-derive ([#454](https://github.com/anton-rs/kona/pull/454))
+- bump scr version ([#440](https://github.com/anton-rs/kona/pull/440))
+- Bump `superchain-registry` version ([#306](https://github.com/anton-rs/kona/pull/306))
+
 ## [0.0.1](https://github.com/anton-rs/kona/releases/tag/kona-primitives-v0.0.1) - 2024-06-22
 
 ### Added

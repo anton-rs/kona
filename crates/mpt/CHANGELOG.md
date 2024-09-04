@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.2...kona-mpt-v0.0.3) - 2024-09-04
+
+### Added
+- *(mpt)* `TrieNode` benchmarks ([#351](https://github.com/anton-rs/kona/pull/351))
+
+### Fixed
+- *(workspace)* Add Unused Dependency Lint ([#453](https://github.com/anton-rs/kona/pull/453))
+- *(deps)* Bump Alloy Dependencies ([#409](https://github.com/anton-rs/kona/pull/409))
+
+### Other
+- *(workspace)* Alloy Version Bumps ([#467](https://github.com/anton-rs/kona/pull/467))
+- *(workspace)* Update for `anton-rs` org transfer ([#474](https://github.com/anton-rs/kona/pull/474))
+- *(workspace)* Hoist Dependencies ([#466](https://github.com/anton-rs/kona/pull/466))
+- *(bin)* Remove `kt` ([#461](https://github.com/anton-rs/kona/pull/461))
+- *(deps)* Bump revm version to v13 ([#422](https://github.com/anton-rs/kona/pull/422))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.1...kona-mpt-v0.0.2) - 2024-06-22
 
 ### Added
