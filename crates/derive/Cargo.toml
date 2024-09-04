@@ -74,6 +74,7 @@ online = [
   "alloy-provider/reqwest",
   "alloy-consensus/serde",
   "kona-primitives/online",
+  "kona-primitives/serde",
 ]
 test-utils = [
   "dep:spin",

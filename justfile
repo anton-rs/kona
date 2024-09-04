@@ -6,6 +6,7 @@ alias f := fmt-native-fix
 alias b := build
 alias d := docker-build-ts
 alias r := docker-run-ts
+alias h := hack
 
 # default recipe to display help information
 default:
@@ -13,6 +14,10 @@ default:
 
 # Run all tests
 tests: test test-docs
+
+# Runs `cargo hack check` against the workspace
+hack:
+  cargo hack check --feature-powerset --no-dev-deps
 
 # Test for the native target with all features
 test *args='':
