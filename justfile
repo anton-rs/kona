@@ -64,7 +64,7 @@ build: build-native build-cannon build-asterisc
 
 # Build for the native target
 build-native *args='':
-  cargo build --workspace --all $@
+  cargo build --workspace $@
 
 # Build for the `cannon` target. Any crates that require the stdlib are excluded from the build for this target.
 build-cannon *args='':
@@ -73,7 +73,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -82,7 +82,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
 
 # Build the `trusted-sync` docker image
 docker-build-ts *args='':
