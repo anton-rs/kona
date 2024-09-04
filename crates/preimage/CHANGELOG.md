@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-preimage-v0.0.2...kona-preimage-v0.0.3) - 2024-09-04
+
+### Added
+- *(workspace)* Workspace Re-exports ([#468](https://github.com/anton-rs/kona/pull/468))
+- *(client)* providers generic over oracles ([#336](https://github.com/anton-rs/kona/pull/336))
+
+### Fixed
+- *(workspace)* Add Unused Dependency Lint ([#453](https://github.com/anton-rs/kona/pull/453))
+
+### Other
+- *(workspace)* Update for `anton-rs` org transfer ([#474](https://github.com/anton-rs/kona/pull/474))
+- *(workspace)* Hoist Dependencies ([#466](https://github.com/anton-rs/kona/pull/466))
+- *(common)* Remove need for cursors in `NativeIO` ([#416](https://github.com/anton-rs/kona/pull/416))
+- *(preimage)* Remove dynamic dispatch ([#354](https://github.com/anton-rs/kona/pull/354))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-preimage-v0.0.1...kona-preimage-v0.0.2) - 2024-06-22
 
 ### Added

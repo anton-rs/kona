@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-common-v0.0.2...kona-common-v0.0.3) - 2024-09-04
+
+### Added
+- add zkvm target for io ([#394](https://github.com/anton-rs/kona/pull/394))
+
+### Other
+- *(workspace)* Update for `anton-rs` org transfer ([#474](https://github.com/anton-rs/kona/pull/474))
+- *(workspace)* Hoist Dependencies ([#466](https://github.com/anton-rs/kona/pull/466))
+- *(bin)* Remove `kt` ([#461](https://github.com/anton-rs/kona/pull/461))
+- *(common)* Remove need for cursors in `NativeIO` ([#416](https://github.com/anton-rs/kona/pull/416))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-common-v0.0.1...kona-common-v0.0.2) - 2024-06-22
 
 ### Added
