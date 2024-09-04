@@ -40,4 +40,4 @@ serde_json.workspace = true
 [features]
 default = ["serde"]
 serde = ["dep:serde", "superchain-primitives/serde"]
-online = ["dep:c-kzg", "dep:sha2", "dep:revm", "dep:tracing"]
+online = ["dep:c-kzg", "dep:sha2", "dep:revm", "dep:tracing", "revm/default"]

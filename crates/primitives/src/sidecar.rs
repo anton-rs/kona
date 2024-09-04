@@ -11,7 +11,7 @@ use alloy_primitives::B256;
 #[cfg(feature = "online")]
 use c_kzg::{Bytes48, KzgProof};
 #[cfg(feature = "online")]
-use revm::primitives::kzg::EnvKzgSettings;
+use revm::primitives::EnvKzgSettings;
 #[cfg(feature = "online")]
 use sha2::{Digest, Sha256};
 #[cfg(feature = "online")]
