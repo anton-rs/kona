@@ -159,6 +159,7 @@ where
 mod test {
     use super::*;
     use crate::{
+        NoopTrieDBFetcher,
         ordered_trie_with_encoder,
         test_util::{
             get_live_derivable_receipts_list, get_live_derivable_transactions_list,
@@ -222,6 +223,15 @@ mod test {
                 .map(|(_, v)| { String::decode(&mut v.as_ref()).unwrap() })
                 .collect::<Vec<_>>(),
             VALUES
+        );
+    }
+
+    #[test]
+    fn test_empty_list_walker() {
+        assert!(
+            OrderedListWalker::fetch_leaves(&TrieNode::Empty, &NoopTrieDBFetcher)
+                .expect("Failed to traverse empty trie")
+                .is_empty()
         );
     }
 }
