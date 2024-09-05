@@ -81,8 +81,12 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         let interval = self.slot_interval.expect("Config Spec Loaded");
 
         // Calculate the slot for the given timestamp.
-        let slot =
-            S::slot(genesis, interval, block_ref.timestamp).map_err(BlobProviderError::Slot)?;
+        let slot = S::slot(
+            genesis,
+            interval,
+            u64::try_from(block_ref.timestamp).expect("block timestamp is u64"),
+        )
+        .map_err(BlobProviderError::Slot)?;
 
         // Fetch blob sidecars for the slot using the given blob hashes.
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
@@ -257,7 +261,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
         let slot = S::slot(
             self.primary.genesis_time.expect("Genesis Config Loaded"),
             self.primary.slot_interval.expect("Config Spec Loaded"),
-            block_ref.timestamp,
+            u64::try_from(block_ref.timestamp).expect("block timestamp is u64"),
         )
         .map_err(BlobProviderError::Slot)?;
 
@@ -458,7 +462,7 @@ mod tests {
     use super::*;
     use crate::online::test_utils::MockBeaconClient;
     use alloc::vec;
-    use alloy_primitives::b256;
+    use alloy_primitives::{b256, U64};
     use kona_primitives::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 
     #[tokio::test]
@@ -512,7 +516,7 @@ mod tests {
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blobs = blob_provider.get_blobs(&block_ref, &blob_hashes).await.unwrap();
         assert_eq!(blobs.len(), 5);
     }
@@ -572,7 +576,7 @@ mod tests {
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 5, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(5), ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
@@ -592,7 +596,7 @@ mod tests {
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
@@ -613,7 +617,7 @@ mod tests {
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash { index: 1, ..Default::default() }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(result.unwrap_err(), BlobProviderError::SidecarLengthMismatch(1, 0));
@@ -653,7 +657,7 @@ mod tests {
         ];
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
@@ -675,7 +679,7 @@ mod tests {
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash {
             hash: alloy_primitives::FixedBytes::from([1; 32]),
             ..Default::default()
@@ -696,7 +700,7 @@ mod tests {
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash {
             hash: b256!("01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"),
             ..Default::default()
@@ -727,7 +731,7 @@ mod tests {
                 OnlineBlobProvider::new(beacon_client, None, None),
                 Some(fallback_client),
             );
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blob_hashes = vec![
             IndexedBlobHash {
                 index: 0,
@@ -777,7 +781,7 @@ mod tests {
                 OnlineBlobProvider::new(beacon_client, None, None),
                 Some(fallback_client),
             );
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(15), ..Default::default() };
         let blob_hashes = vec![
             IndexedBlobHash {
                 index: 0,

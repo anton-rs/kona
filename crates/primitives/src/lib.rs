@@ -11,7 +11,10 @@ extern crate alloc;
 pub use op_alloy_consensus::Hardforks;
 
 // Use op-alloy-protocol crate.
-pub use op_alloy_protocol::{Frame, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
+pub use op_alloy_protocol::{
+    BlockInfo, Channel, ChannelId, Frame, L2BlockInfo, CHANNEL_ID_LENGTH, DERIVATION_VERSION_0,
+    FJORD_MAX_RLP_BYTES_PER_CHANNEL, FRAME_OVERHEAD, MAX_FRAME_LEN, MAX_RLP_BYTES_PER_CHANNEL,
+};
 
 // Re-export superchain-primitives.
 pub use superchain_primitives::*;
@@ -34,7 +37,7 @@ pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 pub use alloy_eips::eip4895::Withdrawal;
 
 pub mod block;
-pub use block::{Block, BlockInfo, BlockKind, L2BlockInfo, OpBlock};
+pub use block::{Block, BlockKind, OpBlock};
 
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
@@ -64,10 +67,4 @@ pub use sidecar::{
     APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
     APIVersionResponse, BeaconBlockHeader, BlobSidecar, SignedBeaconBlockHeader,
     VersionInformation, KZG_COMMITMENT_SIZE, KZG_PROOF_SIZE,
-};
-
-pub mod channel;
-pub use channel::{
-    Channel, ChannelID, CHANNEL_ID_LENGTH, FJORD_MAX_RLP_BYTES_PER_CHANNEL,
-    MAX_RLP_BYTES_PER_CHANNEL,
 };

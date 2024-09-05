@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
-use alloy_primitives::{Address, Bloom, Bytes, B256};
+use alloy_primitives::{Address, Bloom, Bytes, B256, U64};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
@@ -157,12 +157,12 @@ impl L2ExecutionPayloadEnvelope {
         Ok(L2BlockInfo {
             block_info: BlockInfo {
                 hash: execution_payload.block_hash,
-                number: execution_payload.block_number,
+                number: U64::from(execution_payload.block_number),
                 parent_hash: execution_payload.parent_hash,
-                timestamp: execution_payload.timestamp,
+                timestamp: U64::from(execution_payload.timestamp),
             },
             l1_origin,
-            seq_num: sequence_number,
+            seq_num: U64::from(sequence_number),
         })
     }
 

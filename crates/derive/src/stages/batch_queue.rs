@@ -1,6 +1,7 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloy_primitives::U64;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -125,7 +126,9 @@ where
         // Note: epoch origin can now be one block ahead of the L2 Safe Head
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
         // but don't advance the L2 Safe Head's epoch
-        if parent.l1_origin != epoch.id() && parent.l1_origin.number != epoch.number - 1 {
+        if parent.l1_origin != epoch.id() &&
+            U64::from(parent.l1_origin.number) != U64::from(epoch.number) - U64::from(1)
+        {
             return Err(StageError::Custom(anyhow!(
                 "buffered L1 chain epoch {} in batch queue does not match safe head origin {:?}",
                 epoch,
@@ -137,7 +140,7 @@ where
         // We may not have sufficient information to proceed filtering, and then we stop.
         // There may be none: in that case we force-create an empty batch
         let mut next_batch = None;
-        let next_timestamp = parent.block_info.timestamp + self.cfg.block_time;
+        let next_timestamp: U64 = parent.block_info.timestamp + U64::from(self.cfg.block_time);
 
         // Go over all batches, in order of inclusion, and find the first batch we can accept.
         // Filter in-place by only remembering the batches that may be processed in the future, or
@@ -178,10 +181,10 @@ where
 
         // If the current epoch is too old compared to the L1 block we are at,
         // i.e. if the sequence window expired, we create empty batches for the current epoch
-        let expiry_epoch = epoch.number + self.cfg.seq_window_size;
-        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty) ||
-            expiry_epoch < parent.l1_origin.number;
-        let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
+        let expiry_epoch = epoch.number + U64::from(self.cfg.seq_window_size);
+        let force_empty_batches = (expiry_epoch == U64::from(parent.l1_origin.number) && empty) ||
+            expiry_epoch < U64::from(parent.l1_origin.number);
+        let first_of_epoch = epoch.number == U64::from(parent.l1_origin.number + 1);
 
         // If the sequencer window did not expire,
         // there is still room to receive batches for the current epoch.
@@ -210,9 +213,13 @@ where
             info!(target: "batch-queue", "Generating empty batch for epoch: {}", epoch.number);
             return Ok(Batch::Single(SingleBatch {
                 parent_hash: parent.block_info.hash,
-                epoch_num: epoch.number,
+                epoch_num: epoch.number.try_into().map_err(|_| {
+                    StageError::Custom(anyhow::anyhow!("Failed to convert epoch number to u64"))
+                })?,
                 epoch_hash: epoch.hash,
-                timestamp: next_timestamp,
+                timestamp: next_timestamp.try_into().map_err(|_| {
+                    StageError::Custom(anyhow::anyhow!("Failed to convert timestamp to u64"))
+                })?,
                 transactions: Vec::new(),
             }));
         }
@@ -269,7 +276,9 @@ where
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
-            if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
+            if U64::from(self.next_spans[0].timestamp) ==
+                parent.block_info.timestamp + U64::from(self.cfg.block_time)
+            {
                 crate::timer!(DISCARD, timer);
                 return self
                     .pop_next_batch(parent)
@@ -291,9 +300,11 @@ where
         // batch to the chain.
         // Because the span batch can be reverted during processing the batch, then we must
         // preserve existing l1 blocks to verify the epochs of the next candidate batch.
-        if !self.l1_blocks.is_empty() && parent.l1_origin.number > self.l1_blocks[0].number {
+        if !self.l1_blocks.is_empty() &&
+            U64::from(parent.l1_origin.number) > self.l1_blocks[0].number
+        {
             for (i, block) in self.l1_blocks.iter().enumerate() {
-                if parent.l1_origin.number == block.number {
+                if U64::from(parent.l1_origin.number) == block.number {
                     self.l1_blocks.drain(0..i);
                     info!(target: "batch-queue", "Advancing epoch");
                     break;
@@ -306,8 +317,10 @@ where
         // It is the future origin that gets saved into the l1 blocks array.
         // We always update the origin of this stage if it's not the same so
         // after the update code runs, this is consistent.
-        let origin_behind =
-            self.prev.origin().map_or(true, |origin| origin.number < parent.l1_origin.number);
+        let origin_behind = self
+            .prev
+            .origin()
+            .map_or(true, |origin| origin.number < U64::from(parent.l1_origin.number));
 
         // Advance the origin if needed.
         // The entire pipeline has the same origin.
@@ -595,8 +608,8 @@ mod tests {
         let origin_check =
             b256!("8527cdb6f601acf9b483817abd1da92790c92b19000000000000000000000000");
         mock.origin = Some(BlockInfo {
-            number: 16988980031808077784,
-            timestamp: 1639845845,
+            number: U64::from(16988980031808077784),
+            timestamp: U64::from(1639845845),
             parent_hash: Default::default(),
             hash: origin_check,
         });
@@ -606,8 +619,8 @@ mod tests {
             b256!("01ddf682e2f8a6f10c2207e02322897e65317196000000000000000000000000");
         let block_nine = L2BlockInfo {
             block_info: BlockInfo {
-                number: 9,
-                timestamp: 1639845645,
+                number: U64::from(9),
+                timestamp: U64::from(1639845645),
                 parent_hash: parent_check,
                 hash: origin_check,
             },
@@ -615,8 +628,8 @@ mod tests {
         };
         let block_seven = L2BlockInfo {
             block_info: BlockInfo {
-                number: 7,
-                timestamp: 1639845745,
+                number: U64::from(7),
+                timestamp: U64::from(1639845745),
                 parent_hash: parent_check,
                 hash: origin_check,
             },
@@ -648,8 +661,8 @@ mod tests {
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo {
             block_info: BlockInfo {
-                number: 9,
-                timestamp: 1639845745,
+                number: U64::from(9),
+                timestamp: U64::from(1639845745),
                 parent_hash: parent_check,
                 hash: origin_check,
             },

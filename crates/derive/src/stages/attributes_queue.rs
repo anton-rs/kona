@@ -131,7 +131,9 @@ where
         }
 
         // Sanity check timestamp
-        let actual = parent.block_info.timestamp + self.cfg.block_time;
+        let actual = u64::try_from(parent.block_info.timestamp).map_err(|_| {
+            StageError::Custom(anyhow::anyhow!("Failed to convery parent block timestamp into u64"))
+        })? + self.cfg.block_time;
         if actual != batch.timestamp {
             return Err(StageError::Reset(ResetError::BadTimestamp(batch.timestamp, actual)));
         }
@@ -223,7 +225,7 @@ mod tests {
         },
     };
     use alloc::{sync::Arc, vec, vec::Vec};
-    use alloy_primitives::b256;
+    use alloy_primitives::{b256, U64};
     use kona_primitives::RawTransaction;
 
     fn new_attributes_queue(
@@ -283,7 +285,7 @@ mod tests {
     async fn test_create_next_attributes_bad_parent_timestamp() {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 2, ..Default::default() },
+            block_info: BlockInfo { timestamp: U64::from(2), ..Default::default() },
             ..Default::default()
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
@@ -296,7 +298,7 @@ mod tests {
         let cfg = RollupConfig { block_time: 1, ..Default::default() };
         let mut attributes_queue = new_attributes_queue(Some(cfg), None, vec![]);
         let parent = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 1, ..Default::default() },
+            block_info: BlockInfo { timestamp: U64::from(1), ..Default::default() },
             ..Default::default()
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };

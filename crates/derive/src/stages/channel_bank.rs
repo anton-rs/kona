@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
-use kona_primitives::{BlockInfo, Channel, ChannelID, Frame, RollupConfig, SystemConfig};
+use kona_primitives::{BlockInfo, Channel, ChannelId, Frame, RollupConfig, SystemConfig};
 use tracing::{trace, warn};
 
 /// Provides frames for the [ChannelBank] stage.
@@ -43,9 +43,9 @@ where
     /// The rollup configuration.
     cfg: Arc<RollupConfig>,
     /// Map of channels by ID.
-    channels: HashMap<ChannelID, Channel>,
+    channels: HashMap<ChannelId, Channel>,
     /// Channels in FIFO order.
-    channel_queue: VecDeque<ChannelID>,
+    channel_queue: VecDeque<ChannelId>,
     /// The previous stage of the derivation pipeline.
     prev: P,
 }

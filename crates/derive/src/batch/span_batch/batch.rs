@@ -1,7 +1,7 @@
 //! The Span Batch Type
 
 use alloc::vec::Vec;
-use alloy_primitives::FixedBytes;
+use alloy_primitives::{FixedBytes, U64};
 use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig};
 use op_alloy_consensus::OpTxType;
 use tracing::{info, warn};
@@ -75,7 +75,7 @@ impl SpanBatch {
         let epoch = l1_blocks[0];
         let mut batch_origin = epoch;
         let starting_epoch_num = self.starting_epoch_num();
-        if starting_epoch_num == batch_origin.number + 1 {
+        if batch_origin.number.saturating_add(U64::from(1)) == U64::from(starting_epoch_num) {
             if l1_blocks.len() < 2 {
                 info!("eager batch wants to advance current epoch {}, but could not without more L1 blocks", epoch.id());
                 return BatchValidity::Undecided;
@@ -84,7 +84,7 @@ impl SpanBatch {
         }
 
         // Span batches are only valid after the Delta hard fork.
-        if !cfg.is_delta_active(batch_origin.timestamp) {
+        if !cfg.is_delta_active(batch_origin.timestamp.try_into().expect("timestamp is u64")) {
             warn!(
                 "received SpanBatch (id {}) with L1 origin (timestamp {}) before Delta hard fork",
                 batch_origin.id(),
@@ -94,8 +94,9 @@ impl SpanBatch {
         }
 
         // Skip out of order batches.
-        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
-        if self.timestamp() > next_timestamp {
+        let next_timestamp =
+            l2_safe_head.block_info.timestamp.saturating_add(U64::from(cfg.block_time));
+        if U64::from(self.timestamp()) > next_timestamp {
             warn!(
                 "received out-of-order batch for future processing after next batch ({} > {})",
                 self.timestamp(),
@@ -104,7 +105,7 @@ impl SpanBatch {
             return BatchValidity::Future;
         }
         // SAFETY: The span batch is not empty so the last element exists.
-        if self.batches.last().unwrap().timestamp < next_timestamp {
+        if U64::from(self.batches.last().unwrap().timestamp) < next_timestamp {
             warn!("span batch has no new blocks after safe head");
             return BatchValidity::Drop;
         }
@@ -114,20 +115,29 @@ impl SpanBatch {
         // safe head.
         let mut parent_num = l2_safe_head.block_info.number;
         let mut parent_block = l2_safe_head;
-        if self.timestamp() < next_timestamp {
-            if self.timestamp() > l2_safe_head.block_info.timestamp {
+        if U64::from(self.timestamp()) < next_timestamp {
+            if self.timestamp() >
+                l2_safe_head.block_info.timestamp.try_into().expect("timestamp is u64")
+            {
                 // Batch timestamp cannot be between safe head and next timestamp.
                 warn!("batch has misaligned timestamp, block time is too short");
                 return BatchValidity::Drop;
             }
-            if (l2_safe_head.block_info.timestamp - self.timestamp()) % cfg.block_time != 0 {
+            if l2_safe_head.block_info.timestamp.saturating_sub(U64::from(self.timestamp())) %
+                U64::from(cfg.block_time) !=
+                U64::ZERO
+            {
                 warn!("batch has misaligned timestamp, not overlapped exactly");
                 return BatchValidity::Drop;
             }
             parent_num = l2_safe_head.block_info.number -
-                (l2_safe_head.block_info.timestamp - self.timestamp()) / cfg.block_time -
-                1;
-            parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
+                (l2_safe_head.block_info.timestamp - U64::from(self.timestamp())) /
+                    U64::from(cfg.block_time) -
+                U64::from(1);
+            parent_block = match fetcher
+                .l2_block_info_by_number(parent_num.try_into().expect("parent block num is u64"))
+                .await
+            {
                 Ok(block) => block,
                 Err(e) => {
                     warn!("failed to fetch L2 block number {parent_num}: {e}");
@@ -147,7 +157,9 @@ impl SpanBatch {
         }
 
         // Filter out batches that were included too late.
-        if starting_epoch_num + cfg.seq_window_size < inclusion_block.number {
+        if U64::from(starting_epoch_num) + U64::from(cfg.seq_window_size) <
+            U64::from(inclusion_block.number)
+        {
             warn!("batch was included too late, sequence window expired");
             return BatchValidity::Drop;
         }
@@ -168,7 +180,7 @@ impl SpanBatch {
         let mut origin_checked = false;
         // l1Blocks is supplied from batch queue and its length is limited to SequencerWindowSize.
         for l1_block in l1_blocks {
-            if l1_block.number == end_epoch_num {
+            if l1_block.number == U64::from(end_epoch_num) {
                 if !self.check_origin_hash(l1_block.hash) {
                     warn!(
                         "batch is for different L1 chain, epoch hash does not match, expected: {}",
@@ -194,12 +206,12 @@ impl SpanBatch {
         let mut origin_index = 0;
         let mut origin_advanced = starting_epoch_num == parent_block.l1_origin.number + 1;
         for (i, batch) in self.batches.iter().enumerate() {
-            if batch.timestamp <= l2_safe_head.block_info.timestamp {
+            if U64::from(batch.timestamp) <= l2_safe_head.block_info.timestamp {
                 continue;
             }
             // Find the L1 origin for the batch.
             for (j, j_block) in l1_blocks.iter().enumerate().skip(origin_index) {
-                if batch.epoch_num == j_block.number {
+                if U64::from(batch.epoch_num) == j_block.number {
                     origin_index = j;
                     break;
                 }
@@ -211,7 +223,7 @@ impl SpanBatch {
                     origin_advanced = true;
                 }
             }
-            let block_timestamp = batch.timestamp;
+            let block_timestamp = U64::from(batch.timestamp);
             if block_timestamp < l1_origin.timestamp {
                 warn!(
                     "block timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {}",
@@ -223,7 +235,9 @@ impl SpanBatch {
             }
 
             // Check if we ran out of sequencer time drift
-            let max_drift = cfg.max_sequencer_drift(l1_origin.timestamp);
+            let max_drift = U64::from(
+                cfg.max_sequencer_drift(l1_origin.timestamp.try_into().expect("timestamp is u64")),
+            );
             if block_timestamp > l1_origin.timestamp + max_drift {
                 if batch.transactions.is_empty() {
                     // If the sequencer is co-operating by producing an empty batch,
@@ -273,9 +287,11 @@ impl SpanBatch {
         }
 
         // Check overlapped blocks
-        if self.timestamp() < next_timestamp {
-            for i in 0..(l2_safe_head.block_info.number - parent_num) {
-                let safe_block_num = parent_num + i + 1;
+        if U64::from(self.timestamp()) < next_timestamp {
+            for i in 0..u64::try_from(l2_safe_head.block_info.number - parent_num)
+                .expect("u64 block num")
+            {
+                let safe_block_num = u64::try_from(parent_num).expect("u64 block num") + i + 1;
                 let safe_block_payload = match fetcher.payload_by_number(safe_block_num).await {
                     Ok(p) => p,
                     Err(e) => {
@@ -335,7 +351,7 @@ impl SpanBatch {
         let mut single_batches = Vec::new();
         let mut origin_index = 0;
         for batch in &self.batches {
-            if batch.timestamp <= l2_safe_head.block_info.timestamp {
+            if U64::from(batch.timestamp) <= l2_safe_head.block_info.timestamp {
                 continue;
             }
             tracing::info!(
@@ -348,7 +364,7 @@ impl SpanBatch {
             let origin_epoch_hash = l1_origins[origin_index..l1_origins.len()]
                 .iter()
                 .enumerate()
-                .find(|(_, origin)| origin.number == batch.epoch_num)
+                .find(|(_, origin)| origin.number == U64::from(batch.epoch_num))
                 .map(|(i, origin)| {
                     origin_index = i;
                     origin.hash
@@ -517,7 +533,7 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig::default();
-        let block = BlockInfo { number: 9, ..Default::default() };
+        let block = BlockInfo { number: U64::from(9), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo::default();
         let inclusion_block = BlockInfo::default();
@@ -544,7 +560,8 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(10), ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 9, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(9), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo::default();
         let inclusion_block = BlockInfo::default();
@@ -572,10 +589,11 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 10, ..Default::default() },
+            block_info: BlockInfo { timestamp: U64::from(10), ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
@@ -600,10 +618,11 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 10, ..Default::default() },
+            block_info: BlockInfo { timestamp: U64::from(10), ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
@@ -626,10 +645,11 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 10, ..Default::default() },
+            block_info: BlockInfo { timestamp: U64::from(10), ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
@@ -653,10 +673,11 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 10, ..Default::default() },
+            block_info: BlockInfo { timestamp: U64::from(10), ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
@@ -680,10 +701,15 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                ..Default::default()
+            },
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
@@ -708,15 +734,24 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                ..Default::default()
+            },
             ..Default::default()
         };
         let inclusion_block = BlockInfo::default();
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
@@ -748,19 +783,25 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = RollupConfig { delta_time: Some(0), block_time: 10, ..Default::default() };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
+                number: U64::from(40),
                 hash: parent_hash,
-                timestamp: 10,
+                timestamp: U64::from(10),
                 ..Default::default()
             },
             ..Default::default()
@@ -795,20 +836,26 @@ mod tests {
             block_time: 10,
             ..Default::default()
         };
-        let block = BlockInfo { number: 10, timestamp: 10, ..Default::default() };
+        let block =
+            BlockInfo { number: U64::from(10), timestamp: U64::from(10), ..Default::default() };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 8, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
+                number: U64::from(40),
                 hash: parent_hash,
-                timestamp: 10,
+                timestamp: U64::from(10),
                 ..Default::default()
             },
             l1_origin: BlockID { number: 8, ..Default::default() },
@@ -847,25 +894,29 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
-                timestamp: 10,
+                number: U64::from(40),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
@@ -907,20 +958,29 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 10, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(10),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
-                timestamp: 10,
+                number: U64::from(40),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
@@ -959,20 +1019,29 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 13, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
-                timestamp: 10,
+                number: U64::from(40),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
@@ -1020,25 +1089,33 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
-        let second_block =
-            BlockInfo { number: 12, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
+        let second_block = BlockInfo {
+            number: U64::from(12),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block, second_block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: U64::from(40), ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -1075,25 +1152,33 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
-        let second_block =
-            BlockInfo { number: 12, timestamp: 21, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
+        let second_block = BlockInfo {
+            number: U64::from(12),
+            timestamp: U64::from(21),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block, second_block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: U64::from(40), ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -1133,25 +1218,33 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
-        let second_block =
-            BlockInfo { number: 12, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
+        let second_block = BlockInfo {
+            number: U64::from(12),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block, second_block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: U64::from(40), ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -1201,25 +1294,33 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
-        let second_block =
-            BlockInfo { number: 12, timestamp: 21, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
+        let second_block = BlockInfo {
+            number: U64::from(12),
+            timestamp: U64::from(21),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block, second_block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: U64::from(40), ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -1265,25 +1366,33 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
-        let second_block =
-            BlockInfo { number: 12, timestamp: 21, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
+        let second_block = BlockInfo {
+            number: U64::from(12),
+            timestamp: U64::from(21),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block, second_block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
-            block_info: BlockInfo { number: 40, ..Default::default() },
+            block_info: BlockInfo { number: U64::from(40), ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -1330,20 +1439,29 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
-                timestamp: 10,
+                number: U64::from(40),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
@@ -1386,20 +1504,29 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
-                timestamp: 10,
+                number: U64::from(40),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
@@ -1456,21 +1583,30 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
-            block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
+            block_info: BlockInfo {
+                number: U64::from(41),
+                timestamp: U64::from(10),
+                parent_hash,
+                ..Default::default()
+            },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
+                number: U64::from(40),
                 hash: parent_hash,
-                timestamp: 10,
+                timestamp: U64::from(10),
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
@@ -1527,26 +1663,30 @@ mod tests {
         };
         let l1_block_hash =
             b256!("3333333333333333333333333333333333333333000000000000000000000000");
-        let block =
-            BlockInfo { number: 11, timestamp: 10, hash: l1_block_hash, ..Default::default() };
+        let block = BlockInfo {
+            number: U64::from(11),
+            timestamp: U64::from(10),
+            hash: l1_block_hash,
+            ..Default::default()
+        };
         let l1_blocks = vec![block];
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo {
-                number: 41,
-                timestamp: 10,
+                number: U64::from(41),
+                timestamp: U64::from(10),
                 hash: parent_hash,
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let inclusion_block = BlockInfo { number: 50, ..Default::default() };
+        let inclusion_block = BlockInfo { number: U64::from(50), ..Default::default() };
         let l2_block = L2BlockInfo {
             block_info: BlockInfo {
-                number: 40,
+                number: U64::from(40),
                 hash: parent_hash,
-                timestamp: 10,
+                timestamp: U64::from(10),
                 ..Default::default()
             },
             l1_origin: BlockID { number: 9, ..Default::default() },
