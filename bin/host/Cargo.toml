@@ -41,3 +41,4 @@ serde_json.workspace = true
 tracing-subscriber.workspace = true
 command-fds.workspace = true
 os_pipe.workspace = true
+rocksdb.workspace = true

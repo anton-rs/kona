@@ -1,10 +1,10 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that splits between two separate
 //! [KeyValueStore]s depending on [PreimageKeyType].
 
-use alloy_primitives::B256;
-use kona_preimage::PreimageKeyType;
-
 use super::KeyValueStore;
+use alloy_primitives::B256;
+use anyhow::Result;
+use kona_preimage::PreimageKeyType;
 
 /// A split implementation of the [KeyValueStore] trait that splits between two separate
 /// [KeyValueStore]s.
@@ -41,7 +41,7 @@ where
         }
     }
 
-    fn set(&mut self, key: B256, value: Vec<u8>) {
-        self.remote_store.set(key, value);
+    fn set(&mut self, key: B256, value: Vec<u8>) -> Result<()> {
+        self.remote_store.set(key, value)
     }
 }

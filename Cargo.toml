@@ -95,6 +95,9 @@ revm = { version = "14.0", default-features = false }
 superchain = "0.3"
 superchain-primitives = { version = "0.3", default-features = false }
 
+# K/V database
+rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
+
 # Alloy
 alloy-rlp = { version = "0.3", default-features = false }
 alloy-trie = { version = "0.5", default-features = false }

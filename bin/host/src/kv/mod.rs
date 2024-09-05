@@ -1,6 +1,7 @@
 //! This module contains the [KeyValueStore] trait and concrete implementations of it.
 
 use alloy_primitives::B256;
+use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -25,5 +26,5 @@ pub trait KeyValueStore {
     fn get(&self, key: B256) -> Option<Vec<u8>>;
 
     /// Set the value associated with the given key.
-    fn set(&mut self, key: B256, value: Vec<u8>);
+    fn set(&mut self, key: B256, value: Vec<u8>) -> Result<()>;
 }
