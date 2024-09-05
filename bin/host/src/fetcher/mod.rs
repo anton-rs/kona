@@ -549,8 +549,7 @@ where
         // `ProofRetainer` in the event that there are no leaves inserted.
         if nodes.is_empty() {
             let empty_key = PreimageKey::new(*EMPTY_ROOT_HASH, PreimageKeyType::Keccak256);
-            kv_write_lock.set(empty_key.into(), [EMPTY_STRING_CODE].into());
-            return Ok(())
+            return kv_write_lock.set(empty_key.into(), [EMPTY_STRING_CODE].into())
         }
 
         let mut hb = kona_mpt::ordered_trie_with_encoder(nodes, |node, buf| {
