@@ -11,8 +11,8 @@ use alloy_eips::eip2718::Encodable2718;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use kona_primitives::{
-    BlockID, EcotoneTransactionBuilder, FjordTransactionBuilder, L1BlockInfoTx, L2BlockInfo,
-    L2PayloadAttributes, RawTransaction, RollupConfig,
+    BlockID, Hardforks, L1BlockInfoTx, L2BlockInfo, L2PayloadAttributes, RawTransaction,
+    RollupConfig,
 };
 
 /// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
@@ -126,14 +126,13 @@ where
             !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
         {
             upgrade_transactions =
-                EcotoneTransactionBuilder::build_txs().map_err(BuilderError::Custom)?;
+                Hardforks::ecotone_txs().into_iter().map(RawTransaction).collect();
         }
         if self.rollup_cfg.is_fjord_active(next_l2_time) &&
             !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
         {
-            upgrade_transactions.append(
-                FjordTransactionBuilder::build_txs().map_err(BuilderError::Custom)?.as_mut(),
-            );
+            let mut txs = Hardforks::fjord_txs().into_iter().map(RawTransaction).collect();
+            upgrade_transactions.append(&mut txs);
         }
 
         // Build and encode the L1 info transaction for the current payload.

@@ -11,8 +11,6 @@ homepage.workspace = true
 [dependencies]
 # General
 anyhow.workspace = true
-spin.workspace = true
-
 hashbrown.workspace = true
 
 # Alloy

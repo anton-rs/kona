@@ -7,6 +7,9 @@
 
 extern crate alloc;
 
+// Re-export `op-alloy-consensus` types.
+pub use op_alloy_consensus::Hardforks;
+
 // Use op-alloy-protocol crate.
 pub use op_alloy_protocol::{Frame, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
 
@@ -52,12 +55,6 @@ pub use payload::{
 
 pub mod attributes;
 pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
-
-pub mod ecotone;
-pub use ecotone::*;
-
-pub mod fjord;
-pub use fjord::*;
 
 pub mod blob;
 pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
