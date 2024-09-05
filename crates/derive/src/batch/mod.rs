@@ -2,7 +2,7 @@
 //! [SingleBatch].
 
 use alloy_rlp::{Buf, Decodable};
-use kona_primitives::{block::BlockInfo, L2BlockInfo, RollupConfig};
+use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig};
 
 use crate::{errors::DecodeError, traits::L2ChainProvider};
 

@@ -2456,7 +2456,6 @@ dependencies = [
  "alloy-rlp",
  "anyhow",
  "c-kzg",
- "hashbrown 0.14.5",
  "op-alloy-consensus",
  "op-alloy-protocol",
  "revm",
@@ -2889,7 +2888,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-protocol"
 version = "0.2.8"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/export-frame-consts#5bab5db85315b98ae9ba704300c44883099e70e7"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/fix/use-native-u64#ea93a1fd9e46d9ca38919ebbdbd21e448b475898"
 dependencies = [
  "alloy-primitives",
  "hashbrown 0.14.5",
