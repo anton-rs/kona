@@ -16,7 +16,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
-          token: ${{ secrets.PAT_TOKEN }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Commit Cargo.lock
