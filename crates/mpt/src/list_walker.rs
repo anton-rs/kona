@@ -117,6 +117,7 @@ where
                     node => Ok(Self::fetch_leaves(node, fetcher)?),
                 }
             }
+            TrieNode::Empty => Ok(VecDeque::new()),
             _ => anyhow::bail!("Invalid trie node type encountered"),
         }
     }
@@ -161,6 +162,7 @@ mod test {
             get_live_derivable_receipts_list, get_live_derivable_transactions_list,
             TrieNodeProvider,
         },
+        NoopTrieDBFetcher,
     };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};
@@ -220,5 +222,12 @@ mod test {
                 .collect::<Vec<_>>(),
             VALUES
         );
+    }
+
+    #[test]
+    fn test_empty_list_walker() {
+        assert!(OrderedListWalker::fetch_leaves(&TrieNode::Empty, &NoopTrieDBFetcher)
+            .expect("Failed to traverse empty trie")
+            .is_empty());
     }
 }
