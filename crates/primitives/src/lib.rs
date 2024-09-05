@@ -7,6 +7,9 @@
 
 extern crate alloc;
 
+// Use op-alloy-protocol crate.
+pub use op_alloy_protocol::{Frame, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
+
 // Re-export superchain-primitives.
 pub use superchain_primitives::*;
 
@@ -65,9 +68,6 @@ pub use sidecar::{
     APIVersionResponse, BeaconBlockHeader, BlobSidecar, SignedBeaconBlockHeader,
     VersionInformation, KZG_COMMITMENT_SIZE, KZG_PROOF_SIZE,
 };
-
-pub mod frame;
-pub use frame::{Frame, DERIVATION_VERSION_0, FRAME_OVERHEAD, MAX_FRAME_LEN};
 
 pub mod channel;
 pub use channel::{

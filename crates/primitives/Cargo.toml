@@ -21,6 +21,7 @@ alloy-consensus.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-primitives = { workspace = true, features = ["rlp"] }
 op-alloy-consensus.workspace = true
+op-alloy-protocol.workspace = true
 
 # SCR Repo Primitives
 superchain-primitives.workspace = true

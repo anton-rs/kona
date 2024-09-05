@@ -5,7 +5,7 @@ use alloy_primitives::Bytes;
 use anyhow::{anyhow, bail, Result};
 use hashbrown::HashMap;
 
-use crate::{block::BlockInfo, frame::Frame};
+use crate::{block::BlockInfo, Frame};
 
 /// [MAX_RLP_BYTES_PER_CHANNEL] is the maximum amount of bytes that will be read from
 /// a channel. This limit is set when decoding the RLP.
@@ -175,7 +175,7 @@ mod test {
     use std::println;
 
     use super::Channel;
-    use crate::{block::BlockInfo, frame::Frame};
+    use crate::{block::BlockInfo, Frame};
     use alloc::{
         string::{String, ToString},
         vec,

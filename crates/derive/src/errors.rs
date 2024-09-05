@@ -84,7 +84,7 @@ impl PartialEq<StageError> for StageError {
 /// Converts a stage result into a vector of frames.
 pub fn into_frames<T: Into<Bytes>>(result: StageResult<T>) -> anyhow::Result<Vec<Frame>> {
     match result {
-        Ok(data) => Ok(Frame::parse_frames(&data.into())?),
+        Ok(data) => Ok(Frame::parse_frames(&data.into()).map_err(|e| anyhow::anyhow!(e))?),
         Err(e) => Err(anyhow::anyhow!(e)),
     }
 }
