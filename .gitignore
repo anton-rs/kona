@@ -6,3 +6,6 @@ target/
 
 # Environment Variables
 .env
+
+# IntelliJ IDE
+.idea
