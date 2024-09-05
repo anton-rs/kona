@@ -469,7 +469,7 @@ where
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
                     kv_write_lock.set(key.into(), node.into())?;
-                    Ok(())
+                    Ok::<(), anyhow::Error>(())
                 })?;
             }
             HintType::L2AccountStorageProof => {
@@ -499,7 +499,7 @@ where
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
                     kv_write_lock.set(key.into(), node.into())?;
-                    Ok(())
+                    Ok::<(), anyhow::Error>(())
                 })?;
 
                 // Write the storage proof nodes to the key-value store.
@@ -508,7 +508,7 @@ where
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
                     kv_write_lock.set(key.into(), node.into())?;
-                    Ok(())
+                    Ok::<(), anyhow::Error>(())
                 })?;
             }
         }
@@ -549,7 +549,7 @@ where
         // `ProofRetainer` in the event that there are no leaves inserted.
         if nodes.is_empty() {
             let empty_key = PreimageKey::new(*EMPTY_ROOT_HASH, PreimageKeyType::Keccak256);
-            return kv_write_lock.set(empty_key.into(), [EMPTY_STRING_CODE].into())
+            return kv_write_lock.set(empty_key.into(), [EMPTY_STRING_CODE].into());
         }
 
         let mut hb = kona_mpt::ordered_trie_with_encoder(nodes, |node, buf| {
