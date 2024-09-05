@@ -117,6 +117,9 @@ where
                     node => Ok(Self::fetch_leaves(node, fetcher)?),
                 }
             }
+            TrieNode::Empty => {
+                Ok(Default::default())
+            }
             _ => anyhow::bail!("Invalid trie node type encountered"),
         }
     }
