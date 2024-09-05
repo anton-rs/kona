@@ -6,7 +6,7 @@ use crate::{
     traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, fmt::Debug};
-use alloy_primitives::{Address, Bytes};
+use alloy_primitives::{Address, Bytes, U64};
 use anyhow::Result;
 use async_trait::async_trait;
 use kona_primitives::{BlockInfo, RollupConfig};
@@ -63,7 +63,7 @@ where
 
     async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
         let ecotone_enabled =
-            self.ecotone_timestamp.map(|e| block_ref.timestamp >= e).unwrap_or(false);
+            self.ecotone_timestamp.map(|e| block_ref.timestamp >= U64::from(e)).unwrap_or(false);
         if ecotone_enabled {
             Ok(EthereumDataSourceVariant::Blob(BlobSource::new(
                 self.chain_provider.clone(),
@@ -87,7 +87,7 @@ where
 mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
-    use alloy_primitives::address;
+    use alloy_primitives::{address, U64};
     use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
 
     use crate::{
@@ -119,7 +119,7 @@ mod tests {
 
         // If the ecotone_timestamp is set, and the block_ref timestamp is greater than
         // or equal to the ecotone_timestamp, a Blob source is created.
-        let block_ref = BlockInfo { timestamp: 101, ..Default::default() };
+        let block_ref = BlockInfo { timestamp: U64::from(101), ..Default::default() };
         let data_iter = data_source.open_data(&block_ref).await.unwrap();
         assert!(matches!(data_iter, EthereumDataSourceVariant::Blob(_)));
     }
@@ -130,7 +130,7 @@ mod tests {
         let blob = TestBlobProvider::default();
         let batcher_address = address!("6887246668a3b87F54DeB3b94Ba47a6f63F32985");
         let batch_inbox = address!("FF00000000000000000000000000000000000010");
-        let block_ref = BlockInfo { number: 10, ..Default::default() };
+        let block_ref = BlockInfo { number: U64::from(10), ..Default::default() };
 
         let mut cfg = RollupConfig::default();
         cfg.genesis.system_config = Some(SystemConfig { batcher_address, ..Default::default() });

@@ -2,7 +2,7 @@
 
 use super::validity::BatchValidity;
 use alloc::vec::Vec;
-use alloy_primitives::BlockHash;
+use alloy_primitives::{BlockHash, U64};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use kona_primitives::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
 use tracing::{info, warn};
@@ -49,8 +49,8 @@ impl SingleBatch {
         }
 
         let epoch = l1_blocks[0];
-        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
-        if self.timestamp > next_timestamp {
+        let next_timestamp = l2_safe_head.block_info.timestamp + U64::from(cfg.block_time);
+        if U64::from(self.timestamp) > next_timestamp {
             info!("received out-of-order batch for future processing after next batch");
             tracing::debug!(
                 "Next timestamp: {}, self timestamp {}",
@@ -59,7 +59,7 @@ impl SingleBatch {
             );
             return BatchValidity::Future;
         }
-        if self.timestamp < next_timestamp {
+        if U64::from(self.timestamp) < next_timestamp {
             warn!("dropping batch with old timestamp, min_timestamp: {next_timestamp}");
             return BatchValidity::Drop;
         }
@@ -73,19 +73,19 @@ impl SingleBatch {
         }
 
         // Filter out batches that were included too late.
-        if self.epoch_num + cfg.seq_window_size < inclusion_block.number {
+        if U64::from(self.epoch_num + cfg.seq_window_size) < inclusion_block.number {
             warn!("batch was included too late, sequence window expired");
             return BatchValidity::Drop;
         }
 
         // Check the L1 origin of the batch
         let mut batch_origin = epoch;
-        if self.epoch_num < epoch.number {
+        if U64::from(self.epoch_num) < epoch.number {
             warn!("dropped batch, epoch is too old, minimum: {}", epoch.id());
             return BatchValidity::Drop;
-        } else if self.epoch_num == epoch.number {
+        } else if U64::from(self.epoch_num) == epoch.number {
             // Batch is sticking to the current epoch, continue.
-        } else if self.epoch_num == epoch.number + 1 {
+        } else if U64::from(self.epoch_num) == epoch.number + U64::from(1) {
             // With only 1 l1Block we cannot look at the next L1 Origin.
             // Note: This means that we are unable to determine validity of a batch
             // without more information. In this case we should bail out until we have
@@ -107,14 +107,15 @@ impl SingleBatch {
             return BatchValidity::Drop;
         }
 
-        if self.timestamp < batch_origin.timestamp {
+        if U64::from(self.timestamp) < batch_origin.timestamp {
             warn!("dropped batch, batch timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {}", self.timestamp, batch_origin.timestamp, batch_origin.id());
             return BatchValidity::Drop;
         }
 
         // Check if we ran out of sequencer time drift
-        let max_drift = cfg.max_sequencer_drift(batch_origin.timestamp);
-        let max = if let Some(max) = batch_origin.timestamp.checked_add(max_drift) {
+        let max_drift =
+            cfg.max_sequencer_drift(batch_origin.timestamp.try_into().expect("timestamp is u64"));
+        let max = if let Some(max) = batch_origin.timestamp.checked_add(U64::from(max_drift)) {
             max
         } else {
             warn!("dropped batch, timestamp exceeds configured max sequencer drift, origin timestamp: {}, max drift: {}", batch_origin.timestamp, max_drift);
@@ -122,14 +123,14 @@ impl SingleBatch {
         };
 
         let no_txs = self.transactions.is_empty();
-        if self.timestamp > max && !no_txs {
+        if U64::from(self.timestamp) > max && !no_txs {
             // If the sequencer is ignoring the time drift rule, then drop the batch and force an
             // empty batch instead, as the sequencer is not allowed to include anything
             // past this point without moving to the next epoch.
             warn!("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again, max time: {max}");
             return BatchValidity::Drop;
         }
-        if self.timestamp > max && no_txs {
+        if U64::from(self.timestamp) > max && no_txs {
             // If the sequencer is co-operating by producing an empty batch,
             // allow the batch if it was the right thing to do to maintain the L2 time >= L1 time
             // invariant. Only check batches that do not advance the epoch, to ensure
@@ -141,7 +142,7 @@ impl SingleBatch {
                 }
                 let next_origin = l1_blocks[1];
                 // Check if the next L1 Origin could have been adopted
-                if self.timestamp >= next_origin.timestamp {
+                if U64::from(self.timestamp) >= next_origin.timestamp {
                     info!("empty batch that exceeds the time drift without adopting next L1 origin, dropping");
                     return BatchValidity::Drop;
                 } else {

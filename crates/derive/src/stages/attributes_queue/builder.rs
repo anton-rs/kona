@@ -8,6 +8,7 @@ use crate::{
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::U64;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use kona_primitives::{
@@ -74,7 +75,10 @@ where
         let deposit_transactions: Vec<RawTransaction>;
         let mut sys_config = self
             .config_fetcher
-            .system_config_by_number(l2_parent.block_info.number, self.rollup_cfg.clone())
+            .system_config_by_number(
+                l2_parent.block_info.number.try_into().expect("u64 block number"),
+                self.rollup_cfg.clone(),
+            )
             .await?;
 
         // If the L1 origin changed in this block, then we are in the first block of the epoch.
@@ -96,7 +100,7 @@ where
                     .await?;
             l1_header = header;
             deposit_transactions = deposits;
-            0
+            U64::ZERO
         } else {
             #[allow(clippy::collapsible_else_if)]
             if l2_parent.l1_origin.hash != epoch.hash {
@@ -106,12 +110,14 @@ where
             let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
             l1_header = header;
             deposit_transactions = vec![];
-            l2_parent.seq_num + 1
+            l2_parent.seq_num + U64::from(1)
         };
 
         // Sanity check the L1 origin was correctly selected to maintain the time invariant
         // between L1 and L2.
-        let next_l2_time = l2_parent.block_info.timestamp + self.rollup_cfg.block_time;
+        let next_l2_time = u64::try_from(l2_parent.block_info.timestamp)
+            .expect("timestamp not u64") +
+            self.rollup_cfg.block_time;
         if next_l2_time < l1_header.timestamp {
             return Err(BuilderError::BrokenTimeInvariant(
                 l2_parent.l1_origin,
@@ -123,13 +129,17 @@ where
 
         let mut upgrade_transactions: Vec<RawTransaction> = vec![];
         if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
-            !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
+            !self.rollup_cfg.is_ecotone_active(
+                l2_parent.block_info.timestamp.try_into().expect("timestamp not u64"),
+            )
         {
             upgrade_transactions =
                 Hardforks::ecotone_txs().into_iter().map(RawTransaction).collect();
         }
         if self.rollup_cfg.is_fjord_active(next_l2_time) &&
-            !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
+            !self.rollup_cfg.is_fjord_active(
+                l2_parent.block_info.timestamp.try_into().expect("timestamp not u64"),
+            )
         {
             let mut txs = Hardforks::fjord_txs().into_iter().map(RawTransaction).collect();
             upgrade_transactions.append(&mut txs);
@@ -139,7 +149,7 @@ where
         let (_, l1_info_tx_envelope) = L1BlockInfoTx::try_new_with_deposit_tx(
             &self.rollup_cfg,
             &sys_config,
-            sequence_number,
+            sequence_number.try_into().expect("sequencer number not u64"),
             &l1_header,
             next_l2_time,
         )?;
@@ -201,9 +211,13 @@ mod tests {
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
         let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: U64::from(l2_number),
+                ..Default::default()
+            },
             l1_origin: BlockID { hash: B256::left_padding_from(&[0xFF]), number: 2 },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
         // This should error because the l2 parent's l1_origin.hash should equal the epoch header
         // hash. Here we use the default header whose hash will not equal the custom `l2_hash`.
@@ -226,9 +240,13 @@ mod tests {
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
         let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: U64::from(l2_number),
+                ..Default::default()
+            },
             l1_origin: BlockID { hash: B256::ZERO, number: l2_number },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
         // This should error because the l2 parent's l1_origin.hash should equal the epoch hash
         // Here the default header is used whose hash will not equal the custom `l2_hash` above.
@@ -252,11 +270,16 @@ mod tests {
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
         let epoch = BlockID { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
-            block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
+            block_info: BlockInfo {
+                hash: B256::ZERO,
+                number: U64::from(l2_number),
+                ..Default::default()
+            },
             l1_origin: BlockID { hash, number: l2_number },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
-        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let next_l2_time =
+            u64::try_from(l2_parent.block_info.timestamp).expect("timestamp not u64") + block_time;
         let block_id = BlockID { hash, number: 0 };
         let expected = BuilderError::BrokenTimeInvariant(
             l2_parent.l1_origin,
@@ -286,14 +309,15 @@ mod tests {
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
-                number: l2_number,
-                timestamp,
+                number: U64::from(l2_number),
+                timestamp: U64::from(timestamp),
                 parent_hash: hash,
             },
             l1_origin: BlockID { hash, number: l2_number },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
-        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let next_l2_time =
+            u64::try_from(l2_parent.block_info.timestamp).expect("timestamp not u64") + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
         let expected = L2PayloadAttributes {
             timestamp: next_l2_time,
@@ -329,14 +353,15 @@ mod tests {
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
-                number: l2_number,
-                timestamp,
+                number: U64::from(l2_number),
+                timestamp: U64::from(timestamp),
                 parent_hash: hash,
             },
             l1_origin: BlockID { hash, number: l2_number },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
-        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let next_l2_time =
+            u64::try_from(l2_parent.block_info.timestamp).expect("timestamp not u64") + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
         let expected = L2PayloadAttributes {
             timestamp: next_l2_time,
@@ -374,14 +399,15 @@ mod tests {
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
-                number: l2_number,
-                timestamp,
+                number: U64::from(l2_number),
+                timestamp: U64::from(timestamp),
                 parent_hash: hash,
             },
             l1_origin: BlockID { hash, number: l2_number },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
-        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let next_l2_time =
+            u64::try_from(l2_parent.block_info.timestamp).expect("timestamp not u64") + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
         let expected = L2PayloadAttributes {
             timestamp: next_l2_time,
@@ -418,14 +444,15 @@ mod tests {
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
-                number: l2_number,
-                timestamp,
+                number: U64::from(l2_number),
+                timestamp: U64::from(timestamp),
                 parent_hash: hash,
             },
             l1_origin: BlockID { hash, number: l2_number },
-            seq_num: 0,
+            seq_num: U64::ZERO,
         };
-        let next_l2_time = l2_parent.block_info.timestamp + block_time;
+        let next_l2_time =
+            u64::try_from(l2_parent.block_info.timestamp).expect("timestamp not u64") + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
         let expected = L2PayloadAttributes {
             timestamp: next_l2_time,

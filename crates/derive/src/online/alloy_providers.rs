@@ -142,9 +142,9 @@ impl ChainProvider for AlloyChainProvider {
 
         let block_info = BlockInfo {
             hash: header.hash_slow(),
-            number,
+            number: U64::from(number),
             parent_hash: header.parent_hash,
-            timestamp: header.timestamp,
+            timestamp: U64::from(header.timestamp),
         };
         self.block_info_by_number_cache.put(number, block_info);
         Ok(block_info)
@@ -244,9 +244,9 @@ impl ChainProvider for AlloyChainProvider {
 
         let block_info = BlockInfo {
             hash: block.header.hash_slow(),
-            number: block.header.number,
+            number: U64::from(block.header.number),
             parent_hash: block.header.parent_hash,
-            timestamp: block.header.timestamp,
+            timestamp: U64::from(block.header.timestamp),
         };
         self.block_info_and_transactions_by_hash_cache.put(hash, (block_info, block.body.clone()));
         Ok((block_info, block.body))

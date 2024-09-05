@@ -94,7 +94,10 @@ where
     ) -> anyhow::Result<()> {
         let system_config = self
             .l2_chain_provider
-            .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
+            .system_config_by_number(
+                u64::try_from(l2_block_info.number).map_err(|e| anyhow::anyhow!(e))?,
+                Arc::clone(&self.rollup_config),
+            )
             .await?;
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),

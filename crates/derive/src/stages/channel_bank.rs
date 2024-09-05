@@ -7,7 +7,7 @@ use crate::{
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use alloy_primitives::{hex, Bytes};
+use alloy_primitives::{hex, Bytes, U64};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -89,7 +89,9 @@ where
         });
 
         // Check if the channel is not timed out. If it has, ignore the frame.
-        if current_channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
+        let origin_timestamp = u64::try_from(origin.timestamp).map_err(|e| anyhow!(e))?;
+        if current_channel.open_block_number() +
+            U64::from(self.cfg.channel_timeout(origin_timestamp)) <
             origin.number
         {
             warn!(
@@ -136,13 +138,18 @@ where
         let first = self.channel_queue[0];
         let channel = self.channels.get(&first).ok_or(StageError::ChannelNotFound)?;
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
-        if channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) < origin.number
+        let origin_timestamp = u64::try_from(origin.timestamp).map_err(|e| anyhow!(e))?;
+        if channel.open_block_number() + U64::from(self.cfg.channel_timeout(origin_timestamp)) <
+            origin.number
         {
             warn!(
                 target: "channel-bank",
                 "Channel (ID: {}) timed out", hex::encode(first)
             );
-            crate::observe!(CHANNEL_TIMEOUTS, (origin.number - channel.open_block_number()) as f64);
+            crate::observe!(
+                CHANNEL_TIMEOUTS,
+                f64::from(origin.number - channel.open_block_number())
+            );
             self.channels.remove(&first);
             self.channel_queue.pop_front();
             crate::set!(
@@ -162,7 +169,8 @@ where
         // If no channel is available, we return StageError::Eof.
         // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2
         // timestamp.
-        if !self.cfg.is_canyon_active(origin.timestamp) {
+        let origin_timestamp = u64::try_from(origin.timestamp).map_err(|e| anyhow!(e))?;
+        if !self.cfg.is_canyon_active(origin_timestamp) {
             return self.try_read_channel_at_index(0).map(Some);
         }
 
@@ -182,7 +190,9 @@ where
         let channel = self.channels.get(&channel_id).ok_or(StageError::ChannelNotFound)?;
         let origin = self.origin().ok_or(StageError::MissingOrigin)?;
 
-        let timed_out = channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
+        let origin_timestamp = u64::try_from(origin.timestamp).map_err(|e| anyhow!(e))?;
+        let timed_out = channel.open_block_number() +
+            U64::from(self.cfg.channel_timeout(origin_timestamp)) <
             origin.number;
         if timed_out || !channel.is_ready() {
             return Err(StageError::Eof);
@@ -192,7 +202,7 @@ where
         self.channels.remove(&channel_id);
         self.channel_queue.remove(index);
 
-        frame_data.map_err(StageError::Custom)
+        frame_data.ok_or_else(|| StageError::Custom(anyhow!("Channel data is empty")))
     }
 }
 

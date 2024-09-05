@@ -9,7 +9,7 @@ use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
 use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
-use tracing::warn;
+use tracing::{trace, warn};
 
 /// The [L1Traversal] stage of the derivation pipeline.
 ///
@@ -82,7 +82,15 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
                 return Err(StageError::Eof);
             }
         };
-        let next_l1_origin = match self.data_source.block_info_by_number(block.number + 1).await {
+        let next_l1_origin = match self
+            .data_source
+            .block_info_by_number(
+                u64::try_from(block.number).map_err(|_| {
+                    StageError::Custom(anyhow::anyhow!("Failed to convert block number to u64"))
+                })? + 1,
+            )
+            .await
+        {
             Ok(block) => block,
             Err(e) => return Err(StageError::BlockInfoFetch(e)),
         };
@@ -101,12 +109,20 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         if let Err(e) = self.system_config.update_with_receipts(
             receipts.as_slice(),
             &self.rollup_config,
-            next_l1_origin.timestamp,
+            u64::try_from(next_l1_origin.timestamp).map_err(|_| {
+                StageError::Custom(anyhow::anyhow!(
+                    "Failed to convert next l1 origin timestamp to u64"
+                ))
+            })?,
         ) {
             return Err(StageError::SystemConfigUpdate(e));
         }
 
-        crate::set!(ORIGIN_GAUGE, next_l1_origin.number as i64);
+        let next_origin_num = u64::try_from(next_l1_origin.number).map_err(|_| {
+            StageError::Custom(anyhow::anyhow!("Failed to convert next l1 origin number to u64"))
+        })?;
+        trace!(target: "l1-traversal", "Next l1 origin block number: {}", next_origin_num);
+        crate::set!(ORIGIN_GAUGE, next_origin_num as i64);
         self.block = Some(next_l1_origin);
         self.done = false;
         Ok(())
