@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.3...kona-mpt-v0.0.4) - 2024-09-06
+
+### Fixed
+- *(mpt)* Empty list walker ([#493](https://github.com/anton-rs/kona/pull/493))
+
 ## [0.0.3](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.2...kona-mpt-v0.0.3) - 2024-09-04
 
 ### Added

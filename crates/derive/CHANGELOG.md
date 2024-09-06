@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.3...kona-derive-v0.0.4) - 2024-09-06
+
+### Added
+- *(primitives)* reuse op-alloy-protocol channel and block types ([#499](https://github.com/anton-rs/kona/pull/499))
+
+### Fixed
+- *(primitives)* use consensus hardforks ([#497](https://github.com/anton-rs/kona/pull/497))
+- *(primitives)* re-use op-alloy frame type ([#492](https://github.com/anton-rs/kona/pull/492))
+
 ## [0.0.3](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.2...kona-derive-v0.0.3) - 2024-09-04
 
 ### Added
