@@ -151,7 +151,7 @@ where
 
     /// Produces the disputed [L2AttributesWithParent] payload, directly after the starting L2
     /// output root passed through the [BootInfo].
-    pub async fn produce_disputed_payload(&mut self) -> Result<L2AttributesWithParent> {
+    pub async fn produce_disputed_payload(&mut self) -> Result<Option<L2AttributesWithParent>> {
         // As we start the safe head at the disputed block's parent, we step the pipeline until the
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.
@@ -179,7 +179,7 @@ where
             attributes = self.pipeline.next();
         }
 
-        Ok(attributes.expect("Failed to derive payload attributes"))
+        Ok(attributes)
     }
 
     /// Finds the startup information for the derivation pipeline.

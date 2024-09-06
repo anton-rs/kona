@@ -58,7 +58,10 @@ fn main() -> Result<()> {
             l2_provider.clone(),
         )
         .await?;
-        let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
+        let L2AttributesWithParent { attributes, .. } = driver
+            .produce_disputed_payload()
+            .await?
+            .expect("Failed to derive payload attributes");
 
         let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
             .with_parent_header(driver.take_l2_safe_head_header())
