@@ -469,7 +469,7 @@ where
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
                     kv_write_lock.set(key.into(), node.into())?;
-                    Ok(())
+                    Ok::<(), anyhow::Error>(())
                 })?;
             }
             HintType::L2AccountStorageProof => {
@@ -499,7 +499,7 @@ where
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
                     kv_write_lock.set(key.into(), node.into())?;
-                    Ok(())
+                    Ok::<(), anyhow::Error>(())
                 })?;
 
                 // Write the storage proof nodes to the key-value store.
@@ -508,7 +508,7 @@ where
                     let node_hash = keccak256(node.as_ref());
                     let key = PreimageKey::new(*node_hash, PreimageKeyType::Keccak256);
                     kv_write_lock.set(key.into(), node.into())?;
-                    Ok(())
+                    Ok::<(), anyhow::Error>(())
                 })?;
             }
         }
