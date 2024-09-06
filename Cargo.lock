@@ -2397,6 +2397,7 @@ dependencies = [
  "kona-preimage",
  "kona-primitives",
  "os_pipe",
+ "proptest",
  "reqwest",
  "revm",
  "rocksdb",
