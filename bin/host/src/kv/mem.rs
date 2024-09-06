@@ -9,7 +9,8 @@ use std::collections::HashMap;
 /// development purposes.
 #[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub struct MemoryKeyValueStore {
-    store: HashMap<B256, Vec<u8>>,
+    /// The underlying store.
+    pub store: HashMap<B256, Vec<u8>>,
 }
 
 impl MemoryKeyValueStore {
