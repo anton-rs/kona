@@ -36,7 +36,8 @@ codegen-units = 1
 lto = "fat"
 
 [patch.crates-io]
-op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/fix/use-native-u64" }
+op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/feat/other-block-types" }
+op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/feat/other-block-types" }
 
 [workspace.dependencies]
 # Workspace

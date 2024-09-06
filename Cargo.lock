@@ -2872,8 +2872,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 [[package]]
 name = "op-alloy-consensus"
 version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b7fbb0f5c3754c22c6ea30e100dca6aea73b747e693e27763e23ca92fb02f2f"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/other-block-types#a661e2ab69f61ca825a0123374a5215b2c9e47f4"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2888,10 +2887,14 @@ dependencies = [
 [[package]]
 name = "op-alloy-protocol"
 version = "0.2.8"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/fix/use-native-u64#ea93a1fd9e46d9ca38919ebbdbd21e448b475898"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/other-block-types#a661e2ab69f61ca825a0123374a5215b2c9e47f4"
 dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
  "alloy-primitives",
+ "alloy-rlp",
  "hashbrown 0.14.5",
+ "op-alloy-consensus",
  "superchain-primitives",
 ]
 

@@ -12,8 +12,9 @@ pub use op_alloy_consensus::Hardforks;
 
 // Use op-alloy-protocol crate.
 pub use op_alloy_protocol::{
-    BlockInfo, Channel, ChannelId, Frame, L2BlockInfo, CHANNEL_ID_LENGTH, DERIVATION_VERSION_0,
-    FJORD_MAX_RLP_BYTES_PER_CHANNEL, FRAME_OVERHEAD, MAX_FRAME_LEN, MAX_RLP_BYTES_PER_CHANNEL,
+    Block, BlockInfo, BlockKind, Channel, ChannelId, Frame, L2BlockInfo, OpBlock,
+    CHANNEL_ID_LENGTH, DERIVATION_VERSION_0, FJORD_MAX_RLP_BYTES_PER_CHANNEL, FRAME_OVERHEAD,
+    MAX_FRAME_LEN, MAX_RLP_BYTES_PER_CHANNEL,
 };
 
 // Re-export superchain-primitives.
@@ -35,9 +36,6 @@ pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 ///
 /// [Withdrawal]: alloy_eips::eip4895::Withdrawal
 pub use alloy_eips::eip4895::Withdrawal;
-
-pub mod block;
-pub use block::{Block, BlockKind, OpBlock};
 
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
