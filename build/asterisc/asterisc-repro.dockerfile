@@ -82,7 +82,7 @@ ENV RUST_VERSION=1.80.0
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain ${RUST_VERSION} --component rust-src
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Build kona-host on the selecte tag
+# Build kona-host on the selected tag
 RUN git checkout $CLIENT_TAG && \
   cargo build --workspace --bin kona-host --release && \
   mv ./target/release/kona-host /kona-host
