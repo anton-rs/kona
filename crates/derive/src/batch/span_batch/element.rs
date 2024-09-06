@@ -1,9 +1,8 @@
 //! Span Batch Element
 
-use alloc::vec::Vec;
-use kona_primitives::RawTransaction;
-
 use crate::batch::SingleBatch;
+use alloc::vec::Vec;
+use alloy_primitives::Bytes;
 
 /// A single batch element is similar to the [SingleBatch] type
 /// but does not contain the parent hash and epoch hash since spans
@@ -15,7 +14,7 @@ pub struct SpanBatchElement {
     /// The timestamp of the L2 block
     pub timestamp: u64,
     /// The transactions in the L2 block
-    pub transactions: Vec<RawTransaction>,
+    pub transactions: Vec<Bytes>,
 }
 
 impl From<SingleBatch> for SpanBatchElement {

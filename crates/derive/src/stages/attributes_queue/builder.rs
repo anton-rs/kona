@@ -8,11 +8,11 @@ use crate::{
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use kona_primitives::{
-    BlockID, Hardforks, L1BlockInfoTx, L2BlockInfo, L2PayloadAttributes, RawTransaction,
-    RollupConfig,
+    BlockID, Hardforks, L1BlockInfoTx, L2BlockInfo, L2PayloadAttributes, RollupConfig,
 };
 
 /// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
@@ -71,7 +71,7 @@ where
         epoch: BlockID,
     ) -> Result<L2PayloadAttributes, BuilderError> {
         let l1_header;
-        let deposit_transactions: Vec<RawTransaction>;
+        let deposit_transactions: Vec<Bytes>;
         let mut sys_config = self
             .config_fetcher
             .system_config_by_number(l2_parent.block_info.number, self.rollup_cfg.clone())
@@ -121,18 +121,16 @@ where
             ));
         }
 
-        let mut upgrade_transactions: Vec<RawTransaction> = vec![];
+        let mut upgrade_transactions: Vec<Bytes> = vec![];
         if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
             !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
         {
-            upgrade_transactions =
-                Hardforks::ecotone_txs().into_iter().map(RawTransaction).collect();
+            upgrade_transactions = Hardforks::ecotone_txs();
         }
         if self.rollup_cfg.is_fjord_active(next_l2_time) &&
             !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
         {
-            let mut txs = Hardforks::fjord_txs().into_iter().map(RawTransaction).collect();
-            upgrade_transactions.append(&mut txs);
+            upgrade_transactions.append(&mut Hardforks::fjord_txs());
         }
 
         // Build and encode the L1 info transaction for the current payload.

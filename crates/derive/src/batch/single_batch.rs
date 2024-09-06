@@ -2,9 +2,9 @@
 
 use super::validity::BatchValidity;
 use alloc::vec::Vec;
-use alloy_primitives::BlockHash;
+use alloy_primitives::{BlockHash, Bytes};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use kona_primitives::{BlockID, BlockInfo, L2BlockInfo, RawTransaction, RollupConfig};
+use kona_primitives::{starts_with_2781_deposit, BlockID, BlockInfo, L2BlockInfo, RollupConfig};
 use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
@@ -20,7 +20,7 @@ pub struct SingleBatch {
     /// The L2 block timestamp of this batch
     pub timestamp: u64,
     /// The L2 block transactions in this batch
-    pub transactions: Vec<RawTransaction>,
+    pub transactions: Vec<Bytes>,
 }
 
 impl SingleBatch {
@@ -156,7 +156,7 @@ impl SingleBatch {
                 warn!("transaction data must not be empty, but found empty tx at index {i}");
                 return BatchValidity::Drop;
             }
-            if tx.is_deposit() {
+            if starts_with_2781_deposit(tx) {
                 warn!("sequencers may not embed any deposits into batch data, but found tx that has one at index: {i}");
                 return BatchValidity::Drop;
             }
@@ -170,9 +170,8 @@ impl SingleBatch {
 mod tests {
     use super::SingleBatch;
     use alloc::vec;
-    use alloy_primitives::{hex, B256};
+    use alloy_primitives::{hex, Bytes, B256};
     use alloy_rlp::{BytesMut, Decodable, Encodable};
-    use kona_primitives::RawTransaction;
 
     #[test]
     fn test_single_batch_rlp_roundtrip() {
@@ -181,7 +180,7 @@ mod tests {
             epoch_num: 0xFF,
             epoch_hash: B256::ZERO,
             timestamp: 0xEE,
-            transactions: vec![RawTransaction(hex!("00").into())],
+            transactions: vec![Bytes::from(hex!("00"))],
         };
 
         let mut out_buf = BytesMut::default();
@@ -198,7 +197,7 @@ mod tests {
             epoch_num: 0xFF,
             epoch_hash: B256::ZERO,
             timestamp: 0xEE,
-            transactions: vec![RawTransaction(hex!("7E").into())],
+            transactions: vec![Bytes::from(hex!("7E"))],
         };
 
         assert!(single_batch.has_invalid_transactions());

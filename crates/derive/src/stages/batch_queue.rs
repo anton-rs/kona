@@ -548,20 +548,8 @@ mod tests {
         let mut second_batch_txs: Vec<Bytes> = vec![];
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             if let Batch::Span(span) = &batch {
-                let bys = span.batches[0]
-                    .transactions
-                    .iter()
-                    .cloned()
-                    .map(|tx| tx.0)
-                    .collect::<Vec<Bytes>>();
-                let sbys = span.batches[1]
-                    .transactions
-                    .iter()
-                    .cloned()
-                    .map(|tx| tx.0)
-                    .collect::<Vec<Bytes>>();
-                second_batch_txs.extend(sbys);
-                batch_txs.extend(bys);
+                batch_txs.extend(span.batches[0].transactions.clone());
+                second_batch_txs.extend(span.batches[1].transactions.clone());
             }
             batch_vec.push(Ok(batch));
         }

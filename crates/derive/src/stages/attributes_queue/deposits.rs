@@ -2,8 +2,8 @@
 
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
-use alloy_primitives::{Address, B256};
-use kona_primitives::{decode_deposit, RawTransaction, DEPOSIT_EVENT_ABI_HASH};
+use alloy_primitives::{Address, Bytes, B256};
+use kona_primitives::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
 
 /// Derive deposits for transaction receipts.
 ///
@@ -14,7 +14,7 @@ pub(crate) async fn derive_deposits(
     block_hash: B256,
     receipts: Vec<Receipt>,
     deposit_contract: Address,
-) -> anyhow::Result<Vec<RawTransaction>> {
+) -> anyhow::Result<Vec<Bytes>> {
     let mut global_index = 0;
     let mut res = Vec::new();
     for r in receipts.iter() {
@@ -100,7 +100,7 @@ mod tests {
         let receipts = vec![];
         let deposit_contract = Address::default();
         let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
-        assert_eq!(result.unwrap(), vec![]);
+        assert!(result.unwrap().is_empty());
     }
 
     #[tokio::test]
