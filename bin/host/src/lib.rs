@@ -220,18 +220,14 @@ pub async fn start_native_client_program(
         ])
         .expect("No errors may occur when mapping file descriptors.");
 
-    let status = command
-        .status()
-        .await
-        .map_err(|e| {
-            error!(target: "client_program", "Failed to execute client program: {:?}", e);
-            anyhow!("Failed to execute client program: {:?}", e)
-        })?
-        .success();
+    let status = command.status().await.map_err(|e| {
+        error!(target: "client_program", "Failed to execute client program: {:?}", e);
+        anyhow!("Failed to execute client program: {:?}", e)
+    })?;
 
-    if !status {
+    if !status.success() {
         error!(target: "client_program", "Client program exited with a non-zero status.");
-        return Err(anyhow!("Client program exited with a non-zero status."));
+        std::process::exit(status.code().map_or(1, |c| c as i32));
     }
 
     Ok(())
