@@ -1,6 +1,6 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk.
 
-use super::KeyValueStore;
+use super::{KeyValueStore, MemoryKeyValueStore};
 use crate::cli::HostCli;
 use alloy_primitives::B256;
 use anyhow::Result;
@@ -43,5 +43,9 @@ impl KeyValueStore for LocalKeyValueStore {
 
     fn set(&mut self, _: B256, _: Vec<u8>) -> Result<()> {
         unreachable!("LocalKeyValueStore is read-only")
+    }
+
+    fn to_memory_store(&self) -> MemoryKeyValueStore {
+        unimplemented!("LocalKeyValueStore is read-only")
     }
 }

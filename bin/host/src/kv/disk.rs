@@ -1,7 +1,7 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk
 //! using [rocksdb].
 
-use super::KeyValueStore;
+use super::{KeyValueStore, MemoryKeyValueStore};
 use anyhow::{anyhow, Result};
 use rocksdb::{Options, DB};
 use std::path::PathBuf;
@@ -39,7 +39,23 @@ impl KeyValueStore for DiskKeyValueStore {
     fn set(&mut self, key: alloy_primitives::B256, value: Vec<u8>) -> Result<()> {
         self.db.put(*key, value).map_err(|e| anyhow!("Failed to set key-value pair: {}", e))
     }
+
+    /// Converts the [DiskKeyValueStore] to a [MemoryKeyValueStore].
+    fn to_memory_store(&self) -> MemoryKeyValueStore {
+        let mut memory_store = MemoryKeyValueStore::new();
+        let iter = self.db.iterator(rocksdb::IteratorMode::Start);
+        for item in iter {
+            if let Ok((key, value)) = item {
+                if let Ok(b256_key) = alloy_primitives::B256::try_from(key.as_ref()) {
+                    let _ = memory_store.set(b256_key, value.to_vec());
+                }
+            }
+        }
+        memory_store
+    }
 }
+
+impl DiskKeyValueStore {}
 
 impl Drop for DiskKeyValueStore {
     fn drop(&mut self) {

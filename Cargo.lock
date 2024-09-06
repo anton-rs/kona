@@ -2399,6 +2399,7 @@ dependencies = [
  "os_pipe",
  "reqwest",
  "revm",
+ "rkyv",
  "rocksdb",
  "serde",
  "serde_json",

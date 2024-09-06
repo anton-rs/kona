@@ -27,4 +27,7 @@ pub trait KeyValueStore {
 
     /// Set the value associated with the given key.
     fn set(&mut self, key: B256, value: Vec<u8>) -> Result<()>;
+
+    /// Converts the [KeyValueStore] to a [MemoryKeyValueStore].
+    fn to_memory_store(&self) -> MemoryKeyValueStore;
 }

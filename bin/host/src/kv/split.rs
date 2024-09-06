@@ -1,7 +1,7 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that splits between two separate
 //! [KeyValueStore]s depending on [PreimageKeyType].
 
-use super::KeyValueStore;
+use super::{KeyValueStore, MemoryKeyValueStore};
 use alloy_primitives::B256;
 use anyhow::Result;
 use kona_preimage::PreimageKeyType;
@@ -43,5 +43,9 @@ where
 
     fn set(&mut self, key: B256, value: Vec<u8>) -> Result<()> {
         self.remote_store.set(key, value)
+    }
+
+    fn to_memory_store(&self) -> MemoryKeyValueStore {
+        self.remote_store.to_memory_store()
     }
 }
