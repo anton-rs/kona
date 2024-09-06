@@ -1,7 +1,8 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk
 //! using [rocksdb].
 
-use super::KeyValueStore;
+use super::{KeyValueStore, MemoryKeyValueStore};
+use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use rocksdb::{Options, DB};
 use std::path::PathBuf;
@@ -44,5 +45,53 @@ impl KeyValueStore for DiskKeyValueStore {
 impl Drop for DiskKeyValueStore {
     fn drop(&mut self) {
         let _ = DB::destroy(&Self::get_db_options(), self.data_directory.as_path());
+    }
+}
+
+impl TryFrom<DiskKeyValueStore> for MemoryKeyValueStore {
+    type Error = anyhow::Error;
+
+    fn try_from(disk_store: DiskKeyValueStore) -> Result<MemoryKeyValueStore> {
+        let mut memory_store = MemoryKeyValueStore::new();
+        let mut db_iter = disk_store.db.full_iterator(rocksdb::IteratorMode::Start);
+
+        while let Some(Ok((key, value))) = db_iter.next() {
+            memory_store.set(
+                B256::try_from(key.as_ref())
+                    .map_err(|e| anyhow!("Failed to convert slice to B256: {e}"))?,
+                value.to_vec(),
+            )?;
+        }
+
+        Ok(memory_store)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::DiskKeyValueStore;
+    use crate::kv::{KeyValueStore, MemoryKeyValueStore};
+    use proptest::{
+        arbitrary::any,
+        collection::{hash_map, vec},
+        proptest,
+    };
+    use std::env::temp_dir;
+
+    proptest! {
+        /// Test that converting from a [DiskKeyValueStore] to a [MemoryKeyValueStore] is lossless.
+        #[test]
+        fn convert_disk_kv_to_mem_kv(k_v in hash_map(any::<[u8; 32]>(), vec(any::<u8>(), 0..128), 1..128)) {
+            let tempdir = temp_dir();
+            let mut disk_kv = DiskKeyValueStore::new(tempdir);
+            k_v.iter().for_each(|(k, v)| {
+                disk_kv.set(k.into(), v.to_vec()).unwrap();
+            });
+
+            let mem_kv = MemoryKeyValueStore::try_from(disk_kv).unwrap();
+            for (k, v) in k_v {
+                assert_eq!(mem_kv.get(k.into()).unwrap(), v.to_vec());
+            }
+        }
     }
 }

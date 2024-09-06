@@ -42,3 +42,6 @@ tracing-subscriber.workspace = true
 command-fds.workspace = true
 os_pipe.workspace = true
 rocksdb.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
