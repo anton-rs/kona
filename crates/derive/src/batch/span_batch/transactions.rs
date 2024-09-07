@@ -8,9 +8,8 @@ use super::{
 use alloc::vec::Vec;
 use alloy_consensus::{Transaction, TxEnvelope, TxType};
 use alloy_eips::eip2718::Encodable2718;
-use alloy_primitives::{Address, TxKind, U256};
+use alloy_primitives::{Address, Bytes, TxKind, U256};
 use alloy_rlp::{Buf, Decodable, Encodable};
-use kona_primitives::RawTransaction;
 
 /// This struct contains the decoded information for transactions in a span batch.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -338,11 +337,7 @@ impl SpanBatchTransactions {
     }
 
     /// Add raw transactions into the [SpanBatchTransactions].
-    pub fn add_txs(
-        &mut self,
-        txs: Vec<RawTransaction>,
-        chain_id: u64,
-    ) -> Result<(), SpanBatchError> {
+    pub fn add_txs(&mut self, txs: Vec<Bytes>, chain_id: u64) -> Result<(), SpanBatchError> {
         let total_block_tx_count = txs.len() as u64;
         let offset = self.total_block_tx_count;
 

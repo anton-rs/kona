@@ -3,9 +3,9 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{L2BlockInfo, RawTransaction, Withdrawal};
+use super::{L2BlockInfo, Withdrawal};
 use alloc::vec::Vec;
-use alloy_primitives::{Address, B256};
+use alloy_primitives::{Address, Bytes, B256};
 
 /// Payload attributes.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -31,7 +31,7 @@ pub struct L2PayloadAttributes {
     // Optimism additions.
     /// Transactions to force into the block (always at the start of the transactions list).
     #[cfg_attr(feature = "serde", serde(rename = "transactions"))]
-    pub transactions: Vec<RawTransaction>,
+    pub transactions: Vec<Bytes>,
     /// NoTxPool to disable adding any transactions from the transaction-pool.
     #[cfg_attr(feature = "serde", serde(rename = "noTxPool"))]
     pub no_tx_pool: bool,

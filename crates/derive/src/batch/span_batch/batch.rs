@@ -421,9 +421,7 @@ mod tests {
     };
     use alloc::vec;
     use alloy_primitives::{b256, Bytes, B256};
-    use kona_primitives::{
-        BlockID, ChainGenesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope, RawTransaction,
-    };
+    use kona_primitives::{BlockID, ChainGenesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope};
     use op_alloy_consensus::OpTxType;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -1287,7 +1285,7 @@ mod tests {
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
-        let filler_bytes = RawTransaction(Bytes::copy_from_slice(&[OpTxType::Eip1559 as u8]));
+        let filler_bytes = Bytes::copy_from_slice(&[OpTxType::Eip1559 as u8]);
         let first = SpanBatchElement {
             epoch_num: 10,
             timestamp: 20,
@@ -1296,7 +1294,7 @@ mod tests {
         let second = SpanBatchElement {
             epoch_num: 10,
             timestamp: 20,
-            transactions: vec![RawTransaction(Bytes::copy_from_slice(&[OpTxType::Deposit as u8]))],
+            transactions: vec![Bytes::copy_from_slice(&[OpTxType::Deposit as u8])],
         };
         let third =
             SpanBatchElement { epoch_num: 11, timestamp: 20, transactions: vec![filler_bytes] };

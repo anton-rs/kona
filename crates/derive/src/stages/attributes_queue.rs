@@ -223,8 +223,7 @@ mod tests {
         },
     };
     use alloc::{sync::Arc, vec, vec::Vec};
-    use alloy_primitives::b256;
-    use kona_primitives::RawTransaction;
+    use alloy_primitives::{b256, Bytes};
 
     fn new_attributes_queue(
         cfg: Option<RollupConfig>,
@@ -327,7 +326,7 @@ mod tests {
             MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
         let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         let parent = L2BlockInfo::default();
-        let txs = vec![RawTransaction::default(), RawTransaction::default()];
+        let txs = vec![Bytes::default(), Bytes::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
         let attributes = aq.create_next_attributes(batch, parent).await.unwrap();
         // update the expected attributes

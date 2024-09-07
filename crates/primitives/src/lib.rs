@@ -10,25 +10,26 @@ extern crate alloc;
 // Re-export `op-alloy-consensus` types.
 pub use op_alloy_consensus::Hardforks;
 
-// Use op-alloy-protocol crate.
+// Re-export `op-alloy-protocol` types.
 pub use op_alloy_protocol::{
-    BlockInfo, Channel, ChannelId, Frame, L2BlockInfo, CHANNEL_ID_LENGTH, DERIVATION_VERSION_0,
-    FJORD_MAX_RLP_BYTES_PER_CHANNEL, FRAME_OVERHEAD, MAX_FRAME_LEN, MAX_RLP_BYTES_PER_CHANNEL,
+    starts_with_2718_deposit, BlockInfo, Channel, ChannelId, Frame, L2BlockInfo, CHANNEL_ID_LENGTH,
+    DERIVATION_VERSION_0, FJORD_MAX_RLP_BYTES_PER_CHANNEL, FRAME_OVERHEAD, MAX_FRAME_LEN,
+    MAX_RLP_BYTES_PER_CHANNEL,
 };
 
-// Re-export superchain-primitives.
+// Re-export `superchain-primitives` types.
 pub use superchain_primitives::*;
 
-// Re-export alloy-primitives.
+// Re-export `alloy-primitives`.
 pub use alloy_primitives;
 
-// Re-export alloy consensus primitives.
+// Re-export `alloy-consensus` types.
 pub use alloy_consensus::{
     Header, Receipt, Signed, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
     TxEip4844WithSidecar, TxEnvelope, TxLegacy,
 };
 
-/// Re-export [alloy_eips] eip4844 primitives.
+// Re-export `alloy-eips` eip4844 types.
 pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 
 /// Re-export the [Withdrawal] type from the [alloy_eips] crate.
@@ -41,9 +42,6 @@ pub use block::{Block, BlockKind, OpBlock};
 
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
-
-pub mod raw_tx;
-pub use raw_tx::RawTransaction;
 
 pub mod deposits;
 pub use deposits::{

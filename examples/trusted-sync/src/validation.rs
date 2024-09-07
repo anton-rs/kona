@@ -1,10 +1,11 @@
 //! Contains logic to validate derivation pipeline outputs.
 
+use alloy_primitives::Bytes;
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, BlockTransactionsKind, Header};
 use alloy_transport::TransportResult;
 use anyhow::Result;
-use kona_primitives::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig};
+use kona_primitives::{L2AttributesWithParent, L2PayloadAttributes, RollupConfig};
 use std::vec::Vec;
 use tracing::{error, warn};
 
@@ -36,10 +37,7 @@ impl OnlineValidator {
     ///
     /// This method needs to fetch the non-hydrated block and then
     /// fetch the raw transactions using the `debug_*` namespace.
-    pub(crate) async fn get_block(
-        &self,
-        tag: BlockNumberOrTag,
-    ) -> Result<(Header, Vec<RawTransaction>)> {
+    pub(crate) async fn get_block(&self, tag: BlockNumberOrTag) -> Result<(Header, Vec<Bytes>)> {
         // Don't hydrate the block so we only get a list of transaction hashes.
         let block = self
             .provider
@@ -50,7 +48,7 @@ impl OnlineValidator {
         // For each transaction hash, fetch the raw transaction RLP.
         let mut txs = vec![];
         for tx in block.transactions.hashes() {
-            let tx: TransportResult<RawTransaction> =
+            let tx: TransportResult<Bytes> =
                 self.provider.raw_request("debug_getRawTransaction".into(), [tx]).await;
             if let Ok(tx) = tx {
                 txs.push(tx);
