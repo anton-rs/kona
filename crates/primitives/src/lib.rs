@@ -12,7 +12,7 @@ pub use op_alloy_consensus::Hardforks;
 
 // Re-export `op-alloy-protocol` types.
 pub use op_alloy_protocol::{
-    starts_with_2781_deposit, BlockInfo, Channel, ChannelId, Frame, L2BlockInfo, CHANNEL_ID_LENGTH,
+    starts_with_2718_deposit, BlockInfo, Channel, ChannelId, Frame, L2BlockInfo, CHANNEL_ID_LENGTH,
     DERIVATION_VERSION_0, FJORD_MAX_RLP_BYTES_PER_CHANNEL, FRAME_OVERHEAD, MAX_FRAME_LEN,
     MAX_RLP_BYTES_PER_CHANNEL,
 };

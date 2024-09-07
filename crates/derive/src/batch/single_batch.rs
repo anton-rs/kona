@@ -4,7 +4,7 @@ use super::validity::BatchValidity;
 use alloc::vec::Vec;
 use alloy_primitives::{BlockHash, Bytes};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use kona_primitives::{starts_with_2781_deposit, BlockID, BlockInfo, L2BlockInfo, RollupConfig};
+use kona_primitives::{starts_with_2718_deposit, BlockID, BlockInfo, L2BlockInfo, RollupConfig};
 use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
