@@ -156,7 +156,7 @@ impl SingleBatch {
                 warn!("transaction data must not be empty, but found empty tx at index {i}");
                 return BatchValidity::Drop;
             }
-            if starts_with_2781_deposit(tx) {
+            if starts_with_2718_deposit(tx) {
                 warn!("sequencers may not embed any deposits into batch data, but found tx that has one at index: {i}");
                 return BatchValidity::Drop;
             }
