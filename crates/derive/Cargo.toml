@@ -50,6 +50,9 @@ alloy-node-bindings = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true } 
 
 [dev-dependencies]
+spin.workspace = true
+alloy-rpc-client.workspace = true
+alloy-transport-http.workspace = true
 tokio.workspace = true
 proptest.workspace = true
 tracing-subscriber.workspace = true
