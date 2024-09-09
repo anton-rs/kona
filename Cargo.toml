@@ -35,9 +35,6 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
-[patch.crates-io]
-op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/protocol-fix" }
-
 [workspace.dependencies]
 # Workspace
 kona-client = { path = "bin/client", version = "0.1.0" }
@@ -83,7 +80,11 @@ brotli = { version = "6.0.0", default-features = false }
 # Testing
 proptest = "1.4"
 criterion = { version = "0.5.1", features = ["html_reports"] }
-pprof = { version = "0.13.0", features = ["criterion", "flamegraph", "frame-pointer"] } 
+pprof = { version = "0.13.0", features = [
+    "criterion",
+    "flamegraph",
+    "frame-pointer",
+] }
 
 # Serialization
 rkyv = "0.7.44"
@@ -96,7 +97,7 @@ revm = { version = "14.0", default-features = false }
 
 # Superchain
 superchain = "0.3"
-superchain-primitives = { version = "0.3", default-features = false }
+superchain-primitives = { version = "0.4", default-features = false }
 
 # K/V database
 rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
