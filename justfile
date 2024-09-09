@@ -128,4 +128,5 @@ build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-a
     --output $OUTPUT_DIR \
     --build-arg CLIENT_TAG={{kona_tag}} \
     --build-arg ASTERISC_TAG={{asterisc_tag}} \
+    --platform linux/amd64 \
     .

@@ -2458,7 +2458,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "superchain-primitives 0.4.0",
+ "superchain-primitives",
  "tracing",
 ]
 
@@ -2883,7 +2883,7 @@ dependencies = [
  "alloy-rlp",
  "hashbrown 0.14.5",
  "op-alloy-consensus",
- "superchain-primitives 0.4.0",
+ "superchain-primitives",
 ]
 
 [[package]]
@@ -4170,28 +4170,12 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "superchain"
-version = "0.3.4"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21507261557d79aad65c050fd48138068792c462b769f2dd828ee6fbaca2621b"
+checksum = "fc46041e66734c67d9ca020e8cb9af3a84986620c0b50d06208c0230de3d6022"
 dependencies = [
- "superchain-primitives 0.3.4",
+ "superchain-primitives",
  "superchain-registry",
-]
-
-[[package]]
-name = "superchain-primitives"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7df394e39609f1f5d6b2d0d2fa9cd27aae0058339c992c9a4bf1f47f5f86fec6"
-dependencies = [
- "alloy-consensus",
- "alloy-eips",
- "alloy-genesis",
- "alloy-primitives",
- "alloy-sol-types",
- "anyhow",
- "serde",
- "serde_repr",
 ]
 
 [[package]]
@@ -4213,15 +4197,15 @@ dependencies = [
 
 [[package]]
 name = "superchain-registry"
-version = "0.3.4"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3e0718465e68383a90ff54a2749ee1ec41609fec359840c1436d17414fdabae"
+checksum = "ef9478ce31da9bbe15dad2ed4ff5fa64652ae220c4d5a95681bf09cb5cb39867"
 dependencies = [
  "hashbrown 0.14.5",
  "lazy_static",
  "serde",
  "serde_json",
- "superchain-primitives 0.3.4",
+ "superchain-primitives",
 ]
 
 [[package]]
