@@ -153,8 +153,8 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
-            if extract_tx_gas_limit(&transaction) > block_available_gas
-                && (is_regolith || !is_system_transaction(&transaction))
+            if extract_tx_gas_limit(&transaction) > block_available_gas &&
+                (is_regolith || !is_system_transaction(&transaction))
             {
                 anyhow::bail!("Transaction gas limit exceeds block gas limit")
             }
