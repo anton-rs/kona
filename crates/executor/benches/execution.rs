@@ -71,7 +71,7 @@ fn op_mainnet_exec_bench(
         delta_time: Some(0),
         ecotone_time: Some(0),
         base_fee_params: OP_BASE_FEE_PARAMS,
-        canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+        canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
         ..Default::default()
     };
 

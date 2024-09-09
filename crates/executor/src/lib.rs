@@ -153,8 +153,8 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
-            if extract_tx_gas_limit(&transaction) > block_available_gas &&
-                (is_regolith || !is_system_transaction(&transaction))
+            if extract_tx_gas_limit(&transaction) > block_available_gas
+                && (is_regolith || !is_system_transaction(&transaction))
             {
                 anyhow::bail!("Transaction gas limit exceeds block gas limit")
             }
@@ -479,7 +479,7 @@ where
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
         let base_fee_params = if config.is_canyon_active(payload_attrs.timestamp) {
-            config.canyon_base_fee_params.expect("Canyon base fee params not provided")
+            config.canyon_base_fee_params
         } else {
             config.base_fee_params
         };
@@ -686,7 +686,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -739,7 +739,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -796,7 +796,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -860,7 +860,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -918,7 +918,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -985,7 +985,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
