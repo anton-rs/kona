@@ -1,0 +1,41 @@
+name: Build and Publish Kona FPP Images
+
+on: [workflow_dispatch, workflow_call]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-fpp-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        fpvm: ["asterisc"]
+    env:
+      IMAGE_NAME: ${{ github.repository }}/kona-fpp-${{ matrix.fpvm }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Authenticate with container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build and Publish `kona-fpp-${{ matrix.fpvm }}`
+        uses: docker/build-push-action@v6
+        with:
+          file: build/${{ matrix.fpvm }}/${{ matrix.fpvm }}-repro.dockerfile
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
