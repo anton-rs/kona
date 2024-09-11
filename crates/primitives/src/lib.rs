@@ -29,6 +29,11 @@ pub use alloy_consensus::{
     TxEip4844WithSidecar, TxEnvelope, TxLegacy,
 };
 
+pub use op_alloy_protocol::deposits::{
+    decode_deposit, DepositError, DepositSourceDomain, DepositSourceDomainIdentifier,
+    L1InfoDepositSource, UpgradeDepositSource, UserDepositSource, DEPOSIT_EVENT_ABI_HASH,
+};
+
 // Re-export `alloy-eips` eip4844 types.
 pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 
@@ -42,12 +47,6 @@ pub use block::{Block, BlockKind, OpBlock};
 
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
-
-pub mod deposits;
-pub use deposits::{
-    decode_deposit, DepositError, DepositSourceDomain, DepositSourceDomainIdentifier,
-    L1InfoDepositSource, UpgradeDepositSource, UserDepositSource, DEPOSIT_EVENT_ABI_HASH,
-};
 
 pub mod payload;
 pub use payload::{
