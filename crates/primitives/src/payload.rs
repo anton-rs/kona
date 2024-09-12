@@ -260,7 +260,7 @@ impl L2ExecutionPayloadEnvelope {
     /// Tries to convert the bytes into an [L2ExecutionPayloadEnvelope].
     pub fn try_from_bytes(mut bytes: &[u8]) -> Result<Self> {
         use alloy_rlp::Decodable;
-        let op_block = OpBlock::decode(&mut bytes)?;
+        let op_block = OpBlock::decode(&mut bytes).map_err(|e| anyhow::anyhow!(e))?;
         let OpBlock { header, body, withdrawals, .. } = op_block;
         Ok(Self::from_body(header, &body, withdrawals))
     }
