@@ -3,6 +3,7 @@
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
+use alloy_eips::eip4895::Withdrawal;
 use alloy_primitives::{Bytes, B256, U64};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
@@ -11,7 +12,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use core::num::NonZeroUsize;
 use kona_primitives::{
-    Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
+    BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig,
 };
 use lru::LruCache;
 
@@ -69,6 +70,26 @@ impl AlloyChainProvider {
         };
         u64::from_str_radix(&chain_id, 16).map_err(|e| anyhow!(e))
     }
+}
+
+/// Ethereum full block.
+///
+/// Withdrawals can be optionally included at the end of the RLP encoded message.
+///
+/// Taken from [reth-primitives](https://github.com/paradigmxyz/reth)
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, alloy_rlp::RlpEncodable, alloy_rlp::RlpDecodable,
+)]
+#[rlp(trailing)]
+struct Block {
+    /// Block header.
+    pub header: Header,
+    /// Transactions in this block.
+    pub body: Vec<TxEnvelope>,
+    /// Ommers/uncles header.
+    pub ommers: Vec<Header>,
+    /// Block withdrawals.
+    pub withdrawals: Option<Vec<Withdrawal>>,
 }
 
 #[async_trait]
@@ -381,7 +402,9 @@ impl L2ChainProvider for AlloyL2ChainProvider {
                 return Err(e);
             }
         };
-        let block = match OpBlock::decode(&mut raw_block.as_ref()).map_err(|e| anyhow!(e)) {
+        let payload_envelope = match L2ExecutionPayloadEnvelope::try_from_bytes(raw_block.as_ref())
+            .map_err(|e| anyhow!(e))
+        {
             Ok(b) => b,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
@@ -389,7 +412,6 @@ impl L2ChainProvider for AlloyL2ChainProvider {
                 return Err(e);
             }
         };
-        let payload_envelope: L2ExecutionPayloadEnvelope = block.into();
 
         self.payload_by_number_cache.put(number, payload_envelope.clone());
         Ok(payload_envelope)

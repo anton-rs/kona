@@ -11,9 +11,7 @@ use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
 use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{
-    L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
-};
+use kona_primitives::{L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig};
 use op_alloy_consensus::OpTxEnvelope;
 
 /// The oracle-backed L2 chain provider for the client program.
@@ -96,13 +94,9 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let optimism_block = OpBlock {
-            header,
-            body: transactions,
-            withdrawals: self.boot_info.rollup_config.is_canyon_active(timestamp).then(Vec::new),
-            ..Default::default()
-        };
-        Ok(optimism_block.into())
+        let withdrawals = self.boot_info.rollup_config.is_canyon_active(timestamp).then(Vec::new);
+        let payload = L2ExecutionPayloadEnvelope::from_body(header, &transactions, withdrawals);
+        Ok(payload)
     }
 
     async fn system_config_by_number(

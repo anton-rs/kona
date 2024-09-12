@@ -1,8 +1,13 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
-use alloy_eips::eip2718::{Decodable2718, Encodable2718};
+use alloy_consensus::Header;
+use alloy_eips::{
+    eip2718::{Decodable2718, Encodable2718},
+    eip4895::Withdrawal,
+};
 use alloy_primitives::{Address, Bloom, Bytes, B256};
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 
@@ -15,8 +20,8 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
 use super::{
-    BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo, OpBlock,
-    RollupConfig, SystemConfig, Withdrawal,
+    BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo, RollupConfig,
+    SystemConfig,
 };
 use alloy_rlp::Encodable;
 
@@ -228,9 +233,41 @@ impl L2ExecutionPayloadEnvelope {
     }
 }
 
-impl From<OpBlock> for L2ExecutionPayloadEnvelope {
-    fn from(block: OpBlock) -> Self {
-        let OpBlock { header, body, withdrawals, .. } = block;
+// TODO: Below is a temporary conversion utility to rlp decode the block.
+//       Once alloy-consensus has a block type with rlp encoding/decoding,
+//       this can be removed and replaced with an op-alloy-consensus type
+//       that specifies the tx as an OpTxEnvelope.
+
+/// OP Stack full block.
+///
+/// Withdrawals can be optionally included at the end of the RLP encoded message.
+///
+/// Taken from [reth-primitives](https://github.com/paradigmxyz/reth)
+#[derive(Debug, Clone, PartialEq, Eq, Default, RlpEncodable, RlpDecodable)]
+#[rlp(trailing)]
+pub struct OpBlock {
+    /// Block header.
+    pub header: Header,
+    /// Transactions in this block.
+    pub body: Vec<OpTxEnvelope>,
+    /// Ommers/uncles header.
+    pub ommers: Vec<Header>,
+    /// Block withdrawals.
+    pub withdrawals: Option<Vec<Withdrawal>>,
+}
+
+impl L2ExecutionPayloadEnvelope {
+    /// Tries to convert the bytes into an [L2ExecutionPayloadEnvelope].
+    pub fn try_from_bytes(mut bytes: &[u8]) -> Result<Self> {
+        use alloy_rlp::Decodable;
+        let op_block = OpBlock::decode(&mut bytes)?;
+        let OpBlock { header, body, withdrawals, .. } = op_block;
+        Ok(Self::from_body(header, &body, withdrawals))
+    }
+
+    /// Constructs a new [L2ExecutionPayloadEnvelope] from the given header, transactions, and
+    /// withdrawals.
+    pub fn from_body(header: Header, body: &[OpTxEnvelope], w: Option<Vec<Withdrawal>>) -> Self {
         Self {
             execution_payload: L2ExecutionPayload {
                 parent_hash: header.parent_hash,
@@ -246,16 +283,16 @@ impl From<OpBlock> for L2ExecutionPayloadEnvelope {
                 extra_data: header.extra_data.clone(),
                 base_fee_per_gas: header.base_fee_per_gas,
                 block_hash: header.hash_slow(),
-                deserialized_transactions: body.clone(),
+                deserialized_transactions: body.to_vec(),
                 transactions: body
-                    .into_iter()
+                    .iter()
                     .map(|tx| {
                         let mut buf = Vec::with_capacity(tx.length());
                         tx.encode_2718(&mut buf);
                         buf.into()
                     })
                     .collect(),
-                withdrawals,
+                withdrawals: w,
                 blob_gas_used: header.blob_gas_used,
                 excess_blob_gas: header.excess_blob_gas,
             },

@@ -42,9 +42,6 @@ pub use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 /// [Withdrawal]: alloy_eips::eip4895::Withdrawal
 pub use alloy_eips::eip4895::Withdrawal;
 
-pub mod block;
-pub use block::{Block, BlockKind, OpBlock};
-
 pub mod block_info;
 pub use block_info::{L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx};
 
