@@ -33,7 +33,9 @@ impl KeyValueStore for LocalKeyValueStore {
             L2_CLAIM_BLOCK_NUMBER_KEY => Some(self.cfg.l2_block_number.to_be_bytes().to_vec()),
             L2_CHAIN_ID_KEY => Some(self.cfg.l2_chain_id.to_be_bytes().to_vec()),
             L2_ROLLUP_CONFIG_KEY => {
+                tracing::info!(target: "host", "Getting rollup config");
                 let rollup_config = self.cfg.read_rollup_config().ok()?;
+                tracing::info!(target: "host", "Rollup config: {:?}", rollup_config);
                 let serialized = serde_json::to_vec(&rollup_config).ok()?;
                 Some(serialized)
             }

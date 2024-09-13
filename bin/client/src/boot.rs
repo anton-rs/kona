@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use kona_primitives::RollupConfig;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
+use tracing::{info, warn};
 
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
@@ -92,6 +92,9 @@ impl BootInfo {
                 .map_err(|_| anyhow!("Failed to convert L2 chain ID to u64"))?,
         );
 
+        tracing::info!(target: "boot-loader", "chain_id: {}", chain_id);
+
+        
         // Attempt to load the rollup config from the chain ID. If there is no config for the chain,
         // fall back to loading the config from the preimage oracle.
         let rollup_config = if let Some(config) = RollupConfig::from_l2_chain_id(chain_id) {
@@ -103,6 +106,7 @@ impl BootInfo {
                 chain_id
             );
             let ser_cfg = oracle.get(PreimageKey::new_local(L2_ROLLUP_CONFIG_KEY.to())).await?;
+            info!(target: "boot-loader", "ser_cfg: {:?}", ser_cfg);
             serde_json::from_slice(&ser_cfg)
                 .map_err(|e| anyhow!("Failed to deserialize rollup config: {}", e))?
         };

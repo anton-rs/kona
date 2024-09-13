@@ -108,8 +108,10 @@ where
         mut chain_provider: OracleL1ChainProvider<O>,
         mut l2_chain_provider: OracleL2ChainProvider<O>,
     ) -> Result<Self> {
+        println!("Got here!");
         let cfg = Arc::new(boot_info.rollup_config.clone());
 
+        println!("Got here 2!");
         // Fetch the startup information.
         let (l1_origin, l2_safe_head, l2_safe_head_header) = Self::find_startup_info(
             caching_oracle,
@@ -119,6 +121,8 @@ where
         )
         .await?;
 
+        println!("Got here 3!");
+
         // Construct the pipeline.
         let attributes = StatefulAttributesBuilder::new(
             cfg.clone(),
@@ -126,6 +130,8 @@ where
             chain_provider.clone(),
         );
         let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider, &cfg);
+
+        println!("Got here 4!");
 
         // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
         // captured.
@@ -137,6 +143,8 @@ where
         }
         let l1_origin = chain_provider.block_info_by_number(l1_origin_number).await?;
 
+        println!("Got here 5!");
+
         let pipeline = PipelineBuilder::new()
             .rollup_config(cfg)
             .dap_source(dap)
@@ -145,6 +153,8 @@ where
             .builder(attributes)
             .origin(l1_origin)
             .build();
+
+        println!("Got here 6!");
 
         Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
     }
@@ -202,6 +212,9 @@ where
         caching_oracle
             .write(&HintType::StartingL2Output.encode_with(&[boot_info.l2_output_root.as_ref()]))
             .await?;
+
+        tracing::info!(target: "client_oracle", "Retrieved blob {:?} from the oracle.", boot_info.l2_output_root);
+
         let mut output_preimage = [0u8; 128];
         caching_oracle
             .get_exact(
@@ -209,6 +222,8 @@ where
                 &mut output_preimage,
             )
             .await?;
+
+        tracing::info!(target: "client_oracle", "Retrieved blob {:?} from the oracle.", output_preimage);
 
         let safe_hash =
             output_preimage[96..128].try_into().map_err(|_| anyhow!("Invalid L2 output root"))?;

@@ -94,15 +94,20 @@ impl HostCli {
 
     /// Reads the [RollupConfig] from the file system and returns it as a string.
     pub fn read_rollup_config(&self) -> Result<RollupConfig> {
+        tracing::info!(target: "host", "Reading rollup config with path {:?}", self.rollup_config_path);
         let path = self.rollup_config_path.as_ref().ok_or_else(|| {
             anyhow::anyhow!(
                 "No rollup config path provided. Please provide a path to the rollup config."
             )
         })?;
 
+        tracing::info!(target: "host", "Path: {:?}", path);
+
         // Read the serialized config from the file system.
         let ser_config = std::fs::read_to_string(path)
             .map_err(|e| anyhow!("Error reading RollupConfig file: {e}"))?;
+
+        tracing::info!(target: "host", "Rollup config: {:?}", ser_config);
 
         // Deserialize the config and return it.
         serde_json::from_str(&ser_config)
