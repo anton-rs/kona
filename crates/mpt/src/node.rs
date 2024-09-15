@@ -116,7 +116,7 @@ impl TrieNode {
         }
     }
 
-    /// Blinds the [TrieNode] if its encoded length is longer than an encoded [B256] string in
+    /// Blinds the [TrieNode] in-place if its encoded length is longer than an encoded [B256] string in
     /// length. Alternatively, if the [TrieNode] is a [TrieNode::Blinded] node already, it
     /// is left as-is.
     pub fn blind(&mut self) {
@@ -124,6 +124,19 @@ impl TrieNode {
             let mut rlp_buf = Vec::with_capacity(self.length());
             self.encode_in_place(&mut rlp_buf);
             *self = TrieNode::Blinded { commitment: keccak256(rlp_buf) }
+        }
+    }
+
+    /// Blinds the [TrieNode] if its encoded length is longer than an encoded [B256] string in
+    /// length. Alternatively, if the [TrieNode] is a [TrieNode::Blinded] node already, it
+    /// is left as-is.
+    pub fn blind_ref(&self) -> Result<B256> {
+        if self.length() >= B256::ZERO.len() && !matches!(self, TrieNode::Blinded { .. }) {
+            let mut rlp_buf = Vec::with_capacity(self.length());
+            self.encode(&mut rlp_buf);
+            Ok(keccak256(rlp_buf))
+        } else {
+            anyhow::bail!("Node is not longer than 32 bytes in length")
         }
     }
 

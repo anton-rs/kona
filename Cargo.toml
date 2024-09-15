@@ -89,7 +89,7 @@ serde_json = { version = "1.0.125", default-features = false }
 
 # Ethereum
 unsigned-varint = "0.8.0"
-revm = { version = "14.0", default-features = false }
+revm = { git = "https://github.com/clabby/revm", branch = "cl/ll-bop", default-features = false }
 
 # Superchain
 superchain = "0.4"

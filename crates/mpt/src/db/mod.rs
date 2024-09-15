@@ -162,16 +162,14 @@ where
         self.update_accounts(bundle)?;
 
         // Recompute the root hash of the trie.
-        self.root_node.blind();
+        let commitment = self.root_node.blind_ref()?;
 
         debug!(
             target: "client_executor",
-            "Recomputed state root: {commitment:?}",
-            commitment = self.root_node.blinded_commitment()
+            "Recomputed state root: {commitment}",
         );
 
-        // Extract the new state root from the root node.
-        self.root_node.blinded_commitment().ok_or(anyhow!("State root node is not a blinded node"))
+        Ok(commitment)
     }
 
     /// Returns a reference to the current parent block header of the trie DB.
@@ -384,8 +382,8 @@ where
         let mut header = self.parent_block_header.inner().clone();
 
         // Check if the block number is in range. If not, we can fail early.
-        if block_number > header.number ||
-            header.number.saturating_sub(block_number) > BLOCK_HASH_HISTORY
+        if block_number > header.number
+            || header.number.saturating_sub(block_number) > BLOCK_HASH_HISTORY
         {
             return Ok(B256::default());
         }

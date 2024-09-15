@@ -3,6 +3,7 @@
 
 use crate::{TrieDBFetcher, TrieNode};
 use alloc::{collections::VecDeque, vec};
+use alloy_consensus::EMPTY_ROOT_HASH;
 use alloy_primitives::{Bytes, B256};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
 use anyhow::{anyhow, Result};
@@ -47,6 +48,10 @@ where
         // Do not allow for re-hydration if `inner` is `Some` and still contains elements.
         if self.inner.is_some() && self.inner.as_ref().map(|s| s.len()).unwrap_or_default() > 0 {
             anyhow::bail!("Iterator is already hydrated, and has not been consumed entirely.")
+        }
+        if self.root == EMPTY_ROOT_HASH {
+            self.inner = Some(VecDeque::new());
+            return Ok(());
         }
 
         // Get the preimage to the root node.
