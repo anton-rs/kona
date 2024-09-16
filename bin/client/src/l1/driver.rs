@@ -21,7 +21,8 @@ use kona_derive::{
 };
 use kona_mpt::TrieDBFetcher;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
+use kona_primitives::L2AttributesWithParent;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{info, warn};
 
 /// An oracle-backed derivation pipeline.

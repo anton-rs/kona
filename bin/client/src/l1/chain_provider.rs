@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use kona_derive::traits::ChainProvider;
 use kona_mpt::{OrderedListWalker, TrieDBFetcher};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::BlockInfo;
+use op_alloy_protocol::BlockInfo;
 
 /// The oracle-backed L1 chain provider for the client program.
 #[derive(Debug, Clone)]

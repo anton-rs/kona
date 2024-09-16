@@ -7,7 +7,8 @@ use crate::{
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use kona_primitives::{BlockInfo, Frame, SystemConfig};
+use op_alloy_genesis::SystemConfig;
+use op_alloy_protocol::{BlockInfo, Frame};
 
 /// A mock [ChannelBankProvider] for testing the [ChannelBank] stage.
 #[derive(Debug, Default)]

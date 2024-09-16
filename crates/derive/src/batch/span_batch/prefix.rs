@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
-use kona_primitives::RollupConfig;
+use op_alloy_genesis::RollupConfig;
 
 use crate::batch::{SpanBatchError, SpanDecodingError};
 

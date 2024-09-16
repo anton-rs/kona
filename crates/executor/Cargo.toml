@@ -16,6 +16,7 @@ alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-eips.workspace = true
 alloy-consensus = { workspace = true, features = ["k256"] }
 op-alloy-consensus.workspace = true
+op-alloy-genesis.workspace = true
 revm = { workspace = true, features = ["optimism"] }
 
 # Workspace

@@ -10,10 +10,10 @@ use alloy_transport::TransportResult;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use core::num::NonZeroUsize;
-use kona_primitives::{
-    Block, BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
-};
+use kona_primitives::{Block, L2ExecutionPayloadEnvelope, OpBlock};
 use lru::LruCache;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 use crate::traits::{ChainProvider, L2ChainProvider};
 
@@ -408,7 +408,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
             timer
         );
         if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
-            return Ok(system_config.clone());
+            return Ok(*system_config);
         }
 
         let envelope = match self.payload_by_number(number).await {
@@ -433,7 +433,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
                 return Err(e);
             }
         };
-        self.system_config_by_number_cache.put(number, sys_config.clone());
+        self.system_config_by_number_cache.put(number, sys_config);
         Ok(sys_config)
     }
 }

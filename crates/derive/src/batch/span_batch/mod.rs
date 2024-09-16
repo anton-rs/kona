@@ -15,14 +15,14 @@
 ///
 /// This value cannot be larger than MaxRLPBytesPerChannel because single batch cannot be larger
 /// than channel size.
-pub const MAX_SPAN_BATCH_BYTES: u64 = kona_primitives::MAX_RLP_BYTES_PER_CHANNEL;
+pub const MAX_SPAN_BATCH_BYTES: u64 = op_alloy_protocol::MAX_RLP_BYTES_PER_CHANNEL;
 
 /// [FJORD_MAX_SPAN_BATCH_BYTES] is the maximum amount of bytes that will be needed
 /// to decode every span batch field after the Fjord Hardfork.
 ///
 /// This value cannot be larger than MaxRLPBytesPerChannel because single batch
 /// cannot be larger than channel size.
-pub const FJORD_MAX_SPAN_BATCH_BYTES: u64 = kona_primitives::FJORD_MAX_RLP_BYTES_PER_CHANNEL;
+pub const FJORD_MAX_SPAN_BATCH_BYTES: u64 = op_alloy_protocol::FJORD_MAX_RLP_BYTES_PER_CHANNEL;
 
 mod batch;
 pub use batch::SpanBatch;

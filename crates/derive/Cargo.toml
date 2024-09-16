@@ -15,6 +15,8 @@ alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256"] }
 op-alloy-consensus = { workspace = true, features = ["k256"] }
+op-alloy-protocol.workspace = true
+op-alloy-genesis.workspace = true
 
 # General
 hashbrown.workspace = true
@@ -66,7 +68,9 @@ serde = [
   "kona-primitives/serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
-  "op-alloy-consensus/serde"
+  "op-alloy-consensus/serde",
+  "op-alloy-protocol/serde",
+  "op-alloy-genesis/serde",
 ]
 metrics = ["dep:prometheus", "dep:lazy_static"]
 online = [
@@ -78,6 +82,9 @@ online = [
   "alloy-consensus/serde",
   "kona-primitives/online",
   "kona-primitives/serde",
+  "op-alloy-consensus/std",
+  "op-alloy-protocol/std",
+  "op-alloy-genesis/std",
 ]
 test-utils = [
   "dep:spin",

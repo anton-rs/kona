@@ -8,7 +8,9 @@ use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use anyhow::bail;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, RollupConfig};
+use kona_primitives::L2AttributesWithParent;
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.

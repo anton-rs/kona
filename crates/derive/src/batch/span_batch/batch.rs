@@ -2,8 +2,9 @@
 
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
-use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig};
 use op_alloy_consensus::OpTxType;
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{info, warn};
 
 use super::{SpanBatchBits, SpanBatchElement, SpanBatchError, SpanBatchTransactions};
@@ -77,7 +78,7 @@ impl SpanBatch {
         let starting_epoch_num = self.starting_epoch_num();
         if starting_epoch_num == batch_origin.number + 1 {
             if l1_blocks.len() < 2 {
-                info!("eager batch wants to advance current epoch {}, but could not without more L1 blocks", epoch.id());
+                info!("eager batch wants to advance current epoch {:?}, but could not without more L1 blocks", epoch.id());
                 return BatchValidity::Undecided;
             }
             batch_origin = l1_blocks[1];
@@ -86,7 +87,7 @@ impl SpanBatch {
         // Span batches are only valid after the Delta hard fork.
         if !cfg.is_delta_active(batch_origin.timestamp) {
             warn!(
-                "received SpanBatch (id {}) with L1 origin (timestamp {}) before Delta hard fork",
+                "received SpanBatch (id {:?}) with L1 origin (timestamp {}) before Delta hard fork",
                 batch_origin.id(),
                 batch_origin.timestamp
             );
@@ -187,7 +188,7 @@ impl SpanBatch {
 
         // Check if the batch is too old.
         if starting_epoch_num < parent_block.l1_origin.number {
-            warn!("dropped batch, epoch is too old, minimum: {}", parent_block.block_info.id());
+            warn!("dropped batch, epoch is too old, minimum: {:?}", parent_block.block_info.id());
             return BatchValidity::Drop;
         }
 
@@ -214,7 +215,7 @@ impl SpanBatch {
             let block_timestamp = batch.timestamp;
             if block_timestamp < l1_origin.timestamp {
                 warn!(
-                    "block timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {}",
+                    "block timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {:?}",
                     block_timestamp,
                     l1_origin.timestamp,
                     l1_origin.id()
@@ -420,9 +421,11 @@ mod tests {
         traits::test_utils::TestL2ChainProvider,
     };
     use alloc::vec;
+    use alloy_eips::BlockNumHash;
     use alloy_primitives::{b256, Bytes, B256};
-    use kona_primitives::{BlockID, ChainGenesis, L2ExecutionPayload, L2ExecutionPayloadEnvelope};
+    use kona_primitives::{L2ExecutionPayload, L2ExecutionPayloadEnvelope};
     use op_alloy_consensus::OpTxType;
+    use op_alloy_genesis::ChainGenesis;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -529,7 +532,7 @@ mod tests {
         let logs = trace_store.get_by_level(Level::INFO);
         assert_eq!(logs.len(), 1);
         let str = alloc::format!(
-            "eager batch wants to advance current epoch {}, but could not without more L1 blocks",
+            "eager batch wants to advance current epoch {:?}, but could not without more L1 blocks",
             block.id()
         );
         assert!(logs[0].contains(&str));
@@ -556,7 +559,7 @@ mod tests {
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);
         let str = alloc::format!(
-            "received SpanBatch (id {}) with L1 origin (timestamp {}) before Delta hard fork",
+            "received SpanBatch (id {:?}) with L1 origin (timestamp {}) before Delta hard fork",
             block.id(),
             block.timestamp
         );
@@ -715,7 +718,7 @@ mod tests {
         let inclusion_block = BlockInfo::default();
         let l2_block = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, ..Default::default() },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -798,7 +801,7 @@ mod tests {
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
-            l1_origin: BlockID { number: 8, ..Default::default() },
+            l1_origin: BlockNumHash { number: 8, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -809,7 +812,7 @@ mod tests {
                 timestamp: 10,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 8, ..Default::default() },
+            l1_origin: BlockNumHash { number: 8, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -856,7 +859,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -867,7 +870,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -911,7 +914,7 @@ mod tests {
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -922,7 +925,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -963,7 +966,7 @@ mod tests {
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
-            l1_origin: BlockID { number: 13, ..Default::default() },
+            l1_origin: BlockNumHash { number: 13, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -974,7 +977,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 14, ..Default::default() },
+            l1_origin: BlockNumHash { number: 14, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -993,7 +996,7 @@ mod tests {
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);
         let str = alloc::format!(
-            "dropped batch, epoch is too old, minimum: {}",
+            "dropped batch, epoch is too old, minimum: {:?}",
             l2_block.block_info.id(),
         );
         assert!(logs[0].contains(&str));
@@ -1031,7 +1034,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1086,7 +1089,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1144,7 +1147,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1212,7 +1215,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1276,7 +1279,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1334,7 +1337,7 @@ mod tests {
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1345,7 +1348,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider { blocks: vec![l2_block], ..Default::default() };
@@ -1390,7 +1393,7 @@ mod tests {
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1401,7 +1404,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
@@ -1447,7 +1450,7 @@ mod tests {
             delta_time: Some(0),
             block_time: 10,
             genesis: ChainGenesis {
-                l2: BlockID { number: 41, hash: payload_block_hash },
+                l2: BlockNumHash { number: 41, hash: payload_block_hash },
                 ..Default::default()
             },
             ..Default::default()
@@ -1460,7 +1463,7 @@ mod tests {
         let parent_hash = b256!("1111111111111111111111111111111111111111000000000000000000000000");
         let l2_safe_head = L2BlockInfo {
             block_info: BlockInfo { number: 41, timestamp: 10, parent_hash, ..Default::default() },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1471,7 +1474,7 @@ mod tests {
                 timestamp: 10,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {
@@ -1517,8 +1520,8 @@ mod tests {
             delta_time: Some(0),
             block_time: 10,
             genesis: ChainGenesis {
-                l2: BlockID { number: 41, hash: payload_block_hash },
-                l1: BlockID { number: 10, ..Default::default() },
+                l2: BlockNumHash { number: 41, hash: payload_block_hash },
+                l1: BlockNumHash { number: 10, ..Default::default() },
                 ..Default::default()
             },
             ..Default::default()
@@ -1536,7 +1539,7 @@ mod tests {
                 hash: parent_hash,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let inclusion_block = BlockInfo { number: 50, ..Default::default() };
@@ -1547,7 +1550,7 @@ mod tests {
                 timestamp: 10,
                 ..Default::default()
             },
-            l1_origin: BlockID { number: 9, ..Default::default() },
+            l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
         let payload = L2ExecutionPayloadEnvelope {

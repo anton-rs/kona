@@ -3,7 +3,8 @@
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::iter::Iterator;
-use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
+use kona_primitives::L2AttributesWithParent;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 use super::OriginProvider;
 use crate::errors::StageError;

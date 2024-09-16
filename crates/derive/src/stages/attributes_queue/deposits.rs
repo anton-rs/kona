@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, Bytes, B256};
-use kona_primitives::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
+use op_alloy_protocol::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
 
 /// Derive deposits for transaction receipts.
 ///
@@ -43,7 +43,7 @@ mod tests {
     use super::*;
     use alloc::vec;
     use alloy_primitives::{address, Bytes, Log, LogData, U256, U64};
-    use kona_primitives::DepositError;
+    use op_alloy_protocol::DepositError;
 
     fn generate_valid_log() -> Log {
         let deposit_contract = address!("1111111111111111111111111111111111111111");

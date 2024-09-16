@@ -11,10 +11,10 @@ use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
 use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{
-    L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
-};
+use kona_primitives::{L2ExecutionPayloadEnvelope, OpBlock};
 use op_alloy_consensus::OpTxEnvelope;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::L2BlockInfo;
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]

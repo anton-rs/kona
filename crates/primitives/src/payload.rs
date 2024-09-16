@@ -1,10 +1,18 @@
 //! Contains the execution payload type.
 
 use alloc::vec::Vec;
-use alloy_eips::eip2718::{Decodable2718, Encodable2718};
+use alloy_eips::{
+    eip2718::{Decodable2718, Encodable2718},
+    eip4895::Withdrawal,
+};
 use alloy_primitives::{Address, Bloom, Bytes, B256};
+use alloy_rlp::Encodable;
 use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{
+    BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo,
+};
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -14,11 +22,7 @@ pub const PAYLOAD_MEM_FIXED_COST: u64 = 1000;
 /// 24 bytes per tx overhead (size of slice header in memory).
 pub const PAYLOAD_TX_MEM_OVERHEAD: u64 = 24;
 
-use super::{
-    BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo, OpBlock,
-    RollupConfig, SystemConfig, Withdrawal,
-};
-use alloy_rlp::Encodable;
+use super::OpBlock;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -150,7 +154,8 @@ impl L2ExecutionPayloadEnvelope {
                 anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
             };
 
-            let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+            let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())
+                .map_err(|e| anyhow::anyhow!(e))?;
             (l1_info.id(), l1_info.sequence_number())
         };
 
@@ -177,7 +182,6 @@ impl L2ExecutionPayloadEnvelope {
             return rollup_config
                 .genesis
                 .system_config
-                .clone()
                 .ok_or_else(|| anyhow::anyhow!("Missing system config in genesis block"));
         }
 
@@ -198,7 +202,8 @@ impl L2ExecutionPayloadEnvelope {
             anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
         };
 
-        let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+        let l1_info =
+            L1BlockInfoTx::decode_calldata(tx.input.as_ref()).map_err(|e| anyhow::anyhow!(e))?;
         let l1_fee_scalar = match l1_info {
             L1BlockInfoTx::Bedrock(L1BlockInfoBedrock { l1_fee_scalar, .. }) => l1_fee_scalar,
             L1BlockInfoTx::Ecotone(L1BlockInfoEcotone {

@@ -2,15 +2,15 @@
 
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
+use alloy_eips::eip4844::Blob;
 use alloy_primitives::{Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
-use kona_primitives::{
-    Blob, BlockInfo, IndexedBlobHash, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig,
-    SystemConfig,
-};
+use kona_primitives::{IndexedBlobHash, L2ExecutionPayloadEnvelope};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 use crate::{
     errors::{BlobProviderError, StageError, StageResult},

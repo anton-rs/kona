@@ -5,6 +5,9 @@ use alloy_eips::eip4844::Blob;
 use alloy_primitives::FixedBytes;
 
 #[cfg(feature = "online")]
+use alloy_eips::eip4844::VERSIONED_HASH_VERSION_KZG;
+
+#[cfg(feature = "online")]
 use crate::IndexedBlobHash;
 #[cfg(feature = "online")]
 use alloy_primitives::B256;
@@ -28,10 +31,6 @@ pub const KZG_PROOF_SIZE: usize = 48;
 
 /// KZG Commitment Size
 pub const KZG_COMMITMENT_SIZE: usize = 48;
-
-/// The versioned hash version for KZG.
-#[cfg(feature = "online")]
-pub(crate) const VERSIONED_HASH_VERSION_KZG: u8 = 0x01;
 
 #[cfg(feature = "serde")]
 fn parse_u64_string<'de, T, D>(de: D) -> Result<T, D::Error>

@@ -8,7 +8,8 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
-use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
 /// The [L1Traversal] stage of the derivation pipeline.
@@ -124,7 +125,7 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
         self.block = Some(base);
         self.done = false;
-        self.system_config = cfg.clone();
+        self.system_config = *cfg;
         crate::inc!(STAGE_RESETS, &["l1-traversal"]);
         Ok(())
     }

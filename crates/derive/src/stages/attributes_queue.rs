@@ -3,9 +3,9 @@
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::{
-    BlockInfo, L2AttributesWithParent, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig,
-};
+use kona_primitives::{L2AttributesWithParent, L2PayloadAttributes};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::info;
 
 use crate::{

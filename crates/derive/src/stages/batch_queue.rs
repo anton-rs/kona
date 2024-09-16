@@ -4,7 +4,8 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, L2BlockInfo, RollupConfig, SystemConfig};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
 
 use crate::{
@@ -457,13 +458,13 @@ mod tests {
         traits::test_utils::TestL2ChainProvider,
     };
     use alloc::vec;
+    use alloy_eips::BlockNumHash;
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use kona_primitives::{
-        BlockID, ChainGenesis, L1BlockInfoBedrock, L1BlockInfoTx, L2ExecutionPayload,
-        L2ExecutionPayloadEnvelope,
-    };
+    use kona_primitives::{L2ExecutionPayload, L2ExecutionPayloadEnvelope};
     use op_alloy_consensus::{OpTxType, TxDeposit};
+    use op_alloy_genesis::ChainGenesis;
+    use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -514,7 +515,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo {
-            l1_origin: BlockID { number: 10, ..Default::default() },
+            l1_origin: BlockNumHash { number: 10, ..Default::default() },
             ..Default::default()
         };
         let res = bq.next_batch(parent).await.unwrap_err();
@@ -536,8 +537,8 @@ mod tests {
             max_sequencer_drift: 10000000,
             seq_window_size: 10000000,
             genesis: ChainGenesis {
-                l2: BlockID { number: 8, hash: payload_block_hash },
-                l1: BlockID { number: 16988980031808077784, ..Default::default() },
+                l2: BlockNumHash { number: 8, hash: payload_block_hash },
+                l1: BlockNumHash { number: 16988980031808077784, ..Default::default() },
                 ..Default::default()
             },
             batch_inbox_address: address!("6887246668a3b87f54deb3b94ba47a6f63f32985"),
@@ -641,7 +642,7 @@ mod tests {
                 parent_hash: parent_check,
                 hash: origin_check,
             },
-            l1_origin: BlockID { number: 16988980031808077784, hash: origin_check },
+            l1_origin: BlockNumHash { number: 16988980031808077784, hash: origin_check },
             ..Default::default()
         };
         let res = bq.next_batch(parent).await.unwrap_err();

@@ -2,9 +2,11 @@
 
 use crate::batch::SpanBatchError;
 use alloc::vec::Vec;
+use alloy_eips::BlockNumHash;
 use alloy_primitives::{Bytes, B256};
 use core::fmt::Display;
-use kona_primitives::{BlockID, Frame};
+use op_alloy_genesis::system::SystemConfigUpdateError;
+use op_alloy_protocol::Frame;
 
 /// A result type for the derivation pipeline stages.
 pub type StageResult<T> = Result<T, StageError>;
@@ -45,10 +47,10 @@ pub enum StageError {
     ReorgDetected(B256, B256),
     /// Receipt fetching error.
     ReceiptFetch(anyhow::Error),
-    /// [kona_primitives::BlockInfo] fetching error.
+    /// [op_alloy_protocol::BlockInfo] fetching error.
     BlockInfoFetch(anyhow::Error),
-    /// [kona_primitives::SystemConfig] update error.
-    SystemConfigUpdate(anyhow::Error),
+    /// [op_alloy_genesis::SystemConfig] update error.
+    SystemConfigUpdate(SystemConfigUpdateError),
     /// Other wildcard error.
     Custom(anyhow::Error),
 }
@@ -255,15 +257,15 @@ impl Display for DecodeError {
 #[derive(Debug)]
 pub enum BuilderError {
     /// Mismatched blocks.
-    BlockMismatch(BlockID, BlockID),
+    BlockMismatch(BlockNumHash, BlockNumHash),
     /// Mismatched blocks for the start of an Epoch.
-    BlockMismatchEpochReset(BlockID, BlockID, B256),
+    BlockMismatchEpochReset(BlockNumHash, BlockNumHash, B256),
     /// [SystemConfig] update failed.
     ///
-    /// [SystemConfig]: kona_primitives::SystemConfig
+    /// [SystemConfig]: op_alloy_genesis::SystemConfig
     SystemConfigUpdate,
     /// Broken time invariant between L2 and L1.
-    BrokenTimeInvariant(BlockID, u64, BlockID, u64),
+    BrokenTimeInvariant(BlockNumHash, u64, BlockNumHash, u64),
     /// A custom error wrapping [anyhow::Error].
     Custom(anyhow::Error),
 }
@@ -299,12 +301,12 @@ impl Display for BuilderError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             BuilderError::BlockMismatch(block_id, parent) => {
-                write!(f, "Block mismatch with L1 origin {} (parent {})", block_id, parent)
+                write!(f, "Block mismatch with L1 origin {:?} (parent {:?})", block_id, parent)
             }
             BuilderError::BlockMismatchEpochReset(block_id, parent, origin) => {
                 write!(
                     f,
-                    "Block mismatch with L1 origin {} (parent {}) on top of L1 origin {}",
+                    "Block mismatch with L1 origin {:?} (parent {:?}) on top of L1 origin {}",
                     block_id, parent, origin
                 )
             }
@@ -312,7 +314,7 @@ impl Display for BuilderError {
             BuilderError::BrokenTimeInvariant(block_id, l2_time, parent, l1_time) => {
                 write!(
                     f,
-                    "Cannot build L2 block on top {} (time {}) before L1 origin {} (time {})",
+                    "Cannot build L2 block on top {:?} (time {}) before L1 origin {:?} (time {})",
                     block_id, l2_time, parent, l1_time
                 )
             }

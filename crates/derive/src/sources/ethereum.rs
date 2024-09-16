@@ -9,7 +9,8 @@ use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
-use kona_primitives::{BlockInfo, RollupConfig};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::BlockInfo;
 
 /// A factory for creating an Ethereum data source provider.
 #[derive(Debug, Clone, Copy)]
@@ -88,7 +89,8 @@ mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::address;
-    use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
+    use op_alloy_genesis::{RollupConfig, SystemConfig};
+    use op_alloy_protocol::BlockInfo;
 
     use crate::{
         sources::{EthereumDataSource, EthereumDataSourceVariant},
