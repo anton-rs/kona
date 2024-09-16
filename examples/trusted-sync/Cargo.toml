@@ -34,3 +34,5 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-provider = { workspace = true, default-features = false }
 alloy-transport = { workspace = true, default-features = false }
 op-alloy-genesis.workspace = true
+op-alloy-rpc-types-engine.workspace = true
+alloy-rpc-types-engine.workspace = true

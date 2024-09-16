@@ -10,20 +10,21 @@ use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
 use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
 use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
+use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
-use kona_primitives::L2PayloadAttributes;
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{L1BlockInfoTx, L2BlockInfo};
+use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
-/// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
+/// The [AttributesBuilder] is responsible for preparing [OptimismPayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.
 #[async_trait]
 pub trait AttributesBuilder {
-    /// Prepares a template [L2PayloadAttributes] that is ready to be used to build an L2 block.
-    /// The block will contain deposits only, on top of the given L2 parent, with the L1 origin
-    /// set to the given epoch.
-    /// By default, the [L2PayloadAttributes] template will have `no_tx_pool` set to true,
+    /// Prepares a template [OptimismPayloadAttributes] that is ready to be used to build an L2
+    /// block. The block will contain deposits only, on top of the given L2 parent, with the L1
+    /// origin set to the given epoch.
+    /// By default, the [OptimismPayloadAttributes] template will have `no_tx_pool` set to true,
     /// and no sequencer transactions. The caller has to modify the template to add transactions.
     /// This can be done by either setting the `no_tx_pool` to false as sequencer, or by appending
     /// batch transactions as the verifier.
@@ -31,7 +32,7 @@ pub trait AttributesBuilder {
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockNumHash,
-    ) -> Result<L2PayloadAttributes, BuilderError>;
+    ) -> Result<OptimismPayloadAttributes, BuilderError>;
 }
 
 /// A stateful implementation of the [AttributesBuilder].
@@ -70,7 +71,7 @@ where
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockNumHash,
-    ) -> Result<L2PayloadAttributes, BuilderError> {
+    ) -> Result<OptimismPayloadAttributes, BuilderError> {
         let l1_header;
         let deposit_transactions: Vec<Bytes>;
         let mut sys_config = self
@@ -165,17 +166,19 @@ where
             parent_beacon_root = Some(l1_header.parent_beacon_block_root.unwrap_or_default());
         }
 
-        Ok(L2PayloadAttributes {
-            timestamp: next_l2_time,
-            prev_randao: l1_header.mix_hash,
-            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
-            transactions: txs,
-            no_tx_pool: true,
+        Ok(OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: next_l2_time,
+                prev_randao: l1_header.mix_hash,
+                suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+                parent_beacon_block_root: parent_beacon_root,
+                withdrawals,
+            },
+            transactions: Some(txs),
+            no_tx_pool: Some(true),
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(sys_config.gas_limit).to_be_bytes(),
             )),
-            withdrawals,
-            parent_beacon_block_root: parent_beacon_root,
         })
     }
 }
@@ -298,20 +301,22 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = L2PayloadAttributes {
-            timestamp: next_l2_time,
-            prev_randao,
-            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+        let expected = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: next_l2_time,
+                prev_randao,
+                suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+                parent_beacon_block_root: None,
+                withdrawals: None,
+            },
             transactions: payload.transactions.clone(),
-            no_tx_pool: true,
+            no_tx_pool: Some(true),
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
-            withdrawals: None,
-            parent_beacon_block_root: None,
         };
         assert_eq!(payload, expected);
-        assert_eq!(payload.transactions.len(), 1);
+        assert_eq!(payload.transactions.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -341,20 +346,22 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = L2PayloadAttributes {
-            timestamp: next_l2_time,
-            prev_randao,
-            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+        let expected = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: next_l2_time,
+                prev_randao,
+                suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+                parent_beacon_block_root: None,
+                withdrawals: Some(Vec::default()),
+            },
             transactions: payload.transactions.clone(),
-            no_tx_pool: true,
+            no_tx_pool: Some(true),
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
-            withdrawals: Some(Vec::default()),
-            parent_beacon_block_root: None,
         };
         assert_eq!(payload, expected);
-        assert_eq!(payload.transactions.len(), 1);
+        assert_eq!(payload.transactions.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -386,20 +393,22 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = L2PayloadAttributes {
-            timestamp: next_l2_time,
-            prev_randao,
-            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+        let expected = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: next_l2_time,
+                prev_randao,
+                suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+                parent_beacon_block_root,
+                withdrawals: None,
+            },
             transactions: payload.transactions.clone(),
-            no_tx_pool: true,
+            no_tx_pool: Some(true),
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
-            withdrawals: None,
-            parent_beacon_block_root,
         };
         assert_eq!(payload, expected);
-        assert_eq!(payload.transactions.len(), 7);
+        assert_eq!(payload.transactions.unwrap().len(), 7);
     }
 
     #[tokio::test]
@@ -430,19 +439,21 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = L2PayloadAttributes {
-            timestamp: next_l2_time,
-            prev_randao,
-            fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+        let expected = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: next_l2_time,
+                prev_randao,
+                suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
+                parent_beacon_block_root: None,
+                withdrawals: None,
+            },
             transactions: payload.transactions.clone(),
-            no_tx_pool: true,
+            no_tx_pool: Some(true),
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
-            withdrawals: None,
-            parent_beacon_block_root: None,
         };
         assert_eq!(payload, expected);
-        assert_eq!(payload.transactions.len(), 4);
+        assert_eq!(payload.transactions.unwrap().len(), 4);
     }
 }

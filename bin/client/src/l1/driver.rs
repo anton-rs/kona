@@ -1,7 +1,7 @@
-//! Contains the [DerivationDriver] struct, which handles the [L2PayloadAttributes] derivation
+//! Contains the [DerivationDriver] struct, which handles the [OptimismPayloadAttributes] derivation
 //! process.
 //!
-//! [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
+//! [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
 
 use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
@@ -21,8 +21,8 @@ use kona_derive::{
 };
 use kona_mpt::TrieDBFetcher;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::L2AttributesWithParent;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use tracing::{info, warn};
 
 /// An oracle-backed derivation pipeline.
@@ -50,13 +50,13 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
     OracleAttributesBuilder<O>,
 >;
 
-/// The [DerivationDriver] struct is responsible for handling the [L2PayloadAttributes] derivation
-/// process.
+/// The [DerivationDriver] struct is responsible for handling the [OptimismPayloadAttributes]
+/// derivation process.
 ///
 /// It contains an inner [OraclePipeline] that is used to derive the attributes, backed by
 /// oracle-based data sources.
 ///
-/// [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
+/// [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
 #[derive(Debug)]
 pub struct DerivationDriver<O, B>
 where
@@ -150,9 +150,9 @@ where
         Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
     }
 
-    /// Produces the disputed [L2AttributesWithParent] payload, directly after the starting L2
+    /// Produces the disputed [OptimismAttributesWithParent] payload, directly after the starting L2
     /// output root passed through the [BootInfo].
-    pub async fn produce_disputed_payload(&mut self) -> Result<L2AttributesWithParent> {
+    pub async fn produce_disputed_payload(&mut self) -> Result<OptimismAttributesWithParent> {
         // As we start the safe head at the disputed block's parent, we step the pipeline until the
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.

@@ -2,8 +2,8 @@
 
 use alloc::boxed::Box;
 use async_trait::async_trait;
-use kona_primitives::L2AttributesWithParent;
 use op_alloy_protocol::L2BlockInfo;
+use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 
 use crate::errors::StageResult;
 
@@ -11,7 +11,9 @@ use crate::errors::StageResult;
 /// the top level `AttributesQueue` stage of the pipeline.
 #[async_trait]
 pub trait NextAttributes {
-    /// Returns the next [L2AttributesWithParent] from the current batch.
-    async fn next_attributes(&mut self, parent: L2BlockInfo)
-        -> StageResult<L2AttributesWithParent>;
+    /// Returns the next [OptimismAttributesWithParent] from the current batch.
+    async fn next_attributes(
+        &mut self,
+        parent: L2BlockInfo,
+    ) -> StageResult<OptimismAttributesWithParent>;
 }

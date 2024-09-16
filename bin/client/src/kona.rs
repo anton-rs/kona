@@ -16,7 +16,7 @@ use kona_client::{
 };
 use kona_common_proc::client_entry;
 use kona_executor::StatelessL2BlockExecutor;
-use kona_primitives::L2AttributesWithParent;
+use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 
 pub(crate) mod fault;
 use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
@@ -58,7 +58,8 @@ fn main() -> Result<()> {
             l2_provider.clone(),
         )
         .await?;
-        let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
+        let OptimismAttributesWithParent { attributes, .. } =
+            driver.produce_disputed_payload().await?;
 
         let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
             .with_parent_header(driver.take_l2_safe_head_header())

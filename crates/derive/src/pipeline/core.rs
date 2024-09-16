@@ -8,9 +8,9 @@ use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use anyhow::bail;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::L2AttributesWithParent;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
@@ -23,8 +23,9 @@ where
     /// A handle to the next attributes.
     pub attributes: S,
     /// Reset provider for the pipeline.
-    /// A list of prepared [L2AttributesWithParent] to be used by the derivation pipeline consumer.
-    pub prepared: VecDeque<L2AttributesWithParent>,
+    /// A list of prepared [OptimismAttributesWithParent] to be used by the derivation pipeline
+    /// consumer.
+    pub prepared: VecDeque<OptimismAttributesWithParent>,
     /// The rollup config.
     pub rollup_config: Arc<RollupConfig>,
     /// The L2 Chain Provider used to fetch the system config on reset.
@@ -57,7 +58,7 @@ where
     S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    type Item = L2AttributesWithParent;
+    type Item = OptimismAttributesWithParent;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.prepared.pop_front()
@@ -70,8 +71,8 @@ where
     S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    /// Peeks at the next prepared [L2AttributesWithParent] from the pipeline.
-    fn peek(&self) -> Option<&L2AttributesWithParent> {
+    /// Peeks at the next prepared [OptimismAttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&OptimismAttributesWithParent> {
         self.prepared.front()
     }
 

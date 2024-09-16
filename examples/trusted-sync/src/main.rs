@@ -283,7 +283,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             "Validated Payload Attributes {} [L2 Block Num: {}] [L2 Timestamp: {}] [L1 Origin Block Num: {:?}]",
             metrics::DERIVED_ATTRIBUTES_COUNT.get(),
             derived,
-            attributes.attributes.timestamp,
+            attributes.attributes.payload_attributes.timestamp,
             pipeline.origin().map(|n| n.number),
         );
     }

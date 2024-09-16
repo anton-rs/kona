@@ -40,6 +40,7 @@ lto = "fat"
 op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "main" }
 op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "main" }
 op-alloy-genesis = { git = "https://github.com/alloy-rs/op-alloy", branch = "main" }
+op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", branch = "main" }
 
 [workspace.dependencies]
 # Workspace
@@ -109,6 +110,7 @@ alloy-trie = { version = "0.5", default-features = false }
 alloy-provider = { version = "0.3.5", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
 alloy-rpc-types = { version = "0.3.5", default-features = false }
+alloy-rpc-types-engine = { version = "0.3.5", default-features = false }
 alloy-consensus = { version = "0.3.5", default-features = false }
 alloy-transport = { version = "0.3.5", default-features = false }
 alloy-transport-http = { version = "0.3.5", default-features = false }
@@ -118,3 +120,4 @@ alloy-node-bindings = { version = "0.3.5", default-features = false }
 op-alloy-consensus = { version = "0.2.11", default-features = false }
 op-alloy-protocol = { version = "0.2.11", default-features = false }
 op-alloy-genesis = { version = "0.2.11", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.2.11", default-features = false }
