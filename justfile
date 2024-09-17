@@ -24,7 +24,7 @@ test *args='':
   cargo nextest run --workspace --all --all-features $@
 
 # Run action tests for the client program on the native target
-action-tests *args='':
+action-tests test_name='Test_ProgramAction':
   #!/bin/bash
 
   if [ ! -d "monorepo" ]; then
@@ -42,8 +42,9 @@ action-tests *args='':
   echo "Running action tests for the client program on the native target"
   export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"
   export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
+
   cd monorepo/op-e2e/actions/proofs && \
-    gotestsum --format=testname -- -run Test_ProgramAction -v ./...
+    gotestsum --format=testname -- -run "{{test_name}}" -v ./...
 
 # Clean the action tests directory
 clean-actions:
