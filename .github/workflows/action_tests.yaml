@@ -1,0 +1,34 @@
+name: Action Tests
+on:
+  push:
+    branches: [main]
+  merge_group:
+  pull_request:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  action-tests:
+    name: FPP actions
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install just
+        uses: taiki-e/install-action@just
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.6"
+          cache-dependency-path: |
+            monorepo/go.sum
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Run Actions Tests
+        run: |
+          just action-tests

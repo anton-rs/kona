@@ -44,7 +44,7 @@ action-tests test_name='Test_ProgramAction':
   export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
 
   cd monorepo/op-e2e/actions/proofs && \
-    gotestsum --format=testname -- -run "{{test_name}}" -v ./...
+    go test -run "{{test_name}}" -v ./...
 
 # Clean the action tests directory
 clean-actions:
