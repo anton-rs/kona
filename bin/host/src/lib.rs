@@ -83,7 +83,8 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
 ///
 /// ## Returns
 /// - `Ok(exit_code)` if the client program exits successfully.
-/// - `Err(_)` if the client program failed to execute, was killed by a signal, or the host program exited first.
+/// - `Err(_)` if the client program failed to execute, was killed by a signal, or the host program
+///   exited first.
 pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
     let hint_pipe = util::bidirectional_pipe()?;
     let preimage_pipe = util::bidirectional_pipe()?;
