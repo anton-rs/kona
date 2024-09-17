@@ -35,9 +35,9 @@ pub enum StageError {
     ChannelNotFound,
     /// Missing L1 origin.
     MissingOrigin,
-    /// Failed to build the [L2PayloadAttributes] for the next batch.
+    /// Failed to build the [OptimismPayloadAttributes] for the next batch.
     ///
-    /// [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
+    /// [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
     AttributesBuild(BuilderError),
     /// Reset the pipeline.
     Reset(ResetError),

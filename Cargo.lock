@@ -505,6 +505,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloy-rpc-types-engine"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c031a91e94a39f928244bc837c953817be5b8cc61759e1a9123b3abd17560dd"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rlp",
+ "alloy-serde",
+ "derive_more 1.0.0",
+ "serde",
+]
+
+[[package]]
 name = "alloy-rpc-types-eth"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -644,9 +659,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-trie"
-version = "0.5.1"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "398a977d774db13446b8cead8cfa9517aebf9e03fc8a1512892dc1e03e70bb04"
+checksum = "0a46c9c4fdccda7982e7928904bd85fe235a0404ee3d7e197fff13d61eac8b4f"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -1146,9 +1161,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.1.19"
+version = "1.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d74707dde2ba56f86ae90effb3b43ddd369504387e718014de010cec7959800"
+checksum = "45bcde016d64c21da4be18b655631e5ab6d3107607e71a73a9f53eb48aae23fb"
 dependencies = [
  "jobserver",
  "libc",
@@ -2274,6 +2289,7 @@ dependencies = [
  "alloy-eips",
  "alloy-primitives",
  "alloy-rlp",
+ "alloy-rpc-types-engine",
  "anyhow",
  "async-trait",
  "cfg-if",
@@ -2288,6 +2304,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-rpc-types-engine",
  "revm",
  "serde",
  "serde_json",
@@ -2329,6 +2346,7 @@ dependencies = [
  "alloy-provider",
  "alloy-rlp",
  "alloy-rpc-client",
+ "alloy-rpc-types-engine",
  "alloy-transport",
  "alloy-transport-http",
  "anyhow",
@@ -2342,6 +2360,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-rpc-types-engine",
  "prometheus",
  "proptest",
  "reqwest",
@@ -2362,12 +2381,13 @@ dependencies = [
  "alloy-eips",
  "alloy-primitives",
  "alloy-rlp",
+ "alloy-rpc-types-engine",
  "anyhow",
  "criterion",
  "kona-mpt",
- "kona-primitives",
  "op-alloy-consensus",
  "op-alloy-genesis",
+ "op-alloy-rpc-types-engine",
  "pprof",
  "rand",
  "revm",
@@ -2856,9 +2876,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.20.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ea5043e58958ee56f3e15a90aee535795cd7dfd319846288d93c5b57d85cbe"
+checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "oorandom"
@@ -2869,7 +2889,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 [[package]]
 name = "op-alloy-consensus"
 version = "0.2.11"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#95fdc87239d58079c8db2226779545f10758ba77"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#81cb0e8e50ab15b0426634b569570c31bd07a642"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2884,7 +2904,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-genesis"
 version = "0.2.11"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#95fdc87239d58079c8db2226779545f10758ba77"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#81cb0e8e50ab15b0426634b569570c31bd07a642"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2897,7 +2917,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-protocol"
 version = "0.2.11"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#95fdc87239d58079c8db2226779545f10758ba77"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#81cb0e8e50ab15b0426634b569570c31bd07a642"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2907,6 +2927,18 @@ dependencies = [
  "hashbrown 0.14.5",
  "op-alloy-consensus",
  "op-alloy-genesis",
+ "serde",
+]
+
+[[package]]
+name = "op-alloy-rpc-types-engine"
+version = "0.2.11"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#81cb0e8e50ab15b0426634b569570c31bd07a642"
+dependencies = [
+ "alloy-primitives",
+ "alloy-rpc-types-engine",
+ "alloy-serde",
+ "op-alloy-protocol",
  "serde",
 ]
 
@@ -4505,9 +4537,9 @@ checksum = "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
 
 [[package]]
 name = "toml_edit"
-version = "0.22.20"
+version = "0.22.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "583c44c02ad26b0c3f3066fe629275e50627026c51ac2e595cca4c230ce1ce1d"
+checksum = "3b072cee73c449a636ffd6f32bd8de3a9f7119139aff882f44943ce2986dc5cf"
 dependencies = [
  "indexmap",
  "toml_datetime",
@@ -4663,6 +4695,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-provider",
  "alloy-rpc-types",
+ "alloy-rpc-types-engine",
  "alloy-transport",
  "anyhow",
  "clap",
@@ -4670,6 +4703,7 @@ dependencies = [
  "kona-primitives",
  "lazy_static",
  "op-alloy-genesis",
+ "op-alloy-rpc-types-engine",
  "prometheus",
  "reqwest",
  "serde",

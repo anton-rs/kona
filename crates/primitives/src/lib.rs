@@ -15,9 +15,6 @@ pub use payload::{
     L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
 };
 
-pub mod attributes;
-pub use attributes::{L2AttributesWithParent, L2PayloadAttributes};
-
 pub mod blob;
 pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
 

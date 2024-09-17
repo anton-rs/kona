@@ -14,9 +14,11 @@ alloy-eips.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256"] }
+alloy-rpc-types-engine.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 op-alloy-protocol.workspace = true
 op-alloy-genesis.workspace = true
+op-alloy-rpc-types-engine.workspace = true
 
 # General
 hashbrown.workspace = true
@@ -71,6 +73,7 @@ serde = [
   "op-alloy-consensus/serde",
   "op-alloy-protocol/serde",
   "op-alloy-genesis/serde",
+  "op-alloy-rpc-types-engine/serde",
 ]
 metrics = ["dep:prometheus", "dep:lazy_static"]
 online = [

@@ -4,8 +4,8 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
 use anyhow::{anyhow, Result};
-use kona_primitives::L2PayloadAttributes;
 use op_alloy_genesis::RollupConfig;
+use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 use revm::{
     primitives::{
         BlockEnv, CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, OptimismFields, TransactTo, TxEnv,
@@ -20,7 +20,7 @@ pub(crate) fn pre_block_beacon_root_contract_call<DB: Database + DatabaseCommit>
     block_number: u64,
     initialized_cfg: &CfgEnvWithHandlerCfg,
     initialized_block_env: &BlockEnv,
-    payload: &L2PayloadAttributes,
+    payload: &OptimismPayloadAttributes,
 ) -> Result<()>
 where
     DB::Error: core::fmt::Display,
@@ -38,9 +38,9 @@ where
     // initialize a block from the env, because the pre block call needs the block itself
     apply_beacon_root_contract_call(
         config,
-        payload.timestamp,
+        payload.payload_attributes.timestamp,
         block_number,
-        payload.parent_beacon_block_root,
+        payload.payload_attributes.parent_beacon_block_root,
         &mut evm_pre_block,
     )
 }

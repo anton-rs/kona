@@ -9,15 +9,15 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
-use kona_primitives::L2PayloadAttributes;
 use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
 /// A mock implementation of the [`AttributesBuilder`] for testing.
 #[derive(Debug, Default)]
 pub struct MockAttributesBuilder {
     /// The attributes to return.
-    pub attributes: Vec<anyhow::Result<L2PayloadAttributes>>,
+    pub attributes: Vec<anyhow::Result<OptimismPayloadAttributes>>,
 }
 
 #[async_trait]
@@ -27,7 +27,7 @@ impl AttributesBuilder for MockAttributesBuilder {
         &mut self,
         _l2_parent: L2BlockInfo,
         _epoch: BlockNumHash,
-    ) -> Result<L2PayloadAttributes, BuilderError> {
+    ) -> Result<OptimismPayloadAttributes, BuilderError> {
         match self.attributes.pop() {
             Some(Ok(attrs)) => Ok(attrs),
             Some(Err(err)) => Err(BuilderError::Custom(err)),
