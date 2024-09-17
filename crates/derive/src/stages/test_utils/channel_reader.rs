@@ -8,7 +8,8 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
-use kona_primitives::{BlockInfo, SystemConfig};
+use op_alloy_genesis::SystemConfig;
+use op_alloy_protocol::BlockInfo;
 
 /// A mock [ChannelReaderProvider] for testing the [ChannelReader] stage.
 #[derive(Debug, Default)]

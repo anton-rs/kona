@@ -5,7 +5,8 @@ use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_primitives::{BlobData, BlockInfo, IndexedBlobHash};
+use kona_primitives::{BlobData, IndexedBlobHash};
+use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
 use crate::{

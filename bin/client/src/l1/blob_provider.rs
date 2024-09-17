@@ -8,7 +8,8 @@ use alloy_primitives::keccak256;
 use async_trait::async_trait;
 use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{BlockInfo, IndexedBlobHash};
+use kona_primitives::IndexedBlobHash;
+use op_alloy_protocol::BlockInfo;
 
 /// An oracle-backed blob provider.
 #[derive(Debug, Clone)]

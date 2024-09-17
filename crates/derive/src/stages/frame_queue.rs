@@ -10,7 +10,8 @@ use alloy_primitives::Bytes;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, Frame, SystemConfig};
+use op_alloy_genesis::SystemConfig;
+use op_alloy_protocol::{BlockInfo, Frame};
 use tracing::{debug, error, trace};
 
 /// Provides data frames for the [FrameQueue] stage.
@@ -130,7 +131,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::stages::test_utils::MockFrameQueueProvider;
     use alloc::{vec, vec::Vec};
-    use kona_primitives::DERIVATION_VERSION_0;
+    use op_alloy_protocol::DERIVATION_VERSION_0;
 
     pub(crate) fn new_test_frames(count: usize) -> Vec<Frame> {
         (0..count)

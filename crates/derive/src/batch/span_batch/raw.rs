@@ -1,7 +1,7 @@
 //! Raw Span Batch
 
 use alloc::{vec, vec::Vec};
-use kona_primitives::RollupConfig;
+use op_alloy_genesis::RollupConfig;
 
 use super::{SpanBatch, SpanBatchElement, SpanBatchError, SpanBatchPayload, SpanBatchPrefix};
 use crate::batch::{BatchType, SpanDecodingError};

@@ -2,7 +2,8 @@
 
 use alloc::boxed::Box;
 use async_trait::async_trait;
-use kona_primitives::{L2AttributesWithParent, L2BlockInfo};
+use kona_primitives::L2AttributesWithParent;
+use op_alloy_protocol::L2BlockInfo;
 
 use crate::errors::StageResult;
 

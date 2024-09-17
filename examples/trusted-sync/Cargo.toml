@@ -33,3 +33,4 @@ alloy-rpc-types = { workspace = true, features = ["eth"] }
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-provider = { workspace = true, default-features = false }
 alloy-transport = { workspace = true, default-features = false }
+op-alloy-genesis.workspace = true

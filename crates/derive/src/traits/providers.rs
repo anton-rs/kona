@@ -3,9 +3,9 @@ use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
-use kona_primitives::{
-    BlockInfo, L2BlockInfo, L2ExecutionPayloadEnvelope, RollupConfig, SystemConfig,
-};
+use kona_primitives::L2ExecutionPayloadEnvelope;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]

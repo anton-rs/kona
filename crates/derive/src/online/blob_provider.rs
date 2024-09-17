@@ -1,10 +1,12 @@
 //! Contains an online implementation of the [BlobProvider] trait.
 
 use alloc::{boxed::Box, string::String, vec::Vec};
+use alloy_eips::eip4844::Blob;
 use anyhow::{anyhow, ensure};
 use async_trait::async_trait;
 use core::marker::PhantomData;
-use kona_primitives::{APIBlobSidecar, Blob, BlobSidecar, BlockInfo, IndexedBlobHash};
+use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
+use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
 use crate::{

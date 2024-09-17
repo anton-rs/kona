@@ -2,9 +2,11 @@
 
 use super::validity::BatchValidity;
 use alloc::vec::Vec;
+use alloy_eips::BlockNumHash;
 use alloy_primitives::{BlockHash, Bytes};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use kona_primitives::{starts_with_2718_deposit, BlockID, BlockInfo, L2BlockInfo, RollupConfig};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::{starts_with_2718_deposit, BlockInfo, L2BlockInfo};
 use tracing::{info, warn};
 
 /// Represents a single batch: a single encoded L2 block
@@ -29,9 +31,9 @@ impl SingleBatch {
         self.transactions.iter().any(|tx| tx.0.is_empty() || tx.0[0] == 0x7E)
     }
 
-    /// Returns the [BlockID] of the batch.
-    pub fn epoch(&self) -> BlockID {
-        BlockID { number: self.epoch_num, hash: self.epoch_hash }
+    /// Returns the [BlockNumHash] of the batch.
+    pub fn epoch(&self) -> BlockNumHash {
+        BlockNumHash { number: self.epoch_num, hash: self.epoch_hash }
     }
 
     /// Checks if the batch is valid.
@@ -81,7 +83,7 @@ impl SingleBatch {
         // Check the L1 origin of the batch
         let mut batch_origin = epoch;
         if self.epoch_num < epoch.number {
-            warn!("dropped batch, epoch is too old, minimum: {}", epoch.id());
+            warn!("dropped batch, epoch is too old, minimum: {:?}", epoch.id());
             return BatchValidity::Drop;
         } else if self.epoch_num == epoch.number {
             // Batch is sticking to the current epoch, continue.
@@ -92,23 +94,23 @@ impl SingleBatch {
             // more information otherwise the eager algorithm may diverge from a non-eager
             // algorithm.
             if l1_blocks.len() < 2 {
-                info!("eager batch wants to advance epoch, but could not without more L1 blocks at epoch: {}", epoch.id());
+                info!("eager batch wants to advance epoch, but could not without more L1 blocks at epoch: {:?}", epoch.id());
                 return BatchValidity::Undecided;
             }
             batch_origin = l1_blocks[1];
         } else {
-            warn!("dropped batch, epoch is too far ahead, maximum: {}", epoch.id());
+            warn!("dropped batch, epoch is too far ahead, maximum: {:?}", epoch.id());
             return BatchValidity::Drop;
         }
 
         // Validate the batch epoch hash
         if self.epoch_hash != batch_origin.hash {
-            warn!("dropped batch, epoch hash does not match, expected: {}", batch_origin.id());
+            warn!("dropped batch, epoch hash does not match, expected: {:?}", batch_origin.id());
             return BatchValidity::Drop;
         }
 
         if self.timestamp < batch_origin.timestamp {
-            warn!("dropped batch, batch timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {}", self.timestamp, batch_origin.timestamp, batch_origin.id());
+            warn!("dropped batch, batch timestamp is less than L1 origin timestamp, l2_timestamp: {}, l1_timestamp: {}, origin: {:?}", self.timestamp, batch_origin.timestamp, batch_origin.id());
             return BatchValidity::Drop;
         }
 

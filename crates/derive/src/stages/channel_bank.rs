@@ -12,7 +12,8 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
-use kona_primitives::{BlockInfo, Channel, ChannelId, Frame, RollupConfig, SystemConfig};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::{BlockInfo, Channel, ChannelId, Frame};
 use tracing::{trace, warn};
 
 /// Provides frames for the [ChannelBank] stage.
@@ -274,7 +275,7 @@ mod tests {
         test_utils::{CollectingLayer, MockChannelBankProvider, TraceStorage},
     };
     use alloc::vec;
-    use kona_primitives::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
+    use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -302,11 +303,11 @@ mod tests {
         assert!(channel_bank.channels.is_empty());
         assert_eq!(trace_store.lock().iter().filter(|(l, _)| matches!(l, &Level::WARN)).count(), 0);
         assert_eq!(channel_bank.ingest_frame(frame.clone()), Ok(()));
-        assert_eq!(channel_bank.size(), kona_primitives::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.size(), op_alloy_protocol::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
         // This should fail since the frame is already ingested.
         assert_eq!(channel_bank.ingest_frame(frame), Ok(()));
-        assert_eq!(channel_bank.size(), kona_primitives::FRAME_OVERHEAD);
+        assert_eq!(channel_bank.size(), op_alloy_protocol::FRAME_OVERHEAD);
         assert_eq!(channel_bank.channels.len(), 1);
         assert_eq!(trace_store.lock().iter().filter(|(l, _)| matches!(l, &Level::WARN)).count(), 1);
     }

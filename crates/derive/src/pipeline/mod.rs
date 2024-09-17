@@ -9,9 +9,6 @@ pub use crate::traits::{
 /// Re-export stage types that are needed as inputs.
 pub use crate::stages::AttributesBuilder;
 
-/// Re-export kona primitive types.
-pub use kona_primitives::{BlockInfo, RollupConfig};
-
 /// Re-export error types.
 pub use crate::errors::{StageError, StageResult};
 

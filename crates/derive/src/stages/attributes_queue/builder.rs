@@ -7,13 +7,14 @@ use crate::{
     traits::{ChainProvider, L2ChainProvider},
 };
 use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
-use alloy_eips::eip2718::Encodable2718;
+use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
 use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
-use kona_primitives::{
-    BlockID, Hardforks, L1BlockInfoTx, L2BlockInfo, L2PayloadAttributes, RollupConfig,
-};
+use kona_primitives::L2PayloadAttributes;
+use op_alloy_consensus::Hardforks;
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::{L1BlockInfoTx, L2BlockInfo};
 
 /// The [AttributesBuilder] is responsible for preparing [L2PayloadAttributes]
 /// that can be used to construct an L2 Block containing only deposits.
@@ -29,7 +30,7 @@ pub trait AttributesBuilder {
     async fn prepare_payload_attributes(
         &mut self,
         l2_parent: L2BlockInfo,
-        epoch: BlockID,
+        epoch: BlockNumHash,
     ) -> Result<L2PayloadAttributes, BuilderError>;
 }
 
@@ -68,7 +69,7 @@ where
     async fn prepare_payload_attributes(
         &mut self,
         l2_parent: L2BlockInfo,
-        epoch: BlockID,
+        epoch: BlockNumHash,
     ) -> Result<L2PayloadAttributes, BuilderError> {
         let l1_header;
         let deposit_transactions: Vec<Bytes>;
@@ -90,7 +91,9 @@ where
                 ));
             }
             let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
-            sys_config.update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)?;
+            sys_config
+                .update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)
+                .map_err(|e| BuilderError::Custom(anyhow::anyhow!(e)))?;
             let deposits =
                 derive_deposits(epoch.hash, receipts, self.rollup_cfg.deposit_contract_address)
                     .await?;
@@ -116,7 +119,7 @@ where
             return Err(BuilderError::BrokenTimeInvariant(
                 l2_parent.l1_origin,
                 next_l2_time,
-                BlockID { hash: l1_header.hash_slow(), number: l1_header.number },
+                BlockNumHash { hash: l1_header.hash_slow(), number: l1_header.number },
                 l1_header.timestamp,
             ));
         }
@@ -140,7 +143,8 @@ where
             sequence_number,
             &l1_header,
             next_l2_time,
-        )?;
+        )
+        .map_err(|e| BuilderError::Custom(anyhow::anyhow!(e)))?;
         let mut encoded_l1_info_tx = Vec::with_capacity(l1_info_tx_envelope.length());
         l1_info_tx_envelope.encode_2718(&mut encoded_l1_info_tx);
 
@@ -184,7 +188,8 @@ mod tests {
     };
     use alloy_consensus::Header;
     use alloy_primitives::B256;
-    use kona_primitives::{BlockInfo, SystemConfig};
+    use op_alloy_genesis::SystemConfig;
+    use op_alloy_protocol::BlockInfo;
 
     #[tokio::test]
     async fn test_prepare_payload_block_mismatch_epoch_reset() {
@@ -197,10 +202,10 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
-            l1_origin: BlockID { hash: B256::left_padding_from(&[0xFF]), number: 2 },
+            l1_origin: BlockNumHash { hash: B256::left_padding_from(&[0xFF]), number: 2 },
             seq_num: 0,
         };
         // This should error because the l2 parent's l1_origin.hash should equal the epoch header
@@ -222,10 +227,10 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
-            l1_origin: BlockID { hash: B256::ZERO, number: l2_number },
+            l1_origin: BlockNumHash { hash: B256::ZERO, number: l2_number },
             seq_num: 0,
         };
         // This should error because the l2 parent's l1_origin.hash should equal the epoch hash
@@ -248,14 +253,14 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo { hash: B256::ZERO, number: l2_number, ..Default::default() },
-            l1_origin: BlockID { hash, number: l2_number },
+            l1_origin: BlockNumHash { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
-        let block_id = BlockID { hash, number: 0 };
+        let block_id = BlockNumHash { hash, number: 0 };
         let expected = BuilderError::BrokenTimeInvariant(
             l2_parent.l1_origin,
             next_l2_time,
@@ -280,7 +285,7 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
@@ -288,7 +293,7 @@ mod tests {
                 timestamp,
                 parent_hash: hash,
             },
-            l1_origin: BlockID { hash, number: l2_number },
+            l1_origin: BlockNumHash { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
@@ -323,7 +328,7 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
@@ -331,7 +336,7 @@ mod tests {
                 timestamp,
                 parent_hash: hash,
             },
-            l1_origin: BlockID { hash, number: l2_number },
+            l1_origin: BlockNumHash { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
@@ -368,7 +373,7 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
@@ -376,7 +381,7 @@ mod tests {
                 timestamp,
                 parent_hash: hash,
             },
-            l1_origin: BlockID { hash, number: l2_number },
+            l1_origin: BlockNumHash { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
@@ -412,7 +417,7 @@ mod tests {
         let hash = header.hash_slow();
         provider.insert_header(hash, header);
         let mut builder = StatefulAttributesBuilder::new(cfg, fetcher, provider);
-        let epoch = BlockID { hash, number: l2_number };
+        let epoch = BlockNumHash { hash, number: l2_number };
         let l2_parent = L2BlockInfo {
             block_info: BlockInfo {
                 hash: B256::ZERO,
@@ -420,7 +425,7 @@ mod tests {
                 timestamp,
                 parent_hash: hash,
             },
-            l1_origin: BlockID { hash, number: l2_number },
+            l1_origin: BlockNumHash { hash, number: l2_number },
             seq_num: 0,
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;

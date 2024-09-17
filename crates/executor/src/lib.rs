@@ -13,8 +13,9 @@ use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
 use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
-use kona_primitives::{L2PayloadAttributes, RollupConfig};
+use kona_primitives::L2PayloadAttributes;
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
+use op_alloy_genesis::RollupConfig;
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
     primitives::{
@@ -626,7 +627,7 @@ mod test {
     use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
     use kona_mpt::NoopTrieDBHinter;
-    use kona_primitives::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
+    use op_alloy_genesis::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
     use serde::Deserialize;
     use std::{collections::HashMap, format};
 

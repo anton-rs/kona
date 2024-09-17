@@ -6,7 +6,8 @@ use crate::{
     stages::{decompress_brotli, BatchQueueProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
-use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::BlockInfo;
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;

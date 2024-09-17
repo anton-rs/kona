@@ -17,6 +17,8 @@ kona-mpt.workspace = true
 kona-derive.workspace = true
 kona-executor.workspace = true
 kona-primitives = { workspace = true, features = ["serde"] }
+op-alloy-genesis = { workspace = true, features = ["serde"] }
+op-alloy-protocol = { workspace = true, features = ["serde"] }
 
 # Revm + Alloy
 revm.workspace = true

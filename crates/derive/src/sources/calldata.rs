@@ -5,7 +5,7 @@ use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
 use anyhow::Result;
 use async_trait::async_trait;
-use kona_primitives::BlockInfo;
+use op_alloy_protocol::BlockInfo;
 
 use crate::{
     errors::{StageError, StageResult},

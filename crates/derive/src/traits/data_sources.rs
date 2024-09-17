@@ -2,10 +2,12 @@
 //! pipeline's stages.
 
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
+use alloy_eips::eip4844::Blob;
 use alloy_primitives::Bytes;
 use anyhow::Result;
 use async_trait::async_trait;
-use kona_primitives::{Blob, BlockInfo, IndexedBlobHash};
+use kona_primitives::IndexedBlobHash;
+use op_alloy_protocol::BlockInfo;
 
 use crate::errors::{BlobProviderError, StageResult};
 

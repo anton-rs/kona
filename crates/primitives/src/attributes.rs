@@ -3,9 +3,10 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{L2BlockInfo, Withdrawal};
 use alloc::vec::Vec;
+use alloy_eips::eip4895::Withdrawal;
 use alloy_primitives::{Address, Bytes, B256};
+use op_alloy_protocol::L2BlockInfo;
 
 /// Payload attributes.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
