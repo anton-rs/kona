@@ -178,5 +178,4 @@ run-client-asterisc-offline block_number l2_claim l2_output_root l2_head l1_head
     --l2-chain-id $L2_CHAIN_ID \
     --server \
     --data-dir ./data \
-    --exec "" \
     {{verbosity}}

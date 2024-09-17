@@ -70,12 +70,12 @@ impl HostCli {
     /// Validates the CLI arguments.
     pub fn validate(&self) -> Result<()> {
         ensure!(
-            !(self.exec.is_some() && self.server),
-            "Cannot run in both server and native modes."
+            self.exec.is_some() ^ self.server,
+            "One of `--exec` or `--server` must be supplied, but not both."
         );
         ensure!(
-            !(self.rollup_config_path.is_some() && self.l2_chain_id.is_some()),
-            "Both L2 chain ID and a custom rollup config cannot be supplied."
+            self.rollup_config_path.is_some() ^ self.l2_chain_id.is_some(),
+            "One of `--rollup-config-path` or `--l2-chain-id` must be supplied, but not both."
         );
 
         Ok(())
