@@ -15,7 +15,7 @@ pub use cli::{init_tracing_subscriber, HostCli};
 use fetcher::Fetcher;
 use server::PreimageServer;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use command_fds::{CommandFdExt, FdMapping};
 use futures::FutureExt;
 use kona_common::FileDescriptor;
@@ -29,7 +29,7 @@ use std::{
     sync::Arc,
 };
 use tokio::{process::Command, sync::RwLock, task};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use util::Pipe;
 
 /// Starts the [PreimageServer] in the primary thread. In this mode, the host program has been
@@ -77,7 +77,14 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
 
 /// Starts the [PreimageServer] and the client program in separate threads. The client program is
 /// ran natively in this mode.
-pub async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
+///
+/// ## Takes
+/// - `cfg`: The host configuration.
+///
+/// ## Returns
+/// - `Ok(exit_code)` if the client program exits successfully.
+/// - `Err(_)` if the client program failed to execute, was killed by a signal, or the host program exited first.
+pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
     let hint_pipe = util::bidirectional_pipe()?;
     let preimage_pipe = util::bidirectional_pipe()?;
 
@@ -121,13 +128,21 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<()> {
 
     // Execute both tasks and wait for them to complete.
     info!("Starting preimage server and client program.");
+    let exit_status;
     tokio::select!(
-        r = util::flatten_join_result(server_task) => r?,
-        r = util::flatten_join_result(program_task) => r?
+        r = util::flatten_join_result(server_task) => {
+            r?;
+            error!(target: "kona_host", "Preimage server exited before client program.");
+            bail!("Host program exited before client program.");
+        },
+        r = util::flatten_join_result(program_task) => {
+            exit_status = r?;
+            debug!(target: "kona_host", "Client program has exited with status {exit_status}.");
+        }
     );
-    info!(target: "kona_host", "Preimage server and client program have exited.");
+    info!(target: "kona_host", "Preimage server and client program have joined.");
 
-    Ok(())
+    Ok(exit_status)
 }
 
 /// Starts the preimage server in a separate thread. The client program is ran natively in this
@@ -176,13 +191,13 @@ where
 /// - `rx`: The receiver to wait for the preimage server to exit.
 ///
 /// ## Returns
-/// - `Ok(())` if the client program exits successfully.
-/// - `Err(_)` if the client program exits with a non-zero status.
+/// - `Ok(exit_code)` if the client program exits successfully.
+/// - `Err(_)` if the client program failed to execute or was killed by a signal.
 pub async fn start_native_client_program(
     cfg: HostCli,
     hint_pipe: Pipe,
     preimage_pipe: Pipe,
-) -> Result<()> {
+) -> Result<i32> {
     // Map the file descriptors to the standard streams and the preimage oracle and hint
     // reader's special file descriptors.
     let mut command =
@@ -220,19 +235,10 @@ pub async fn start_native_client_program(
         ])
         .expect("No errors may occur when mapping file descriptors.");
 
-    let status = command
-        .status()
-        .await
-        .map_err(|e| {
-            error!(target: "client_program", "Failed to execute client program: {:?}", e);
-            anyhow!("Failed to execute client program: {:?}", e)
-        })?
-        .success();
+    let status = command.status().await.map_err(|e| {
+        error!(target: "client_program", "Failed to execute client program: {:?}", e);
+        anyhow!("Failed to execute client program: {:?}", e)
+    })?;
 
-    if !status {
-        error!(target: "client_program", "Client program exited with a non-zero status.");
-        return Err(anyhow!("Client program exited with a non-zero status."));
-    }
-
-    Ok(())
+    status.code().ok_or_else(|| anyhow!("Client program was killed by a signal."))
 }

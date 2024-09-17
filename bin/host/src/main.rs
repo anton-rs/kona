@@ -11,7 +11,10 @@ async fn main() -> Result<()> {
     if cfg.server {
         start_server(cfg).await?;
     } else {
-        start_server_and_native_client(cfg).await?;
+        let status = start_server_and_native_client(cfg).await?;
+
+        // Bubble up the exit status of the client program.
+        std::process::exit(status as i32);
     }
 
     info!("Exiting host program.");
