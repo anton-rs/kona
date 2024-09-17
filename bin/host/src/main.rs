@@ -6,6 +6,7 @@ use tracing::{error, info};
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     let cfg = HostCli::parse();
+    cfg.validate()?;
     init_tracing_subscriber(cfg.v)?;
 
     if cfg.server {

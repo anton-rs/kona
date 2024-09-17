@@ -5,7 +5,7 @@ use crate::kv::{
     SplitKeyValueStore,
 };
 use alloy_primitives::B256;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use clap::{ArgAction, Parser};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
@@ -19,7 +19,7 @@ mod tracing_util;
 pub use tracing_util::init_tracing_subscriber;
 
 /// The host binary CLI application arguments.
-#[derive(Parser, Serialize, Clone, Debug)]
+#[derive(Default, Parser, Serialize, Clone, Debug)]
 pub struct HostCli {
     /// Verbosity level (0-4)
     #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
@@ -41,7 +41,7 @@ pub struct HostCli {
     pub l2_block_number: u64,
     /// The L2 chain ID.
     #[clap(long)]
-    pub l2_chain_id: u64,
+    pub l2_chain_id: Option<u64>,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
     #[clap(long)]
     pub l2_node_address: Option<String>,
@@ -67,6 +67,20 @@ pub struct HostCli {
 }
 
 impl HostCli {
+    /// Validates the CLI arguments.
+    pub fn validate(&self) -> Result<()> {
+        ensure!(
+            self.exec.is_some() ^ self.server,
+            "One of `--exec` or `--server` must be supplied, but not both."
+        );
+        ensure!(
+            self.rollup_config_path.is_some() ^ self.l2_chain_id.is_some(),
+            "One of `--rollup-config-path` or `--l2-chain-id` must be supplied, but not both."
+        );
+
+        Ok(())
+    }
+
     /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() ||
@@ -107,5 +121,27 @@ impl HostCli {
         // Deserialize the config and return it.
         serde_json::from_str(&ser_config)
             .map_err(|e| anyhow!("Error deserializing RollupConfig: {e}"))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::HostCli;
+
+    #[test]
+    fn test_invalid_cli_server_and_native() {
+        let cli =
+            HostCli { server: true, exec: Some("deaddead".to_string()), ..Default::default() };
+        assert!(cli.validate().is_err());
+    }
+
+    #[test]
+    fn test_invalid_cli_chain_id_and_rollup_config() {
+        let cli = HostCli {
+            l2_chain_id: Some(1),
+            rollup_config_path: Some("deaddead".into()),
+            ..Default::default()
+        };
+        assert!(cli.validate().is_err());
     }
 }

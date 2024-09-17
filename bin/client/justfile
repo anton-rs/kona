@@ -70,7 +70,6 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc verbo
   L1_BEACON_ADDRESS="{{l1_beacon_rpc}}"
   L2_NODE_ADDRESS="{{l2_rpc}}"
   OP_NODE_ADDRESS="{{rollup_node_rpc}}"
-  CLIENT_BIN_PATH="./target/riscv64gc-unknown-none-elf/release-client-lto/kona"
 
   L2_BLOCK_NUMBER={{block_number}}
   echo "Fetching configuration for block #$L2_BLOCK_NUMBER..."
@@ -179,5 +178,4 @@ run-client-asterisc-offline block_number l2_claim l2_output_root l2_head l1_head
     --l2-chain-id $L2_CHAIN_ID \
     --server \
     --data-dir ./data \
-    --exec "" \
     {{verbosity}}
