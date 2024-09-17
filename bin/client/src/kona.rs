@@ -74,8 +74,21 @@ fn main() -> Result<()> {
         //                          EPILOGUE                          //
         ////////////////////////////////////////////////////////////////
 
-        assert_eq!(number, boot.l2_claim_block);
-        assert_eq!(output_root, boot.l2_claim);
+        if number != boot.l2_claim_block || output_root != boot.l2_claim {
+            tracing::error!(
+                target: "client",
+                "Failed to validate L2 block #{number} with output root {output_root}",
+                number = number,
+                output_root = output_root
+            );
+            kona_common::io::print(&alloc::format!(
+                "Failed to validate L2 block #{} with output root {}\n",
+                number,
+                output_root
+            ));
+
+            kona_common::io::exit(1);
+        }
 
         tracing::info!(
             target: "client",
