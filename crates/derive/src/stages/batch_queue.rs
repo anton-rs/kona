@@ -180,8 +180,9 @@ where
         // If the current epoch is too old compared to the L1 block we are at,
         // i.e. if the sequence window expired, we create empty batches for the current epoch
         let expiry_epoch = epoch.number + self.cfg.seq_window_size;
-        let force_empty_batches = (expiry_epoch == parent.l1_origin.number && empty) ||
-            expiry_epoch < parent.l1_origin.number;
+        let bq_origin = self.origin.ok_or(StageError::MissingOrigin)?;
+        let force_empty_batches =
+            (expiry_epoch == bq_origin.number && empty) || expiry_epoch < bq_origin.number;
         let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
 
         // If the sequencer window did not expire,
@@ -235,7 +236,7 @@ where
             error!(target: "batch-queue", "Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
         }
-        let origin = self.origin.ok_or_else(|| anyhow!("cannot add batch with missing origin"))?;
+        let origin = self.origin.ok_or(StageError::MissingOrigin)?;
         let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
         if data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await.is_drop() {
