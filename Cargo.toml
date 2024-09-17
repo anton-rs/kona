@@ -98,7 +98,7 @@ serde_json = { version = "1.0.125", default-features = false }
 unsigned-varint = "0.8.0"
 revm = { version = "14.0", default-features = false }
 
-# Superchain
+# Optimism
 superchain = { version = "0.5", default-features = false }
 
 # K/V database
@@ -107,16 +107,18 @@ rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
 # Alloy
 alloy-rlp = { version = "0.3.8", default-features = false }
 alloy-trie = { version = "0.5", default-features = false }
+alloy-eips = { version = "0.3.5", default-features = false }
 alloy-provider = { version = "0.3.5", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
-alloy-rpc-types = { version = "0.3.5", default-features = false }
-alloy-rpc-types-engine = { version = "0.3.5", default-features = false }
 alloy-consensus = { version = "0.3.5", default-features = false }
 alloy-transport = { version = "0.3.5", default-features = false }
-alloy-transport-http = { version = "0.3.5", default-features = false }
-alloy-eips = { version = "0.3.5", default-features = false }
+alloy-rpc-types = { version = "0.3.5", default-features = false }
 alloy-rpc-client = { version = "0.3.5", default-features = false }
+alloy-rpc-types-engine = { version = "0.3.5", default-features = false }
 alloy-node-bindings = { version = "0.3.5", default-features = false }
+alloy-transport-http = { version = "0.3.5", default-features = false }
+
+# OP Alloy
 op-alloy-consensus = { version = "0.2.11", default-features = false }
 op-alloy-protocol = { version = "0.2.11", default-features = false }
 op-alloy-genesis = { version = "0.2.11", default-features = false }
