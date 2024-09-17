@@ -23,6 +23,33 @@ hack:
 test *args='':
   cargo nextest run --workspace --all --all-features $@
 
+# Run action tests for the client program on the native target
+action-tests test_name='Test_ProgramAction':
+  #!/bin/bash
+
+  if [ ! -d "monorepo" ]; then
+    echo "Monorepo not found. Cloning..."
+    git clone https://github.com/ethereum-optimism/monorepo
+
+    echo "Building devnet allocs for the monorepo"
+    (cd monorepo && make devnet-allocs)
+  fi
+
+  echo "Building client and host programs for the native target"
+  just build-native --bin kona --profile release-client-lto --features tracing-subscriber && \
+    just build-native --bin kona-host --release
+
+  echo "Running action tests for the client program on the native target"
+  export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"
+  export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
+
+  cd monorepo/op-e2e/actions/proofs && \
+    gotestsum --format=testname -- -run "{{test_name}}" -v ./...
+
+# Clean the action tests directory
+clean-actions:
+  rm -rf monorepo/
+
 # Lint the workspace for all available targets
 lint-all: lint-native lint-cannon lint-asterisc lint-docs
 

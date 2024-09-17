@@ -4,5 +4,8 @@
 # Rust target
 target/
 
+# Monorepo workspace
+monorepo/
+
 # Environment Variables
 .env
