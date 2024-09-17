@@ -30,7 +30,9 @@ action-tests test_name='Test_ProgramAction':
   if [ ! -d "monorepo" ]; then
     echo "Monorepo not found. Cloning..."
     git clone https://github.com/ethereum-optimism/monorepo
+  fi
 
+  if [ ! -d "monorepo/.devnet" ]; then
     echo "Building devnet allocs for the monorepo"
     (cd monorepo && make devnet-allocs)
   fi
@@ -44,7 +46,7 @@ action-tests test_name='Test_ProgramAction':
   export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
 
   cd monorepo/op-e2e/actions/proofs && \
-    gotestsum --format=testname -- -run "{{test_name}}" -v ./...
+    go test -run "{{test_name}}" -v ./...
 
 # Clean the action tests directory
 clean-actions:
