@@ -30,7 +30,9 @@ action-tests test_name='Test_ProgramAction':
   if [ ! -d "monorepo" ]; then
     echo "Monorepo not found. Cloning..."
     git clone https://github.com/ethereum-optimism/monorepo
+  fi
 
+  if [ ! -d "monorepo/.devnet" ]; then
     echo "Building devnet allocs for the monorepo"
     (cd monorepo && make devnet-allocs)
   fi

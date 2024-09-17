@@ -14,6 +14,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Clone monorepo
+        run: |
+          git clone https://github.com/ethereum-optimism/monorepo
       - name: Install just
         uses: taiki-e/install-action@just
       - name: Install Rust stable toolchain
