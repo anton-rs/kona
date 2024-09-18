@@ -10,7 +10,10 @@ use crate::{
 use alloy_primitives::B256;
 use alloy_provider::ReqwestProvider;
 use anyhow::{anyhow, Result};
-use clap::{ArgAction, Parser};
+use clap::{
+    builder::styling::{AnsiColor, Color, Style},
+    ArgAction, Parser,
+};
 use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
@@ -23,38 +26,62 @@ pub(crate) use parser::parse_b256;
 mod tracing_util;
 pub use tracing_util::init_tracing_subscriber;
 
+const ABOUT: &str = "
+kona-host is a CLI application that runs the Kona pre-image server and client program. The host
+can run in two modes: server mode and native mode. In server mode, the host runs the pre-image
+server and waits for the client program in the parent process to request pre-images. In native
+mode, the host runs the client program in a child process with the pre-image server in the primary
+thread.
+";
+
 /// The host binary CLI application arguments.
 #[derive(Default, Parser, Serialize, Clone, Debug)]
+#[command(about = ABOUT, version, styles = cli_styles())]
 pub struct HostCli {
-    /// Verbosity level (0-4)
-    #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
+    /// Verbosity level (0-2)
+    #[arg(long, short, action = ArgAction::Count)]
     pub v: u8,
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256)]
     pub l1_head: B256,
-    /// Hash of the L2 block at the L2 Output Root.
+    /// Hash of the L2 block committed to by `--l2-output-root`.
     #[clap(long, value_parser = parse_b256)]
     pub l2_head: B256,
     /// Agreed L2 Output Root to start derivation from.
     #[clap(long, value_parser = parse_b256)]
     pub l2_output_root: B256,
-    /// Claimed L2 output root to validate
+    /// Claimed L2 output root at block # `--l2-block-number` to validate.
     #[clap(long, value_parser = parse_b256)]
     pub l2_claim: B256,
-    /// Number of the L2 block that the claim is from.
+    /// Number of the L2 block that the claim commits to.
     #[clap(long)]
     pub l2_block_number: u64,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
-    #[clap(long, requires = "l1_node_address", requires = "l1_beacon_address")]
+    #[clap(
+        long,
+        visible_alias = "l2",
+        requires = "l1_node_address",
+        requires = "l1_beacon_address"
+    )]
     pub l2_node_address: Option<String>,
-    /// Address of L1 JSON-RPC endpoint to use (eth namespace required)
-    #[clap(long, requires = "l2_node_address", requires = "l1_beacon_address")]
+    /// Address of L1 JSON-RPC endpoint to use (eth and debug namespace required)
+    #[clap(
+        long,
+        visible_alias = "l1",
+        requires = "l2_node_address",
+        requires = "l1_beacon_address"
+    )]
     pub l1_node_address: Option<String>,
     /// Address of the L1 Beacon API endpoint to use.
-    #[clap(long, requires = "l1_node_address", requires = "l2_node_address")]
+    #[clap(
+        long,
+        visible_alias = "beacon",
+        requires = "l1_node_address",
+        requires = "l2_node_address"
+    )]
     pub l1_beacon_address: Option<String>,
     /// The Data Directory for preimage data storage. Default uses in-memory storage.
-    #[clap(long)]
+    #[clap(long, visible_alias = "db")]
     pub data_dir: Option<PathBuf>,
     /// Run the specified client program natively as a separate process detached from the host.
     #[clap(long, conflicts_with = "server", required_unless_present = "server")]
@@ -73,7 +100,12 @@ pub struct HostCli {
     pub l2_chain_id: Option<u64>,
     /// Path to rollup config. If provided, the host will use this config instead of attempting to
     /// look up the config in the superchain registry.
-    #[clap(long, conflicts_with = "l2_chain_id", required_unless_present = "l2_chain_id")]
+    #[clap(
+        long,
+        alias = "rollup-cfg",
+        conflicts_with = "l2_chain_id",
+        required_unless_present = "l2_chain_id"
+    )]
     pub rollup_config_path: Option<PathBuf>,
 }
 
@@ -150,6 +182,18 @@ impl HostCli {
         serde_json::from_str(&ser_config)
             .map_err(|e| anyhow!("Error deserializing RollupConfig: {e}"))
     }
+}
+
+/// Styles for the CLI application.
+fn cli_styles() -> clap::builder::Styles {
+    clap::builder::Styles::styled()
+        .usage(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
+        .header(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
+        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green))))
+        .invalid(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
+        .error(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
+        .valid(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Green))))
+        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::White))))
 }
 
 #[cfg(test)]
