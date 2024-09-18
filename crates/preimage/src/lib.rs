@@ -22,7 +22,7 @@ pub use pipe::PipeHandle;
 mod traits;
 pub use traits::{
     CommsClient, HintReaderServer, HintRouter, HintWriterClient, PreimageFetcher,
-    PreimageOracleClient, PreimageOracleServer,
+    PreimageOracleClient, PreimageOracleServer, PreimageServerError,
 };
 
 #[cfg(test)]

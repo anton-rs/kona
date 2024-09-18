@@ -1,5 +1,5 @@
 use crate::{
-    traits::{HintRouter, HintWriterClient},
+    traits::{HintRouter, HintWriterClient, PreimageServerError},
     HintReaderServer, PipeHandle,
 };
 use alloc::{boxed::Box, string::String, vec};
@@ -65,34 +65,38 @@ impl HintReader {
 
 #[async_trait]
 impl HintReaderServer for HintReader {
-    async fn next_hint<R>(&self, hint_router: &R) -> Result<()>
+    async fn next_hint<R>(&self, hint_router: &R) -> Result<(), PreimageServerError>
     where
         R: HintRouter + Send + Sync,
     {
         // Read the length of the raw hint payload.
         let mut len_buf = [0u8; 4];
-        self.pipe_handle.read_exact(&mut len_buf).await?;
+        self.pipe_handle.read_exact(&mut len_buf).await.map_err(PreimageServerError::BrokenPipe)?;
         let len = u32::from_be_bytes(len_buf);
 
         // Read the raw hint payload.
         let mut raw_payload = vec![0u8; len as usize];
-        self.pipe_handle.read_exact(raw_payload.as_mut_slice()).await?;
-        let payload = String::from_utf8(raw_payload)
-            .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?;
+        self.pipe_handle
+            .read_exact(raw_payload.as_mut_slice())
+            .await
+            .map_err(PreimageServerError::BrokenPipe)?;
+        let payload = String::from_utf8(raw_payload).map_err(|e| {
+            PreimageServerError::Other(anyhow::anyhow!("Failed to decode hint payload: {e}"))
+        })?;
 
         trace!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
 
         // Route the hint
         if let Err(e) = hint_router.route_hint(payload).await {
             // Write back on error to prevent blocking the client.
-            self.pipe_handle.write(&[0x00]).await?;
+            self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
 
             error!("Failed to route hint: {e}");
-            anyhow::bail!("Failed to rout hint: {e}");
+            return Err(PreimageServerError::Other(e));
         }
 
         // Write back an acknowledgement to the client to unblock their process.
-        self.pipe_handle.write(&[0x00]).await?;
+        self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
 
         trace!(target: "hint_reader", "Successfully routed and acknowledged hint");
 

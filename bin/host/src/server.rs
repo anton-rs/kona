@@ -8,9 +8,12 @@ use crate::{
     },
 };
 use anyhow::{anyhow, Result};
-use kona_preimage::{HintReaderServer, HintRouter, PreimageFetcher, PreimageOracleServer};
+use kona_preimage::{
+    HintReaderServer, HintRouter, PreimageFetcher, PreimageOracleServer, PreimageServerError,
+};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::error;
 
 /// The [PreimageServer] is responsible for waiting for incoming preimage requests and
 /// serving them to the client.
@@ -67,8 +70,6 @@ where
             s = server => s.map_err(|e| anyhow!(e))?,
             h = hint_router => h.map_err(|e| anyhow!(e))?,
         }
-
-        Ok(())
     }
 
     /// Starts the oracle server, which waits for incoming preimage requests and serves them to the
@@ -77,49 +78,60 @@ where
         kv_store: Arc<RwLock<KV>>,
         fetcher: Option<Arc<RwLock<Fetcher<KV>>>>,
         oracle_server: P,
-    ) {
+    ) -> Result<()> {
         #[inline(always)]
-        async fn do_loop<F, P>(fetcher: &F, server: &P)
+        async fn do_loop<F, P>(fetcher: &F, server: &P) -> Result<()>
         where
             F: PreimageFetcher + Send + Sync,
             P: PreimageOracleServer,
         {
             loop {
-                // Break the loop on any error. An error in this path indicates a closed pipe.
-                if server.next_preimage_request(fetcher).await.is_err() {
-                    break;
+                match server.next_preimage_request(fetcher).await {
+                    Ok(_) => (),
+                    Err(PreimageServerError::BrokenPipe(_)) => return Ok(()),
+                    Err(PreimageServerError::Other(e)) => {
+                        error!("Failed to serve preimage request: {e:?}");
+                        return Err(e);
+                    }
                 }
             }
         }
 
         if let Some(fetcher) = fetcher.as_ref() {
-            do_loop(&OnlinePreimageFetcher::new(Arc::clone(fetcher)), &oracle_server).await;
+            do_loop(&OnlinePreimageFetcher::new(Arc::clone(fetcher)), &oracle_server).await
         } else {
-            do_loop(&OfflinePreimageFetcher::new(Arc::clone(&kv_store)), &oracle_server).await;
-        };
+            do_loop(&OfflinePreimageFetcher::new(Arc::clone(&kv_store)), &oracle_server).await
+        }
     }
 
     /// Starts the hint router, which waits for incoming hints and routes them to the appropriate
     /// handler.
-    async fn start_hint_router(hint_reader: H, fetcher: Option<Arc<RwLock<Fetcher<KV>>>>) {
+    async fn start_hint_router(
+        hint_reader: H,
+        fetcher: Option<Arc<RwLock<Fetcher<KV>>>>,
+    ) -> Result<()> {
         #[inline(always)]
-        async fn do_loop<R, H>(router: &R, server: &H)
+        async fn do_loop<R, H>(router: &R, server: &H) -> Result<()>
         where
             R: HintRouter + Send + Sync,
             H: HintReaderServer,
         {
             loop {
-                // Break the loop on any error. An error in this path indicates a closed pipe.
-                if server.next_hint(router).await.is_err() {
-                    break;
+                match server.next_hint(router).await {
+                    Ok(_) => (),
+                    Err(PreimageServerError::BrokenPipe(_)) => return Ok(()),
+                    Err(PreimageServerError::Other(e)) => {
+                        error!("Failed to serve preimage request: {e:?}");
+                        return Err(e);
+                    }
                 }
             }
         }
 
         if let Some(fetcher) = fetcher {
-            do_loop(&OnlineHintRouter::new(Arc::clone(&fetcher)), &hint_reader).await;
+            do_loop(&OnlineHintRouter::new(Arc::clone(&fetcher)), &hint_reader).await
         } else {
-            do_loop(&OfflineHintRouter, &hint_reader).await;
+            do_loop(&OfflineHintRouter, &hint_reader).await
         }
     }
 }
