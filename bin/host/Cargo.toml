@@ -16,8 +16,6 @@ kona-common.workspace = true
 kona-preimage.workspace = true
 kona-derive = { workspace = true, features = ["online"] }
 kona-primitives = { workspace = true, features = ["online"] }
-op-alloy-genesis = { workspace = true, features = ["std", "serde"] }
-op-alloy-protocol = { workspace = true, features = ["std", "serde"] }
 
 # Alloy & Revm
 alloy-eips.workspace = true
@@ -28,6 +26,8 @@ alloy-transport-http.workspace = true
 alloy-rpc-client.workspace = true 
 alloy-rpc-types = { workspace = true, features = ["eth"] }
 alloy-primitives = { workspace = true, features = ["serde"] }
+op-alloy-genesis = { workspace = true, features = ["std", "serde"] }
+op-alloy-protocol = { workspace = true, features = ["std", "serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 
 # General
