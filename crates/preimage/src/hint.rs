@@ -80,9 +80,17 @@ impl HintReaderServer for HintReader {
             .read_exact(raw_payload.as_mut_slice())
             .await
             .map_err(PreimageServerError::BrokenPipe)?;
-        let payload = String::from_utf8(raw_payload).map_err(|e| {
-            PreimageServerError::Other(anyhow::anyhow!("Failed to decode hint payload: {e}"))
-        })?;
+        let payload = match String::from_utf8(raw_payload) {
+            Ok(p) => p,
+            Err(e) => {
+                // Write back on error to prevent blocking the client.
+                self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
+
+                return Err(PreimageServerError::Other(anyhow::anyhow!(
+                    "Failed to decode hint payload: {e}"
+                )));
+            }
+        };
 
         trace!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
 
@@ -137,7 +145,42 @@ mod test {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn test_unblock_on_failure() {
+    async fn test_unblock_on_bad_utf8() {
+        let mock_data = [0xf0, 0x90, 0x28, 0xbc];
+
+        let hint_pipe = bidirectional_pipe().unwrap();
+
+        let client = tokio::task::spawn(async move {
+            let hint_writer = HintWriter::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+            ));
+
+            #[allow(invalid_from_utf8_unchecked)]
+            hint_writer.write(unsafe { alloc::str::from_utf8_unchecked(&mock_data) }).await
+        });
+        let host = tokio::task::spawn(async move {
+            let router = TestRouter { incoming_hints: Default::default() };
+
+            let hint_reader = HintReader::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+            ));
+            hint_reader.next_hint(&router).await
+        });
+
+        let (c, h) = tokio::join!(client, host);
+        c.unwrap().unwrap();
+        assert!(h.unwrap().is_err_and(|e| {
+            let PreimageServerError::Other(e) = e else {
+                return false;
+            };
+            e.to_string().contains("Failed to decode hint payload")
+        }));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_unblock_on_fetch_failure() {
         const MOCK_DATA: &str = "test-hint 0xfacade";
 
         let hint_pipe = bidirectional_pipe().unwrap();
