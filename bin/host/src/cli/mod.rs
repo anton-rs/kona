@@ -80,8 +80,13 @@ pub struct HostCli {
         requires = "l2_node_address"
     )]
     pub l1_beacon_address: Option<String>,
-    /// The Data Directory for preimage data storage. Default uses in-memory storage.
-    #[clap(long, visible_alias = "db")]
+    /// The Data Directory for preimage data storage. Optional if running in online mode,
+    /// required if running in offline mode.
+    #[clap(
+        long,
+        visible_alias = "db",
+        required_unless_present_all = ["l2_node_address", "l1_node_address", "l1_beacon_address"]
+    )]
     pub data_dir: Option<PathBuf>,
     /// Run the specified client program natively as a separate process detached from the host.
     #[clap(long, conflicts_with = "server", required_unless_present = "server")]
@@ -221,10 +226,14 @@ mod test {
 
         let cases = [
             // valid
-            (["--server", "--l2-chain-id", "0"].as_slice(), true),
-            (["--server", "--rollup-config-path", "dummy"].as_slice(), true),
-            (["--exec", "dummy", "--l2-chain-id", "0"].as_slice(), true),
-            (["--exec", "dummy", "--rollup-config-path", "dummy"].as_slice(), true),
+            (["--server", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
+            (["--server", "--rollup-config-path", "dummy", "--data-dir", "dummy"].as_slice(), true),
+            (["--exec", "dummy", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
+            (
+                ["--exec", "dummy", "--rollup-config-path", "dummy", "--data-dir", "dummy"]
+                    .as_slice(),
+                true,
+            ),
             (
                 [
                     "--l1-node-address",
