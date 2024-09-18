@@ -1,12 +1,14 @@
 //! This module contains all CLI-specific code for the host binary.
 
-use crate::kv::{
+use crate::{kv::{
     DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
     SplitKeyValueStore,
-};
+}, util};
 use alloy_primitives::B256;
+use alloy_provider::ReqwestProvider;
 use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
+use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
@@ -40,13 +42,13 @@ pub struct HostCli {
     #[clap(long)]
     pub l2_block_number: u64,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
-    #[clap(long)]
+    #[clap(long, requires = "l1_node_address", requires = "l1_beacon_address")]
     pub l2_node_address: Option<String>,
     /// Address of L1 JSON-RPC endpoint to use (eth namespace required)
-    #[clap(long)]
+    #[clap(long, requires = "l2_node_address", requires = "l1_beacon_address")]
     pub l1_node_address: Option<String>,
     /// Address of the L1 Beacon API endpoint to use.
-    #[clap(long)]
+    #[clap(long, requires = "l1_node_address", requires = "l2_node_address")]
     pub l1_beacon_address: Option<String>,
     /// The Data Directory for preimage data storage. Default uses in-memory storage.
     #[clap(long)]
@@ -75,9 +77,40 @@ pub struct HostCli {
 impl HostCli {
     /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
-        self.l1_node_address.is_none() ||
-            self.l2_node_address.is_none() ||
-            self.l1_beacon_address.is_none()
+        self.l1_node_address.is_none()
+            && self.l2_node_address.is_none()
+            && self.l1_beacon_address.is_none()
+    }
+
+    /// Creates the providers associated with the [HostCli] configuration.
+    ///
+    /// ## Returns
+    /// - A [ReqwestProvider] for the L1 node.
+    /// - An [OnlineBlobProvider] for the L1 beacon node.
+    /// - A [ReqwestProvider] for the L2 node.
+    pub async fn create_providers(
+        &self,
+    ) -> Result<(
+        ReqwestProvider,
+        OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
+        ReqwestProvider,
+    )> {
+        let beacon_client = OnlineBeaconClient::new_http(
+            self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
+        );
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
+        blob_provider
+            .load_configs()
+            .await
+            .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
+        let l1_provider = util::http_provider(
+            self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
+        );
+        let l2_provider = util::http_provider(
+            self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
+        );
+
+        Ok((l1_provider, blob_provider, l2_provider))
     }
 
     /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is
@@ -123,7 +156,7 @@ mod test {
     use clap::Parser;
 
     #[test]
-    fn test_exclusive_flags() {
+    fn test_flags() {
         let zero_hash_str = &B256::ZERO.to_string();
         let default_flags = [
             "host",
@@ -145,6 +178,21 @@ mod test {
             (["--server", "--rollup-config-path", "dummy"].as_slice(), true),
             (["--exec", "dummy", "--l2-chain-id", "0"].as_slice(), true),
             (["--exec", "dummy", "--rollup-config-path", "dummy"].as_slice(), true),
+            (
+                [
+                    "--l1-node-address",
+                    "dummy",
+                    "--l2-node-address",
+                    "dummy",
+                    "--l1-beacon-address",
+                    "dummy",
+                    "--server",
+                    "--l2-chain-id",
+                    "0",
+                ]
+                .as_slice(),
+                true,
+            ),
             // invalid
             (["--server", "--exec", "dummy", "--l2-chain-id", "0"].as_slice(), false),
             (["--l2-chain-id", "0", "--rollup-config-path", "dummy", "--server"].as_slice(), false),
@@ -152,6 +200,9 @@ mod test {
             (["--exec", "dummy"].as_slice(), false),
             (["--rollup-config-path", "dummy"].as_slice(), false),
             (["--l2-chain-id", "0"].as_slice(), false),
+            (["--l1-node-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),
+            (["--l2-node-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),
+            (["--l1-beacon-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),
             ([].as_slice(), false),
         ];
 
