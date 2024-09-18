@@ -11,7 +11,7 @@ kona-host is a CLI application that runs the [pre-image server][p-server] and [c
 
 ## Usage
 
-```
+```txt
 Usage: kona-host [OPTIONS] --l1-head <L1_HEAD> --l2-head <L2_HEAD> --l2-output-root <L2_OUTPUT_ROOT> --l2-claim <L2_CLAIM> --l2-block-number <L2_BLOCK_NUMBER>
 
 Options:
