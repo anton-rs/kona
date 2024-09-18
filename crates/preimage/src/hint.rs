@@ -127,6 +127,40 @@ mod test {
         }
     }
 
+    struct TestFailRouter;
+
+    #[async_trait]
+    impl HintRouter for TestFailRouter {
+        async fn route_hint(&self, _hint: String) -> Result<()> {
+            anyhow::bail!("Failed to route hint")
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_unblock_on_failure() {
+        const MOCK_DATA: &str = "test-hint 0xfacade";
+
+        let hint_pipe = bidirectional_pipe().unwrap();
+
+        let client = tokio::task::spawn(async move {
+            let hint_writer = HintWriter::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+            ));
+
+            hint_writer.write(MOCK_DATA).await
+        });
+        let host = tokio::task::spawn(async move {
+            let hint_reader = HintReader::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+            ));
+            hint_reader.next_hint(&TestFailRouter).await.unwrap();
+        });
+
+        let _ = tokio::join!(client, host);
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_hint_client_and_host() {
         const MOCK_DATA: &str = "test-hint 0xfacade";
