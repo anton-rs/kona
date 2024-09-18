@@ -1,5 +1,5 @@
 use crate::{
-    traits::{HintRouter, HintWriterClient},
+    traits::{HintRouter, HintWriterClient, PreimageServerError},
     HintReaderServer, PipeHandle,
 };
 use alloc::{boxed::Box, string::String, vec};
@@ -65,34 +65,46 @@ impl HintReader {
 
 #[async_trait]
 impl HintReaderServer for HintReader {
-    async fn next_hint<R>(&self, hint_router: &R) -> Result<()>
+    async fn next_hint<R>(&self, hint_router: &R) -> Result<(), PreimageServerError>
     where
         R: HintRouter + Send + Sync,
     {
         // Read the length of the raw hint payload.
         let mut len_buf = [0u8; 4];
-        self.pipe_handle.read_exact(&mut len_buf).await?;
+        self.pipe_handle.read_exact(&mut len_buf).await.map_err(PreimageServerError::BrokenPipe)?;
         let len = u32::from_be_bytes(len_buf);
 
         // Read the raw hint payload.
         let mut raw_payload = vec![0u8; len as usize];
-        self.pipe_handle.read_exact(raw_payload.as_mut_slice()).await?;
-        let payload = String::from_utf8(raw_payload)
-            .map_err(|e| anyhow::anyhow!("Failed to decode hint payload: {e}"))?;
+        self.pipe_handle
+            .read_exact(raw_payload.as_mut_slice())
+            .await
+            .map_err(PreimageServerError::BrokenPipe)?;
+        let payload = match String::from_utf8(raw_payload) {
+            Ok(p) => p,
+            Err(e) => {
+                // Write back on error to prevent blocking the client.
+                self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
+
+                return Err(PreimageServerError::Other(anyhow::anyhow!(
+                    "Failed to decode hint payload: {e}"
+                )));
+            }
+        };
 
         trace!(target: "hint_reader", "Successfully read hint: \"{payload}\"");
 
         // Route the hint
         if let Err(e) = hint_router.route_hint(payload).await {
             // Write back on error to prevent blocking the client.
-            self.pipe_handle.write(&[0x00]).await?;
+            self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
 
             error!("Failed to route hint: {e}");
-            anyhow::bail!("Failed to rout hint: {e}");
+            return Err(PreimageServerError::Other(e));
         }
 
         // Write back an acknowledgement to the client to unblock their process.
-        self.pipe_handle.write(&[0x00]).await?;
+        self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
 
         trace!(target: "hint_reader", "Successfully routed and acknowledged hint");
 
@@ -106,7 +118,7 @@ mod test {
 
     use super::*;
     use crate::test_utils::bidirectional_pipe;
-    use alloc::{sync::Arc, vec::Vec};
+    use alloc::{string::ToString, sync::Arc, vec::Vec};
     use kona_common::FileDescriptor;
     use std::os::fd::AsRawFd;
     use tokio::sync::Mutex;
@@ -121,6 +133,82 @@ mod test {
             self.incoming_hints.lock().await.push(hint);
             Ok(())
         }
+    }
+
+    struct TestFailRouter;
+
+    #[async_trait]
+    impl HintRouter for TestFailRouter {
+        async fn route_hint(&self, _hint: String) -> Result<()> {
+            anyhow::bail!("Failed to route hint")
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_unblock_on_bad_utf8() {
+        let mock_data = [0xf0, 0x90, 0x28, 0xbc];
+
+        let hint_pipe = bidirectional_pipe().unwrap();
+
+        let client = tokio::task::spawn(async move {
+            let hint_writer = HintWriter::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+            ));
+
+            #[allow(invalid_from_utf8_unchecked)]
+            hint_writer.write(unsafe { alloc::str::from_utf8_unchecked(&mock_data) }).await
+        });
+        let host = tokio::task::spawn(async move {
+            let router = TestRouter { incoming_hints: Default::default() };
+
+            let hint_reader = HintReader::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+            ));
+            hint_reader.next_hint(&router).await
+        });
+
+        let (c, h) = tokio::join!(client, host);
+        c.unwrap().unwrap();
+        assert!(h.unwrap().is_err_and(|e| {
+            let PreimageServerError::Other(e) = e else {
+                return false;
+            };
+            e.to_string().contains("Failed to decode hint payload")
+        }));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_unblock_on_fetch_failure() {
+        const MOCK_DATA: &str = "test-hint 0xfacade";
+
+        let hint_pipe = bidirectional_pipe().unwrap();
+
+        let client = tokio::task::spawn(async move {
+            let hint_writer = HintWriter::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+            ));
+
+            hint_writer.write(MOCK_DATA).await
+        });
+        let host = tokio::task::spawn(async move {
+            let hint_reader = HintReader::new(PipeHandle::new(
+                FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+            ));
+            hint_reader.next_hint(&TestFailRouter).await
+        });
+
+        let (c, h) = tokio::join!(client, host);
+        c.unwrap().unwrap();
+        assert!(h.unwrap().is_err_and(|e| {
+            let PreimageServerError::Other(e) = e else {
+                return false;
+            };
+            e.to_string() == "Failed to route hint"
+        }));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

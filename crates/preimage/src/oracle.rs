@@ -1,5 +1,6 @@
 use crate::{
-    traits::PreimageFetcher, PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer,
+    traits::{PreimageFetcher, PreimageServerError},
+    PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer,
 };
 use alloc::{boxed::Box, vec::Vec};
 use anyhow::{bail, Result};
@@ -99,19 +100,19 @@ impl OracleServer {
 
 #[async_trait::async_trait]
 impl PreimageOracleServer for OracleServer {
-    async fn next_preimage_request<F>(&self, fetcher: &F) -> Result<()>
+    async fn next_preimage_request<F>(&self, fetcher: &F) -> Result<(), PreimageServerError>
     where
         F: PreimageFetcher + Send + Sync,
     {
         // Read the preimage request from the client, and throw early if there isn't is any.
         let mut buf = [0u8; 32];
-        self.pipe_handle.read_exact(&mut buf).await?;
-        let preimage_key = PreimageKey::try_from(buf)?;
+        self.pipe_handle.read_exact(&mut buf).await.map_err(PreimageServerError::BrokenPipe)?;
+        let preimage_key = PreimageKey::try_from(buf).map_err(PreimageServerError::Other)?;
 
         trace!(target: "oracle_server", "Fetching preimage for key {preimage_key}");
 
         // Fetch the preimage value from the preimage getter.
-        let value = fetcher.get_preimage(preimage_key).await?;
+        let value = fetcher.get_preimage(preimage_key).await.map_err(PreimageServerError::Other)?;
 
         // Write the length as a big-endian u64 followed by the data.
         let data = [(value.len() as u64).to_be_bytes().as_ref(), value.as_ref()]
@@ -119,7 +120,7 @@ impl PreimageOracleServer for OracleServer {
             .flatten()
             .copied()
             .collect::<Vec<_>>();
-        self.pipe_handle.write(data.as_slice()).await?;
+        self.pipe_handle.write(data.as_slice()).await.map_err(PreimageServerError::BrokenPipe)?;
 
         trace!(target: "oracle_server", "Successfully wrote preimage data for key {preimage_key}");
 
@@ -188,8 +189,10 @@ mod test {
             let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
 
             loop {
-                if oracle_server.next_preimage_request(&test_fetcher).await.is_err() {
-                    break;
+                match oracle_server.next_preimage_request(&test_fetcher).await {
+                    Err(PreimageServerError::BrokenPipe(_)) => break,
+                    Err(PreimageServerError::Other(e)) => panic!("Unexpected error: {:?}", e),
+                    Ok(_) => {}
                 }
             }
         });

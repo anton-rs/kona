@@ -43,6 +43,16 @@ pub trait CommsClient: PreimageOracleClient + Clone + HintWriterClient {}
 // Implement the super trait for any type that satisfies the bounds
 impl<T: PreimageOracleClient + Clone + HintWriterClient> CommsClient for T {}
 
+/// A [PreimageServerError] is an enum that differentiates pipe-related errors from other errors
+/// in the [PreimageOracleServer] and [HintReaderServer] implementations.
+#[derive(Debug)]
+pub enum PreimageServerError {
+    /// The pipe has been broken.
+    BrokenPipe(anyhow::Error),
+    /// Other errors.
+    Other(anyhow::Error),
+}
+
 /// A [PreimageOracleServer] is a high-level interface to accept read requests from the client and
 /// write the preimage data to the client pipe.
 #[async_trait]
@@ -52,7 +62,7 @@ pub trait PreimageOracleServer {
     /// # Returns
     /// - `Ok(())` if the data was successfully written into the client pipe.
     /// - `Err(_)` if the data could not be written to the client.
-    async fn next_preimage_request<F>(&self, get_preimage: &F) -> Result<()>
+    async fn next_preimage_request<F>(&self, get_preimage: &F) -> Result<(), PreimageServerError>
     where
         F: PreimageFetcher + Send + Sync;
 }
@@ -67,7 +77,7 @@ pub trait HintReaderServer {
     /// - `Ok(())` if the hint was received and the client was notified of the host's
     ///   acknowledgement.
     /// - `Err(_)` if the hint was not received correctly.
-    async fn next_hint<R>(&self, route_hint: &R) -> Result<()>
+    async fn next_hint<R>(&self, route_hint: &R) -> Result<(), PreimageServerError>
     where
         R: HintRouter + Send + Sync;
 }
