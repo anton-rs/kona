@@ -1,9 +1,12 @@
 //! This module contains all CLI-specific code for the host binary.
 
-use crate::{kv::{
-    DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
-    SplitKeyValueStore,
-}, util};
+use crate::{
+    kv::{
+        DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
+        SplitKeyValueStore,
+    },
+    util,
+};
 use alloy_primitives::B256;
 use alloy_provider::ReqwestProvider;
 use anyhow::{anyhow, Result};
@@ -77,9 +80,9 @@ pub struct HostCli {
 impl HostCli {
     /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
-        self.l1_node_address.is_none()
-            && self.l2_node_address.is_none()
-            && self.l1_beacon_address.is_none()
+        self.l1_node_address.is_none() &&
+            self.l2_node_address.is_none() &&
+            self.l1_beacon_address.is_none()
     }
 
     /// Creates the providers associated with the [HostCli] configuration.
@@ -207,8 +210,7 @@ mod test {
         ];
 
         for (args_ext, valid) in cases.into_iter() {
-            let args =
-                default_flags.iter().chain(args_ext.into_iter()).cloned().collect::<Vec<_>>();
+            let args = default_flags.iter().chain(args_ext.iter()).cloned().collect::<Vec<_>>();
 
             let parsed = HostCli::try_parse_from(args);
             assert_eq!(parsed.is_ok(), valid);
