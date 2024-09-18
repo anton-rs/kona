@@ -5,7 +5,7 @@ use crate::kv::{
     SplitKeyValueStore,
 };
 use alloy_primitives::B256;
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, Result};
 use clap::{ArgAction, Parser};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
@@ -39,9 +39,6 @@ pub struct HostCli {
     /// Number of the L2 block that the claim is from.
     #[clap(long)]
     pub l2_block_number: u64,
-    /// The L2 chain ID.
-    #[clap(long)]
-    pub l2_chain_id: Option<u64>,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
     #[clap(long)]
     pub l2_node_address: Option<String>,
@@ -54,33 +51,28 @@ pub struct HostCli {
     /// The Data Directory for preimage data storage. Default uses in-memory storage.
     #[clap(long)]
     pub data_dir: Option<PathBuf>,
-    /// Run the specified client program as a separate process detached from the host. Default is
-    /// to run the client program in the host process.
-    #[clap(long)]
+    /// Run the specified client program natively as a separate process detached from the host.
+    #[clap(long, conflicts_with = "server", required_unless_present = "server")]
     pub exec: Option<String>,
-    /// Run in pre-image server mode without executing any client program. Defaults to `false`.
-    #[clap(long)]
+    /// Run in pre-image server mode without executing any client program. If not provided, the
+    /// host will run the client program in the host process.
+    #[clap(long, conflicts_with = "exec", required_unless_present = "exec")]
     pub server: bool,
-    /// Path to rollup config
-    #[clap(long)]
+    /// The L2 chain ID of a supported chain. If provided, the host will look for the corresponding
+    /// rollup config in the superchain registry.
+    #[clap(
+        long,
+        conflicts_with = "rollup_config_path",
+        required_unless_present = "rollup_config_path"
+    )]
+    pub l2_chain_id: Option<u64>,
+    /// Path to rollup config. If provided, the host will use this config instead of attempting to
+    /// look up the config in the superchain registry.
+    #[clap(long, conflicts_with = "l2_chain_id", required_unless_present = "l2_chain_id")]
     pub rollup_config_path: Option<PathBuf>,
 }
 
 impl HostCli {
-    /// Validates the CLI arguments.
-    pub fn validate(&self) -> Result<()> {
-        ensure!(
-            self.exec.is_some() ^ self.server,
-            "One of `--exec` or `--server` must be supplied, but not both."
-        );
-        ensure!(
-            self.rollup_config_path.is_some() ^ self.l2_chain_id.is_some(),
-            "One of `--rollup-config-path` or `--l2-chain-id` must be supplied, but not both."
-        );
-
-        Ok(())
-    }
-
     /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() ||
@@ -127,21 +119,48 @@ impl HostCli {
 #[cfg(test)]
 mod test {
     use crate::HostCli;
+    use alloy_primitives::B256;
+    use clap::Parser;
 
     #[test]
-    fn test_invalid_cli_server_and_native() {
-        let cli =
-            HostCli { server: true, exec: Some("deaddead".to_string()), ..Default::default() };
-        assert!(cli.validate().is_err());
-    }
+    fn test_exclusive_flags() {
+        let zero_hash_str = &B256::ZERO.to_string();
+        let default_flags = [
+            "host",
+            "--l1-head",
+            zero_hash_str,
+            "--l2-head",
+            zero_hash_str,
+            "--l2-output-root",
+            zero_hash_str,
+            "--l2-claim",
+            zero_hash_str,
+            "--l2-block-number",
+            "0",
+        ];
 
-    #[test]
-    fn test_invalid_cli_chain_id_and_rollup_config() {
-        let cli = HostCli {
-            l2_chain_id: Some(1),
-            rollup_config_path: Some("deaddead".into()),
-            ..Default::default()
-        };
-        assert!(cli.validate().is_err());
+        let cases = [
+            // valid
+            (["--server", "--l2-chain-id", "0"].as_slice(), true),
+            (["--server", "--rollup-config-path", "dummy"].as_slice(), true),
+            (["--exec", "dummy", "--l2-chain-id", "0"].as_slice(), true),
+            (["--exec", "dummy", "--rollup-config-path", "dummy"].as_slice(), true),
+            // invalid
+            (["--server", "--exec", "dummy", "--l2-chain-id", "0"].as_slice(), false),
+            (["--l2-chain-id", "0", "--rollup-config-path", "dummy", "--server"].as_slice(), false),
+            (["--server"].as_slice(), false),
+            (["--exec", "dummy"].as_slice(), false),
+            (["--rollup-config-path", "dummy"].as_slice(), false),
+            (["--l2-chain-id", "0"].as_slice(), false),
+            ([].as_slice(), false),
+        ];
+
+        for (args_ext, valid) in cases.into_iter() {
+            let args =
+                default_flags.iter().chain(args_ext.into_iter()).cloned().collect::<Vec<_>>();
+
+            let parsed = HostCli::try_parse_from(args);
+            assert_eq!(parsed.is_ok(), valid);
+        }
     }
 }
