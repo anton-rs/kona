@@ -110,7 +110,7 @@ mod test {
 
     use super::*;
     use crate::test_utils::bidirectional_pipe;
-    use alloc::{sync::Arc, vec::Vec};
+    use alloc::{string::ToString, sync::Arc, vec::Vec};
     use kona_common::FileDescriptor;
     use std::os::fd::AsRawFd;
     use tokio::sync::Mutex;
@@ -155,10 +155,17 @@ mod test {
                 FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
                 FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
             ));
-            hint_reader.next_hint(&TestFailRouter).await.unwrap();
+            hint_reader.next_hint(&TestFailRouter).await
         });
 
-        let _ = tokio::join!(client, host);
+        let (c, h) = tokio::join!(client, host);
+        c.unwrap().unwrap();
+        assert!(h.unwrap().is_err_and(|e| {
+            let PreimageServerError::Other(e) = e else {
+                return false;
+            };
+            e.to_string() == "Failed to route hint"
+        }));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
