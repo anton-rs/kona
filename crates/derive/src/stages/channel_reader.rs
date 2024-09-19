@@ -6,6 +6,7 @@ use crate::{
     stages::{decompress_brotli, BatchQueueProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
+use anyhow::anyhow;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::BlockInfo;
 
@@ -63,7 +64,8 @@ where
     /// Creates the batch reader from available channel data.
     async fn set_batch_reader(&mut self) -> StageResult<()> {
         if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(StageError::NoChannel)?;
+            let channel =
+                self.prev.next_data().await?.ok_or(StageError::Temporary(anyhow!("No channel")))?;
             self.next_batch = Some(BatchReader::from(&channel[..]));
         }
         Ok(())
@@ -174,8 +176,8 @@ impl BatchReader {
             }
 
             let compression_type = data[0];
-            if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD ||
-                (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
+            if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD
+                || (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
             {
                 self.decompressed = decompress_to_vec_zlib(&data).ok()?;
             } else if compression_type == CHANNEL_VERSION_BROTLI {
