@@ -6,6 +6,7 @@ use crate::{
     stages::{decompress_brotli, BatchQueueProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
+use anyhow::anyhow;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::BlockInfo;
 
@@ -63,7 +64,8 @@ where
     /// Creates the batch reader from available channel data.
     async fn set_batch_reader(&mut self) -> StageResult<()> {
         if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(StageError::NoChannel)?;
+            let channel =
+                self.prev.next_data().await?.ok_or(StageError::Temporary(anyhow!("No channel")))?;
             self.next_batch = Some(BatchReader::from(&channel[..]));
         }
         Ok(())
@@ -244,7 +246,7 @@ mod test {
     async fn test_next_batch_batch_reader_no_data() {
         let mock = MockChannelReaderProvider::new(vec![Ok(None)]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        assert_eq!(reader.next_batch().await, Err(StageError::NoChannel));
+        assert!(matches!(reader.next_batch().await.unwrap_err(), StageError::Temporary(_)));
         assert!(reader.next_batch.is_none());
     }
 

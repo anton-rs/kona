@@ -171,7 +171,7 @@ where
                     // Break the loop unless the error signifies that there is not enough data to
                     // complete the current step. In this case, we retry the step to see if other
                     // stages can make progress.
-                    if !matches!(e, StageError::NotEnoughData) {
+                    if !matches!(e, StageError::NotEnoughData | StageError::Temporary(_)) {
                         break;
                     }
                 }
