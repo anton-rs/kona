@@ -2,7 +2,7 @@
 
 use crate::{
     batch::Batch,
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineResult},
     stages::batch_queue::BatchQueueProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -17,12 +17,12 @@ pub struct MockBatchQueueProvider {
     /// The origin of the L1 block.
     pub origin: Option<BlockInfo>,
     /// A list of batches to return.
-    pub batches: Vec<StageResult<Batch>>,
+    pub batches: Vec<PipelineResult<Batch>>,
 }
 
 impl MockBatchQueueProvider {
     /// Creates a new [MockBatchQueueProvider] with the given origin and batches.
-    pub fn new(batches: Vec<StageResult<Batch>>) -> Self {
+    pub fn new(batches: Vec<PipelineResult<Batch>>) -> Self {
         Self { origin: Some(BlockInfo::default()), batches }
     }
 }
@@ -35,21 +35,21 @@ impl OriginProvider for MockBatchQueueProvider {
 
 #[async_trait]
 impl BatchQueueProvider for MockBatchQueueProvider {
-    async fn next_batch(&mut self) -> StageResult<Batch> {
-        self.batches.pop().ok_or(StageError::Eof)?
+    async fn next_batch(&mut self) -> PipelineResult<Batch> {
+        self.batches.pop().ok_or(PipelineError::Eof)?
     }
 }
 
 #[async_trait]
 impl OriginAdvancer for MockBatchQueueProvider {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         Ok(())
     }
 }
 
 #[async_trait]
 impl ResettableStage for MockBatchQueueProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
         Ok(())
     }
 }

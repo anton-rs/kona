@@ -2,7 +2,7 @@
 
 use super::derive_deposits;
 use crate::{
-    errors::BuilderError,
+    errors::{BuilderError, PipelineError, PipelineResult, StageErrorKind},
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::{ChainProvider, L2ChainProvider},
 };
@@ -14,7 +14,7 @@ use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{L1BlockInfoTx, L2BlockInfo};
+use op_alloy_protocol::{block_info::DecodeError, L1BlockInfoTx, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
 /// The [AttributesBuilder] is responsible for preparing [OptimismPayloadAttributes]
@@ -32,7 +32,7 @@ pub trait AttributesBuilder {
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockNumHash,
-    ) -> Result<OptimismPayloadAttributes, BuilderError>;
+    ) -> PipelineResult<OptimismPayloadAttributes>;
 }
 
 /// A stateful implementation of the [AttributesBuilder].
@@ -71,9 +71,11 @@ where
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockNumHash,
-    ) -> Result<OptimismPayloadAttributes, BuilderError> {
+    ) -> PipelineResult<OptimismPayloadAttributes> {
         let l1_header;
         let deposit_transactions: Vec<Bytes>;
+
+        // TODO: Temp RPC error
         let mut sys_config = self
             .config_fetcher
             .system_config_by_number(l2_parent.block_info.number, self.rollup_cfg.clone())
@@ -83,30 +85,39 @@ where
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
         let sequence_number = if l2_parent.l1_origin.number != epoch.number {
+            // TODO: Temp RPC error
             let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
             if l2_parent.l1_origin.hash != header.parent_hash {
-                return Err(BuilderError::BlockMismatchEpochReset(
-                    epoch,
-                    l2_parent.l1_origin,
-                    header.parent_hash,
+                return Err(StageErrorKind::Reset(
+                    BuilderError::BlockMismatchEpochReset(
+                        epoch,
+                        l2_parent.l1_origin,
+                        header.parent_hash,
+                    )
+                    .into(),
                 ));
             }
+            // TODO: Temp RPC error
             let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
-            sys_config
-                .update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)
-                .map_err(|e| BuilderError::Custom(anyhow::anyhow!(e)))?;
             let deposits =
                 derive_deposits(epoch.hash, receipts, self.rollup_cfg.deposit_contract_address)
-                    .await?;
+                    .await
+                    .map_err(|e| PipelineError::DecodeError(e).crit())?;
+            sys_config
+                .update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)
+                .map_err(|e| PipelineError::SystemConfigUpdate(e).crit())?;
             l1_header = header;
             deposit_transactions = deposits;
             0
         } else {
             #[allow(clippy::collapsible_else_if)]
             if l2_parent.l1_origin.hash != epoch.hash {
-                return Err(BuilderError::BlockMismatch(epoch, l2_parent.l1_origin));
+                return Err(StageErrorKind::Reset(
+                    BuilderError::BlockMismatch(epoch, l2_parent.l1_origin).into(),
+                ));
             }
 
+            // TODO: Temp RPC error
             let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
             l1_header = header;
             deposit_transactions = vec![];
@@ -117,22 +128,22 @@ where
         // between L1 and L2.
         let next_l2_time = l2_parent.block_info.timestamp + self.rollup_cfg.block_time;
         if next_l2_time < l1_header.timestamp {
-            return Err(BuilderError::BrokenTimeInvariant(
+            return Err(StageErrorKind::Reset(BuilderError::BrokenTimeInvariant(
                 l2_parent.l1_origin,
                 next_l2_time,
                 BlockNumHash { hash: l1_header.hash_slow(), number: l1_header.number },
                 l1_header.timestamp,
-            ));
+            ).into()));
         }
 
         let mut upgrade_transactions: Vec<Bytes> = vec![];
-        if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
-            !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
+        if self.rollup_cfg.is_ecotone_active(next_l2_time)
+            && !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
         {
             upgrade_transactions = Hardforks::ecotone_txs();
         }
-        if self.rollup_cfg.is_fjord_active(next_l2_time) &&
-            !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
+        if self.rollup_cfg.is_fjord_active(next_l2_time)
+            && !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
         {
             upgrade_transactions.append(&mut Hardforks::fjord_txs());
         }

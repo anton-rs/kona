@@ -1,7 +1,7 @@
 //! Mock types for the [FrameQueue] stage.
 
 use crate::{
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineResult},
     stages::FrameQueueProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -15,12 +15,12 @@ use op_alloy_protocol::BlockInfo;
 #[derive(Debug, Default)]
 pub struct MockFrameQueueProvider {
     /// The data to return.
-    pub data: Vec<StageResult<Bytes>>,
+    pub data: Vec<PipelineResult<Bytes>>,
 }
 
 impl MockFrameQueueProvider {
     /// Creates a new [MockFrameQueueProvider] with the given data.
-    pub fn new(data: Vec<StageResult<Bytes>>) -> Self {
+    pub fn new(data: Vec<PipelineResult<Bytes>>) -> Self {
         Self { data }
     }
 }
@@ -33,7 +33,7 @@ impl OriginProvider for MockFrameQueueProvider {
 
 #[async_trait]
 impl OriginAdvancer for MockFrameQueueProvider {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         Ok(())
     }
 }
@@ -42,14 +42,14 @@ impl OriginAdvancer for MockFrameQueueProvider {
 impl FrameQueueProvider for MockFrameQueueProvider {
     type Item = Bytes;
 
-    async fn next_data(&mut self) -> StageResult<Self::Item> {
-        self.data.pop().unwrap_or(Err(StageError::Eof))
+    async fn next_data(&mut self) -> PipelineResult<Self::Item> {
+        self.data.pop().unwrap_or(Err(PipelineError::Eof.temp()))
     }
 }
 
 #[async_trait]
 impl ResettableStage for MockFrameQueueProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
         Ok(())
     }
 }

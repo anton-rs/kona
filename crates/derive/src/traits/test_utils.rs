@@ -13,7 +13,7 @@ use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 use crate::{
-    errors::{BlobProviderError, StageError, StageResult},
+    errors::{BlobProviderError, PipelineError, PipelineResult},
     traits::{
         AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
     },
@@ -25,15 +25,15 @@ pub struct TestIter {
     /// Holds open data calls with args for assertions.
     pub(crate) open_data_calls: Vec<(BlockInfo, Address)>,
     /// A queue of results to return as the next iterated data.
-    pub(crate) results: Vec<StageResult<Bytes>>,
+    pub(crate) results: Vec<PipelineResult<Bytes>>,
 }
 
 #[async_trait]
 impl AsyncIterator for TestIter {
     type Item = Bytes;
 
-    async fn next(&mut self) -> StageResult<Self::Item> {
-        self.results.pop().unwrap_or_else(|| Err(StageError::Eof))
+    async fn next(&mut self) -> PipelineResult<Self::Item> {
+        self.results.pop().unwrap_or(Err(PipelineError::Eof.temp()))
     }
 }
 
@@ -43,7 +43,7 @@ pub struct TestDAP {
     /// The batch inbox address.
     pub batch_inbox_address: Address,
     /// Specifies the stage results the test iter returns as data.
-    pub(crate) results: Vec<StageResult<Bytes>>,
+    pub(crate) results: Vec<PipelineResult<Bytes>>,
 }
 
 #[async_trait]
@@ -51,16 +51,16 @@ impl DataAvailabilityProvider for TestDAP {
     type Item = Bytes;
     type DataIter = TestIter;
 
-    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
+    async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::DataIter> {
         // Construct a new vec of results to return.
         let results = self
             .results
             .iter()
             .map(|i| match i {
                 Ok(r) => Ok(r.clone()),
-                Err(_) => Err(StageError::Eof),
+                Err(_) => Err(PipelineError::Eof.temp()),
             })
-            .collect::<Vec<StageResult<Bytes>>>();
+            .collect::<Vec<PipelineResult<Bytes>>>();
         Ok(TestIter { open_data_calls: vec![(*block_ref, self.batch_inbox_address)], results })
     }
 }
@@ -130,6 +130,8 @@ impl TestChainProvider {
 
 #[async_trait]
 impl ChainProvider for TestChainProvider {
+    type Error = anyhow::Error;
+
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
         if let Some((_, header)) = self.headers.iter().find(|(_, b)| b.hash_slow() == hash) {
             Ok(header.clone())
@@ -195,11 +197,13 @@ impl TestBlobProvider {
 
 #[async_trait]
 impl BlobProvider for TestBlobProvider {
+    type Error = BlobProviderError;
+
     async fn get_blobs(
         &mut self,
         _block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, BlobProviderError> {
+    ) -> Result<Vec<Blob>, Self::Error> {
         let mut blobs = Vec::new();
         for blob_hash in blob_hashes {
             if let Some(data) = self.blobs.get(&blob_hash.hash) {
@@ -236,6 +240,8 @@ impl TestL2ChainProvider {
 
 #[async_trait]
 impl L2ChainProvider for TestL2ChainProvider {
+    type Error = anyhow::Error;
+
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         if self.short_circuit {
             return self.blocks.first().copied().ok_or_else(|| anyhow::anyhow!("Block not found"));

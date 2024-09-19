@@ -1,15 +1,14 @@
 //! Stage Utilities
 
-use crate::batch::FJORD_MAX_SPAN_BATCH_BYTES;
+use crate::{batch::FJORD_MAX_SPAN_BATCH_BYTES, ensure, errors::BatchDecompressionError};
 use alloc::{vec, vec::Vec};
 use alloc_no_stdlib::*;
-use anyhow::{ensure, Result};
 use brotli::*;
 use core::ops;
 
 /// Decompresses the given bytes data using the Brotli decompressor implemented
 /// in the [`brotli`](https://crates.io/crates/brotli) crate.
-pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>> {
+pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>, BatchDecompressionError> {
     declare_stack_allocator_struct!(MemPool, 4096, stack);
 
     let mut u8_buffer = vec![0; 32 * 1024 * 1024].into_boxed_slice();
@@ -47,7 +46,7 @@ pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>> {
                 let old_len = output.len();
                 let new_len = old_len * 2;
 
-                ensure!(new_len as u64 <= FJORD_MAX_SPAN_BATCH_BYTES, "Output buffer too large");
+                ensure!(new_len as u64 <= FJORD_MAX_SPAN_BATCH_BYTES, BatchDecompressionError::BatchTooLarge);
 
                 output.resize(new_len, 0);
                 available_out += old_len;

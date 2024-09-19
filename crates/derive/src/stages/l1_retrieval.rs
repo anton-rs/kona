@@ -1,7 +1,7 @@
 //! Contains the [L1Retrieval] stage of the derivation pipeline.
 
 use crate::{
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineResult, StageErrorKind},
     stages::FrameQueueProvider,
     traits::{
         AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
@@ -9,7 +9,6 @@ use crate::{
 };
 use alloc::boxed::Box;
 use alloy_primitives::Address;
-use anyhow::anyhow;
 use async_trait::async_trait;
 use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
@@ -24,7 +23,7 @@ pub trait L1RetrievalProvider {
     /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
-    async fn next_l1_block(&mut self) -> StageResult<Option<BlockInfo>>;
+    async fn next_l1_block(&mut self) -> PipelineResult<Option<BlockInfo>>;
 
     /// Returns the batcher [Address] from the [op_alloy_genesis::SystemConfig].
     fn batcher_addr(&self) -> Address;
@@ -73,7 +72,7 @@ where
     DAP: DataAvailabilityProvider + Send,
     P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
 {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
@@ -86,23 +85,24 @@ where
 {
     type Item = DAP::Item;
 
-    async fn next_data(&mut self) -> StageResult<Self::Item> {
+    async fn next_data(&mut self) -> PipelineResult<Self::Item> {
         if self.data.is_none() {
             let next = self
                 .prev
                 .next_l1_block()
                 .await? // SAFETY: This question mark bubbles up the Eof error.
-                .ok_or_else(|| anyhow!("No block to retrieve data from"))?;
+                .ok_or(PipelineError::MissingL1Data.temp())?; // TODO: Check if this is actually temp
             self.data = Some(self.provider.open_data(&next).await?);
         }
 
         match self.data.as_mut().expect("Cannot be None").next().await {
             Ok(data) => Ok(data),
-            Err(StageError::Eof) => {
-                self.data = None;
-                Err(StageError::Eof)
+            Err(e) => {
+                if let StageErrorKind::Temporary(PipelineError::Eof) = e {
+                    self.data = None;
+                }
+                Err(e)
             }
-            Err(e) => Err(e),
         }
     }
 }
@@ -123,7 +123,7 @@ where
     DAP: DataAvailabilityProvider + Send,
     P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
         self.prev.reset(base, cfg).await?;
         self.data = Some(self.provider.open_data(&base).await?);
         crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
@@ -153,7 +153,7 @@ mod tests {
     #[tokio::test]
     async fn test_l1_retrieval_next_data() {
         let traversal = new_populated_test_traversal();
-        let results = vec![Err(StageError::Eof), Ok(Bytes::default())];
+        let results = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
         let dap = TestDAP { results, batch_inbox_address: Address::default() };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         assert_eq!(retrieval.data, None);
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(retrieval_data.open_data_calls[0].1, Address::default());
         // Data should be reset to none and the error should be bubbled up.
         let data = retrieval.next_data().await.unwrap_err();
-        assert_eq!(data, StageError::Eof);
+        assert_eq!(data, PipelineError::Eof.temp());
         assert!(retrieval.data.is_none());
     }
 
@@ -193,13 +193,13 @@ mod tests {
     async fn test_l1_retrieval_existing_data_errors() {
         let data = TestIter {
             open_data_calls: vec![(BlockInfo::default(), Address::default())],
-            results: vec![Err(StageError::Eof)],
+            results: vec![Err(PipelineError::Eof.temp())],
         };
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
         let data = retrieval.next_data().await.unwrap_err();
-        assert_eq!(data, StageError::Eof);
+        assert_eq!(data, PipelineError::Eof.temp());
         assert!(retrieval.data.is_none());
     }
 }

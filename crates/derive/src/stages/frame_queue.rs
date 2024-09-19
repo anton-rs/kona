@@ -1,13 +1,12 @@
 //! This module contains the [FrameQueue] stage of the derivation pipeline.
 
 use crate::{
-    errors::{into_frames, StageError, StageResult},
+    errors::{PipelineError, PipelineResult},
     stages::ChannelBankProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
-use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::SystemConfig;
@@ -23,7 +22,7 @@ pub trait FrameQueueProvider {
     /// Retrieves the next data item from the L1 retrieval stage.
     /// If there is data, it pushes it into the next stage.
     /// If there is no data, it returns an error.
-    async fn next_data(&mut self) -> StageResult<Self::Item>;
+    async fn next_data(&mut self) -> PipelineResult<Self::Item>;
 }
 
 /// The [FrameQueue] stage of the derivation pipeline.
@@ -59,7 +58,7 @@ impl<P> OriginAdvancer for FrameQueue<P>
 where
     P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
@@ -69,7 +68,7 @@ impl<P> ChannelBankProvider for FrameQueue<P>
 where
     P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn next_frame(&mut self) -> StageResult<Frame> {
+    async fn next_frame(&mut self) -> PipelineResult<Frame> {
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
@@ -93,10 +92,10 @@ where
         // If we did not add more frames but still have more data, retry this function.
         if self.queue.is_empty() {
             trace!(target: "frame-queue", "Queue is empty after fetching data. Retrying next_frame.");
-            return Err(StageError::NotEnoughData);
+            return Err(PipelineError::NotEnoughData.temp());
         }
 
-        self.queue.pop_front().ok_or_else(|| anyhow!("Frame queue is impossibly empty.").into())
+        Ok(self.queue.pop_front().expect("Frame queue impossibly empty"))
     }
 }
 
@@ -118,7 +117,7 @@ where
         &mut self,
         block_info: BlockInfo,
         system_config: &SystemConfig,
-    ) -> StageResult<()> {
+    ) -> PipelineResult<()> {
         self.prev.reset(block_info, system_config).await?;
         self.queue = VecDeque::default();
         crate::inc!(STAGE_RESETS, &["frame-queue"]);
@@ -160,16 +159,16 @@ pub(crate) mod tests {
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, StageError::NotEnoughData);
+        assert_eq!(err, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]
     async fn test_frame_queue_no_frames_decoded() {
-        let data = vec![Err(StageError::Eof), Ok(Bytes::default())];
+        let data = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, StageError::NotEnoughData);
+        assert_eq!(err, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]
@@ -178,7 +177,7 @@ pub(crate) mod tests {
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, StageError::NotEnoughData);
+        assert_eq!(err, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]
@@ -187,7 +186,7 @@ pub(crate) mod tests {
         let mock = MockFrameQueueProvider { data };
         let mut frame_queue = FrameQueue::new(mock);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, StageError::NotEnoughData);
+        assert_eq!(err, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]
@@ -199,7 +198,7 @@ pub(crate) mod tests {
         let frame = new_test_frames(1);
         assert_eq!(frame[0], frame_decoded);
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, StageError::Eof);
+        assert_eq!(err, PipelineError::Eof.temp());
     }
 
     #[tokio::test]
@@ -212,6 +211,6 @@ pub(crate) mod tests {
             assert_eq!(frame_decoded.number, i);
         }
         let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, StageError::Eof);
+        assert_eq!(err, PipelineError::Eof.temp());
     }
 }

@@ -2,12 +2,10 @@
 //! [DataAvailabilityProvider] trait for the Ethereum protocol.
 
 use crate::{
-    sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},
-    traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
+    errors::PipelineResult, sources::{BlobSource, CalldataSource, EthereumDataSourceVariant}, traits::{BlobProvider, ChainProvider, DataAvailabilityProvider}
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
-use anyhow::Result;
 use async_trait::async_trait;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
@@ -62,7 +60,7 @@ where
     type Item = Bytes;
     type DataIter = EthereumDataSourceVariant<C, B>;
 
-    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
+    async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::DataIter> {
         let ecotone_enabled =
             self.ecotone_timestamp.map(|e| block_ref.timestamp >= e).unwrap_or(false);
         if ecotone_enabled {

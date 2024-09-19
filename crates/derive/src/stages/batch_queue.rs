@@ -1,16 +1,14 @@
 //! This module contains the `BatchQueue` stage implementation.
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
-
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineResult, StageErrorKind},
     stages::attributes_queue::AttributesProvider,
     traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -24,7 +22,7 @@ pub trait BatchQueueProvider {
     /// complete and the batch has been consumed, an [StageError::Eof] error is returned.
     ///
     /// [ChannelReader]: crate::stages::ChannelReader
-    async fn next_batch(&mut self) -> StageResult<Batch>;
+    async fn next_batch(&mut self) -> PipelineResult<Batch>;
 }
 
 /// [BatchQueue] is responsible for o rdering unordered batches
@@ -53,7 +51,6 @@ where
     prev: P,
     /// The l1 block ref
     origin: Option<BlockInfo>,
-
     /// A consecutive, time-centric window of L1 Blocks.
     /// Every L1 origin of unsafe L2 Blocks must be included in this list.
     /// If every L2 Block corresponding to a single L1 Block becomes safe,
@@ -61,15 +58,12 @@ where
     /// If new L2 Block's L1 origin is not included in this list, fetch and
     /// push it to the list.
     l1_blocks: Vec<BlockInfo>,
-
     /// A set of batches in order from when we've seen them.
     batches: Vec<BatchWithInclusionBlock>,
-
     /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
     ///
     /// [SpanBatch]: crate::batch::SpanBatch
     next_spans: Vec<SingleBatch>,
-
     /// Used to validate the batches.
     fetcher: BF,
 }
@@ -113,10 +107,10 @@ where
         &mut self,
         empty: bool,
         parent: L2BlockInfo,
-    ) -> StageResult<Batch> {
+    ) -> PipelineResult<Batch> {
         // Cannot derive a batch if no origin was prepared.
         if self.l1_blocks.is_empty() {
-            return Err(StageError::MissingOrigin);
+            return Err(PipelineError::MissingOrigin.crit());
         }
 
         // Get the epoch
@@ -166,7 +160,7 @@ where
                 BatchValidity::Undecided => {
                     remaining.extend_from_slice(&self.batches[i..]);
                     self.batches = remaining;
-                    return Err(StageError::Eof);
+                    return Err(PipelineError::Eof.temp());
                 }
             }
         }
@@ -180,7 +174,7 @@ where
         // If the current epoch is too old compared to the L1 block we are at,
         // i.e. if the sequence window expired, we create empty batches for the current epoch
         let expiry_epoch = epoch.number + self.cfg.seq_window_size;
-        let bq_origin = self.origin.ok_or(StageError::MissingOrigin)?;
+        let bq_origin = self.origin.ok_or(PipelineError::MissingOrigin.crit())?;
         let force_empty_batches =
             (expiry_epoch == bq_origin.number && empty) || expiry_epoch < bq_origin.number;
         let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
@@ -189,7 +183,7 @@ where
         // there is still room to receive batches for the current epoch.
         // No need to force-create empty batch(es) towards the next epoch yet.
         if !force_empty_batches {
-            return Err(StageError::Eof);
+            return Err(PipelineError::Eof.temp());
         }
 
         info!(
@@ -200,7 +194,7 @@ where
 
         // The next L1 block is needed to proceed towards the next epoch.
         if self.l1_blocks.len() < 2 {
-            return Err(StageError::Eof);
+            return Err(PipelineError::Eof.temp());
         }
 
         let next_epoch = self.l1_blocks[1];
@@ -227,16 +221,16 @@ where
             next_epoch.number, next_timestamp, next_epoch.timestamp
         );
         self.l1_blocks.remove(0);
-        Err(StageError::Eof)
+        Err(PipelineError::Eof.temp())
     }
 
     /// Adds a batch to the queue.
-    pub async fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> StageResult<()> {
+    pub async fn add_batch(&mut self, batch: Batch, parent: L2BlockInfo) -> PipelineResult<()> {
         if self.l1_blocks.is_empty() {
             error!(target: "batch-queue", "Cannot add batch without an origin");
             panic!("Cannot add batch without an origin");
         }
-        let origin = self.origin.ok_or(StageError::MissingOrigin)?;
+        let origin = self.origin.ok_or(PipelineError::MissingOrigin.crit())?;
         let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
         if data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await.is_drop() {
@@ -253,7 +247,7 @@ where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
@@ -266,7 +260,7 @@ where
 {
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
-    async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
+    async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["batch_queue"], timer);
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
@@ -317,11 +311,11 @@ where
         if self.origin != self.prev.origin() {
             self.origin = self.prev.origin();
             if !origin_behind {
-                let origin = match self.origin.as_ref().ok_or_else(|| anyhow!("missing origin")) {
+                let origin = match self.origin.as_ref().ok_or(PipelineError::MissingOrigin.crit()) {
                     Ok(o) => o,
                     Err(e) => {
                         crate::timer!(DISCARD, timer);
-                        return Err(StageError::Custom(e));
+                        return Err(e);
                     }
                 };
                 self.l1_blocks.push(*origin);
@@ -345,8 +339,10 @@ where
                     warn!(target: "batch-queue", "Dropping batch: Origin is behind");
                 }
             }
-            Err(StageError::Eof) => out_of_data = true,
             Err(e) => {
+            if let StageErrorKind::Temporary(PipelineError::Eof) = e {
+                        out_of_data = true;
+                    }
                 crate::timer!(DISCARD, timer);
                 return Err(e);
             }
@@ -357,9 +353,9 @@ where
         if origin_behind {
             crate::timer!(DISCARD, timer);
             if out_of_data {
-                return Err(StageError::Eof);
+                return Err(PipelineError::Eof.temp());
             }
-            return Err(StageError::NotEnoughData);
+            return Err(PipelineError::NotEnoughData.temp());
         }
 
         // Attempt to derive more batches.
@@ -368,11 +364,11 @@ where
             Err(e) => {
                 crate::timer!(DISCARD, timer);
                 match e {
-                    StageError::Eof => {
+                    StageErrorKind::Temporary(PipelineError::Eof) => {
                         if out_of_data {
-                            return Err(StageError::Eof);
+                            return Err(PipelineError::Eof.temp());
                         }
-                        return Err(StageError::NotEnoughData);
+                        return Err(PipelineError::NotEnoughData.temp());
                     }
                     _ => return Err(e),
                 }
@@ -433,7 +429,7 @@ where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
-    async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> PipelineResult<()> {
         self.prev.reset(base, system_config).await?;
         self.origin = Some(base);
         self.batches.clear();
@@ -487,7 +483,7 @@ mod tests {
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
         let result = bq.derive_next_batch(false, parent).await.unwrap_err();
-        assert_eq!(result, StageError::MissingOrigin);
+        assert_eq!(result, PipelineError::MissingOrigin.crit());
     }
 
     #[tokio::test]
@@ -499,7 +495,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
-        assert_eq!(res, StageError::NotEnoughData);
+        assert_eq!(res, PipelineError::NotEnoughData.temp());
         assert!(bq.is_last_in_span());
     }
 
@@ -507,7 +503,7 @@ mod tests {
     async fn test_next_batch_origin_behind() {
         let mut reader = new_batch_reader();
         let cfg = Arc::new(RollupConfig::default());
-        let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+        let mut batch_vec: Vec<PipelineResult<Batch>> = vec![];
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
@@ -520,7 +516,7 @@ mod tests {
             ..Default::default()
         };
         let res = bq.next_batch(parent).await.unwrap_err();
-        assert_eq!(res, StageError::NotEnoughData);
+        assert_eq!(res, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]
@@ -545,7 +541,7 @@ mod tests {
             batch_inbox_address: address!("6887246668a3b87f54deb3b94ba47a6f63f32985"),
             ..Default::default()
         });
-        let mut batch_vec: Vec<StageResult<Batch>> = vec![];
+        let mut batch_vec: Vec<PipelineResult<Batch>> = vec![];
         let mut batch_txs: Vec<Bytes> = vec![];
         let mut second_batch_txs: Vec<Bytes> = vec![];
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
@@ -655,7 +651,7 @@ mod tests {
         let warns = trace_store.get_by_level(Level::WARN);
         assert_eq!(warns.len(), 1);
         assert!(warns[0].contains("span batch has no new blocks after safe head"));
-        assert_eq!(res, StageError::NotEnoughData);
+        assert_eq!(res, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]

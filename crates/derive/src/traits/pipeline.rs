@@ -5,9 +5,8 @@ use async_trait::async_trait;
 use core::iter::Iterator;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
-
 use super::OriginProvider;
-use crate::errors::StageError;
+use crate::errors::StageErrorKind;
 
 /// A pipeline error.
 #[derive(Debug)]
@@ -17,9 +16,9 @@ pub enum StepResult {
     /// Origin was advanced.
     AdvancedOrigin,
     /// Origin advance failed.
-    OriginAdvanceErr(StageError),
+    OriginAdvanceErr(StageErrorKind),
     /// Step failed.
-    StepFailed(StageError),
+    StepFailed(StageErrorKind),
 }
 
 /// This trait defines the interface for interacting with the derivation pipeline.

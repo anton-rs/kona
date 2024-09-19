@@ -1,11 +1,12 @@
 //! Contains the core derivation pipeline.
 
+use crate::errors::StageErrorKind;
+
 use super::{
-    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResettableStage,
-    StageError, StepResult,
+    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
+    PipelineResult, ResettableStage, StepResult,
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use anyhow::bail;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
@@ -94,17 +95,17 @@ where
         &mut self,
         l2_block_info: BlockInfo,
         l1_block_info: BlockInfo,
-    ) -> anyhow::Result<()> {
+    ) -> PipelineResult<()> {
         let system_config = self
             .l2_chain_provider
             .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
             .await?;
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
-            Err(StageError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
+            Err(PipelineError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
             Err(err) => {
                 error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                bail!(err);
+                return Err(err.into());
             }
         }
         Ok(())
@@ -127,17 +128,19 @@ where
                 self.prepared.push_back(a);
                 StepResult::PreparedAttributes
             }
-            Err(StageError::Eof) => {
-                trace!(target: "pipeline", "Pipeline advancing origin");
-                if let Err(e) = self.attributes.advance_origin().await {
-                    return StepResult::OriginAdvanceErr(e);
+            Err(err) => match err {
+                StageErrorKind::Temporary(PipelineError::Eof) => {
+                    trace!(target: "pipeline", "Pipeline advancing origin");
+                    if let Err(e) = self.attributes.advance_origin().await {
+                        return StepResult::OriginAdvanceErr(e);
+                    }
+                    StepResult::AdvancedOrigin
                 }
-                StepResult::AdvancedOrigin
-            }
-            Err(err) => {
-                warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
-                StepResult::StepFailed(err)
-            }
+                _ => {
+                    warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
+                    StepResult::StepFailed(err)
+                }
+            },
         }
     }
 }

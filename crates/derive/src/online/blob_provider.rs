@@ -2,7 +2,6 @@
 
 use alloc::{boxed::Box, string::String, vec::Vec};
 use alloy_eips::eip4844::Blob;
-use anyhow::{anyhow, ensure};
 use async_trait::async_trait;
 use core::marker::PhantomData;
 use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
@@ -10,15 +9,13 @@ use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
 use crate::{
-    errors::BlobProviderError,
-    online::{BeaconClient, OnlineBeaconClient},
-    traits::BlobProvider,
+    ensure, errors::BlobProviderError, online::{BeaconClient, OnlineBeaconClient}, traits::BlobProvider
 };
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
     /// Converts a timestamp to a slot number.
-    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> anyhow::Result<u64>;
+    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError>;
 }
 
 /// An online implementation of the [BlobProvider] trait.
@@ -51,7 +48,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         }
         if self.slot_interval.is_none() {
             self.slot_interval =
-                Some(self.beacon_client.config_spec().await?.data.seconds_per_slot);
+                Some(self.beacon_client.config_spec().await.map_err(|e| BlobProviderError::Backend(e))?.data.seconds_per_slot);
         }
         Ok(())
     }
@@ -65,7 +62,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         self.beacon_client
             .beacon_blob_side_cars(slot, hashes)
             .await
-            .map_err(BlobProviderError::Custom)
+            .map_err(|e| BlobProviderError::Backend(e.to_string()))
     }
 
     /// Fetches blob sidecars for the given block reference and blob hashes.
@@ -84,7 +81,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
 
         // Calculate the slot for the given timestamp.
         let slot =
-            S::slot(genesis, interval, block_ref.timestamp).map_err(BlobProviderError::Slot)?;
+            S::slot(genesis, interval, block_ref.timestamp)?;
 
         // Fetch blob sidecars for the slot using the given blob hashes.
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
@@ -110,10 +107,10 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
 pub struct SimpleSlotDerivation;
 
 impl SlotDerivation for SimpleSlotDerivation {
-    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> anyhow::Result<u64> {
+    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError> {
         ensure!(
             timestamp >= genesis,
-            "provided timestamp ({timestamp}) precedes genesis time ({genesis})"
+            BlobProviderError::SlotDerivation 
         );
         Ok((timestamp - genesis) / slot_time)
     }
@@ -125,6 +122,8 @@ where
     B: BeaconClient + Send + Sync,
     S: SlotDerivation + Send + Sync,
 {
+    type Error = BlobProviderError;
+
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. The blobs are validated for their index and hashes using the specified
     /// [IndexedBlobHash].
@@ -132,7 +131,7 @@ where
         &mut self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, BlobProviderError> {
+    ) -> Result<Vec<Blob>, Self::Error> {
         crate::inc!(PROVIDER_CALLS, &["blob_provider", "get_blobs"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
@@ -173,7 +172,7 @@ where
             Err(e) => {
                 crate::timer!(DISCARD, timer);
                 crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "verify_blob"]);
-                return Err(BlobProviderError::Custom(e));
+                return Err(BlobProviderError::Backend(e.to_string()));
             }
         };
 

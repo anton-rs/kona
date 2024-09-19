@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, Bytes, B256};
 use op_alloy_protocol::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
+use crate::errors::DecodeError;
 
 /// Derive deposits for transaction receipts.
 ///
@@ -14,7 +15,7 @@ pub(crate) async fn derive_deposits(
     block_hash: B256,
     receipts: Vec<Receipt>,
     deposit_contract: Address,
-) -> anyhow::Result<Vec<Bytes>> {
+) -> Result<Vec<Bytes>, DecodeError> {
     let mut global_index = 0;
     let mut res = Vec::new();
     for r in receipts.iter() {
@@ -31,7 +32,7 @@ pub(crate) async fn derive_deposits(
                 continue;
             }
             let decoded =
-                decode_deposit(block_hash, curr_index, l).map_err(|e| anyhow::anyhow!(e))?;
+                decode_deposit(block_hash, curr_index, l)?;
             res.push(decoded);
         }
     }
@@ -131,8 +132,8 @@ mod tests {
             LogData::new_unchecked(vec![DEPOSIT_EVENT_ABI_HASH], Bytes::default());
         let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
         let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
-        let downcasted = result.unwrap_err().downcast::<DepositError>().unwrap();
-        assert_eq!(downcasted, DepositError::UnexpectedTopicsLen(1));
+        let downcasted = result.unwrap_err();
+        assert_eq!(downcasted, DepositError::UnexpectedTopicsLen(1).into());
     }
 
     #[tokio::test]
