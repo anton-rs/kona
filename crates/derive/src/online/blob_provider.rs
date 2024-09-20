@@ -113,7 +113,10 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
+            return Err(BlobProviderError::SidecarLengthMismatch(
+                blob_hashes.len(),
+                filtered.len(),
+            ));
         }
 
         Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
@@ -178,10 +181,10 @@ where
                 let hash = blob_hashes
                     .get(i)
                     .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
-                sidecar
-                    .verify_blob(hash)
-                    .map(|_| sidecar.blob)
-                    .map_err(|e| BlobProviderError::Backend(e.to_string()))
+                match sidecar.verify_blob(hash) {
+                    Ok(_) => Ok(sidecar.blob),
+                    Err(e) => Err(BlobProviderError::Backend(e.to_string())),
+                }
             })
             .collect::<Result<Vec<Blob>, BlobProviderError>>()
         {
@@ -292,7 +295,10 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
+            return Err(BlobProviderError::SidecarLengthMismatch(
+                blob_hashes.len(),
+                filtered.len(),
+            ));
         }
 
         Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
@@ -701,7 +707,7 @@ mod tests {
         assert_eq!(result.unwrap_err(), BlobProviderError::Backend("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1".to_string()));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_get_blobs_failed_verification() {
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
@@ -720,8 +726,8 @@ mod tests {
         }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
-            result.unwrap_err(),
-            BlobProviderError::Backend("blob at index 0 failed verification".to_string())
+            result,
+            Err(BlobProviderError::Backend("blob at index 0 failed verification".to_string()))
         );
     }
 
