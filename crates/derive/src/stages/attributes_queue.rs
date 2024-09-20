@@ -10,7 +10,7 @@ use tracing::info;
 
 use crate::{
     batch::SingleBatch,
-    errors::{ResetError, StageError, StageResult},
+    errors::{PipelineError, PipelineResult, ResetError},
     traits::{NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
 };
 
@@ -26,7 +26,7 @@ pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
 #[async_trait]
 pub trait AttributesProvider {
     /// Returns the next valid batch upon the given safe head.
-    async fn next_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch>;
+    async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch>;
 
     /// Returns whether the current batch is the last in its span.
     fn is_last_in_span(&self) -> bool;
@@ -75,20 +75,20 @@ where
     }
 
     /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
-    pub async fn load_batch(&mut self, parent: L2BlockInfo) -> StageResult<SingleBatch> {
+    pub async fn load_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
         if self.batch.is_none() {
             let batch = self.prev.next_batch(parent).await?;
             self.batch = Some(batch);
             self.is_last_in_span = self.prev.is_last_in_span();
         }
-        self.batch.as_ref().cloned().ok_or(StageError::Eof)
+        self.batch.as_ref().cloned().ok_or(PipelineError::Eof.temp())
     }
 
     /// Returns the next [OptimismAttributesWithParent] from the current batch.
     pub async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,
-    ) -> StageResult<OptimismAttributesWithParent> {
+    ) -> PipelineResult<OptimismAttributesWithParent> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["attributes_queue"], timer);
         let batch = match self.load_batch(parent).await {
             Ok(batch) => batch,
@@ -124,28 +124,21 @@ where
         &mut self,
         batch: SingleBatch,
         parent: L2BlockInfo,
-    ) -> StageResult<OptimismPayloadAttributes> {
+    ) -> PipelineResult<OptimismPayloadAttributes> {
         // Sanity check parent hash
         if batch.parent_hash != parent.block_info.hash {
-            return Err(StageError::Reset(ResetError::BadParentHash(
-                batch.parent_hash,
-                parent.block_info.hash,
-            )));
+            return Err(ResetError::BadParentHash(batch.parent_hash, parent.block_info.hash).into());
         }
 
         // Sanity check timestamp
         let actual = parent.block_info.timestamp + self.cfg.block_time;
         if actual != batch.timestamp {
-            return Err(StageError::Reset(ResetError::BadTimestamp(batch.timestamp, actual)));
+            return Err(ResetError::BadTimestamp(batch.timestamp, actual).into());
         }
 
         // Prepare the payload attributes
         let tx_count = batch.transactions.len();
-        let mut attributes = self
-            .builder
-            .prepare_payload_attributes(parent, batch.epoch())
-            .await
-            .map_err(StageError::AttributesBuild)?;
+        let mut attributes = self.builder.prepare_payload_attributes(parent, batch.epoch()).await?;
         attributes.no_tx_pool = Some(true);
         match attributes.transactions {
             Some(ref mut txs) => txs.extend(batch.transactions),
@@ -172,7 +165,7 @@ where
     P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
     AB: AttributesBuilder + Debug + Send,
 {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
@@ -186,7 +179,7 @@ where
     async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,
-    ) -> StageResult<OptimismAttributesWithParent> {
+    ) -> PipelineResult<OptimismAttributesWithParent> {
         self.next_attributes(parent).await
     }
 }
@@ -211,7 +204,7 @@ where
         &mut self,
         block_info: BlockInfo,
         system_config: &SystemConfig,
-    ) -> StageResult<()> {
+    ) -> PipelineResult<()> {
         self.prev.reset(block_info, system_config).await?;
         self.batch = None;
         self.is_last_in_span = false;
@@ -224,7 +217,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        errors::BuilderError,
+        errors::{BuilderError, PipelineErrorKind},
         stages::test_utils::{
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
@@ -251,7 +244,7 @@ mod tests {
     fn new_attributes_queue(
         cfg: Option<RollupConfig>,
         origin: Option<BlockInfo>,
-        batches: Vec<StageResult<SingleBatch>>,
+        batches: Vec<PipelineResult<SingleBatch>>,
     ) -> AttributesQueue<MockAttributesProvider, MockAttributesBuilder> {
         let cfg = cfg.unwrap_or_default();
         let mock_batch_queue = new_attributes_provider(origin, batches);
@@ -264,7 +257,7 @@ mod tests {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
         let result = attributes_queue.load_batch(parent).await.unwrap_err();
-        assert_eq!(result, StageError::Eof);
+        assert_eq!(result, PipelineError::Eof.temp());
     }
 
     #[tokio::test]
@@ -288,7 +281,7 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageError::Reset(super::ResetError::BadParentHash(Default::default(), bad_hash))
+            PipelineErrorKind::Reset(ResetError::BadParentHash(Default::default(), bad_hash))
         );
     }
 
@@ -298,7 +291,7 @@ mod tests {
         let parent = L2BlockInfo::default();
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 0)));
+        assert_eq!(result, PipelineErrorKind::Reset(ResetError::BadTimestamp(1, 0)));
     }
 
     #[tokio::test]
@@ -310,7 +303,7 @@ mod tests {
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
+        assert_eq!(result, PipelineErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
     }
 
     #[tokio::test]
@@ -323,7 +316,7 @@ mod tests {
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
+        assert_eq!(result, PipelineErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
     }
 
     #[tokio::test]
@@ -334,9 +327,7 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageError::AttributesBuild(BuilderError::Custom(anyhow::anyhow!(
-                "missing payload attribute"
-            )))
+            PipelineError::AttributesBuilder(BuilderError::AttributesUnavailable).crit()
         );
     }
 
@@ -366,7 +357,7 @@ mod tests {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
         let result = attributes_queue.next_attributes(parent).await.unwrap_err();
-        assert_eq!(result, StageError::Eof);
+        assert_eq!(result, PipelineError::Eof.temp());
     }
 
     #[tokio::test]

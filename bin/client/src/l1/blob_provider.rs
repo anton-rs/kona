@@ -5,8 +5,9 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Blob;
 use alloy_eips::eip4844::FIELD_ELEMENTS_PER_BLOB;
 use alloy_primitives::keccak256;
+use anyhow::Result;
 use async_trait::async_trait;
-use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
+use kona_derive::traits::BlobProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_primitives::IndexedBlobHash;
 use op_alloy_protocol::BlockInfo;
@@ -32,11 +33,7 @@ impl<T: CommsClient> OracleBlobProvider<T> {
     /// ## Returns
     /// - `Ok(blob)`: The blob.
     /// - `Err(e)`: The blob could not be retrieved.
-    async fn get_blob(
-        &self,
-        block_ref: &BlockInfo,
-        blob_hash: &IndexedBlobHash,
-    ) -> Result<Blob, BlobProviderError> {
+    async fn get_blob(&self, block_ref: &BlockInfo, blob_hash: &IndexedBlobHash) -> Result<Blob> {
         let mut blob_req_meta = [0u8; 48];
         blob_req_meta[0..32].copy_from_slice(blob_hash.hash.as_ref());
         blob_req_meta[32..40].copy_from_slice((blob_hash.index as u64).to_be_bytes().as_ref());
@@ -76,11 +73,13 @@ impl<T: CommsClient> OracleBlobProvider<T> {
 
 #[async_trait]
 impl<T: CommsClient + Sync + Send> BlobProvider for OracleBlobProvider<T> {
+    type Error = anyhow::Error;
+
     async fn get_blobs(
         &mut self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, BlobProviderError> {
+    ) -> Result<Vec<Blob>, Self::Error> {
         let mut blobs = Vec::with_capacity(blob_hashes.len());
         for hash in blob_hashes {
             blobs.push(self.get_blob(block_ref, hash).await?);

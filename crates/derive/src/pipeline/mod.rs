@@ -10,7 +10,7 @@ pub use crate::traits::{
 pub use crate::stages::AttributesBuilder;
 
 /// Re-export error types.
-pub use crate::errors::{StageError, StageResult};
+pub use crate::errors::{PipelineError, PipelineResult};
 
 mod builder;
 pub use builder::PipelineBuilder;

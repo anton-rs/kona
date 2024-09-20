@@ -1,7 +1,7 @@
 //! Mock testing utilities for the [ChannelBank] stage.
 
 use crate::{
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineResult},
     stages::ChannelBankProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -14,14 +14,14 @@ use op_alloy_protocol::{BlockInfo, Frame};
 #[derive(Debug, Default)]
 pub struct MockChannelBankProvider {
     /// The data to return.
-    pub data: Vec<StageResult<Frame>>,
+    pub data: Vec<PipelineResult<Frame>>,
     /// The block info
     pub block_info: Option<BlockInfo>,
 }
 
 impl MockChannelBankProvider {
     /// Creates a new [MockChannelBankProvider] with the given data.
-    pub fn new(data: Vec<StageResult<Frame>>) -> Self {
+    pub fn new(data: Vec<PipelineResult<Frame>>) -> Self {
         Self { data, block_info: Some(BlockInfo::default()) }
     }
 }
@@ -34,7 +34,7 @@ impl OriginProvider for MockChannelBankProvider {
 
 #[async_trait]
 impl OriginAdvancer for MockChannelBankProvider {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.block_info = self.block_info.map(|mut bi| {
             bi.number += 1;
             bi
@@ -45,14 +45,14 @@ impl OriginAdvancer for MockChannelBankProvider {
 
 #[async_trait]
 impl ChannelBankProvider for MockChannelBankProvider {
-    async fn next_frame(&mut self) -> StageResult<Frame> {
-        self.data.pop().unwrap_or(Err(StageError::Eof))
+    async fn next_frame(&mut self) -> PipelineResult<Frame> {
+        self.data.pop().unwrap_or(Err(PipelineError::Eof.temp()))
     }
 }
 
 #[async_trait]
 impl ResettableStage for MockChannelBankProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
         Ok(())
     }
 }

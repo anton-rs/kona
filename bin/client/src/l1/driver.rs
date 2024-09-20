@@ -10,14 +10,14 @@ use alloy_consensus::{Header, Sealed};
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
-    errors::StageError,
+    errors::PipelineErrorKind,
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{BlobProvider, ChainProvider, L2ChainProvider},
+    traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
 };
 use kona_mpt::TrieDBFetcher;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
@@ -171,8 +171,21 @@ where
                     // Break the loop unless the error signifies that there is not enough data to
                     // complete the current step. In this case, we retry the step to see if other
                     // stages can make progress.
-                    if !matches!(e, StageError::NotEnoughData | StageError::Temporary(_)) {
-                        break;
+                    match e {
+                        PipelineErrorKind::Temporary(_) => { /* continue */ }
+                        PipelineErrorKind::Reset(_) => {
+                            // Reset the pipeline to the initial L2 safe head and L1 origin,
+                            // and try again.
+                            self.pipeline
+                                .reset(
+                                    self.l2_safe_head.block_info,
+                                    self.pipeline
+                                        .origin()
+                                        .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                )
+                                .await?;
+                        }
+                        PipelineErrorKind::Critical(_) => return Err(e.into()),
                     }
                 }
             }

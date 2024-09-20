@@ -1,5 +1,6 @@
 //! Contains a helper method to derive deposit transactions from L1 Receipts.
 
+use crate::errors::PipelineEncodingError;
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, Bytes, B256};
@@ -12,9 +13,9 @@ use op_alloy_protocol::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
 /// must be the [DEPOSIT_EVENT_ABI_HASH].
 pub(crate) async fn derive_deposits(
     block_hash: B256,
-    receipts: Vec<Receipt>,
+    receipts: &[Receipt],
     deposit_contract: Address,
-) -> anyhow::Result<Vec<Bytes>> {
+) -> Result<Vec<Bytes>, PipelineEncodingError> {
     let mut global_index = 0;
     let mut res = Vec::new();
     for r in receipts.iter() {
@@ -30,8 +31,7 @@ pub(crate) async fn derive_deposits(
             if l.address != deposit_contract {
                 continue;
             }
-            let decoded =
-                decode_deposit(block_hash, curr_index, l).map_err(|e| anyhow::anyhow!(e))?;
+            let decoded = decode_deposit(block_hash, curr_index, l)?;
             res.push(decoded);
         }
     }
@@ -99,7 +99,7 @@ mod tests {
     async fn test_derive_deposits_empty() {
         let receipts = vec![];
         let deposit_contract = Address::default();
-        let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
         assert!(result.unwrap().is_empty());
     }
 
@@ -109,7 +109,7 @@ mod tests {
         let mut invalid = generate_valid_receipt();
         invalid.logs[0].data = LogData::new_unchecked(vec![], Bytes::default());
         let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
-        let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
         assert_eq!(result.unwrap().len(), 5);
     }
 
@@ -119,7 +119,7 @@ mod tests {
         let mut invalid = generate_valid_receipt();
         invalid.logs[0].address = Address::default();
         let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
-        let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
         assert_eq!(result.unwrap().len(), 5);
     }
 
@@ -130,16 +130,16 @@ mod tests {
         invalid.logs[0].data =
             LogData::new_unchecked(vec![DEPOSIT_EVENT_ABI_HASH], Bytes::default());
         let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
-        let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
-        let downcasted = result.unwrap_err().downcast::<DepositError>().unwrap();
-        assert_eq!(downcasted, DepositError::UnexpectedTopicsLen(1));
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
+        let downcasted = result.unwrap_err();
+        assert_eq!(downcasted, DepositError::UnexpectedTopicsLen(1).into());
     }
 
     #[tokio::test]
     async fn test_derive_deposits_succeeds() {
         let deposit_contract = address!("1111111111111111111111111111111111111111");
         let receipts = vec![generate_valid_receipt(), generate_valid_receipt()];
-        let result = derive_deposits(B256::default(), receipts, deposit_contract).await;
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
         assert_eq!(result.unwrap().len(), 4);
     }
 }

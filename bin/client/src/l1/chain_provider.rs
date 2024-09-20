@@ -31,6 +31,8 @@ impl<T: CommsClient> OracleL1ChainProvider<T> {
 
 #[async_trait]
 impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
+    type Error = anyhow::Error;
+
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
         // Send a hint for the block header.
         self.oracle.write(&HintType::L1BlockHeader.encode_with(&[hash.as_ref()])).await?;

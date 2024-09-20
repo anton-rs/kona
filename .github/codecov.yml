@@ -19,8 +19,9 @@ coverage:
 
 ignore:
   - "tests"
-  - "test_util*"
-  - "test_utils"
+  - "test_util.rs"
+  - "test_utils.rs"
+  - "crates/derive/src/stages/test_utils"
   - "bin/"
 
 # Make comments less noisy

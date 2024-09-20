@@ -1,11 +1,11 @@
 //! Contains the core derivation pipeline.
 
 use super::{
-    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResettableStage,
-    StageError, StepResult,
+    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
+    PipelineResult, ResettableStage, StepResult,
 };
-use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use anyhow::bail;
+use crate::errors::PipelineErrorKind;
+use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
@@ -94,17 +94,21 @@ where
         &mut self,
         l2_block_info: BlockInfo,
         l1_block_info: BlockInfo,
-    ) -> anyhow::Result<()> {
+    ) -> PipelineResult<()> {
         let system_config = self
             .l2_chain_provider
             .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
-            .await?;
+            .await
+            .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
-            Err(StageError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
             Err(err) => {
-                error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                bail!(err);
+                if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
+                    trace!(target: "pipeline", "Stages reset with EOF");
+                } else {
+                    error!(target: "pipeline", "Stage reset errored: {:?}", err);
+                    return Err(err);
+                }
             }
         }
         Ok(())
@@ -114,12 +118,14 @@ where
     ///
     /// ## Returns
     ///
-    /// A [StageError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
+    /// A [PipelineError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
     /// Any other error is critical and the derivation pipeline should be reset.
     /// An error is expected when the underlying source closes.
     ///
     /// When [DerivationPipeline::step] returns [Ok(())], it should be called again, to continue the
     /// derivation process.
+    ///
+    /// [PipelineError]: crate::errors::PipelineError
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
         match self.attributes.next_attributes(cursor).await {
             Ok(a) => {
@@ -127,17 +133,19 @@ where
                 self.prepared.push_back(a);
                 StepResult::PreparedAttributes
             }
-            Err(StageError::Eof) => {
-                trace!(target: "pipeline", "Pipeline advancing origin");
-                if let Err(e) = self.attributes.advance_origin().await {
-                    return StepResult::OriginAdvanceErr(e);
+            Err(err) => match err {
+                PipelineErrorKind::Temporary(PipelineError::Eof) => {
+                    trace!(target: "pipeline", "Pipeline advancing origin");
+                    if let Err(e) = self.attributes.advance_origin().await {
+                        return StepResult::OriginAdvanceErr(e);
+                    }
+                    StepResult::AdvancedOrigin
                 }
-                StepResult::AdvancedOrigin
-            }
-            Err(err) => {
-                warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
-                StepResult::StepFailed(err)
-            }
+                _ => {
+                    warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
+                    StepResult::StepFailed(err)
+                }
+            },
         }
     }
 }

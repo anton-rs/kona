@@ -1,6 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
-use kona_derive::{errors::StageError, online::*};
+use kona_derive::{
+    errors::{PipelineError, PipelineErrorKind},
+    online::*,
+};
 use std::sync::Arc;
 use superchain::ROLLUP_CONFIGS;
 use tracing::{debug, error, info, trace, warn};
@@ -216,9 +219,21 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 warn!(target: "loop", "Could not advance origin: {:?}", e);
             }
             StepResult::StepFailed(e) => match e {
-                StageError::NotEnoughData => {
-                    metrics::PIPELINE_STEPS.with_label_values(&["not_enough_data"]).inc();
-                    debug!(target: "loop", "Not enough data to step derivation pipeline");
+                PipelineErrorKind::Temporary(e) => {
+                    if matches!(e, PipelineError::NotEnoughData) {
+                        metrics::PIPELINE_STEPS.with_label_values(&["not_enough_data"]).inc();
+                        debug!(target: "loop", "Not enough data to step derivation pipeline");
+                    }
+                }
+                PipelineErrorKind::Reset(_) => {
+                    metrics::PIPELINE_STEPS.with_label_values(&["reset"]).inc();
+                    warn!(target: "loop", "Resetting pipeline: {:?}", e);
+                    pipeline
+                        .reset(
+                            cursor.block_info,
+                            pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?,
+                        )
+                        .await?;
                 }
                 _ => {
                     metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();

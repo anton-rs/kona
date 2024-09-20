@@ -1,14 +1,13 @@
 //! This module contains the `ChannelBank` struct.
 
 use crate::{
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineErrorKind, PipelineResult},
     params::MAX_CHANNEL_BANK_SIZE,
     stages::ChannelReaderProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, Bytes};
-use anyhow::anyhow;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
@@ -22,7 +21,7 @@ pub trait ChannelBankProvider {
     /// Retrieves the next [Frame] from the [FrameQueue] stage.
     ///
     /// [FrameQueue]: crate::stages::FrameQueue
-    async fn next_frame(&mut self) -> StageResult<Frame>;
+    async fn next_frame(&mut self) -> PipelineResult<Frame>;
 }
 
 /// [ChannelBank] is a stateful stage that does the following:
@@ -68,19 +67,20 @@ where
 
     /// Prunes the Channel bank, until it is below [MAX_CHANNEL_BANK_SIZE].
     /// Prunes from the high-priority channel since it failed to be read.
-    pub fn prune(&mut self) -> StageResult<()> {
+    pub fn prune(&mut self) -> PipelineResult<()> {
         let mut total_size = self.size();
         while total_size > MAX_CHANNEL_BANK_SIZE {
-            let id = self.channel_queue.pop_front().ok_or(StageError::NoChannelsAvailable)?;
-            let channel = self.channels.remove(&id).ok_or(StageError::ChannelNotFound)?;
+            let id =
+                self.channel_queue.pop_front().ok_or(PipelineError::ChannelBankEmpty.crit())?;
+            let channel = self.channels.remove(&id).ok_or(PipelineError::ChannelNotFound.crit())?;
             total_size -= channel.size();
         }
         Ok(())
     }
 
     /// Adds new L1 data to the channel bank. Should only be called after all data has been read.
-    pub fn ingest_frame(&mut self, frame: Frame) -> StageResult<()> {
-        let origin = self.origin().ok_or(StageError::MissingOrigin)?;
+    pub fn ingest_frame(&mut self, frame: Frame) -> PipelineResult<()> {
+        let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
 
         // Get the channel for the frame, or create a new one if it doesn't exist.
         let current_channel = self.channels.entry(frame.id).or_insert_with(|| {
@@ -125,18 +125,18 @@ where
     /// Read the raw data of the first channel, if it's timed-out or closed.
     ///
     /// Returns an error if there is nothing new to read.
-    pub fn read(&mut self) -> StageResult<Option<Bytes>> {
+    pub fn read(&mut self) -> PipelineResult<Option<Bytes>> {
         // Bail if there are no channels to read from.
         if self.channel_queue.is_empty() {
             trace!(target: "channel-bank", "No channels to read from");
-            return Err(StageError::Eof);
+            return Err(PipelineError::Eof.temp());
         }
 
         // Return an `Ok(None)` if the first channel is timed out. There may be more timed
         // out channels at the head of the queue and we want to remove them all.
         let first = self.channel_queue[0];
-        let channel = self.channels.get(&first).ok_or(StageError::ChannelNotFound)?;
-        let origin = self.origin().ok_or(StageError::MissingOrigin)?;
+        let channel = self.channels.get(&first).ok_or(PipelineError::ChannelBankEmpty.crit())?;
+        let origin = self.origin().ok_or(PipelineError::ChannelBankEmpty.crit())?;
         if channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) < origin.number
         {
             warn!(
@@ -160,7 +160,7 @@ where
         // At this point we have removed all timed out channels from the front of the
         // `channel_queue`. Pre-Canyon we simply check the first index.
         // Post-Canyon we read the entire channelQueue for the first ready channel.
-        // If no channel is available, we return StageError::Eof.
+        // If no channel is available, we return `PipelineError::Eof`.
         // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2
         // timestamp.
         if !self.cfg.is_canyon_active(origin.timestamp) {
@@ -171,29 +171,30 @@ where
             (0..self.channel_queue.len()).find_map(|i| self.try_read_channel_at_index(i).ok());
         match channel_data {
             Some(data) => Ok(Some(data)),
-            None => Err(StageError::Eof),
+            None => Err(PipelineError::Eof.temp()),
         }
     }
 
     /// Attempts to read the channel at the specified index. If the channel is not ready or timed
     /// out, it will return an error.
     /// If the channel read was successful, it will remove the channel from the channel queue.
-    fn try_read_channel_at_index(&mut self, index: usize) -> StageResult<Bytes> {
+    fn try_read_channel_at_index(&mut self, index: usize) -> PipelineResult<Bytes> {
         let channel_id = self.channel_queue[index];
-        let channel = self.channels.get(&channel_id).ok_or(StageError::ChannelNotFound)?;
-        let origin = self.origin().ok_or(StageError::MissingOrigin)?;
+        let channel =
+            self.channels.get(&channel_id).ok_or(PipelineError::ChannelBankEmpty.crit())?;
+        let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
 
         let timed_out = channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
             origin.number;
         if timed_out || !channel.is_ready() {
-            return Err(StageError::Eof);
+            return Err(PipelineError::Eof.temp());
         }
 
         let frame_data = channel.frame_data();
         self.channels.remove(&channel_id);
         self.channel_queue.remove(index);
 
-        frame_data.ok_or_else(|| StageError::Custom(anyhow!("Channel data is empty")))
+        frame_data.ok_or(PipelineError::ChannelBankEmpty.crit())
     }
 }
 
@@ -202,7 +203,7 @@ impl<P> OriginAdvancer for ChannelBank<P>
 where
     P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
@@ -212,15 +213,14 @@ impl<P> ChannelReaderProvider for ChannelBank<P>
 where
     P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn next_data(&mut self) -> StageResult<Option<Bytes>> {
+    async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
         match self.read() {
-            Err(StageError::Eof) => {
-                // continue - we will attempt to load data into the channel bank
-            }
             Err(e) => {
-                crate::timer!(DISCARD, timer);
-                return Err(anyhow!("Error fetching next data from channel bank: {:?}", e).into());
+                if !matches!(e, PipelineErrorKind::Temporary(PipelineError::Eof)) {
+                    crate::timer!(DISCARD, timer);
+                    return Err(PipelineError::ChannelBankEmpty.crit());
+                }
             }
             data => return data,
         };
@@ -236,7 +236,7 @@ where
         let res = self.ingest_frame(frame);
         crate::timer!(DISCARD, timer);
         res?;
-        Err(StageError::NotEnoughData)
+        Err(PipelineError::NotEnoughData.temp())
     }
 }
 
@@ -258,7 +258,7 @@ where
         &mut self,
         block_info: BlockInfo,
         system_config: &SystemConfig,
-    ) -> StageResult<()> {
+    ) -> PipelineResult<()> {
         self.prev.reset(block_info, system_config).await?;
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
@@ -287,7 +287,7 @@ mod tests {
         let mut channel_bank = ChannelBank::new(cfg, mock);
         let frame = Frame::default();
         let err = channel_bank.ingest_frame(frame).unwrap_err();
-        assert_eq!(err, StageError::MissingOrigin);
+        assert_eq!(err, PipelineError::MissingOrigin.crit());
     }
 
     #[test]
@@ -346,9 +346,9 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         let err = channel_bank.read().unwrap_err();
-        assert_eq!(err, StageError::Eof);
+        assert_eq!(err, PipelineError::Eof.temp());
         let err = channel_bank.next_data().await.unwrap_err();
-        assert_eq!(err, StageError::NotEnoughData);
+        assert_eq!(err, PipelineError::NotEnoughData.temp());
     }
 
     #[tokio::test]
@@ -367,7 +367,7 @@ mod tests {
 
             // Ingest first frame
             let err = channel_bank.next_data().await.unwrap_err();
-            assert_eq!(err, StageError::NotEnoughData);
+            assert_eq!(err, PipelineError::NotEnoughData.temp());
 
             for _ in 0..cfg.channel_timeout + 1 {
                 channel_bank.advance_origin().await.unwrap();

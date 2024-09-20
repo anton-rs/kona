@@ -2,11 +2,11 @@
 
 use crate::{
     batch::SingleBatch,
-    errors::{BuilderError, StageError, StageResult},
+    errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
 use op_alloy_genesis::SystemConfig;
@@ -27,11 +27,13 @@ impl AttributesBuilder for MockAttributesBuilder {
         &mut self,
         _l2_parent: L2BlockInfo,
         _epoch: BlockNumHash,
-    ) -> Result<OptimismPayloadAttributes, BuilderError> {
+    ) -> PipelineResult<OptimismPayloadAttributes> {
         match self.attributes.pop() {
             Some(Ok(attrs)) => Ok(attrs),
-            Some(Err(err)) => Err(BuilderError::Custom(err)),
-            None => Err(BuilderError::Custom(anyhow::anyhow!("no attributes available"))),
+            Some(Err(err)) => {
+                Err(PipelineErrorKind::Temporary(BuilderError::Custom(err.to_string()).into()))
+            }
+            None => Err(PipelineErrorKind::Critical(BuilderError::AttributesUnavailable.into())),
         }
     }
 }
@@ -42,7 +44,7 @@ pub struct MockAttributesProvider {
     /// The origin of the L1 block.
     origin: Option<BlockInfo>,
     /// A list of batches to return.
-    batches: Vec<StageResult<SingleBatch>>,
+    batches: Vec<PipelineResult<SingleBatch>>,
 }
 
 impl OriginProvider for MockAttributesProvider {
@@ -53,22 +55,22 @@ impl OriginProvider for MockAttributesProvider {
 
 #[async_trait]
 impl OriginAdvancer for MockAttributesProvider {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         Ok(())
     }
 }
 
 #[async_trait]
 impl ResettableStage for MockAttributesProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
         Ok(())
     }
 }
 
 #[async_trait]
 impl AttributesProvider for MockAttributesProvider {
-    async fn next_batch(&mut self, _parent: L2BlockInfo) -> StageResult<SingleBatch> {
-        self.batches.pop().ok_or(StageError::Eof)?
+    async fn next_batch(&mut self, _parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
+        self.batches.pop().ok_or(PipelineError::Eof.temp())?
     }
 
     fn is_last_in_span(&self) -> bool {
@@ -79,7 +81,7 @@ impl AttributesProvider for MockAttributesProvider {
 /// Creates a new [`MockAttributesProvider`] with the given origin and batches.
 pub fn new_attributes_provider(
     origin: Option<BlockInfo>,
-    batches: Vec<StageResult<SingleBatch>>,
+    batches: Vec<PipelineResult<SingleBatch>>,
 ) -> MockAttributesProvider {
     MockAttributesProvider { origin, batches }
 }

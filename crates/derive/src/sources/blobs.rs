@@ -1,18 +1,16 @@
 //! Blob Data Source
 
-use alloc::{boxed::Box, vec::Vec};
+use crate::{
+    errors::{BlobProviderError, PipelineError, PipelineResult},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
+};
+use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
-use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_primitives::{BlobData, IndexedBlobHash};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
-
-use crate::{
-    errors::{StageError, StageResult},
-    traits::{AsyncIterator, BlobProvider, ChainProvider},
-};
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
@@ -122,13 +120,16 @@ where
     }
 
     /// Loads blob data into the source if it is not open.
-    async fn load_blobs(&mut self) -> Result<()> {
+    async fn load_blobs(&mut self) -> Result<(), BlobProviderError> {
         if self.open {
             return Ok(());
         }
 
-        let info =
-            self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
+        let info = self
+            .chain_provider
+            .block_info_and_transactions_by_hash(self.block_ref.hash)
+            .await
+            .map_err(|e| BlobProviderError::Backend(e.to_string()))?;
 
         let (mut data, blob_hashes) = self.extract_blob_data(info.1);
 
@@ -142,7 +143,7 @@ where
         let blobs =
             self.blob_fetcher.get_blobs(&self.block_ref, &blob_hashes).await.map_err(|e| {
                 warn!(target: "blob-source", "Failed to fetch blobs: {e}");
-                anyhow!("Failed to fetch blobs: {e}")
+                BlobProviderError::Backend(e.to_string())
             })?;
 
         // Fill the blob pointers.
@@ -153,7 +154,7 @@ where
                     blob_index += 1;
                 }
                 Err(e) => {
-                    return Err(e);
+                    return Err(e.into());
                 }
             }
         }
@@ -164,9 +165,9 @@ where
     }
 
     /// Extracts the next data from the source.
-    fn next_data(&mut self) -> Result<BlobData, Result<Bytes, StageError>> {
+    fn next_data(&mut self) -> Result<BlobData, PipelineResult<Bytes>> {
         if self.data.is_empty() {
-            return Err(Err(StageError::Eof));
+            return Err(Err(PipelineError::Eof.temp()));
         }
 
         Ok(self.data.remove(0))
@@ -181,9 +182,13 @@ where
 {
     type Item = Bytes;
 
-    async fn next(&mut self) -> StageResult<Self::Item> {
+    async fn next(&mut self) -> PipelineResult<Self::Item> {
         if self.load_blobs().await.is_err() {
-            return Err(StageError::BlockFetch(self.block_ref.hash));
+            return Err(PipelineError::Provider(format!(
+                "Failed to load blobs from stream: {}",
+                self.block_ref.hash
+            ))
+            .temp());
         }
 
         let next_data = match self.next_data() {

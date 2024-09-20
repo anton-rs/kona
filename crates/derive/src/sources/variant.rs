@@ -5,7 +5,7 @@ use alloy_primitives::Bytes;
 use async_trait::async_trait;
 
 use crate::{
-    errors::StageResult,
+    errors::PipelineResult,
     sources::{BlobSource, CalldataSource},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
 };
@@ -31,7 +31,7 @@ where
 {
     type Item = Bytes;
 
-    async fn next(&mut self) -> StageResult<Self::Item> {
+    async fn next(&mut self) -> PipelineResult<Self::Item> {
         match self {
             EthereumDataSourceVariant::Calldata(c) => c.next().await,
             EthereumDataSourceVariant::Blob(b) => b.next().await,

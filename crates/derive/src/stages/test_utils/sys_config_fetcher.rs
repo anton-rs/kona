@@ -30,6 +30,8 @@ impl MockSystemConfigL2Fetcher {
 
 #[async_trait]
 impl L2ChainProvider for MockSystemConfigL2Fetcher {
+    type Error = anyhow::Error;
+
     async fn system_config_by_number(
         &mut self,
         number: u64,

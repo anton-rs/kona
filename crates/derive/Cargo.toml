@@ -26,7 +26,7 @@ unsigned-varint.workspace = true
 miniz_oxide.workspace = true
 brotli.workspace = true
 alloc-no-stdlib.workspace = true
-anyhow.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 
@@ -52,9 +52,11 @@ alloy-rpc-client = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 alloy-node-bindings = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true } 
+anyhow = { workspace = true, optional = true }
 
 [dev-dependencies]
 spin.workspace = true
+anyhow.workspace = true
 alloy-rpc-client.workspace = true
 alloy-transport-http.workspace = true
 tokio.workspace = true
@@ -91,6 +93,7 @@ online = [
 ]
 test-utils = [
   "dep:spin",
+  "dep:anyhow",
   "dep:alloy-transport-http",
   "dep:alloy-node-bindings",
   "dep:tracing-subscriber",
