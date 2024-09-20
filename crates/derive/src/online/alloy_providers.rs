@@ -305,11 +305,13 @@ impl AlloyL2ChainProvider {
 
     /// Returns the latest L2 block number.
     pub async fn latest_block_number(&mut self) -> Result<u64, RpcError<TransportErrorKind>> {
-        let s =
-            self.inner.raw_request::<(), alloc::string::String>("eth_blockNumber".into(), ()).await?;
+        let s = self
+            .inner
+            .raw_request::<(), alloc::string::String>("eth_blockNumber".into(), ())
+            .await?;
         U64::from_str(s.as_str())
-                .map_err(|e| RpcError::LocalUsageError(Box::new(e)))
-                .map(|u| u.to::<u64>())
+            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))
+            .map(|u| u.to::<u64>())
     }
 
     /// Creates a new [AlloyL2ChainProvider] from the provided [reqwest::Url].

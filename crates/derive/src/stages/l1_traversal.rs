@@ -5,7 +5,7 @@ use crate::{
     stages::L1RetrievalProvider,
     traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
 };
-use alloc::{boxed::Box, sync::Arc, string::ToString};
+use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -135,9 +135,9 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
 pub(crate) mod tests {
     use super::*;
     use crate::{
+        errors::StageErrorKind,
         params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
         traits::test_utils::TestChainProvider,
-        errors::StageErrorKind
     };
     use alloc::vec;
     use alloy_consensus::Receipt;
@@ -215,7 +215,10 @@ pub(crate) mod tests {
         let mut traversal = new_test_traversal(blocks, vec![]);
         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), PipelineError::Eof.temp());
-        matches!(traversal.advance_origin().await.unwrap_err(), StageErrorKind::Temporary(PipelineError::Provider(_)));
+        matches!(
+            traversal.advance_origin().await.unwrap_err(),
+            StageErrorKind::Temporary(PipelineError::Provider(_))
+        );
     }
 
     #[tokio::test]
@@ -235,7 +238,10 @@ pub(crate) mod tests {
         let mut traversal = new_test_traversal(vec![], vec![]);
         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), PipelineError::Eof.temp());
-        matches!(traversal.advance_origin().await.unwrap_err(), StageErrorKind::Temporary(PipelineError::Provider(_)));
+        matches!(
+            traversal.advance_origin().await.unwrap_err(),
+            StageErrorKind::Temporary(PipelineError::Provider(_))
+        );
     }
 
     #[tokio::test]

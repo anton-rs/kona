@@ -1,12 +1,12 @@
 //! Defines the interface for the core derivation pipeline.
 
+use super::OriginProvider;
+use crate::errors::{PipelineResult, StageErrorKind};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::iter::Iterator;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
-use super::OriginProvider;
-use crate::errors::{PipelineResult, StageErrorKind};
 
 /// A pipeline error.
 #[derive(Debug)]

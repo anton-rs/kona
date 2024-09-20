@@ -1,18 +1,18 @@
 //! This module contains derivation errors thrown within the pipeline.
 
 use crate::batch::SpanBatchError;
+use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
 use kona_primitives::BlobDecodingError;
 use op_alloy_genesis::system::SystemConfigUpdateError;
 use op_alloy_protocol::DepositError;
 use thiserror::Error;
-use alloc::string::String;
 
 /// A result type for the derivation pipeline stages.
 pub type PipelineResult<T> = Result<T, StageErrorKind>;
 
-/// [ensure] is a short-hand for bubbling up errors in the case of a condition not being met.
+/// [crate::ensure] is a short-hand for bubbling up errors in the case of a condition not being met.
 #[macro_export]
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {
@@ -22,7 +22,7 @@ macro_rules! ensure {
     };
 }
 
-/// A top level filter for [StageError] that sorts by severity.
+/// A top level filter for [PipelineError] that sorts by severity.
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum StageErrorKind {
     /// A temporary error.
@@ -42,16 +42,21 @@ pub enum PipelineError {
     /// There is no data to read from the channel bank.
     #[error("EOF")]
     Eof,
-    /// There is not enough data to complete the processing of the stage. If the operation is re-tried,
-    /// more data will come in allowing the pipeline to progress, or eventually a [StageErrorNew::Eof]
-    /// will be encountered.
+    /// There is not enough data to complete the processing of the stage. If the operation is
+    /// re-tried, more data will come in allowing the pipeline to progress, or eventually a
+    /// [PipelineError::Eof] will be encountered.
     #[error("Not enough data")]
     NotEnoughData,
     /// No channels are available in the [ChannelBank].
     ///
-    /// [ChannelBank]: crate::channel::ChannelBank
+    /// [ChannelBank]: crate::stages::ChannelBank
     #[error("The channel bank is empty")]
     ChannelBankEmpty,
+    /// Failed to find channel in the [ChannelBank].
+    ///
+    /// [ChannelBank]: crate::stages::ChannelBank
+    #[error("Channel not found in channel bank")]
+    ChannelNotFound,
     /// No channel returned by the [ChannelReader] stage.
     ///
     /// [ChannelReader]: crate::stages::ChannelReader
@@ -59,18 +64,15 @@ pub enum PipelineError {
     ChannelReaderEmpty,
     /// The [BatchQueue] is empty.
     ///
-    /// [BatchQueue]: crate::statges::BatchQueue
+    /// [BatchQueue]: crate::stages::BatchQueue
     #[error("The batch queue has no batches available")]
     BatchQueueEmpty,
-    /// Failed to find channel in the [ChannelBank].
-    ///
-    /// [ChannelBank]: crate::channel::ChannelBank
-    #[error("Channel not found in channel bank")]
-    ChannelNotFound,
     /// Missing L1 origin.
     #[error("Missing L1 origin from previous stage")]
     MissingOrigin,
     /// Missing data from [L1Retrieval].
+    ///
+    /// [L1Retrieval]: crate::stages::L1Retrieval
     #[error("L1 Retrieval missing data")]
     MissingL1Data,
     /// [SystemConfig] update error.
@@ -143,7 +145,7 @@ pub enum BlobProviderError {
     #[error("Blob decoding error: {0}")]
     BlobDecoding(#[from] BlobDecodingError),
     /// Error pertaining to the backend transport.
-    #[error("Blob provider backend error: {0}")]
+    #[error("{0}")]
     Backend(String),
 }
 

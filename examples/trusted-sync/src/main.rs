@@ -1,6 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
-use kona_derive::{errors::{PipelineError, StageErrorKind}, online::*};
+use kona_derive::{
+    errors::{PipelineError, StageErrorKind},
+    online::*,
+};
 use std::sync::Arc;
 use superchain::ROLLUP_CONFIGS;
 use tracing::{debug, error, info, trace, warn};
@@ -152,8 +155,8 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                             error!(target: LOG_TARGET, "Failed to get block info by number: {}", latest - 100);
                             continue;
                         }
-                    } else if drift > cli.drift_threshold as i64
-                        && timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300
+                    } else if drift > cli.drift_threshold as i64 &&
+                        timestamp as i64 > metrics::DRIFT_WALKBACK_TIMESTAMP.get() + 300
                     {
                         metrics::DRIFT_WALKBACK.set(cursor.block_info.number as i64);
                         metrics::DRIFT_WALKBACK_TIMESTAMP.set(timestamp as i64);

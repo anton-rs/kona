@@ -90,8 +90,8 @@ where
         });
 
         // Check if the channel is not timed out. If it has, ignore the frame.
-        if current_channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp)
-            < origin.number
+        if current_channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
+            origin.number
         {
             warn!(
                 target: "channel-bank",
@@ -184,8 +184,8 @@ where
             self.channels.get(&channel_id).ok_or(PipelineError::ChannelBankEmpty.crit())?;
         let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
 
-        let timed_out = channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp)
-            < origin.number;
+        let timed_out = channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
+            origin.number;
         if timed_out || !channel.is_ready() {
             return Err(PipelineError::Eof.temp());
         }

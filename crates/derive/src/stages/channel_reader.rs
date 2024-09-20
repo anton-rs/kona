@@ -174,8 +174,8 @@ impl BatchReader {
             }
 
             let compression_type = data[0];
-            if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD
-                || (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
+            if (compression_type & 0x0F) == ZLIB_DEFLATE_COMPRESSION_METHOD ||
+                (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
             {
                 self.decompressed = decompress_to_vec_zlib(&data).ok()?;
             } else if compression_type == CHANNEL_VERSION_BROTLI {

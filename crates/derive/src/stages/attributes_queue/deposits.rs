@@ -1,10 +1,10 @@
 //! Contains a helper method to derive deposit transactions from L1 Receipts.
 
+use crate::errors::DecodeError;
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, Bytes, B256};
 use op_alloy_protocol::{decode_deposit, DEPOSIT_EVENT_ABI_HASH};
-use crate::errors::DecodeError;
 
 /// Derive deposits for transaction receipts.
 ///
@@ -31,8 +31,7 @@ pub(crate) async fn derive_deposits(
             if l.address != deposit_contract {
                 continue;
             }
-            let decoded =
-                decode_deposit(block_hash, curr_index, l)?;
+            let decoded = decode_deposit(block_hash, curr_index, l)?;
             res.push(decoded);
         }
     }

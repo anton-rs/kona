@@ -46,7 +46,10 @@ pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>, BatchDecompressionError
                 let old_len = output.len();
                 let new_len = old_len * 2;
 
-                ensure!(new_len as u64 <= FJORD_MAX_SPAN_BATCH_BYTES, BatchDecompressionError::BatchTooLarge);
+                ensure!(
+                    new_len as u64 <= FJORD_MAX_SPAN_BATCH_BYTES,
+                    BatchDecompressionError::BatchTooLarge
+                );
 
                 output.resize(new_len, 0);
                 available_out += old_len;

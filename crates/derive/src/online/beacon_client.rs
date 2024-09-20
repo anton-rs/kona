@@ -1,8 +1,13 @@
 //! Contains an online implementation of the [BeaconClient] trait.
 
-use core::fmt::Display;
-use alloc::{boxed::Box, format, string::String, vec::Vec, string::ToString};
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use async_trait::async_trait;
+use core::fmt::Display;
 use reqwest::Client;
 
 use kona_primitives::{

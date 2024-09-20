@@ -155,36 +155,35 @@ impl L2ExecutionPayloadEnvelope {
     ) -> Result<L2BlockInfo, PayloadConversionError> {
         let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
 
-        let (l1_origin, sequence_number) =
-            if execution_payload.block_number == rollup_config.genesis.l2.number {
-                if execution_payload.block_hash != rollup_config.genesis.l2.hash {
-                    return Err(PayloadConversionError::InvalidGenesisHash(
-                        rollup_config.genesis.l2.hash,
-                        execution_payload.block_hash,
-                    ));
-                }
-                (rollup_config.genesis.l1, 0)
-            } else {
-                if execution_payload.transactions.is_empty() {
-                    return Err(PayloadConversionError::EmptyTransactions(
-                        execution_payload.block_hash,
-                    ));
-                }
+        let (l1_origin, sequence_number) = if execution_payload.block_number ==
+            rollup_config.genesis.l2.number
+        {
+            if execution_payload.block_hash != rollup_config.genesis.l2.hash {
+                return Err(PayloadConversionError::InvalidGenesisHash(
+                    rollup_config.genesis.l2.hash,
+                    execution_payload.block_hash,
+                ));
+            }
+            (rollup_config.genesis.l1, 0)
+        } else {
+            if execution_payload.transactions.is_empty() {
+                return Err(PayloadConversionError::EmptyTransactions(execution_payload.block_hash));
+            }
 
-                let ty = execution_payload.transactions[0][0];
-                if ty != OpTxType::Deposit as u8 {
-                    return Err(PayloadConversionError::InvalidTxType(ty));
-                }
-                let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
-                    .map_err(PayloadConversionError::Eip2718Error)?;
+            let ty = execution_payload.transactions[0][0];
+            if ty != OpTxType::Deposit as u8 {
+                return Err(PayloadConversionError::InvalidTxType(ty));
+            }
+            let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
+                .map_err(PayloadConversionError::Eip2718Error)?;
 
-                let OpTxEnvelope::Deposit(tx) = tx else {
-                    return Err(PayloadConversionError::InvalidTxType(tx.tx_type() as u8));
-                };
-
-                let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
-                (l1_info.id(), l1_info.sequence_number())
+            let OpTxEnvelope::Deposit(tx) = tx else {
+                return Err(PayloadConversionError::InvalidTxType(tx.tx_type() as u8));
             };
+
+            let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+            (l1_info.id(), l1_info.sequence_number())
+        };
 
         Ok(L2BlockInfo {
             block_info: BlockInfo {

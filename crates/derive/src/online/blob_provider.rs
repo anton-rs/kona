@@ -6,7 +6,11 @@ use crate::{
     online::{BeaconClient, OnlineBeaconClient},
     traits::BlobProvider,
 };
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_eips::eip4844::Blob;
 use async_trait::async_trait;
 use core::marker::PhantomData;
@@ -109,10 +113,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(
-                blob_hashes.len(),
-                filtered.len(),
-            ));
+            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
         Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
@@ -291,10 +292,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(
-                blob_hashes.len(),
-                filtered.len(),
-            ));
+            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
         Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
@@ -565,7 +563,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
-            BlobProviderError::Backend("failed to get beacon genesis".to_string())
+            BlobProviderError::Backend("beacon_genesis not set".to_string())
         );
     }
 
@@ -582,7 +580,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
-            BlobProviderError::Backend("failed to get config spec".to_string())
+            BlobProviderError::Backend("config_spec not set".to_string())
         );
     }
 

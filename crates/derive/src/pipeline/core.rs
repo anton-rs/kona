@@ -1,11 +1,11 @@
 //! Contains the core derivation pipeline.
 
-use crate::errors::StageErrorKind;
 use super::{
     L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
     PipelineResult, ResettableStage, StepResult,
 };
-use alloc::{boxed::Box, collections::VecDeque, sync::Arc, string::ToString};
+use crate::errors::StageErrorKind;
+use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
@@ -118,12 +118,14 @@ where
     ///
     /// ## Returns
     ///
-    /// A [StageError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
+    /// A [PipelineError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
     /// Any other error is critical and the derivation pipeline should be reset.
     /// An error is expected when the underlying source closes.
     ///
     /// When [DerivationPipeline::step] returns [Ok(())], it should be called again, to continue the
     /// derivation process.
+    ///
+    /// [PipelineError]: crate::errors::PipelineError
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
         match self.attributes.next_attributes(cursor).await {
             Ok(a) => {

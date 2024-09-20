@@ -1,6 +1,6 @@
 use core::fmt::Display;
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec, string::ToString};
+use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use async_trait::async_trait;
@@ -44,7 +44,10 @@ pub trait L2ChainProvider {
 
     /// Returns an execution payload for a given number.
     /// Errors if the execution payload does not exist.
-    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope, Self::Error>;
+    async fn payload_by_number(
+        &mut self,
+        number: u64,
+    ) -> Result<L2ExecutionPayloadEnvelope, Self::Error>;
 
     /// Returns the [SystemConfig] by L2 number.
     async fn system_config_by_number(

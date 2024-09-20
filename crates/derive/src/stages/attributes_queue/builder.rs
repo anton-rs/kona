@@ -6,7 +6,7 @@ use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::{ChainProvider, L2ChainProvider},
 };
-use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec, string::ToString};
+use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
 use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
 use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
@@ -149,13 +149,13 @@ where
         }
 
         let mut upgrade_transactions: Vec<Bytes> = vec![];
-        if self.rollup_cfg.is_ecotone_active(next_l2_time)
-            && !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
+        if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
+            !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
         {
             upgrade_transactions = Hardforks::ecotone_txs();
         }
-        if self.rollup_cfg.is_fjord_active(next_l2_time)
-            && !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
+        if self.rollup_cfg.is_fjord_active(next_l2_time) &&
+            !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
         {
             upgrade_transactions.append(&mut Hardforks::fjord_txs());
         }
@@ -212,7 +212,8 @@ where
 mod tests {
     use super::*;
     use crate::{
-        errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher, traits::test_utils::TestChainProvider
+        errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher,
+        traits::test_utils::TestChainProvider,
     };
     use alloy_consensus::Header;
     use alloy_primitives::B256;

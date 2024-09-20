@@ -20,7 +20,7 @@ pub trait L1RetrievalProvider {
     /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
     /// This function can only be called once while the stage is in progress, and will return
     /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
-    /// complete and the [BlockInfo] has been consumed, an [StageError::Eof] error is returned.
+    /// complete and the [BlockInfo] has been consumed, an [PipelineError::Eof] error is returned.
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
     async fn next_l1_block(&mut self) -> PipelineResult<Option<BlockInfo>>;
@@ -91,7 +91,7 @@ where
                 .prev
                 .next_l1_block()
                 .await? // SAFETY: This question mark bubbles up the Eof error.
-                .ok_or(PipelineError::MissingL1Data.temp())?; // TODO: Check if this is actually temp
+                .ok_or(PipelineError::MissingL1Data.temp())?;
             self.data = Some(self.provider.open_data(&next).await?);
         }
 

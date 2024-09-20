@@ -30,7 +30,9 @@ impl AttributesBuilder for MockAttributesBuilder {
     ) -> PipelineResult<OptimismPayloadAttributes> {
         match self.attributes.pop() {
             Some(Ok(attrs)) => Ok(attrs),
-            Some(Err(err)) => Err(StageErrorKind::Temporary(BuilderError::Custom(err.to_string()).into())),
+            Some(Err(err)) => {
+                Err(StageErrorKind::Temporary(BuilderError::Custom(err.to_string()).into()))
+            }
             None => Err(StageErrorKind::Critical(BuilderError::AttributesUnavailable.into())),
         }
     }

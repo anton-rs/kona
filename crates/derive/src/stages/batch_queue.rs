@@ -19,7 +19,7 @@ pub trait BatchQueueProvider {
     /// Returns the next [Batch] in the [ChannelReader] stage, if the stage is not complete.
     /// This function can only be called once while the stage is in progress, and will return
     /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
-    /// complete and the batch has been consumed, an [StageError::Eof] error is returned.
+    /// complete and the batch has been consumed, an [PipelineError::Eof] error is returned.
     ///
     /// [ChannelReader]: crate::stages::ChannelReader
     async fn next_batch(&mut self) -> PipelineResult<Batch>;
@@ -102,7 +102,7 @@ where
     /// Derives the next batch to apply on top of the current L2 safe head.
     /// Follows the validity rules imposed on consecutive batches.
     /// Based on currently available buffered batch and L1 origin information.
-    /// A [StageError::Eof] is returned if no batch can be derived yet.
+    /// A [PipelineError::Eof] is returned if no batch can be derived yet.
     pub async fn derive_next_batch(
         &mut self,
         empty: bool,

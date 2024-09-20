@@ -1,9 +1,9 @@
 //! Module for working with span batch bits.
 
+use super::{errors::SpanBatchError, FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES};
 use alloc::{vec, vec::Vec};
 use alloy_rlp::Buf;
 use core::cmp::Ordering;
-use super::{errors::SpanBatchError, FJORD_MAX_SPAN_BATCH_BYTES, MAX_SPAN_BATCH_BYTES};
 
 /// Type for span batch bits.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

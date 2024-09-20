@@ -3,13 +3,13 @@
 
 use core::fmt::Display;
 
+use crate::errors::PipelineResult;
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
 use alloy_eips::eip4844::Blob;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use kona_primitives::IndexedBlobHash;
 use op_alloy_protocol::BlockInfo;
-use crate::errors::PipelineResult;
 
 /// The BlobProvider trait specifies the functionality of a data source that can provide blobs.
 #[async_trait]
@@ -45,7 +45,7 @@ pub trait AsyncIterator {
     /// The item type of the iterator.
     type Item: Send + Sync + Debug + Into<Bytes>;
 
-    /// Returns the next item in the iterator, or [crate::errors::StageError::Eof] if the iterator
-    /// is exhausted.
+    /// Returns the next item in the iterator, or [crate::errors::PipelineError::Eof] if the
+    /// iterator is exhausted.
     async fn next(&mut self) -> PipelineResult<Self::Item>;
 }

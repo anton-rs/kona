@@ -1,5 +1,11 @@
 //! Test Utilities for derive traits
 
+use crate::{
+    errors::{BlobProviderError, PipelineError, PipelineResult},
+    traits::{
+        AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
+    },
+};
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_eips::eip4844::Blob;
@@ -11,12 +17,6 @@ use hashbrown::HashMap;
 use kona_primitives::{IndexedBlobHash, L2ExecutionPayloadEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use crate::{
-    errors::{BlobProviderError, PipelineError, PipelineResult},
-    traits::{
-        AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
-    },
-};
 
 /// Mock data iterator
 #[derive(Debug, Default, PartialEq)]
