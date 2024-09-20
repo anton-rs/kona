@@ -2,7 +2,7 @@
 
 use crate::{
     batch::SingleBatch,
-    errors::{BuilderError, PipelineError, PipelineResult, StageErrorKind},
+    errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -31,9 +31,9 @@ impl AttributesBuilder for MockAttributesBuilder {
         match self.attributes.pop() {
             Some(Ok(attrs)) => Ok(attrs),
             Some(Err(err)) => {
-                Err(StageErrorKind::Temporary(BuilderError::Custom(err.to_string()).into()))
+                Err(PipelineErrorKind::Temporary(BuilderError::Custom(err.to_string()).into()))
             }
-            None => Err(StageErrorKind::Critical(BuilderError::AttributesUnavailable.into())),
+            None => Err(PipelineErrorKind::Critical(BuilderError::AttributesUnavailable.into())),
         }
     }
 }

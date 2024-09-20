@@ -10,7 +10,7 @@ use alloy_consensus::{Header, Sealed};
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
-    errors::StageErrorKind,
+    errors::PipelineErrorKind,
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
@@ -172,11 +172,11 @@ where
                     // complete the current step. In this case, we retry the step to see if other
                     // stages can make progress.
                     match e {
-                        StageErrorKind::Temporary(_) => {}
-                        StageErrorKind::Reset(_) => {
+                        PipelineErrorKind::Temporary(_) => {}
+                        PipelineErrorKind::Reset(_) => {
                             // self.pipeline.reset(l2_block_info, origin);
                         }
-                        StageErrorKind::Critical(_) => return Err(e.into()),
+                        PipelineErrorKind::Critical(_) => return Err(e.into()),
                     }
                 }
             }

@@ -1,7 +1,7 @@
 //! Contains the [L1Retrieval] stage of the derivation pipeline.
 
 use crate::{
-    errors::{PipelineError, PipelineResult, StageErrorKind},
+    errors::{PipelineError, PipelineErrorKind, PipelineResult},
     stages::FrameQueueProvider,
     traits::{
         AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
@@ -98,7 +98,7 @@ where
         match self.data.as_mut().expect("Cannot be None").next().await {
             Ok(data) => Ok(data),
             Err(e) => {
-                if let StageErrorKind::Temporary(PipelineError::Eof) = e {
+                if let PipelineErrorKind::Temporary(PipelineError::Eof) = e {
                     self.data = None;
                 }
                 Err(e)

@@ -4,7 +4,7 @@ use super::{
     L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
     PipelineResult, ResettableStage, StepResult,
 };
-use crate::errors::StageErrorKind;
+use crate::errors::PipelineErrorKind;
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -103,7 +103,7 @@ where
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
             Err(err) => {
-                if let StageErrorKind::Temporary(PipelineError::Eof) = err {
+                if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
                     trace!(target: "pipeline", "Stages reset with EOF");
                 } else {
                     error!(target: "pipeline", "Stage reset errored: {:?}", err);
@@ -134,7 +134,7 @@ where
                 StepResult::PreparedAttributes
             }
             Err(err) => match err {
-                StageErrorKind::Temporary(PipelineError::Eof) => {
+                PipelineErrorKind::Temporary(PipelineError::Eof) => {
                     trace!(target: "pipeline", "Pipeline advancing origin");
                     if let Err(e) = self.attributes.advance_origin().await {
                         return StepResult::OriginAdvanceErr(e);

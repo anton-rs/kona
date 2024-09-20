@@ -1,7 +1,7 @@
 //! This module contains the `ChannelBank` struct.
 
 use crate::{
-    errors::{PipelineError, PipelineResult, StageErrorKind},
+    errors::{PipelineError, PipelineErrorKind, PipelineResult},
     params::MAX_CHANNEL_BANK_SIZE,
     stages::ChannelReaderProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
@@ -160,7 +160,7 @@ where
         // At this point we have removed all timed out channels from the front of the
         // `channel_queue`. Pre-Canyon we simply check the first index.
         // Post-Canyon we read the entire channelQueue for the first ready channel.
-        // If no channel is available, we return StageError::Eof.
+        // If no channel is available, we return `PipelineError::Eof`.
         // Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2
         // timestamp.
         if !self.cfg.is_canyon_active(origin.timestamp) {
@@ -217,7 +217,7 @@ where
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
         match self.read() {
             Err(e) => {
-                if !matches!(e, StageErrorKind::Temporary(PipelineError::Eof)) {
+                if !matches!(e, PipelineErrorKind::Temporary(PipelineError::Eof)) {
                     crate::timer!(DISCARD, timer);
                     return Err(PipelineError::ChannelBankEmpty.crit());
                 }

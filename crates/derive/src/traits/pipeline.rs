@@ -1,7 +1,7 @@
 //! Defines the interface for the core derivation pipeline.
 
 use super::OriginProvider;
-use crate::errors::{PipelineResult, StageErrorKind};
+use crate::errors::{PipelineErrorKind, PipelineResult};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::iter::Iterator;
@@ -16,9 +16,9 @@ pub enum StepResult {
     /// Origin was advanced.
     AdvancedOrigin,
     /// Origin advance failed.
-    OriginAdvanceErr(StageErrorKind),
+    OriginAdvanceErr(PipelineErrorKind),
     /// Step failed.
-    StepFailed(StageErrorKind),
+    StepFailed(PipelineErrorKind),
 }
 
 /// This trait defines the interface for interacting with the derivation pipeline.

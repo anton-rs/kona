@@ -135,7 +135,7 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        errors::StageErrorKind,
+        errors::PipelineErrorKind,
         params::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC},
         traits::test_utils::TestChainProvider,
     };
@@ -217,7 +217,7 @@ pub(crate) mod tests {
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), PipelineError::Eof.temp());
         matches!(
             traversal.advance_origin().await.unwrap_err(),
-            StageErrorKind::Temporary(PipelineError::Provider(_))
+            PipelineErrorKind::Temporary(PipelineError::Provider(_))
         );
     }
 
@@ -240,7 +240,7 @@ pub(crate) mod tests {
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), PipelineError::Eof.temp());
         matches!(
             traversal.advance_origin().await.unwrap_err(),
-            StageErrorKind::Temporary(PipelineError::Provider(_))
+            PipelineErrorKind::Temporary(PipelineError::Provider(_))
         );
     }
 
@@ -257,7 +257,7 @@ pub(crate) mod tests {
         // Only the second block should fail since the second receipt
         // contains invalid logs that will error for a system config update.
         let err = traversal.advance_origin().await.unwrap_err();
-        matches!(err, StageErrorKind::Critical(PipelineError::SystemConfigUpdate(_)));
+        matches!(err, PipelineErrorKind::Critical(PipelineError::SystemConfigUpdate(_)));
     }
 
     #[tokio::test]

@@ -2,7 +2,7 @@
 
 use super::derive_deposits;
 use crate::{
-    errors::{BuilderError, PipelineError, PipelineResult, StageErrorKind},
+    errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::{ChainProvider, L2ChainProvider},
 };
@@ -91,7 +91,7 @@ where
                 .await
                 .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
             if l2_parent.l1_origin.hash != header.parent_hash {
-                return Err(StageErrorKind::Reset(
+                return Err(PipelineErrorKind::Reset(
                     BuilderError::BlockMismatchEpochReset(
                         epoch,
                         l2_parent.l1_origin,
@@ -118,7 +118,7 @@ where
         } else {
             #[allow(clippy::collapsible_else_if)]
             if l2_parent.l1_origin.hash != epoch.hash {
-                return Err(StageErrorKind::Reset(
+                return Err(PipelineErrorKind::Reset(
                     BuilderError::BlockMismatch(epoch, l2_parent.l1_origin).into(),
                 ));
             }
@@ -137,7 +137,7 @@ where
         // between L1 and L2.
         let next_l2_time = l2_parent.block_info.timestamp + self.rollup_cfg.block_time;
         if next_l2_time < l1_header.timestamp {
-            return Err(StageErrorKind::Reset(
+            return Err(PipelineErrorKind::Reset(
                 BuilderError::BrokenTimeInvariant(
                     l2_parent.l1_origin,
                     next_l2_time,
@@ -242,7 +242,7 @@ mod tests {
         let expected =
             BuilderError::BlockMismatchEpochReset(epoch, l2_parent.l1_origin, B256::default());
         let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
-        assert_eq!(err, StageErrorKind::Reset(expected.into()));
+        assert_eq!(err, PipelineErrorKind::Reset(expected.into()));
     }
 
     #[tokio::test]
@@ -266,7 +266,7 @@ mod tests {
         // Here the default header is used whose hash will not equal the custom `l2_hash` above.
         let expected = BuilderError::BlockMismatch(epoch, l2_parent.l1_origin);
         let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
-        assert_eq!(err, StageErrorKind::Reset(ResetError::AttributesBuilder(expected)));
+        assert_eq!(err, PipelineErrorKind::Reset(ResetError::AttributesBuilder(expected)));
     }
 
     #[tokio::test]
@@ -297,7 +297,7 @@ mod tests {
             timestamp,
         );
         let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
-        assert_eq!(err, StageErrorKind::Reset(ResetError::AttributesBuilder(expected)));
+        assert_eq!(err, PipelineErrorKind::Reset(ResetError::AttributesBuilder(expected)));
     }
 
     #[tokio::test]

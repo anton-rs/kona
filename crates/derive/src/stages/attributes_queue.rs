@@ -217,7 +217,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        errors::{BuilderError, StageErrorKind},
+        errors::{BuilderError, PipelineErrorKind},
         stages::test_utils::{
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
@@ -281,7 +281,7 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageErrorKind::Reset(ResetError::BadParentHash(Default::default(), bad_hash))
+            PipelineErrorKind::Reset(ResetError::BadParentHash(Default::default(), bad_hash))
         );
     }
 
@@ -291,7 +291,7 @@ mod tests {
         let parent = L2BlockInfo::default();
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageErrorKind::Reset(ResetError::BadTimestamp(1, 0)));
+        assert_eq!(result, PipelineErrorKind::Reset(ResetError::BadTimestamp(1, 0)));
     }
 
     #[tokio::test]
@@ -303,7 +303,7 @@ mod tests {
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
+        assert_eq!(result, PipelineErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
     }
 
     #[tokio::test]
@@ -316,7 +316,7 @@ mod tests {
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
+        assert_eq!(result, PipelineErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
     }
 
     #[tokio::test]

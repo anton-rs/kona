@@ -10,7 +10,7 @@ use op_alloy_protocol::DepositError;
 use thiserror::Error;
 
 /// A result type for the derivation pipeline stages.
-pub type PipelineResult<T> = Result<T, StageErrorKind>;
+pub type PipelineResult<T> = Result<T, PipelineErrorKind>;
 
 /// [crate::ensure] is a short-hand for bubbling up errors in the case of a condition not being met.
 #[macro_export]
@@ -24,7 +24,7 @@ macro_rules! ensure {
 
 /// A top level filter for [PipelineError] that sorts by severity.
 #[derive(Error, Debug, PartialEq, Eq)]
-pub enum StageErrorKind {
+pub enum PipelineErrorKind {
     /// A temporary error.
     #[error("Temporary error: {0}")]
     Temporary(#[source] PipelineError),
@@ -95,14 +95,14 @@ pub enum PipelineError {
 }
 
 impl PipelineError {
-    /// Wrap [self] as a [StageErrorKind::Critical].
-    pub fn crit(self) -> StageErrorKind {
-        StageErrorKind::Critical(self)
+    /// Wrap [self] as a [PipelineErrorKind::Critical].
+    pub fn crit(self) -> PipelineErrorKind {
+        PipelineErrorKind::Critical(self)
     }
 
-    /// Wrap [self] as a [StageErrorKind::Temporary].
-    pub fn temp(self) -> StageErrorKind {
-        StageErrorKind::Temporary(self)
+    /// Wrap [self] as a [PipelineErrorKind::Temporary].
+    pub fn temp(self) -> PipelineErrorKind {
+        PipelineErrorKind::Temporary(self)
     }
 }
 

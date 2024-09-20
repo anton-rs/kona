@@ -2,7 +2,7 @@
 
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
-    errors::{DecodeError, PipelineError, PipelineResult, ResetError, StageErrorKind},
+    errors::{DecodeError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     stages::attributes_queue::AttributesProvider,
     traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -121,7 +121,7 @@ where
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
         // but don't advance the L2 Safe Head's epoch
         if parent.l1_origin != epoch.id() && parent.l1_origin.number != epoch.number - 1 {
-            return Err(StageErrorKind::Reset(ResetError::L1OriginMismatch(
+            return Err(PipelineErrorKind::Reset(ResetError::L1OriginMismatch(
                 parent.l1_origin.number,
                 epoch.number - 1,
             )));
@@ -337,7 +337,7 @@ where
                 }
             }
             Err(e) => {
-                if let StageErrorKind::Temporary(PipelineError::Eof) = e {
+                if let PipelineErrorKind::Temporary(PipelineError::Eof) = e {
                     out_of_data = true;
                 } else {
                     crate::timer!(DISCARD, timer);
@@ -362,7 +362,7 @@ where
             Err(e) => {
                 crate::timer!(DISCARD, timer);
                 match e {
-                    StageErrorKind::Temporary(PipelineError::Eof) => {
+                    PipelineErrorKind::Temporary(PipelineError::Eof) => {
                         if out_of_data {
                             return Err(PipelineError::Eof.temp());
                         }

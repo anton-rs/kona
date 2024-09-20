@@ -221,7 +221,7 @@ impl<T: Into<Vec<u8>>> From<T> for BatchReader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{errors::StageErrorKind, stages::test_utils::MockChannelReaderProvider};
+    use crate::{errors::PipelineErrorKind, stages::test_utils::MockChannelReaderProvider};
     use alloc::vec;
 
     fn new_compressed_batch_data() -> Bytes {
@@ -246,7 +246,7 @@ mod test {
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         assert!(matches!(
             reader.next_batch().await.unwrap_err(),
-            StageErrorKind::Temporary(PipelineError::ChannelReaderEmpty)
+            PipelineErrorKind::Temporary(PipelineError::ChannelReaderEmpty)
         ));
         assert!(reader.next_batch.is_none());
     }
