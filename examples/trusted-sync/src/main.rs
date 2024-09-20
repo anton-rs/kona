@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use kona_derive::{
-    errors::{PipelineError, StageErrorKind},
+    errors::{PipelineError, PipelineErrorKind},
     online::*,
 };
 use std::sync::Arc;
@@ -219,7 +219,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 warn!(target: "loop", "Could not advance origin: {:?}", e);
             }
             StepResult::StepFailed(e) => match e {
-                StageErrorKind::Temporary(e) => {
+                PipelineErrorKind::Temporary(e) => {
                     if matches!(e, PipelineError::NotEnoughData) {
                         metrics::PIPELINE_STEPS.with_label_values(&["not_enough_data"]).inc();
                         debug!(target: "loop", "Not enough data to step derivation pipeline");

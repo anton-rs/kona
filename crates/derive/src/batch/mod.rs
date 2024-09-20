@@ -90,7 +90,7 @@ impl Batch {
 
         match batch_type {
             BatchType::Single => {
-                let single_batch = SingleBatch::decode(r)?;
+                let single_batch = SingleBatch::decode(r).map_err(DecodeError::AlloyRlpError)?;
                 Ok(Batch::Single(single_batch))
             }
             BatchType::Span => {

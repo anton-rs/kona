@@ -107,7 +107,7 @@ where
                     trace!(target: "pipeline", "Stages reset with EOF");
                 } else {
                     error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                    return Err(err.into());
+                    return Err(err);
                 }
             }
         }

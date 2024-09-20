@@ -159,8 +159,8 @@ pub enum DecodeError {
     #[error("Error decoding deposit: {0}")]
     DepositError(#[from] DepositError),
     /// Alloy RLP Encoding Error.
-    #[error(transparent)]
-    AlloyRlpError(#[from] alloy_rlp::Error),
+    #[error("RLP error: {0}")]
+    AlloyRlpError(alloy_rlp::Error),
     /// Span Batch Error.
     #[error(transparent)]
     SpanBatchError(#[from] SpanBatchError),
