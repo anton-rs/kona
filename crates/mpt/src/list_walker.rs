@@ -3,7 +3,7 @@
 
 use crate::{
     errors::{OrderedListWalkerError, OrderedListWalkerResult},
-    TrieDBFetcher, TrieNode, TrieNodeError,
+    TrieNode, TrieNodeError, TrieProvider,
 };
 use alloc::{collections::VecDeque, string::ToString, vec};
 use alloy_primitives::{Bytes, B256};
@@ -16,7 +16,7 @@ use core::marker::PhantomData;
 /// Once it has ben hydrated with [Self::hydrate], the elements in the derivable list can be
 /// iterated over using the [Iterator] implementation.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct OrderedListWalker<F: TrieDBFetcher> {
+pub struct OrderedListWalker<F: TrieProvider> {
     /// The Merkle Patricia Trie root.
     root: B256,
     /// The leaf nodes of the derived list, in order. [None] if the tree has yet to be fully
@@ -28,7 +28,7 @@ pub struct OrderedListWalker<F: TrieDBFetcher> {
 
 impl<F> OrderedListWalker<F>
 where
-    F: TrieDBFetcher,
+    F: TrieProvider,
 {
     /// Creates a new [OrderedListWalker], yet to be hydrated.
     pub fn new(root: B256) -> Self {
@@ -143,7 +143,7 @@ where
 
 impl<F> Iterator for OrderedListWalker<F>
 where
-    F: TrieDBFetcher,
+    F: TrieProvider,
 {
     type Item = (Bytes, Bytes);
 
@@ -170,7 +170,7 @@ mod test {
             get_live_derivable_receipts_list, get_live_derivable_transactions_list,
             TrieNodeProvider,
         },
-        NoopTrieDBFetcher,
+        NoopTrieProvider,
     };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};
@@ -234,7 +234,7 @@ mod test {
 
     #[test]
     fn test_empty_list_walker() {
-        assert!(OrderedListWalker::fetch_leaves(&TrieNode::Empty, &NoopTrieDBFetcher)
+        assert!(OrderedListWalker::fetch_leaves(&TrieNode::Empty, &NoopTrieProvider)
             .expect("Failed to traverse empty trie")
             .is_empty());
     }

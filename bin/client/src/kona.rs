@@ -63,7 +63,7 @@ fn main() -> Result<()> {
 
         let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
             .with_parent_header(driver.take_l2_safe_head_header())
-            .with_fetcher(l2_provider.clone())
+            .with_provider(l2_provider.clone())
             .with_hinter(l2_provider)
             .with_handle_register(fpvm_handle_register)
             .build()?;

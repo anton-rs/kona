@@ -12,7 +12,7 @@ use alloy_consensus::{Header, Sealable, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use anyhow::{anyhow, Result};
-use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieHinter, TrieProvider};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
@@ -43,8 +43,8 @@ use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_enve
 #[derive(Debug)]
 pub struct StatelessL2BlockExecutor<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
@@ -56,8 +56,8 @@ where
 
 impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
     pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
@@ -647,20 +647,20 @@ mod test {
     use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
-    use kona_mpt::NoopTrieDBHinter;
+    use kona_mpt::NoopTrieHinter;
     use op_alloy_genesis::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
     use serde::Deserialize;
     use std::{collections::HashMap, format};
 
-    /// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from the local
+    /// A [TrieProvider] implementation that fetches trie nodes and bytecode from the local
     /// testdata folder.
     #[derive(Deserialize)]
-    struct TestdataTrieDBFetcher {
+    struct TestdataTrieProvider {
         preimages: HashMap<B256, Bytes>,
     }
 
-    impl TestdataTrieDBFetcher {
-        /// Constructs a new [TestdataTrieDBFetcher] with the given testdata folder.
+    impl TestdataTrieProvider {
+        /// Constructs a new [TestdataTrieProvider] with the given testdata folder.
         pub(crate) fn new(testdata_folder: &str) -> Self {
             let file_name = format!("testdata/{}/output.json", testdata_folder);
             let preimages = serde_json::from_str::<HashMap<B256, Bytes>>(
@@ -671,7 +671,7 @@ mod test {
         }
     }
 
-    impl TrieDBFetcher for TestdataTrieDBFetcher {
+    impl TrieProvider for TestdataTrieProvider {
         type Error = anyhow::Error;
 
         fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
@@ -723,8 +723,8 @@ mod test {
         // Initialize the block executor on block #120794431's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_120794432_exec"))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new("block_120794432_exec"))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
 
@@ -780,8 +780,8 @@ mod test {
         // Initialize the block executor on block #121049888's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121049889_exec"))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new("block_121049889_exec"))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
 
@@ -841,8 +841,8 @@ mod test {
         // Initialize the block executor on block #121003240's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121003241_exec"))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new("block_121003241_exec"))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
 
@@ -909,8 +909,8 @@ mod test {
         // Initialize the block executor on block #121057302's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121057303_exec"))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new("block_121057303_exec"))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
 
@@ -971,8 +971,8 @@ mod test {
         // Initialize the block executor on block #121057302's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121065789_exec"))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new("block_121065789_exec"))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
 
@@ -1042,8 +1042,8 @@ mod test {
         // Initialize the block executor on block #121135703's post-state.
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121135704_exec"))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new("block_121135704_exec"))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
 

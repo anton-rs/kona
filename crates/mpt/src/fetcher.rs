@@ -1,4 +1,4 @@
-//! Contains the [TrieDBFetcher] trait for fetching trie node preimages, contract bytecode, and
+//! Contains the [TrieProvider] trait for fetching trie node preimages, contract bytecode, and
 //! headers.
 
 use alloc::string::{String, ToString};
@@ -6,9 +6,9 @@ use alloy_consensus::Header;
 use alloy_primitives::{Address, Bytes, B256, U256};
 use core::fmt::Display;
 
-/// The [TrieDBFetcher] trait defines the synchronous interface for fetching trie node preimages and
+/// The [TrieProvider] trait defines the synchronous interface for fetching trie node preimages and
 /// headers.
-pub trait TrieDBFetcher {
+pub trait TrieProvider {
     /// The error type for fetching trie node preimages.
     type Error: Display + ToString;
 
@@ -49,9 +49,9 @@ pub trait TrieDBFetcher {
     fn header_by_hash(&self, hash: B256) -> Result<Header, Self::Error>;
 }
 
-/// The [TrieDBHinter] trait defines the synchronous interface for hinting the host to fetch trie
+/// The [TrieHinter] trait defines the synchronous interface for hinting the host to fetch trie
 /// node preimages.
-pub trait TrieDBHinter {
+pub trait TrieHinter {
     /// The error type for hinting trie node preimages.
     type Error: Display + ToString;
 
@@ -94,11 +94,11 @@ pub trait TrieDBHinter {
     ) -> Result<(), Self::Error>;
 }
 
-/// The default, no-op implementation of the [TrieDBFetcher] trait, used for testing.
+/// The default, no-op implementation of the [TrieProvider] trait, used for testing.
 #[derive(Debug, Clone, Copy)]
-pub struct NoopTrieDBFetcher;
+pub struct NoopTrieProvider;
 
-impl TrieDBFetcher for NoopTrieDBFetcher {
+impl TrieProvider for NoopTrieProvider {
     type Error = String;
 
     fn trie_node_preimage(&self, _key: B256) -> Result<Bytes, Self::Error> {
@@ -114,11 +114,11 @@ impl TrieDBFetcher for NoopTrieDBFetcher {
     }
 }
 
-/// The default, no-op implementation of the [TrieDBHinter] trait, used for testing.
+/// The default, no-op implementation of the [TrieHinter] trait, used for testing.
 #[derive(Debug, Clone, Copy)]
-pub struct NoopTrieDBHinter;
+pub struct NoopTrieHinter;
 
-impl TrieDBHinter for NoopTrieDBHinter {
+impl TrieHinter for NoopTrieHinter {
     type Error = String;
 
     fn hint_trie_node(&self, _hash: B256) -> Result<(), Self::Error> {

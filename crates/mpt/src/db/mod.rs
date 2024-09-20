@@ -3,7 +3,7 @@
 
 use crate::{
     errors::{TrieDBError, TrieDBResult},
-    TrieDBFetcher, TrieDBHinter, TrieNode, TrieNodeError,
+    TrieHinter, TrieNode, TrieNodeError, TrieProvider,
 };
 use alloc::{string::ToString, vec::Vec};
 use alloy_consensus::{Header, Sealed, EMPTY_ROOT_HASH};
@@ -50,7 +50,7 @@ pub use account::TrieAccount;
 /// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
 /// use anyhow::Result;
-/// use kona_mpt::{NoopTrieDBFetcher, NoopTrieDBHinter, TrieDB};
+/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieDB};
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
 ///
 /// let mock_starting_root = B256::default();
@@ -59,8 +59,8 @@ pub use account::TrieAccount;
 /// let trie_db = TrieDB::new(
 ///     mock_starting_root,
 ///     mock_parent_block_header.seal_slow(),
-///     NoopTrieDBFetcher,
-///     NoopTrieDBHinter,
+///     NoopTrieProvider,
+///     NoopTrieHinter,
 /// );
 /// let mut state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
 /// let evm = EvmBuilder::default().with_db(&mut state).build();
@@ -79,8 +79,8 @@ pub use account::TrieAccount;
 #[derive(Debug, Clone)]
 pub struct TrieDB<F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// The [TrieNode] representation of the root node.
     root_node: TrieNode,
@@ -88,16 +88,16 @@ where
     storage_roots: HashMap<Address, TrieNode>,
     /// The parent block hash of the current block.
     parent_block_header: Sealed<Header>,
-    /// The [TrieDBFetcher]
+    /// The [TrieProvider]
     fetcher: F,
-    /// The [TrieDBHinter]
+    /// The [TrieHinter]
     hinter: H,
 }
 
 impl<F, H> TrieDB<F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// Creates a new [TrieDB] with the given root node.
     pub fn new(root: B256, parent_block_header: Sealed<Header>, fetcher: F, hinter: H) -> Self {
@@ -318,8 +318,8 @@ where
 
 impl<F, H> Database for TrieDB<F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     type Error = TrieDBError;
 

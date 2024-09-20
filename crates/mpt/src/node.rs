@@ -4,7 +4,7 @@
 use crate::{
     errors::TrieNodeResult,
     util::{rlp_list_element_length, unpack_path_to_nibbles},
-    TrieDBFetcher, TrieDBHinter, TrieNodeError,
+    TrieHinter, TrieNodeError, TrieProvider,
 };
 use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
 use alloy_primitives::{hex, keccak256, Bytes, B256};
@@ -145,7 +145,7 @@ impl TrieNode {
     }
 
     /// Unblinds the [TrieNode] if it is a [TrieNode::Blinded] node.
-    pub fn unblind<F: TrieDBFetcher>(&mut self, fetcher: &F) -> TrieNodeResult<()> {
+    pub fn unblind<F: TrieProvider>(&mut self, fetcher: &F) -> TrieNodeResult<()> {
         if let TrieNode::Blinded { commitment } = self {
             if *commitment == EMPTY_ROOT_HASH {
                 // If the commitment is the empty root hash, the node is empty, and we don't need to
@@ -173,7 +173,7 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not retrieve the node with the given key from the trie.
     /// - `Ok((_, _))` - The key and value of the node
-    pub fn open<'a, F: TrieDBFetcher>(
+    pub fn open<'a, F: TrieProvider>(
         &'a mut self,
         path: &Nibbles,
         fetcher: &F,
@@ -217,7 +217,7 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not insert the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully inserted at the given path.
-    pub fn insert<F: TrieDBFetcher>(
+    pub fn insert<F: TrieProvider>(
         &mut self,
         path: &Nibbles,
         value: Bytes,
@@ -332,22 +332,20 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not delete the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully deleted at the given path.
-    pub fn delete<F: TrieDBFetcher, H: TrieDBHinter>(
+    pub fn delete<F: TrieProvider, H: TrieHinter>(
         &mut self,
         path: &Nibbles,
         fetcher: &F,
         hinter: &H,
     ) -> TrieNodeResult<()> {
         match self {
-            TrieNode::Empty => {
-                return Err(TrieNodeError::KeyNotFound(self.to_string()));
-            }
+            TrieNode::Empty => Err(TrieNodeError::KeyNotFound(self.to_string())),
             TrieNode::Leaf { prefix, .. } => {
                 if path == prefix {
                     *self = TrieNode::Empty;
                     Ok(())
                 } else {
-                    return Err(TrieNodeError::KeyNotFound(self.to_string()));
+                    Err(TrieNodeError::KeyNotFound(self.to_string()))
                 }
             }
             TrieNode::Extension { prefix, node } => {
@@ -424,7 +422,7 @@ impl TrieNode {
     /// ## Returns
     /// - `Ok(())` - The node was successfully collapsed
     /// - `Err(_)` - Could not collapse the node
-    fn collapse_if_possible<F: TrieDBFetcher, H: TrieDBHinter>(
+    fn collapse_if_possible<F: TrieProvider, H: TrieHinter>(
         &mut self,
         fetcher: &F,
         hinter: &H,
@@ -690,8 +688,8 @@ impl Decodable for TrieNode {
 mod test {
     use super::*;
     use crate::{
-        fetcher::NoopTrieDBFetcher, ordered_trie_with_encoder, test_util::TrieNodeProvider,
-        NoopTrieDBHinter, TrieNode,
+        fetcher::NoopTrieProvider, ordered_trie_with_encoder, test_util::TrieNodeProvider,
+        NoopTrieHinter, TrieNode,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
     use alloy_primitives::{b256, bytes, hex, keccak256};
@@ -825,7 +823,7 @@ mod test {
     #[test]
     fn test_insert_static() {
         let mut node = TrieNode::Empty;
-        let noop_fetcher = NoopTrieDBFetcher;
+        let noop_fetcher = NoopTrieProvider;
         node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), &noop_fetcher).unwrap();
         node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), &noop_fetcher).unwrap();
 
@@ -869,7 +867,7 @@ mod test {
 
             for key in keys {
                 hb.add_leaf(Nibbles::unpack(key), key.as_ref());
-                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieProvider).unwrap();
             }
 
             node.blind();
@@ -895,12 +893,12 @@ mod test {
                 if !deleted_keys.contains(&key) {
                     hb.add_leaf(Nibbles::unpack(key), key.as_ref());
                 }
-                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieProvider).unwrap();
             }
 
             // Delete the keys that were randomly selected from the trie node.
             for deleted_key in deleted_keys {
-                node.delete(&Nibbles::unpack(deleted_key), &NoopTrieDBFetcher, &NoopTrieDBHinter)
+                node.delete(&Nibbles::unpack(deleted_key), &NoopTrieProvider, &NoopTrieHinter)
                     .unwrap();
             }
 
