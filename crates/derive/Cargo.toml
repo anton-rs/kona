@@ -93,6 +93,7 @@ online = [
 ]
 test-utils = [
   "dep:spin",
+  "dep:anyhow",
   "dep:alloy-transport-http",
   "dep:alloy-node-bindings",
   "dep:tracing-subscriber",
