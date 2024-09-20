@@ -48,6 +48,8 @@ pub struct MockBeaconClient {
 
 #[async_trait]
 impl BeaconClient for MockBeaconClient {
+    type Error = anyhow::Error;
+
     async fn config_spec(&self) -> Result<APIConfigResponse> {
         self.config_spec.clone().ok_or_else(|| anyhow!("config_spec not set"))
     }

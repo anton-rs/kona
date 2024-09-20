@@ -6,7 +6,7 @@ use core::iter::Iterator;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use super::OriginProvider;
-use crate::errors::StageErrorKind;
+use crate::errors::{PipelineResult, StageErrorKind};
 
 /// A pipeline error.
 #[derive(Debug)]
@@ -28,7 +28,7 @@ pub trait Pipeline: OriginProvider + Iterator<Item = OptimismAttributesWithParen
     fn peek(&self) -> Option<&OptimismAttributesWithParent>;
 
     /// Resets the pipeline on the next [Pipeline::step] call.
-    async fn reset(&mut self, l2_block_info: BlockInfo, origin: BlockInfo) -> anyhow::Result<()>;
+    async fn reset(&mut self, l2_block_info: BlockInfo, origin: BlockInfo) -> PipelineResult<()>;
 
     /// Attempts to progress the pipeline.
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult;

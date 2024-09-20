@@ -1,17 +1,17 @@
 //! This module contains the `BatchQueue` stage implementation.
 
+use crate::{
+    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
+    errors::{DecodeError, PipelineError, PipelineResult, ResetError, StageErrorKind},
+    stages::attributes_queue::AttributesProvider,
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
-use crate::{
-    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
-    errors::{PipelineError, PipelineResult, StageErrorKind},
-    stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
-};
 
 /// Provides [Batch]es for the [BatchQueue] stage.
 #[async_trait]
@@ -121,10 +121,9 @@ where
         // This is in the case where we auto generate all batches in an epoch & advance the epoch
         // but don't advance the L2 Safe Head's epoch
         if parent.l1_origin != epoch.id() && parent.l1_origin.number != epoch.number - 1 {
-            return Err(StageError::Custom(anyhow!(
-                "buffered L1 chain epoch {} in batch queue does not match safe head origin {:?}",
-                epoch,
-                parent.l1_origin
+            return Err(StageErrorKind::Reset(ResetError::L1OriginMismatch(
+                parent.l1_origin.number,
+                epoch.number - 1,
             )));
         }
 
@@ -267,9 +266,7 @@ where
             // Check if the next cached batch matches the given parent block.
             if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
                 crate::timer!(DISCARD, timer);
-                return self
-                    .pop_next_batch(parent)
-                    .ok_or(anyhow!("failed to pop next batch from span batch").into());
+                return self.pop_next_batch(parent).ok_or(PipelineError::BatchQueueEmpty.crit());
             }
             // Parent block does not match the next batch.
             // Means the previously returned batch is invalid.
@@ -340,11 +337,12 @@ where
                 }
             }
             Err(e) => {
-            if let StageErrorKind::Temporary(PipelineError::Eof) = e {
-                        out_of_data = true;
-                    }
-                crate::timer!(DISCARD, timer);
-                return Err(e);
+                if let StageErrorKind::Temporary(PipelineError::Eof) = e {
+                    out_of_data = true;
+                } else {
+                    crate::timer!(DISCARD, timer);
+                    return Err(e);
+                }
             }
         }
 
@@ -380,11 +378,10 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = match sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
-                    StageError::Custom(anyhow!(
-                        "Could not get singular batches from span batch: {e}"
-                    ))
-                }) {
+                let batches = match sb
+                    .get_singular_batches(&self.l1_blocks, parent)
+                    .map_err(|e| PipelineError::DecodeError(DecodeError::SpanBatchError(e)).crit())
+                {
                     Ok(b) => b,
                     Err(e) => {
                         crate::timer!(DISCARD, timer);
@@ -394,12 +391,12 @@ where
                 self.next_spans = batches;
                 let nb = match self
                     .pop_next_batch(parent)
-                    .ok_or_else(|| anyhow!("failed to pop next batch from span batch"))
+                    .ok_or(PipelineError::BatchQueueEmpty.crit())
                 {
                     Ok(b) => b,
                     Err(e) => {
                         crate::timer!(DISCARD, timer);
-                        return Err(StageError::Custom(e));
+                        return Err(e);
                     }
                 };
                 Ok(nb)

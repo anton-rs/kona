@@ -69,12 +69,14 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
 
 #[async_trait]
 impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         // Get the payload at the given block number.
         let payload = self.payload_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_l2_block_ref(&self.boot_info.rollup_config)
+        payload.to_l2_block_ref(&self.boot_info.rollup_config).map_err(Into::into)
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
@@ -114,7 +116,7 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
         let payload = self.payload_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_system_config(rollup_config.as_ref())
+        payload.to_system_config(rollup_config.as_ref()).map_err(Into::into)
     }
 }
 

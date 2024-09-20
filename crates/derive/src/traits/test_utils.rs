@@ -11,7 +11,6 @@ use hashbrown::HashMap;
 use kona_primitives::{IndexedBlobHash, L2ExecutionPayloadEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-
 use crate::{
     errors::{BlobProviderError, PipelineError, PipelineResult},
     traits::{

@@ -7,6 +7,7 @@ use kona_primitives::BlobDecodingError;
 use op_alloy_genesis::system::SystemConfigUpdateError;
 use op_alloy_protocol::DepositError;
 use thiserror::Error;
+use alloc::string::String;
 
 /// A result type for the derivation pipeline stages.
 pub type PipelineResult<T> = Result<T, StageErrorKind>;
@@ -35,6 +36,7 @@ pub enum StageErrorKind {
     Reset(#[from] ResetError),
 }
 
+/// An error encountered during the processing.
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum PipelineError {
     /// There is no data to read from the channel bank.
@@ -55,6 +57,11 @@ pub enum PipelineError {
     /// [ChannelReader]: crate::stages::ChannelReader
     #[error("The channel reader has no channel available")]
     ChannelReaderEmpty,
+    /// The [BatchQueue] is empty.
+    ///
+    /// [BatchQueue]: crate::statges::BatchQueue
+    #[error("The batch queue has no batches available")]
+    BatchQueueEmpty,
     /// Failed to find channel in the [ChannelBank].
     ///
     /// [ChannelBank]: crate::channel::ChannelBank
@@ -77,6 +84,12 @@ pub enum PipelineError {
     /// [DecodeError] variant.
     #[error("Decode error: {0}")]
     DecodeError(#[from] DecodeError),
+    /// Provider error variant.
+    #[error("Blob provider error: {0}")]
+    Provider(String),
+    /// Custom error variant.
+    #[error("Pipeline error: {0}")]
+    Custom(String),
 }
 
 impl PipelineError {
@@ -104,6 +117,9 @@ pub enum ResetError {
     /// timestamp.
     #[error("Bad timestamp: expected {0}, got {1}")]
     BadTimestamp(u64, u64),
+    /// L1 origin mismatch.
+    #[error("L1 origin mismatch. Expected {0:?}, got {1:?}")]
+    L1OriginMismatch(u64, u64),
     /// The stage detected a block reorg.
     /// The first argument is the expected block hash.
     /// The second argument is the parent_hash of the next l1 origin block.

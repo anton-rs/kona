@@ -138,10 +138,7 @@ where
 
         // Prepare the payload attributes
         let tx_count = batch.transactions.len();
-        let mut attributes = self
-            .builder
-            .prepare_payload_attributes(parent, batch.epoch())
-            .await?;
+        let mut attributes = self.builder.prepare_payload_attributes(parent, batch.epoch()).await?;
         attributes.no_tx_pool = Some(true);
         match attributes.transactions {
             Some(ref mut txs) => txs.extend(batch.transactions),
@@ -220,7 +217,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        errors::BuilderError,
+        errors::{BuilderError, StageErrorKind},
         stages::test_utils::{
             new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
         },
@@ -260,7 +257,7 @@ mod tests {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
         let result = attributes_queue.load_batch(parent).await.unwrap_err();
-        assert_eq!(result, StageError::Eof);
+        assert_eq!(result, PipelineError::Eof.temp());
     }
 
     #[tokio::test]
@@ -284,7 +281,7 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageError::Reset(super::ResetError::BadParentHash(Default::default(), bad_hash))
+            StageErrorKind::Reset(ResetError::BadParentHash(Default::default(), bad_hash))
         );
     }
 
@@ -294,7 +291,7 @@ mod tests {
         let parent = L2BlockInfo::default();
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 0)));
+        assert_eq!(result, StageErrorKind::Reset(ResetError::BadTimestamp(1, 0)));
     }
 
     #[tokio::test]
@@ -306,7 +303,7 @@ mod tests {
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
+        assert_eq!(result, StageErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
     }
 
     #[tokio::test]
@@ -319,7 +316,7 @@ mod tests {
         };
         let batch = SingleBatch { timestamp: 1, ..Default::default() };
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
-        assert_eq!(result, StageError::Reset(super::ResetError::BadTimestamp(1, 2)));
+        assert_eq!(result, StageErrorKind::Reset(ResetError::BadTimestamp(1, 2)));
     }
 
     #[tokio::test]
@@ -330,9 +327,7 @@ mod tests {
         let result = attributes_queue.create_next_attributes(batch, parent).await.unwrap_err();
         assert_eq!(
             result,
-            StageError::AttributesBuild(BuilderError::Custom(anyhow::anyhow!(
-                "missing payload attribute"
-            )))
+            PipelineError::AttributesBuilder(BuilderError::AttributesUnavailable).crit()
         );
     }
 
@@ -362,7 +357,7 @@ mod tests {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();
         let result = attributes_queue.next_attributes(parent).await.unwrap_err();
-        assert_eq!(result, StageError::Eof);
+        assert_eq!(result, PipelineError::Eof.temp());
     }
 
     #[tokio::test]

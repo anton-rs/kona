@@ -5,7 +5,7 @@ use crate::{
     stages::L1RetrievalProvider,
     traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
 };
-use alloc::{boxed::Box, sync::Arc};
+use alloc::{boxed::Box, sync::Arc, string::ToString};
 use alloy_primitives::Address;
 use async_trait::async_trait;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -85,7 +85,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         };
         let next_l1_origin = match self.data_source.block_info_by_number(block.number + 1).await {
             Ok(block) => block,
-            Err(e) => return Err(PipelineError::BlockInfoFetch(e)),
+            Err(e) => return Err(PipelineError::Provider(e.to_string()).temp()),
         };
 
         // Check block hashes for reorgs.
@@ -96,7 +96,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         // Fetch receipts for the next l1 block and update the system config.
         let receipts = match self.data_source.receipts_by_hash(next_l1_origin.hash).await {
             Ok(receipts) => receipts,
-            Err(e) => return Err(PipelineError::ReceiptFetch(e)),
+            Err(e) => return Err(PipelineError::Provider(e.to_string()).temp()),
         };
 
         if let Err(e) = self.system_config.update_with_receipts(
@@ -215,7 +215,7 @@ pub(crate) mod tests {
         let mut traversal = new_test_traversal(blocks, vec![]);
         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), PipelineError::Eof.temp());
-        matches!(traversal.advance_origin().await.unwrap_err(), PipelineError::ReceiptFetch(_));
+        matches!(traversal.advance_origin().await.unwrap_err(), StageErrorKind::Temporary(PipelineError::Provider(_)));
     }
 
     #[tokio::test]
@@ -235,7 +235,7 @@ pub(crate) mod tests {
         let mut traversal = new_test_traversal(vec![], vec![]);
         assert_eq!(traversal.next_l1_block().await.unwrap(), Some(BlockInfo::default()));
         assert_eq!(traversal.next_l1_block().await.unwrap_err(), PipelineError::Eof.temp());
-        matches!(traversal.advance_origin().await.unwrap_err(), PipelineError::BlockInfoFetch(_));
+        matches!(traversal.advance_origin().await.unwrap_err(), StageErrorKind::Temporary(PipelineError::Provider(_)));
     }
 
     #[tokio::test]

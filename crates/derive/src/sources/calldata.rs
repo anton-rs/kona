@@ -1,14 +1,14 @@
 //! CallData Source
 
-use alloc::{boxed::Box, collections::VecDeque};
-use alloy_consensus::{Transaction, TxEnvelope};
-use alloy_primitives::{Address, Bytes, TxKind};
-use async_trait::async_trait;
-use op_alloy_protocol::BlockInfo;
 use crate::{
     errors::{PipelineError, PipelineResult},
     traits::{AsyncIterator, ChainProvider},
 };
+use alloc::{boxed::Box, collections::VecDeque, format};
+use alloy_consensus::{Transaction, TxEnvelope};
+use alloy_primitives::{Address, Bytes, TxKind};
+use async_trait::async_trait;
+use op_alloy_protocol::BlockInfo;
 
 /// A data iterator that reads from calldata.
 #[derive(Debug, Clone)]
@@ -90,7 +90,11 @@ impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
 
     async fn next(&mut self) -> PipelineResult<Self::Item> {
         if self.load_calldata().await.is_err() {
-            return Err(PipelineError::BlockFetch(self.block_ref.hash));
+            return Err(PipelineError::Provider(format!(
+                "Failed to load calldata for block {}",
+                self.block_ref.hash
+            ))
+            .temp());
         }
         self.calldata.pop_front().ok_or(PipelineError::Eof.temp())
     }

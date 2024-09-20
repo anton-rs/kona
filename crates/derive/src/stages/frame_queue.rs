@@ -72,7 +72,7 @@ where
         if self.queue.is_empty() {
             match self.prev.next_data().await {
                 Ok(data) => {
-                    if let Ok(frames) = into_frames(Ok(data)) {
+                    if let Ok(frames) = Frame::parse_frames(&data.into()) {
                         crate::inc!(DERIVED_FRAMES_COUNT, frames.len() as f64, &["success"]);
                         self.queue.extend(frames);
                     } else {

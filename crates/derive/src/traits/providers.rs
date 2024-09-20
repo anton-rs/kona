@@ -1,6 +1,6 @@
 use core::fmt::Display;
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec, string::ToString};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use async_trait::async_trait;
@@ -12,7 +12,7 @@ use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 #[async_trait]
 pub trait ChainProvider {
     /// The error type for the [ChainProvider].
-    type Error: Display;
+    type Error: Display + ToString;
 
     /// Fetch the L1 [Header] for the given [B256] hash.
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error>;
@@ -36,7 +36,7 @@ pub trait ChainProvider {
 #[async_trait]
 pub trait L2ChainProvider {
     /// The error type for the [L2ChainProvider].
-    type Error: Display;
+    type Error: Display + ToString;
 
     /// Returns the L2 block info given a block number.
     /// Errors if the block does not exist.

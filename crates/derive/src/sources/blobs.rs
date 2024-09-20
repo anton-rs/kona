@@ -4,7 +4,7 @@ use crate::{
     errors::{BlobProviderError, PipelineError, PipelineResult},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec::Vec, format, string::ToString};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
@@ -184,7 +184,11 @@ where
 
     async fn next(&mut self) -> PipelineResult<Self::Item> {
         if self.load_blobs().await.is_err() {
-            return Err(PipelineError::ProviderError(self.block_ref.hash));
+            return Err(PipelineError::Provider(format!(
+                "Failed to load blobs from stream: {}",
+                self.block_ref.hash
+            ))
+            .temp());
         }
 
         let next_data = match self.next_data() {

@@ -354,7 +354,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
                     PROVIDER_ERRORS,
                     &["l2_chain_provider", "l2_block_info_by_number", "to_l2_block_ref"]
                 );
-                return Err(e);
+                return Err(RpcError::LocalUsageError(Box::new(e)));
             }
         };
         self.l2_block_info_by_number_cache.put(number, l2_block_info);
@@ -438,7 +438,7 @@ impl L2ChainProvider for AlloyL2ChainProvider {
                     PROVIDER_ERRORS,
                     &["l2_chain_provider", "system_config_by_number", "to_system_config"]
                 );
-                return Err(e);
+                return Err(RpcError::LocalUsageError(Box::new(e)));
             }
         };
         self.system_config_by_number_cache.put(number, sys_config);

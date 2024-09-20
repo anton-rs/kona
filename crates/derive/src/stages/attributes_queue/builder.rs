@@ -6,7 +6,7 @@ use crate::{
     params::SEQUENCER_FEE_VAULT_ADDRESS,
     traits::{ChainProvider, L2ChainProvider},
 };
-use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec};
+use alloc::{boxed::Box, fmt::Debug, sync::Arc, vec, vec::Vec, string::ToString};
 use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
 use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
@@ -14,7 +14,7 @@ use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{block_info::DecodeError, L1BlockInfoTx, L2BlockInfo};
+use op_alloy_protocol::{L1BlockInfoTx, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
 /// The [AttributesBuilder] is responsible for preparing [OptimismPayloadAttributes]
@@ -75,18 +75,21 @@ where
         let l1_header;
         let deposit_transactions: Vec<Bytes>;
 
-        // TODO: Temp RPC error
         let mut sys_config = self
             .config_fetcher
             .system_config_by_number(l2_parent.block_info.number, self.rollup_cfg.clone())
-            .await?;
+            .await
+            .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
 
         // If the L1 origin changed in this block, then we are in the first block of the epoch.
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
         let sequence_number = if l2_parent.l1_origin.number != epoch.number {
-            // TODO: Temp RPC error
-            let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
+            let header = self
+                .receipts_fetcher
+                .header_by_hash(epoch.hash)
+                .await
+                .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
             if l2_parent.l1_origin.hash != header.parent_hash {
                 return Err(StageErrorKind::Reset(
                     BuilderError::BlockMismatchEpochReset(
@@ -97,10 +100,13 @@ where
                     .into(),
                 ));
             }
-            // TODO: Temp RPC error
-            let receipts = self.receipts_fetcher.receipts_by_hash(epoch.hash).await?;
+            let receipts = self
+                .receipts_fetcher
+                .receipts_by_hash(epoch.hash)
+                .await
+                .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
             let deposits =
-                derive_deposits(epoch.hash, receipts, self.rollup_cfg.deposit_contract_address)
+                derive_deposits(epoch.hash, &receipts, self.rollup_cfg.deposit_contract_address)
                     .await
                     .map_err(|e| PipelineError::DecodeError(e).crit())?;
             sys_config
@@ -117,8 +123,11 @@ where
                 ));
             }
 
-            // TODO: Temp RPC error
-            let header = self.receipts_fetcher.header_by_hash(epoch.hash).await?;
+            let header = self
+                .receipts_fetcher
+                .header_by_hash(epoch.hash)
+                .await
+                .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
             l1_header = header;
             deposit_transactions = vec![];
             l2_parent.seq_num + 1
@@ -128,12 +137,15 @@ where
         // between L1 and L2.
         let next_l2_time = l2_parent.block_info.timestamp + self.rollup_cfg.block_time;
         if next_l2_time < l1_header.timestamp {
-            return Err(StageErrorKind::Reset(BuilderError::BrokenTimeInvariant(
-                l2_parent.l1_origin,
-                next_l2_time,
-                BlockNumHash { hash: l1_header.hash_slow(), number: l1_header.number },
-                l1_header.timestamp,
-            ).into()));
+            return Err(StageErrorKind::Reset(
+                BuilderError::BrokenTimeInvariant(
+                    l2_parent.l1_origin,
+                    next_l2_time,
+                    BlockNumHash { hash: l1_header.hash_slow(), number: l1_header.number },
+                    l1_header.timestamp,
+                )
+                .into(),
+            ));
         }
 
         let mut upgrade_transactions: Vec<Bytes> = vec![];
@@ -156,7 +168,9 @@ where
             &l1_header,
             next_l2_time,
         )
-        .map_err(|e| BuilderError::Custom(anyhow::anyhow!(e)))?;
+        .map_err(|e| {
+            PipelineError::AttributesBuilder(BuilderError::Custom(e.to_string())).crit()
+        })?;
         let mut encoded_l1_info_tx = Vec::with_capacity(l1_info_tx_envelope.length());
         l1_info_tx_envelope.encode_2718(&mut encoded_l1_info_tx);
 
@@ -198,7 +212,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::test_utils::MockSystemConfigL2Fetcher, traits::test_utils::TestChainProvider,
+        errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher, traits::test_utils::TestChainProvider
     };
     use alloy_consensus::Header;
     use alloy_primitives::B256;
@@ -227,7 +241,7 @@ mod tests {
         let expected =
             BuilderError::BlockMismatchEpochReset(epoch, l2_parent.l1_origin, B256::default());
         let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
-        assert_eq!(err, expected);
+        assert_eq!(err, StageErrorKind::Reset(expected.into()));
     }
 
     #[tokio::test]
@@ -251,7 +265,7 @@ mod tests {
         // Here the default header is used whose hash will not equal the custom `l2_hash` above.
         let expected = BuilderError::BlockMismatch(epoch, l2_parent.l1_origin);
         let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
-        assert_eq!(err, expected);
+        assert_eq!(err, StageErrorKind::Reset(ResetError::AttributesBuilder(expected)));
     }
 
     #[tokio::test]
@@ -282,7 +296,7 @@ mod tests {
             timestamp,
         );
         let err = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap_err();
-        assert_eq!(err, expected);
+        assert_eq!(err, StageErrorKind::Reset(ResetError::AttributesBuilder(expected)));
     }
 
     #[tokio::test]

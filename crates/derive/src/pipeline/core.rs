@@ -1,12 +1,11 @@
 //! Contains the core derivation pipeline.
 
 use crate::errors::StageErrorKind;
-
 use super::{
     L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
     PipelineResult, ResettableStage, StepResult,
 };
-use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
+use alloc::{boxed::Box, collections::VecDeque, sync::Arc, string::ToString};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
@@ -99,13 +98,17 @@ where
         let system_config = self
             .l2_chain_provider
             .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
-            .await?;
+            .await
+            .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
-            Err(PipelineError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
             Err(err) => {
-                error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                return Err(err.into());
+                if let StageErrorKind::Temporary(PipelineError::Eof) = err {
+                    trace!(target: "pipeline", "Stages reset with EOF");
+                } else {
+                    error!(target: "pipeline", "Stage reset errored: {:?}", err);
+                    return Err(err.into());
+                }
             }
         }
         Ok(())

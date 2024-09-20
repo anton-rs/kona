@@ -7,12 +7,13 @@ use alloy_eips::{
 };
 use alloy_primitives::{Address, Bloom, Bytes, B256};
 use alloy_rlp::Encodable;
-use anyhow::Result;
 use op_alloy_consensus::{OpTxEnvelope, OpTxType};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{
-    BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx, L2BlockInfo,
+    block_info::DecodeError, BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoTx,
+    L2BlockInfo,
 };
+use thiserror::Error;
 
 /// Fixed and variable memory costs for a payload.
 /// ~1000 bytes per payload, with some margin for overhead like map data.
@@ -122,42 +123,68 @@ pub struct L2ExecutionPayload {
     pub excess_blob_gas: Option<u128>,
 }
 
+/// An error encountered during [L2ExecutionPayloadEnvelope] conversion.
+#[derive(Error, Debug)]
+pub enum PayloadConversionError {
+    /// Invalid genesis hash.
+    #[error("Invalid genesis hash. Expected {0}, got {1}")]
+    InvalidGenesisHash(B256, B256),
+    /// Invalid transaction type.
+    #[error("First payload transaction has unexpected type: {0}")]
+    InvalidTxType(u8),
+    /// L1 Info error
+    #[error(transparent)]
+    L1InfoError(#[from] DecodeError),
+    /// EIP 2718 RLP error
+    #[error("EIP 2718 RLP error: {0}")]
+    Eip2718Error(alloy_eips::eip2718::Eip2718Error),
+    /// Missing system config in genesis block.
+    #[error("Missing system config in genesis block")]
+    MissingSystemConfigGenesis,
+    /// Empty transactions.
+    #[error("Empty transactions in payload. Block hash: {0}")]
+    EmptyTransactions(B256),
+}
+
 impl L2ExecutionPayloadEnvelope {
     /// Converts the [L2ExecutionPayloadEnvelope] to an [L2BlockInfo], by checking against the L1
     /// information transaction or the genesis block.
-    pub fn to_l2_block_ref(&self, rollup_config: &RollupConfig) -> Result<L2BlockInfo> {
+    pub fn to_l2_block_ref(
+        &self,
+        rollup_config: &RollupConfig,
+    ) -> Result<L2BlockInfo, PayloadConversionError> {
         let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
 
-        let (l1_origin, sequence_number) = if execution_payload.block_number ==
-            rollup_config.genesis.l2.number
-        {
-            if execution_payload.block_hash != rollup_config.genesis.l2.hash {
-                anyhow::bail!("Invalid genesis hash");
-            }
-            (rollup_config.genesis.l1, 0)
-        } else {
-            if execution_payload.transactions.is_empty() {
-                anyhow::bail!(
-                    "L2 block is missing L1 info deposit transaction, block hash: {}",
-                    execution_payload.block_hash
-                );
-            }
+        let (l1_origin, sequence_number) =
+            if execution_payload.block_number == rollup_config.genesis.l2.number {
+                if execution_payload.block_hash != rollup_config.genesis.l2.hash {
+                    return Err(PayloadConversionError::InvalidGenesisHash(
+                        rollup_config.genesis.l2.hash,
+                        execution_payload.block_hash,
+                    ));
+                }
+                (rollup_config.genesis.l1, 0)
+            } else {
+                if execution_payload.transactions.is_empty() {
+                    return Err(PayloadConversionError::EmptyTransactions(
+                        execution_payload.block_hash,
+                    ));
+                }
 
-            let ty = execution_payload.transactions[0][0];
-            if ty != OpTxType::Deposit as u8 {
-                anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
-            }
-            let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
-                .map_err(|e| anyhow::anyhow!(e))?;
+                let ty = execution_payload.transactions[0][0];
+                if ty != OpTxType::Deposit as u8 {
+                    return Err(PayloadConversionError::InvalidTxType(ty));
+                }
+                let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
+                    .map_err(PayloadConversionError::Eip2718Error)?;
 
-            let OpTxEnvelope::Deposit(tx) = tx else {
-                anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
+                let OpTxEnvelope::Deposit(tx) = tx else {
+                    return Err(PayloadConversionError::InvalidTxType(tx.tx_type() as u8));
+                };
+
+                let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
+                (l1_info.id(), l1_info.sequence_number())
             };
-
-            let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())
-                .map_err(|e| anyhow::anyhow!(e))?;
-            (l1_info.id(), l1_info.sequence_number())
-        };
 
         Ok(L2BlockInfo {
             block_info: BlockInfo {
@@ -172,38 +199,40 @@ impl L2ExecutionPayloadEnvelope {
     }
 
     /// Converts the [L2ExecutionPayloadEnvelope] to a partial [SystemConfig].
-    pub fn to_system_config(&self, rollup_config: &RollupConfig) -> Result<SystemConfig> {
+    pub fn to_system_config(
+        &self,
+        rollup_config: &RollupConfig,
+    ) -> Result<SystemConfig, PayloadConversionError> {
         let L2ExecutionPayloadEnvelope { execution_payload, .. } = self;
 
         if execution_payload.block_number == rollup_config.genesis.l2.number {
             if execution_payload.block_hash != rollup_config.genesis.l2.hash {
-                anyhow::bail!("Invalid genesis hash");
+                return Err(PayloadConversionError::InvalidGenesisHash(
+                    rollup_config.genesis.l2.hash,
+                    execution_payload.block_hash,
+                ));
             }
             return rollup_config
                 .genesis
                 .system_config
-                .ok_or_else(|| anyhow::anyhow!("Missing system config in genesis block"));
+                .ok_or(PayloadConversionError::MissingSystemConfigGenesis);
         }
 
         if execution_payload.transactions.is_empty() {
-            anyhow::bail!(
-                "L2 block is missing L1 info deposit transaction, block hash: {}",
-                execution_payload.block_hash
-            );
+            return Err(PayloadConversionError::EmptyTransactions(execution_payload.block_hash));
         }
         let ty = execution_payload.transactions[0][0];
         if ty != OpTxType::Deposit as u8 {
-            anyhow::bail!("First payload transaction has unexpected type: {:?}", ty);
+            return Err(PayloadConversionError::InvalidTxType(ty));
         }
         let tx = OpTxEnvelope::decode_2718(&mut execution_payload.transactions[0].as_ref())
-            .map_err(|e| anyhow::anyhow!(e))?;
+            .map_err(PayloadConversionError::Eip2718Error)?;
 
         let OpTxEnvelope::Deposit(tx) = tx else {
-            anyhow::bail!("First payload transaction has unexpected type: {:?}", tx.tx_type());
+            return Err(PayloadConversionError::InvalidTxType(tx.tx_type() as u8));
         };
 
-        let l1_info =
-            L1BlockInfoTx::decode_calldata(tx.input.as_ref()).map_err(|e| anyhow::anyhow!(e))?;
+        let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
         let l1_fee_scalar = match l1_info {
             L1BlockInfoTx::Bedrock(L1BlockInfoBedrock { l1_fee_scalar, .. }) => l1_fee_scalar,
             L1BlockInfoTx::Ecotone(L1BlockInfoEcotone {
