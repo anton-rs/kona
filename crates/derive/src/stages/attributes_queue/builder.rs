@@ -79,7 +79,7 @@ where
             .config_fetcher
             .system_config_by_number(l2_parent.block_info.number, self.rollup_cfg.clone())
             .await
-            .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
+            .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
 
         // If the L1 origin changed in this block, then we are in the first block of the epoch.
         // In this case we need to fetch all transaction receipts from the L1 origin block so
@@ -89,7 +89,7 @@ where
                 .receipts_fetcher
                 .header_by_hash(epoch.hash)
                 .await
-                .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
+                .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
             if l2_parent.l1_origin.hash != header.parent_hash {
                 return Err(PipelineErrorKind::Reset(
                     BuilderError::BlockMismatchEpochReset(
@@ -104,11 +104,11 @@ where
                 .receipts_fetcher
                 .receipts_by_hash(epoch.hash)
                 .await
-                .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
+                .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
             let deposits =
                 derive_deposits(epoch.hash, &receipts, self.rollup_cfg.deposit_contract_address)
                     .await
-                    .map_err(|e| PipelineError::DecodeError(e).crit())?;
+                    .map_err(|e| PipelineError::BadEncoding(e).crit())?;
             sys_config
                 .update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)
                 .map_err(|e| PipelineError::SystemConfigUpdate(e).crit())?;
@@ -127,7 +127,7 @@ where
                 .receipts_fetcher
                 .header_by_hash(epoch.hash)
                 .await
-                .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
+                .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
             l1_header = header;
             deposit_transactions = vec![];
             l2_parent.seq_num + 1

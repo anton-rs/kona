@@ -1,13 +1,12 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation
 //! pipeline's stages.
 
-use core::fmt::Display;
-
 use crate::errors::PipelineResult;
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
 use alloy_eips::eip4844::Blob;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use core::fmt::Display;
 use kona_primitives::IndexedBlobHash;
 use op_alloy_protocol::BlockInfo;
 

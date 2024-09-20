@@ -99,7 +99,7 @@ where
             .l2_chain_provider
             .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
             .await
-            .map_err(|e| PipelineError::Custom(e.to_string()).temp())?;
+            .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
             Err(err) => {

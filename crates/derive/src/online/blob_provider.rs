@@ -113,10 +113,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(
-                blob_hashes.len(),
-                filtered.len(),
-            ));
+            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
         Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
@@ -295,10 +292,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(
-                blob_hashes.len(),
-                filtered.len(),
-            ));
+            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
         Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())

@@ -1,6 +1,6 @@
 //! Contains a helper method to derive deposit transactions from L1 Receipts.
 
-use crate::errors::DecodeError;
+use crate::errors::PipelineEncodingError;
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_primitives::{Address, Bytes, B256};
@@ -15,7 +15,7 @@ pub(crate) async fn derive_deposits(
     block_hash: B256,
     receipts: &[Receipt],
     deposit_contract: Address,
-) -> Result<Vec<Bytes>, DecodeError> {
+) -> Result<Vec<Bytes>, PipelineEncodingError> {
     let mut global_index = 0;
     let mut res = Vec::new();
     for r in receipts.iter() {

@@ -2,7 +2,7 @@
 
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
-    errors::{DecodeError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
+    errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     stages::attributes_queue::AttributesProvider,
     traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -378,10 +378,9 @@ where
         match batch {
             Batch::Single(sb) => Ok(sb),
             Batch::Span(sb) => {
-                let batches = match sb
-                    .get_singular_batches(&self.l1_blocks, parent)
-                    .map_err(|e| PipelineError::DecodeError(DecodeError::SpanBatchError(e)).crit())
-                {
+                let batches = match sb.get_singular_batches(&self.l1_blocks, parent).map_err(|e| {
+                    PipelineError::BadEncoding(PipelineEncodingError::SpanBatchError(e)).crit()
+                }) {
                     Ok(b) => b,
                     Err(e) => {
                         crate::timer!(DISCARD, timer);

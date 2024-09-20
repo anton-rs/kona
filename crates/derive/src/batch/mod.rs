@@ -5,7 +5,7 @@ use alloy_rlp::{Buf, Decodable};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
-use crate::{errors::DecodeError, traits::L2ChainProvider};
+use crate::{errors::PipelineEncodingError, traits::L2ChainProvider};
 
 mod batch_type;
 pub use batch_type::BatchType;
@@ -79,9 +79,9 @@ impl Batch {
     }
 
     /// Attempts to decode a batch from a reader.
-    pub fn decode(r: &mut &[u8], cfg: &RollupConfig) -> Result<Self, DecodeError> {
+    pub fn decode(r: &mut &[u8], cfg: &RollupConfig) -> Result<Self, PipelineEncodingError> {
         if r.is_empty() {
-            return Err(DecodeError::EmptyBuffer);
+            return Err(PipelineEncodingError::EmptyBuffer);
         }
 
         // Read the batch type
@@ -90,14 +90,15 @@ impl Batch {
 
         match batch_type {
             BatchType::Single => {
-                let single_batch = SingleBatch::decode(r).map_err(DecodeError::AlloyRlpError)?;
+                let single_batch =
+                    SingleBatch::decode(r).map_err(PipelineEncodingError::AlloyRlpError)?;
                 Ok(Batch::Single(single_batch))
             }
             BatchType::Span => {
                 let mut raw_span_batch = RawSpanBatch::decode(r, cfg)?;
                 let span_batch = raw_span_batch
                     .derive(cfg.block_time, cfg.genesis.l2_time, cfg.l2_chain_id)
-                    .map_err(DecodeError::SpanBatchError)?;
+                    .map_err(PipelineEncodingError::SpanBatchError)?;
                 Ok(Batch::Span(span_batch))
             }
         }

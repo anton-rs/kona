@@ -83,15 +83,12 @@ pub enum PipelineError {
     /// Attributes builder error variant, with [BuilderError].
     #[error("Attributes builder error: {0}")]
     AttributesBuilder(#[from] BuilderError),
-    /// [DecodeError] variant.
+    /// [PipelineEncodingError] variant.
     #[error("Decode error: {0}")]
-    DecodeError(#[from] DecodeError),
+    BadEncoding(#[from] PipelineEncodingError),
     /// Provider error variant.
     #[error("Blob provider error: {0}")]
     Provider(String),
-    /// Custom error variant.
-    #[error("Pipeline error: {0}")]
-    Custom(String),
 }
 
 impl PipelineError {
@@ -132,26 +129,9 @@ pub enum ResetError {
     AttributesBuilder(#[from] BuilderError),
 }
 
-/// An error returned by the [BlobProviderError].
-#[derive(Error, Debug, PartialEq, Eq)]
-pub enum BlobProviderError {
-    /// The number of specified blob hashes did not match the number of returned sidecars.
-    #[error("Blob sidecar length mismatch: expected {0}, got {1}")]
-    SidecarLengthMismatch(usize, usize),
-    /// Slot derivation error.
-    #[error("Failed to derive slot")]
-    SlotDerivation,
-    /// Blob decoding error.
-    #[error("Blob decoding error: {0}")]
-    BlobDecoding(#[from] BlobDecodingError),
-    /// Error pertaining to the backend transport.
-    #[error("{0}")]
-    Backend(String),
-}
-
 /// A decoding error.
 #[derive(Error, Debug, PartialEq, Eq)]
-pub enum DecodeError {
+pub enum PipelineEncodingError {
     /// The buffer is empty.
     #[error("Empty buffer")]
     EmptyBuffer,
@@ -201,4 +181,21 @@ pub enum BuilderError {
     /// A custom error.
     #[error("Error in attributes builder: {0}")]
     Custom(String),
+}
+
+/// An error returned by the [BlobProviderError].
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum BlobProviderError {
+    /// The number of specified blob hashes did not match the number of returned sidecars.
+    #[error("Blob sidecar length mismatch: expected {0}, got {1}")]
+    SidecarLengthMismatch(usize, usize),
+    /// Slot derivation error.
+    #[error("Failed to derive slot")]
+    SlotDerivation,
+    /// Blob decoding error.
+    #[error("Blob decoding error: {0}")]
+    BlobDecoding(#[from] BlobDecodingError),
+    /// Error pertaining to the backend transport.
+    #[error("{0}")]
+    Backend(String),
 }
