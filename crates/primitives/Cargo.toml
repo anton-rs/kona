@@ -15,12 +15,7 @@ thiserror.workspace = true
 
 # Alloy
 alloy-eips.workspace = true
-alloy-consensus.workspace = true
-alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-primitives = { workspace = true, features = ["rlp"] }
-op-alloy-consensus.workspace = true
-op-alloy-protocol.workspace = true
-op-alloy-genesis.workspace = true
 
 # `serde` feature dependencies
 serde = { workspace = true, optional = true }
@@ -36,14 +31,11 @@ serde_json.workspace = true
 
 [features]
 default = ["serde"]
-serde = ["dep:serde", "op-alloy-consensus/serde", "op-alloy-protocol/serde", "op-alloy-genesis/serde"]
+serde = ["dep:serde"]
 online = [
   "dep:c-kzg",
   "dep:sha2",
   "dep:revm",
   "dep:tracing",
   "revm/default",
-  "op-alloy-consensus/std",
-  "op-alloy-protocol/std",
-  "op-alloy-genesis/std",
 ]

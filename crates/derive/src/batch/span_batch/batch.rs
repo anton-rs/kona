@@ -1,6 +1,7 @@
 //! The Span Batch Type
 
 use alloc::vec::Vec;
+use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::FixedBytes;
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
@@ -277,20 +278,18 @@ impl SpanBatch {
         if self.timestamp() < next_timestamp {
             for i in 0..(l2_safe_head.block_info.number - parent_num) {
                 let safe_block_num = parent_num + i + 1;
-                let safe_block_payload = match fetcher.payload_by_number(safe_block_num).await {
+                let safe_block_payload = match fetcher.block_by_number(safe_block_num).await {
                     Ok(p) => p,
                     Err(e) => {
                         warn!("failed to fetch payload for block number {safe_block_num}: {e}");
                         return BatchValidity::Undecided;
                     }
                 };
-                let safe_block_txs = &safe_block_payload.execution_payload.transactions;
+                let safe_block_txs = &safe_block_payload.body;
                 let batch_txs = &self.batches[i as usize].transactions;
                 // Execution payload has deposit txs but batch does not.
-                let deposit_count: usize = safe_block_txs
-                    .iter()
-                    .map(|tx| if tx.0[0] == OpTxType::Deposit as u8 { 1 } else { 0 })
-                    .sum();
+                let deposit_count: usize =
+                    safe_block_txs.iter().map(|tx| if tx.is_deposit() { 1 } else { 0 }).sum();
                 if safe_block_txs.len() - deposit_count != batch_txs.len() {
                     warn!(
                         "overlapped block's tx count does not match, safe_block_txs: {}, batch_txs: {}",
@@ -300,7 +299,9 @@ impl SpanBatch {
                     return BatchValidity::Drop;
                 }
                 for j in 0..batch_txs.len() {
-                    if safe_block_txs[j + deposit_count] != batch_txs[j].0 {
+                    let mut buf = Vec::new();
+                    safe_block_txs[j + deposit_count].encode_2718(&mut buf);
+                    if buf != batch_txs[j].0 {
                         warn!("overlapped block's transaction does not match");
                         return BatchValidity::Drop;
                     }
@@ -308,7 +309,7 @@ impl SpanBatch {
                 let safe_block_ref = match safe_block_payload.to_l2_block_ref(cfg) {
                     Ok(r) => r,
                     Err(e) => {
-                        warn!("failed to extract L2BlockInfo from execution payload, hash: {}, err: {e}", safe_block_payload.execution_payload.block_hash);
+                        warn!("failed to extract L2BlockInfo from execution payload, hash: {}, err: {e}", safe_block_payload.header.hash_slow());
                         return BatchValidity::Drop;
                     }
                 };
@@ -417,13 +418,14 @@ impl SpanBatch {
 mod tests {
     use super::*;
     use crate::{
+        block::OpBlock,
         stages::test_utils::{CollectingLayer, TraceStorage},
         traits::test_utils::TestL2ChainProvider,
     };
     use alloc::vec;
+    use alloy_consensus::Header;
     use alloy_eips::BlockNumHash;
     use alloy_primitives::{b256, Bytes, B256};
-    use kona_primitives::{L2ExecutionPayload, L2ExecutionPayloadEnvelope};
     use op_alloy_consensus::OpTxType;
     use op_alloy_genesis::ChainGenesis;
     use tracing::Level;
@@ -1407,13 +1409,11 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let payload = L2ExecutionPayloadEnvelope {
-            parent_beacon_block_root: None,
-            execution_payload: L2ExecutionPayload { block_number: 41, ..Default::default() },
-        };
+        let block =
+            OpBlock { header: Header { number: 41, ..Default::default() }, ..Default::default() };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
-            payloads: vec![payload],
+            op_blocks: vec![block],
             ..Default::default()
         };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
@@ -1477,17 +1477,17 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let payload = L2ExecutionPayloadEnvelope {
-            parent_beacon_block_root: None,
-            execution_payload: L2ExecutionPayload {
-                block_number: 41,
-                block_hash: payload_block_hash,
+        let block = OpBlock {
+            header: Header {
+                number: 41,
+                // TODO: correct hash
                 ..Default::default()
             },
+            ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
-            payloads: vec![payload],
+            op_blocks: vec![block],
             ..Default::default()
         };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };
@@ -1553,17 +1553,17 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let payload = L2ExecutionPayloadEnvelope {
-            parent_beacon_block_root: None,
-            execution_payload: L2ExecutionPayload {
-                block_number: 41,
-                block_hash: payload_block_hash,
+        let block = OpBlock {
+            header: Header {
+                number: 41,
+                // TODO: correct hash
                 ..Default::default()
             },
+            ..Default::default()
         };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
-            payloads: vec![payload],
+            op_blocks: vec![block],
             ..Default::default()
         };
         let first = SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() };

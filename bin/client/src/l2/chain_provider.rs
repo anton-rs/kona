@@ -8,10 +8,9 @@ use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_derive::traits::L2ChainProvider;
+use kona_derive::{block::OpBlock, traits::L2ChainProvider};
 use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{L2ExecutionPayloadEnvelope, OpBlock};
 use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
@@ -73,13 +72,13 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         // Get the payload at the given block number.
-        let payload = self.payload_by_number(number).await?;
+        let payload = self.block_by_number(number).await?;
 
         // Construct the system config from the payload.
         payload.to_l2_block_ref(&self.boot_info.rollup_config).map_err(Into::into)
     }
 
-    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
+    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock> {
         // Fetch the header for the given block number.
         let header @ Header { transactions_root, timestamp, .. } =
             self.header_by_number(number).await?;
@@ -104,7 +103,7 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
             withdrawals: self.boot_info.rollup_config.is_canyon_active(timestamp).then(Vec::new),
             ..Default::default()
         };
-        Ok(optimism_block.into())
+        Ok(optimism_block)
     }
 
     async fn system_config_by_number(
@@ -113,7 +112,7 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
         // Get the payload at the given block number.
-        let payload = self.payload_by_number(number).await?;
+        let payload = self.block_by_number(number).await?;
 
         // Construct the system config from the payload.
         payload.to_system_config(rollup_config.as_ref()).map_err(Into::into)

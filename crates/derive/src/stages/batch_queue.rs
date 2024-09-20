@@ -444,6 +444,7 @@ where
 mod tests {
     use super::*;
     use crate::{
+        block::OpBlock,
         stages::{
             channel_reader::BatchReader,
             test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
@@ -451,11 +452,11 @@ mod tests {
         traits::test_utils::TestL2ChainProvider,
     };
     use alloc::vec;
-    use alloy_eips::BlockNumHash;
+    use alloy_consensus::Header;
+    use alloy_eips::{eip2718::Decodable2718, BlockNumHash};
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use kona_primitives::{L2ExecutionPayload, L2ExecutionPayloadEnvelope};
-    use op_alloy_consensus::{OpTxType, TxDeposit};
+    use op_alloy_consensus::{OpTxEnvelope, OpTxType, TxDeposit};
     use op_alloy_genesis::ChainGenesis;
     use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
@@ -604,27 +605,35 @@ mod tests {
             },
             ..Default::default()
         };
-        let payload = L2ExecutionPayloadEnvelope {
-            parent_beacon_block_root: None,
-            execution_payload: L2ExecutionPayload {
-                block_number: 8,
-                block_hash: payload_block_hash,
-                transactions: batch_txs,
+        let batch_txs = batch_txs
+            .into_iter()
+            .map(|tx| OpTxEnvelope::decode_2718(&mut &tx[..]).unwrap())
+            .collect();
+        let second_batch_txs = second_batch_txs
+            .into_iter()
+            .map(|tx| OpTxEnvelope::decode_2718(&mut &tx[..]).unwrap())
+            .collect();
+        let block = OpBlock {
+            header: Header {
+                number: 8,
+                // TODO: fix hash
                 ..Default::default()
             },
+            body: batch_txs,
+            ..Default::default()
         };
-        let second = L2ExecutionPayloadEnvelope {
-            parent_beacon_block_root: None,
-            execution_payload: L2ExecutionPayload {
-                block_number: 9,
-                block_hash: payload_block_hash,
-                transactions: second_batch_txs,
+        let second = OpBlock {
+            header: Header {
+                number: 9,
+                // TODO: fix hash
                 ..Default::default()
             },
+            body: second_batch_txs,
+            ..Default::default()
         };
         let fetcher = TestL2ChainProvider {
             blocks: vec![block_nine, block_seven],
-            payloads: vec![payload, second],
+            op_blocks: vec![block, second],
             ..Default::default()
         };
         let mut bq = BatchQueue::new(cfg, mock, fetcher);

@@ -1,6 +1,7 @@
 //! Test Utilities for derive traits
 
 use crate::{
+    block::OpBlock,
     errors::{BlobProviderError, PipelineError, PipelineResult},
     traits::{
         AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
@@ -14,7 +15,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
-use kona_primitives::{IndexedBlobHash, L2ExecutionPayloadEnvelope};
+use kona_primitives::IndexedBlobHash;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
@@ -220,8 +221,8 @@ pub struct TestL2ChainProvider {
     pub blocks: Vec<L2BlockInfo>,
     /// Short circuit the block return to be the first block.
     pub short_circuit: bool,
-    /// Payloads
-    pub payloads: Vec<L2ExecutionPayloadEnvelope>,
+    /// Blocks
+    pub op_blocks: Vec<OpBlock>,
     /// System configs
     pub system_configs: HashMap<u64, SystemConfig>,
 }
@@ -230,10 +231,10 @@ impl TestL2ChainProvider {
     /// Creates a new [MockBlockFetcher] with the given origin and batches.
     pub fn new(
         blocks: Vec<L2BlockInfo>,
-        payloads: Vec<L2ExecutionPayloadEnvelope>,
+        op_blocks: Vec<OpBlock>,
         system_configs: HashMap<u64, SystemConfig>,
     ) -> Self {
-        Self { blocks, short_circuit: false, payloads, system_configs }
+        Self { blocks, short_circuit: false, op_blocks, system_configs }
     }
 }
 
@@ -252,12 +253,12 @@ impl L2ChainProvider for TestL2ChainProvider {
             .ok_or_else(|| anyhow::anyhow!("Block not found"))
     }
 
-    async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
-        self.payloads
+    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock> {
+        self.op_blocks
             .iter()
-            .find(|p| p.execution_payload.block_number == number)
+            .find(|p| p.header.number == number)
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("Payload not found"))
+            .ok_or_else(|| anyhow::anyhow!("L2 Block not found"))
     }
 
     async fn system_config_by_number(
