@@ -122,6 +122,8 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 }
 
 impl<T: CommsClient> TrieDBFetcher for OracleL1ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L1, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.

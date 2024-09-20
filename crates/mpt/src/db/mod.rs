@@ -1,31 +1,31 @@
 //! This module contains an implementation of an in-memory Trie DB for [revm], that allows for
 //! incremental updates through fetching node preimages on the fly during execution.
 
-use crate::{TrieDBFetcher, TrieDBHinter, TrieNode};
-use alloc::vec::Vec;
+use crate::{
+    errors::{TrieDBError, TrieDBResult},
+    TrieDBFetcher, TrieDBHinter, TrieNode, TrieNodeError,
+};
+use alloc::{string::ToString, vec::Vec};
 use alloy_consensus::{Header, Sealed, EMPTY_ROOT_HASH};
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
 use alloy_trie::Nibbles;
-use anyhow::{anyhow, Result};
 use revm::{
     db::{states::StorageSlot, BundleState},
     primitives::{AccountInfo, Bytecode, HashMap, BLOCK_HASH_HISTORY},
     Database,
 };
+use tracing::debug;
 
 mod account;
 pub use account::TrieAccount;
-use tracing::debug;
 
 /// A Trie DB that caches open state in-memory.
 ///
 /// When accounts that don't already exist within the cached [TrieNode] are queried, the database
 /// fetches the preimages of the trie nodes on the path to the account using the `PreimageFetcher`
-/// (`PF` generic) and `CodeHashFetcher` (`CHF` generic). This allows for data to be fetched in a
-/// verifiable manner given an initial trusted state root as it is needed during execution. In
-/// addition, the `HeaderFetcher` (`HF` generic) is used to fetch block headers, relative to the
-/// DB's current block hash, for block hash lookups.
+/// (`F` generic). This allows for data to be fetched in a verifiable manner given an initial
+/// trusted state root as it is needed during execution.
 ///
 /// The [TrieDB] is intended to be wrapped by a [State], which is then used by the [revm::Evm] to
 /// capture state transitions during block execution.
@@ -155,7 +155,7 @@ where
     /// ## Returns
     /// - `Ok(B256)`: The new state root hash of the trie DB.
     /// - `Err(_)`: If the state root hash could not be computed.
-    pub fn state_root(&mut self, bundle: &BundleState) -> Result<B256> {
+    pub fn state_root(&mut self, bundle: &BundleState) -> TrieDBResult<B256> {
         debug!(target: "client_executor", "Recomputing state root");
 
         // Update the accounts in the trie with the changeset.
@@ -171,7 +171,7 @@ where
         );
 
         // Extract the new state root from the root node.
-        self.root_node.blinded_commitment().ok_or(anyhow!("State root node is not a blinded node"))
+        self.root_node.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)
     }
 
     /// Returns a reference to the current parent block header of the trie DB.
@@ -197,9 +197,11 @@ where
     /// - `Ok(Some(TrieAccount))`: The [TrieAccount] of the account.
     /// - `Ok(None)`: If the account does not exist in the trie.
     /// - `Err(_)`: If the account could not be fetched.
-    pub fn get_trie_account(&mut self, address: &Address) -> Result<Option<TrieAccount>> {
+    pub fn get_trie_account(&mut self, address: &Address) -> TrieDBResult<Option<TrieAccount>> {
         // Send a hint to the host to fetch the account proof.
-        self.hinter.hint_account_proof(*address, self.parent_block_header.number)?;
+        self.hinter
+            .hint_account_proof(*address, self.parent_block_header.number)
+            .map_err(|e| TrieDBError::Provider(e.to_string()))?;
 
         // Fetch the account from the trie.
         let hashed_address_nibbles = Nibbles::unpack(keccak256(address.as_slice()));
@@ -210,7 +212,8 @@ where
 
         // Decode the trie account from the RLP bytes.
         TrieAccount::decode(&mut trie_account_rlp.as_ref())
-            .map_err(|e| anyhow!("Error decoding trie account: {e}"))
+            .map_err(TrieNodeError::RLPError)
+            .map_err(Into::into)
             .map(Some)
     }
 
@@ -222,7 +225,7 @@ where
     /// ## Returns
     /// - `Ok(())` if the accounts were successfully updated.
     /// - `Err(_)` if the accounts could not be updated.
-    fn update_accounts(&mut self, bundle: &BundleState) -> Result<()> {
+    fn update_accounts(&mut self, bundle: &BundleState) -> TrieDBResult<()> {
         for (address, bundle_account) in bundle.state() {
             if bundle_account.status.is_not_modified() {
                 continue;
@@ -239,7 +242,7 @@ where
             }
 
             let account_info =
-                bundle_account.account_info().ok_or(anyhow!("Account info not found"))?;
+                bundle_account.account_info().ok_or(TrieDBError::MissingAccountInfo)?;
             let mut trie_account = TrieAccount {
                 balance: account_info.balance,
                 nonce: account_info.nonce,
@@ -259,9 +262,8 @@ where
             // Recompute the account storage root.
             acc_storage_root.blind();
 
-            let commitment = acc_storage_root
-                .blinded_commitment()
-                .ok_or(anyhow!("Storage root node is not a blinded node"))?;
+            let commitment =
+                acc_storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)?;
             trie_account.storage_root = commitment;
 
             // RLP encode the trie account for insertion.
@@ -291,7 +293,7 @@ where
         value: &StorageSlot,
         fetcher: &F,
         hinter: &H,
-    ) -> Result<()> {
+    ) -> TrieDBResult<()> {
         if !value.is_changed() {
             return Ok(());
         }
@@ -319,7 +321,7 @@ where
     F: TrieDBFetcher,
     H: TrieDBHinter,
 {
-    type Error = anyhow::Error;
+    type Error = TrieDBError;
 
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
         // Fetch the account from the trie.
@@ -345,12 +347,14 @@ where
         self.fetcher
             .bytecode_by_hash(code_hash)
             .map(Bytecode::new_raw)
-            .map_err(|e| anyhow!("Failed to fetch code by hash: {e}"))
+            .map_err(|e| TrieDBError::Provider(e.to_string()))
     }
 
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
         // Send a hint to the host to fetch the storage proof.
-        self.hinter.hint_storage_proof(address, index, self.parent_block_header.number)?;
+        self.hinter
+            .hint_storage_proof(address, index, self.parent_block_header.number)
+            .map_err(|e| TrieDBError::Provider(e.to_string()))?;
 
         // Fetch the account's storage root from the cache. If storage is being accessed, the
         // account should have been loaded into the cache by the `basic` method. If the account was
@@ -367,7 +371,7 @@ where
                     Some(slot_value) => {
                         // Decode the storage slot value.
                         let int_slot = U256::decode(&mut slot_value.as_ref())
-                            .map_err(|e| anyhow!("Failed to decode storage slot value: {e}"))?;
+                            .map_err(TrieNodeError::RLPError)?;
                         Ok(int_slot)
                     }
                     None => {
@@ -392,7 +396,10 @@ where
 
         // Walk back the block headers to the desired block number.
         while header.number > block_number {
-            header = self.fetcher.header_by_hash(header.parent_hash)?;
+            header = self
+                .fetcher
+                .header_by_hash(header.parent_hash)
+                .map_err(|e| TrieDBError::Provider(e.to_string()))?;
         }
 
         Ok(header.hash_slow())

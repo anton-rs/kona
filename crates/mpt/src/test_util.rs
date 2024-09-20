@@ -134,6 +134,8 @@ impl TrieNodeProvider {
 }
 
 impl TrieDBFetcher for TrieNodeProvider {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         self.preimages.get(&key).cloned().ok_or_else(|| anyhow!("Key not found"))
     }

@@ -34,6 +34,8 @@ impl TestdataTrieDBFetcher {
 }
 
 impl TrieDBFetcher for TestdataTrieDBFetcher {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         self.preimages
             .get(&key)

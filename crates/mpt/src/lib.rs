@@ -10,6 +10,12 @@ extern crate alloc;
 mod db;
 pub use db::{TrieAccount, TrieDB};
 
+mod errors;
+pub use errors::{
+    OrderedListWalkerError, OrderedListWalkerResult, TrieDBError, TrieDBResult, TrieNodeError,
+    TrieNodeResult,
+};
+
 mod fetcher;
 pub use fetcher::{NoopTrieDBFetcher, NoopTrieDBHinter, TrieDBFetcher, TrieDBHinter};
 
