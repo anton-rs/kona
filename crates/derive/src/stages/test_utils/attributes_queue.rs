@@ -6,7 +6,7 @@ use crate::{
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
-use alloc::{boxed::Box, vec::Vec, string::ToString};
+use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
 use op_alloy_genesis::SystemConfig;

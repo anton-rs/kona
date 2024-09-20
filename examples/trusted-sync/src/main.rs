@@ -225,7 +225,16 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                         debug!(target: "loop", "Not enough data to step derivation pipeline");
                     }
                 }
-                // TODO: RESET
+                PipelineErrorKind::Reset(_) => {
+                    metrics::PIPELINE_STEPS.with_label_values(&["reset"]).inc();
+                    warn!(target: "loop", "Resetting pipeline: {:?}", e);
+                    pipeline
+                        .reset(
+                            cursor.block_info,
+                            pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?,
+                        )
+                        .await?;
+                }
                 _ => {
                     metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
                     error!(target: "loop", "Error stepping derivation pipeline: {:?}", e);

@@ -17,7 +17,7 @@ use kona_derive::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{BlobProvider, ChainProvider, L2ChainProvider},
+    traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
 };
 use kona_mpt::TrieDBFetcher;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
@@ -172,9 +172,18 @@ where
                     // complete the current step. In this case, we retry the step to see if other
                     // stages can make progress.
                     match e {
-                        PipelineErrorKind::Temporary(_) => {}
+                        PipelineErrorKind::Temporary(_) => { /* continue */ }
                         PipelineErrorKind::Reset(_) => {
-                            // self.pipeline.reset(l2_block_info, origin);
+                            // Reset the pipeline to the initial L2 safe head and L1 origin,
+                            // and try again.
+                            self.pipeline
+                                .reset(
+                                    self.l2_safe_head.block_info,
+                                    self.pipeline
+                                        .origin()
+                                        .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                )
+                                .await?;
                         }
                         PipelineErrorKind::Critical(_) => return Err(e.into()),
                     }
