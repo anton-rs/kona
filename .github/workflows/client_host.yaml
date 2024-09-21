@@ -73,5 +73,4 @@ jobs:
             $L2_OUTPUT_ROOT \
             $L2_HEAD \
             $L1_HEAD \
-            $L2_CHAIN_ID \
-            -vv
+            $L2_CHAIN_ID
