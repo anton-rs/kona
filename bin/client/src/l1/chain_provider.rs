@@ -9,7 +9,7 @@ use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::traits::ChainProvider;
-use kona_mpt::{OrderedListWalker, TrieDBFetcher};
+use kona_mpt::{OrderedListWalker, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BlockInfo;
 
@@ -121,7 +121,9 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     }
 }
 
-impl<T: CommsClient> TrieDBFetcher for OracleL1ChainProvider<T> {
+impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L1, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
@@ -134,10 +136,10 @@ impl<T: CommsClient> TrieDBFetcher for OracleL1ChainProvider<T> {
     }
 
     fn bytecode_by_hash(&self, _: B256) -> Result<Bytes> {
-        unimplemented!("TrieDBFetcher::bytecode_by_hash unimplemented for OracleL1ChainProvider")
+        unimplemented!("TrieProvider::bytecode_by_hash unimplemented for OracleL1ChainProvider")
     }
 
     fn header_by_hash(&self, _: B256) -> Result<Header> {
-        unimplemented!("TrieDBFetcher::header_by_hash unimplemented for OracleL1ChainProvider")
+        unimplemented!("TrieProvider::header_by_hash unimplemented for OracleL1ChainProvider")
     }
 }

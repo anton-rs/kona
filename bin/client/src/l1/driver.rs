@@ -19,7 +19,7 @@ use kona_derive::{
     },
     traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
 };
-use kona_mpt::TrieDBFetcher;
+use kona_mpt::TrieProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;

@@ -9,7 +9,7 @@ use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
-use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{OrderedListWalker, TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_primitives::{L2ExecutionPayloadEnvelope, OpBlock};
 use op_alloy_consensus::OpTxEnvelope;
@@ -120,7 +120,9 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
     }
 }
 
-impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
+impl<T: CommsClient> TrieProvider for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L2, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
@@ -157,7 +159,9 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
     }
 }
 
-impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
+impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn hint_trie_node(&self, hash: B256) -> Result<()> {
         kona_common::block_on(async move {
             self.oracle.write(&HintType::L2StateNode.encode_with(&[hash.as_slice()])).await

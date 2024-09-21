@@ -7,22 +7,22 @@ use alloy_rpc_types_engine::PayloadAttributes;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use kona_executor::StatelessL2BlockExecutor;
-use kona_mpt::{NoopTrieDBHinter, TrieDBFetcher};
+use kona_mpt::{NoopTrieHinter, TrieProvider};
 use op_alloy_genesis::{RollupConfig, OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 use pprof::criterion::{Output, PProfProfiler};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from the local
+/// A [TrieProvider] implementation that fetches trie nodes and bytecode from the local
 /// testdata folder.
 #[derive(Deserialize)]
-struct TestdataTrieDBFetcher {
+struct TestdataTrieProvider {
     preimages: HashMap<B256, Bytes>,
 }
 
-impl TestdataTrieDBFetcher {
-    /// Constructs a new [TestdataTrieDBFetcher] with the given testdata folder.
+impl TestdataTrieProvider {
+    /// Constructs a new [TestdataTrieProvider] with the given testdata folder.
     pub(crate) fn new(testdata_folder: &str) -> Self {
         let file_name = format!("testdata/{}/output.json", testdata_folder);
         let preimages = serde_json::from_str::<HashMap<B256, Bytes>>(
@@ -33,7 +33,9 @@ impl TestdataTrieDBFetcher {
     }
 }
 
-impl TrieDBFetcher for TestdataTrieDBFetcher {
+impl TrieProvider for TestdataTrieProvider {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         self.preimages
             .get(&key)
@@ -79,8 +81,8 @@ fn op_mainnet_exec_bench(
     bencher.iter(|| {
         let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
             .with_parent_header(pre_state_header.clone().seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new(data_folder))
-            .with_hinter(NoopTrieDBHinter)
+            .with_provider(TestdataTrieProvider::new(data_folder))
+            .with_hinter(NoopTrieHinter)
             .build()
             .unwrap();
         l2_block_executor.execute_payload(payload_attrs.clone()).unwrap();

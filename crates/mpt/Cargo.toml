@@ -10,8 +10,8 @@ homepage.workspace = true
 
 [dependencies]
 # General
-anyhow.workspace = true
 tracing.workspace = true
+thiserror.workspace = true
 
 # Revm + Alloy
 revm.workspace = true
@@ -22,6 +22,7 @@ alloy-trie.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+anyhow.workspace = true
 reqwest.workspace = true
 futures.workspace = true
 tracing-subscriber.workspace = true

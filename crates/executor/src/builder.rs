@@ -3,7 +3,7 @@
 use crate::StatelessL2BlockExecutor;
 use alloy_consensus::{Header, Sealable, Sealed};
 use anyhow::Result;
-use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
 use revm::{db::State, handler::register::EvmHandler};
 
@@ -15,8 +15,8 @@ pub type KonaHandleRegister<F, H> =
 #[derive(Debug)]
 pub struct StatelessL2BlockExecutorBuilder<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
@@ -24,16 +24,16 @@ where
     parent_header: Option<Sealed<Header>>,
     /// The [KonaHandleRegister] to use during execution.
     handler_register: Option<KonaHandleRegister<F, H>>,
-    /// The [TrieDBFetcher] to fetch the state trie preimages.
+    /// The [TrieProvider] to fetch the state trie preimages.
     fetcher: Option<F>,
-    /// The [TrieDBHinter] to hint the state trie preimages.
+    /// The [TrieHinter] to hint the state trie preimages.
     hinter: Option<H>,
 }
 
 impl<'a, F, H> StatelessL2BlockExecutorBuilder<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// Instantiate a new builder with the given [RollupConfig].
     pub fn with_config(config: &'a RollupConfig) -> Self {
@@ -46,13 +46,13 @@ where
         self
     }
 
-    /// Set the [TrieDBFetcher] to fetch the state trie preimages.
-    pub fn with_fetcher(mut self, fetcher: F) -> Self {
+    /// Set the [TrieProvider] to fetch the state trie preimages.
+    pub fn with_provider(mut self, fetcher: F) -> Self {
         self.fetcher = Some(fetcher);
         self
     }
 
-    /// Set the [TrieDBHinter] to hint the state trie preimages.
+    /// Set the [TrieHinter] to hint the state trie preimages.
     pub fn with_hinter(mut self, hinter: H) -> Self {
         self.hinter = Some(hinter);
         self
