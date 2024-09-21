@@ -8,15 +8,12 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
-use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
     l2::OracleL2ChainProvider,
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
-use kona_executor::StatelessL2BlockExecutor;
-use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 
 pub(crate) mod fault;
 use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
@@ -50,6 +47,7 @@ fn main() -> Result<()> {
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
 
+        // Create a new derivation driver with the given boot information and oracle.
         let mut driver = DerivationDriver::new(
             boot.as_ref(),
             oracle.as_ref(),
@@ -58,19 +56,12 @@ fn main() -> Result<()> {
             l2_provider.clone(),
         )
         .await?;
-        let OptimismAttributesWithParent { attributes, .. } =
-            driver.produce_disputed_payload().await?;
 
-        let mut executor = StatelessL2BlockExecutor::builder(
-            &boot.rollup_config,
-            l2_provider.clone(),
-            l2_provider,
-        )
-        .with_parent_header(driver.take_l2_safe_head_header())
-        .with_handle_register(fpvm_handle_register)
-        .build();
-        let Header { number, .. } = *executor.execute_payload(attributes)?;
-        let output_root = executor.compute_output_root()?;
+        // Run the derivation pipeline until we are able to produce the output root of the claimed
+        // L2 block.
+        let (number, output_root) = driver
+            .produce_output(&boot.rollup_config, &l2_provider, &l2_provider, fpvm_handle_register)
+            .await?;
 
         ////////////////////////////////////////////////////////////////
         //                          EPILOGUE                          //
