@@ -1,8 +1,6 @@
 //! Testing utilities for `kona-mpt`
 
-extern crate std;
-
-use crate::{ordered_trie_with_encoder, TrieProvider};
+use crate::{ordered_trie_with_encoder, TrieDBFetcher};
 use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{keccak256, Bytes, Log, B256};

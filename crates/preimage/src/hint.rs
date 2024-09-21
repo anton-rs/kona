@@ -111,8 +111,6 @@ impl HintReaderServer for HintReader {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use super::*;
     use crate::test_utils::bidirectional_pipe;
     use alloc::{string::ToString, sync::Arc, vec::Vec};

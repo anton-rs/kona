@@ -3,7 +3,7 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
@@ -646,8 +646,6 @@ where
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use super::*;
     use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
@@ -656,7 +654,7 @@ mod test {
     use kona_mpt::NoopTrieHinter;
     use op_alloy_genesis::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
     use serde::Deserialize;
-    use std::{collections::HashMap, format};
+    use std::collections::HashMap;
 
     /// A [TrieProvider] implementation that fetches trie nodes and bytecode from the local
     /// testdata folder.
