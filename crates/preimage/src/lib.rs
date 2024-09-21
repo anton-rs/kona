@@ -7,6 +7,8 @@
 
 extern crate alloc;
 
+pub mod errors;
+
 mod key;
 pub use key::{PreimageKey, PreimageKeyType};
 
@@ -22,7 +24,7 @@ pub use pipe::PipeHandle;
 mod traits;
 pub use traits::{
     CommsClient, HintReaderServer, HintRouter, HintWriterClient, PreimageFetcher,
-    PreimageOracleClient, PreimageOracleServer, PreimageServerError,
+    PreimageOracleClient, PreimageOracleServer,
 };
 
 #[cfg(test)]

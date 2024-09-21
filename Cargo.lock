@@ -2317,9 +2317,9 @@ dependencies = [
 name = "kona-common"
 version = "0.0.3"
 dependencies = [
- "anyhow",
  "cfg-if",
  "linked_list_allocator",
+ "thiserror 1.0.63 (git+https://github.com/quartiq/thiserror?branch=no-std)",
 ]
 
 [[package]]
@@ -2464,12 +2464,12 @@ name = "kona-preimage"
 version = "0.0.3"
 dependencies = [
  "alloy-primitives",
- "anyhow",
  "async-trait",
  "kona-common",
  "os_pipe",
  "rkyv",
  "serde",
+ "thiserror 1.0.63 (git+https://github.com/quartiq/thiserror?branch=no-std)",
  "tokio",
  "tracing",
 ]

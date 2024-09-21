@@ -1,8 +1,7 @@
 //! This module contains the [ClientIO] struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
-use crate::{BasicKernelInterface, FileDescriptor};
-use anyhow::Result;
+use crate::{errors::IOResult, BasicKernelInterface, FileDescriptor};
 use cfg_if::cfg_if;
 
 cfg_if! {
@@ -41,13 +40,13 @@ pub fn print_err(s: &str) {
 
 /// Write the passed buffer to the given [FileDescriptor].
 #[inline]
-pub fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
+pub fn write(fd: FileDescriptor, buf: &[u8]) -> IOResult<usize> {
     ClientIO::write(fd, buf)
 }
 
 /// Write the passed buffer to the given [FileDescriptor].
 #[inline]
-pub fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
+pub fn read(fd: FileDescriptor, buf: &mut [u8]) -> IOResult<usize> {
     ClientIO::read(fd, buf)
 }
 
@@ -61,8 +60,11 @@ pub fn exit(code: usize) -> ! {
 mod native_io {
     extern crate std;
 
-    use crate::{io::FileDescriptor, traits::BasicKernelInterface};
-    use anyhow::{anyhow, Result};
+    use crate::{
+        errors::{IOError, IOResult},
+        io::FileDescriptor,
+        traits::BasicKernelInterface,
+    };
     use std::{
         fs::File,
         io::{Read, Write},
@@ -74,24 +76,22 @@ mod native_io {
     pub struct NativeIO;
 
     impl BasicKernelInterface for NativeIO {
-        fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
+        fn write(fd: FileDescriptor, buf: &[u8]) -> IOResult<usize> {
             let raw_fd: usize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
 
-            file.write_all(buf)
-                .map_err(|e| anyhow!("Error writing to buffer to file descriptor: {e}"))?;
+            file.write_all(buf).map_err(|_| IOError(9))?;
 
             std::mem::forget(file);
 
             Ok(buf.len())
         }
 
-        fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
+        fn read(fd: FileDescriptor, buf: &mut [u8]) -> IOResult<usize> {
             let raw_fd: usize = fd.into();
             let mut file = unsafe { File::from_raw_fd(raw_fd as i32) };
 
-            let n =
-                file.read(buf).map_err(|e| anyhow!("Error reading from file descriptor: {e}"))?;
+            let n = file.read(buf).map_err(|_| IOError(9))?;
 
             std::mem::forget(file);
 
