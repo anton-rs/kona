@@ -1,7 +1,5 @@
 //! Testing utilities for `kona-mpt`
 
-extern crate std;
-
 use crate::{ordered_trie_with_encoder, TrieProvider};
 use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};

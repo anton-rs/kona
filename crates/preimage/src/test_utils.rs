@@ -1,7 +1,5 @@
 //! Test utilities for the `kona-preimage` crate.
 
-extern crate std;
-
 use os_pipe::{PipeReader, PipeWriter};
 use std::io::Result;
 

@@ -130,8 +130,6 @@ impl PreimageOracleServer for OracleServer {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use super::*;
     use crate::{test_utils::bidirectional_pipe, PreimageKeyType};
     use alloc::sync::Arc;
