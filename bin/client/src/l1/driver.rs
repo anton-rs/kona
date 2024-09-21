@@ -7,6 +7,7 @@ use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
+use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
@@ -19,8 +20,10 @@ use kona_derive::{
     },
     traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
 };
-use kona_mpt::TrieProvider;
+use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
+use kona_mpt::{TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use tracing::{info, warn};
@@ -150,14 +153,58 @@ where
         Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
     }
 
+    /// Produces the output root of the next L2 block.
+    ///
+    /// ## Takes
+    /// - `cfg`: The rollup configuration.
+    /// - `provider`: The trie provider.
+    /// - `hinter`: The trie hinter.
+    /// - `handle_register`: The handle register for the EVM.
+    ///
+    /// ## Returns
+    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
+    ///   output root.
+    /// - `Err(e)` - An error if the block could not be produced.
+    pub async fn produce_output<P, H>(
+        &mut self,
+        cfg: &RollupConfig,
+        provider: &P,
+        hinter: &H,
+        handle_register: KonaHandleRegister<P, H>,
+    ) -> Result<(u64, B256)>
+    where
+        P: TrieProvider + Send + Sync + Clone,
+        H: TrieHinter + Send + Sync + Clone,
+    {
+        loop {
+            let OptimismAttributesWithParent { attributes, .. } = self.produce_payload().await?;
+
+            let mut executor =
+                StatelessL2BlockExecutor::builder(cfg, provider.clone(), hinter.clone())
+                    .with_parent_header(self.l2_safe_head_header().clone())
+                    .with_handle_register(handle_register)
+                    .build();
+
+            let number = match executor.execute_payload(attributes) {
+                Ok(Header { number, .. }) => *number,
+                Err(e) => {
+                    tracing::error!(target: "client", "Failed to execute L2 block: {}", e);
+                    continue;
+                }
+            };
+            let output_root = executor.compute_output_root()?;
+
+            return Ok((number, output_root));
+        }
+    }
+
     /// Produces the disputed [OptimismAttributesWithParent] payload, directly after the starting L2
     /// output root passed through the [BootInfo].
-    pub async fn produce_disputed_payload(&mut self) -> Result<OptimismAttributesWithParent> {
+    async fn produce_payload(&mut self) -> Result<OptimismAttributesWithParent> {
         // As we start the safe head at the disputed block's parent, we step the pipeline until the
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.
-        let mut attributes = None;
-        while attributes.is_none() {
+        loop {
             match self.pipeline.step(self.l2_safe_head).await {
                 StepResult::PreparedAttributes => {
                     info!(target: "client_derivation_driver", "Stepped derivation pipeline")
@@ -190,10 +237,10 @@ where
                 }
             }
 
-            attributes = self.pipeline.next();
+            if let Some(attrs) = self.pipeline.next() {
+                return Ok(attrs);
+            }
         }
-
-        Ok(attributes.expect("Failed to derive payload attributes"))
     }
 
     /// Finds the startup information for the derivation pipeline.
