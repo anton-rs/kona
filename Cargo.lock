@@ -2394,6 +2394,7 @@ dependencies = [
  "revm",
  "serde",
  "serde_json",
+ "thiserror 1.0.63 (git+https://github.com/quartiq/thiserror?branch=no-std)",
  "tracing",
 ]
 

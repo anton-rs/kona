@@ -79,12 +79,13 @@ fn op_mainnet_exec_bench(
 
     // Bench the block execution.
     bencher.iter(|| {
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(pre_state_header.clone().seal_slow())
-            .with_provider(TestdataTrieProvider::new(data_folder))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new(data_folder),
+            NoopTrieHinter,
+        )
+        .with_parent_header(pre_state_header.clone().seal_slow())
+        .build();
         l2_block_executor.execute_payload(payload_attrs.clone()).unwrap();
     });
 }

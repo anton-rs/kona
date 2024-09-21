@@ -1,7 +1,7 @@
 //! Contains logic specific to Canyon hardfork activation.
 
+use crate::errors::ExecutorResult;
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
-use anyhow::Result;
 use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
 use revm::{
@@ -26,7 +26,7 @@ pub(crate) fn ensure_create2_deployer_canyon<F, H>(
     db: &mut State<&mut TrieDB<F, H>>,
     config: &RollupConfig,
     timestamp: u64,
-) -> Result<()>
+) -> ExecutorResult<()>
 where
     F: TrieProvider,
     H: TrieHinter,

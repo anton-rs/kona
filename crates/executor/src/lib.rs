@@ -11,8 +11,7 @@ use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
-use anyhow::{anyhow, Result};
-use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieHinter, TrieProvider};
+use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBError, TrieHinter, TrieProvider};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
@@ -25,6 +24,9 @@ use revm::{
     Evm,
 };
 use tracing::{debug, info};
+
+mod errors;
+pub use errors::{ExecutorError, ExecutorResult};
 
 mod builder;
 pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
@@ -60,8 +62,12 @@ where
     H: TrieHinter,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
-    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
-        StatelessL2BlockExecutorBuilder::with_config(config)
+    pub fn builder(
+        config: &'a RollupConfig,
+        provider: F,
+        hinter: H,
+    ) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
+        StatelessL2BlockExecutorBuilder::new(config, provider, hinter)
     }
 
     /// Executes the given block, returning the resulting state root.
@@ -80,7 +86,10 @@ where
     /// 4. Merge all state transitions into the cache state.
     /// 5. Compute the [state root, transactions root, receipts root, logs bloom] for the processed
     ///    block.
-    pub fn execute_payload(&mut self, payload: OptimismPayloadAttributes) -> Result<&Header> {
+    pub fn execute_payload(
+        &mut self,
+        payload: OptimismPayloadAttributes,
+    ) -> ExecutorResult<&Header> {
         // Prepare the `revm` environment.
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.payload_attributes.timestamp),
@@ -91,8 +100,7 @@ where
         let initialized_cfg = self.evm_cfg_env(payload.payload_attributes.timestamp);
         let block_number = initialized_block_env.number.to::<u64>();
         let base_fee = initialized_block_env.basefee.to::<u128>();
-        let gas_limit =
-            payload.gas_limit.ok_or(anyhow!("Gas limit not provided in payload attributes"))?;
+        let gas_limit = payload.gas_limit.ok_or(ExecutorError::MissingGasLimit)?;
 
         info!(
             target: "client_executor",
@@ -150,11 +158,11 @@ where
         let transactions = if let Some(ref txs) = payload.transactions {
             txs.iter()
                 .map(|raw_tx| {
-                    let tx =
-                        OpTxEnvelope::decode_2718(&mut raw_tx.as_ref()).map_err(|e| anyhow!(e))?;
+                    let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref())
+                        .map_err(ExecutorError::RLPError)?;
                     Ok((tx, raw_tx.as_ref()))
                 })
-                .collect::<Result<Vec<_>>>()?
+                .collect::<ExecutorResult<Vec<_>>>()?
         } else {
             Vec::new()
         };
@@ -165,12 +173,12 @@ where
             if extract_tx_gas_limit(&transaction) > block_available_gas &&
                 (is_regolith || !is_system_transaction(&transaction))
             {
-                anyhow::bail!("Transaction gas limit exceeds block gas limit")
+                return Err(ExecutorError::BlockGasLimitExceeded);
             }
 
             // Reject any EIP-4844 transactions.
             if matches!(transaction, OpTxEnvelope::Eip4844(_)) {
-                anyhow::bail!("EIP-4844 transactions are not supported");
+                return Err(ExecutorError::UnsupportedTransactionType(transaction.tx_type() as u8));
             }
 
             // Modify the transaction environment with the current transaction.
@@ -200,7 +208,7 @@ where
                 target: "client_executor",
                 "Executing transaction: {tx_hash}",
             );
-            let result = evm.transact_commit().map_err(|e| anyhow!("Fatal EVM Error: {e}"))?;
+            let result = evm.transact_commit().map_err(ExecutorError::ExecutionError)?;
             debug!(
                 target: "client_executor",
                 "Transaction executed: {tx_hash} | Gas used: {gas_used} | Success: {status}",
@@ -346,7 +354,7 @@ where
     /// ## Returns
     /// - `Ok(output_root)`: The computed output root.
     /// - `Err(_)`: If an error occurred while computing the output root.
-    pub fn compute_output_root(&mut self) -> Result<B256> {
+    pub fn compute_output_root(&mut self) -> ExecutorResult<B256> {
         const OUTPUT_ROOT_VERSION: u8 = 0;
         const L2_TO_L1_MESSAGE_PASSER_ADDRESS: Address =
             address!("4200000000000000000000000000000000000016");
@@ -354,13 +362,13 @@ where
         // Fetch the L2 to L1 message passer account from the cache or underlying trie.
         let storage_root = match self.trie_db.storage_roots().get(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)
         {
-            Some(storage_root) => storage_root
-                .blinded_commitment()
-                .ok_or(anyhow!("Account storage root is unblinded"))?,
+            Some(storage_root) => {
+                storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)?
+            }
             None => {
                 self.trie_db
                     .get_trie_account(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)?
-                    .ok_or(anyhow!("L2 to L1 message passer account not found in trie"))?
+                    .ok_or(TrieDBError::MissingAccountInfo)?
                     .storage_root
             }
         };
@@ -528,14 +536,15 @@ where
     /// ## Returns
     /// - `Ok(())` if the environment was successfully prepared.
     /// - `Err(_)` if an error occurred while preparing the environment.
-    fn prepare_tx_env(transaction: &OpTxEnvelope, encoded_transaction: &[u8]) -> Result<TxEnv> {
+    fn prepare_tx_env(
+        transaction: &OpTxEnvelope,
+        encoded_transaction: &[u8],
+    ) -> ExecutorResult<TxEnv> {
         let mut env = TxEnv::default();
         match transaction {
             OpTxEnvelope::Legacy(signed_tx) => {
                 let tx = signed_tx.tx();
-                env.caller = signed_tx
-                    .recover_signer()
-                    .map_err(|e| anyhow!("Failed to recover signer: {}", e))?;
+                env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
                 env.gas_limit = tx.gas_limit as u64;
                 env.gas_price = U256::from(tx.gas_price);
                 env.gas_priority_fee = None;
@@ -560,9 +569,7 @@ where
             }
             OpTxEnvelope::Eip2930(signed_tx) => {
                 let tx = signed_tx.tx();
-                env.caller = signed_tx
-                    .recover_signer()
-                    .map_err(|e| anyhow!("Failed to recover signer: {}", e))?;
+                env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
                 env.gas_limit = tx.gas_limit as u64;
                 env.gas_price = U256::from(tx.gas_price);
                 env.gas_priority_fee = None;
@@ -587,9 +594,7 @@ where
             }
             OpTxEnvelope::Eip1559(signed_tx) => {
                 let tx = signed_tx.tx();
-                env.caller = signed_tx
-                    .recover_signer()
-                    .map_err(|e| anyhow!("Failed to recover signer: {}", e))?;
+                env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
                 env.gas_limit = tx.gas_limit as u64;
                 env.gas_price = U256::from(tx.max_fee_per_gas);
                 env.gas_priority_fee = Some(U256::from(tx.max_priority_fee_per_gas));
@@ -634,7 +639,7 @@ where
                 };
                 Ok(env)
             }
-            _ => anyhow::bail!("Unexpected tx type"),
+            _ => Err(ExecutorError::UnsupportedTransactionType(transaction.tx_type() as u8)),
         }
     }
 }
@@ -647,6 +652,7 @@ mod test {
     use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
+    use anyhow::{anyhow, Result};
     use kona_mpt::NoopTrieHinter;
     use op_alloy_genesis::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
     use serde::Deserialize;
@@ -721,12 +727,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #120794431's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(header.seal_slow())
-            .with_provider(TestdataTrieProvider::new("block_120794432_exec"))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_120794432_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(header.seal_slow())
+        .build();
 
         let raw_tx = hex!("7ef8f8a003b511b9b71520cd62cad3b5fd5b1b8eaebd658447723c31c7f1eba87cfe98c894deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000300000000665a33a70000000001310e960000000000000000000000000000000000000000000000000000000214d2697300000000000000000000000000000000000000000000000000000000000000015346d208a396843018a2e666c8e7832067358433fb87ca421273c6a4e69f78d50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985");
         let payload_attrs = OptimismPayloadAttributes {
@@ -778,12 +785,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121049888's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_provider(TestdataTrieProvider::new("block_121049889_exec"))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121049889_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a01e6036fa5dc5d76e0095f42fef2c4aa7d6589b4f496f9c4bea53daef1b4a24c194deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc50000000000000000000000006661ff73000000000131b40700000000000000000000000000000000000000000000000000000005c9ea450a0000000000000000000000000000000000000000000000000000000000000001e885b088376fedbd0490a7991be47854872f6467c476d255eed3151d5f6a95940000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -839,12 +847,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121003240's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_provider(TestdataTrieProvider::new("block_121003241_exec"))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121003241_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a02c3adbd572915b3ef2fe7c81418461cb32407df8cb1bd4c1f5f4b45e474bfce694deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000400000000666092ff00000000013195d800000000000000000000000000000000000000000000000000000004da0e1101000000000000000000000000000000000000000000000000000000000000000493a1359bf7a89d8b2b2073a153c47f9c399f8f7a864e4f25744d6832cb6fadd80000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -907,12 +916,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_provider(TestdataTrieProvider::new("block_121057303_exec"))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121057303_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a01a2c45522a69a90b583aa08a0968847a6fbbdc5480fe6f967b5fcb9384f46e9594deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000010000000066623963000000000131b8d700000000000000000000000000000000000000000000000000000003ec02c0240000000000000000000000000000000000000000000000000000000000000001c10a3bb5847ad354f9a70b56f253baaea1c3841647851c4c62e10b22fe4e86940000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -969,12 +979,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_provider(TestdataTrieProvider::new("block_121065789_exec"))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121065789_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a0dd829082801fa06ba178080ec514ae92ae90b5fd6799fcedc5a582a54f1358c094deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000050000000066627b9f000000000131be5400000000000000000000000000000000000000000000000000000001e05d6a160000000000000000000000000000000000000000000000000000000000000001dc97827f5090fcc3425f1f8a22ac4603b0b176a11997a423006eb61cf64d817a0000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -1040,12 +1051,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121135703's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_provider(TestdataTrieProvider::new("block_121135704_exec"))
-            .with_hinter(NoopTrieHinter)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121135704_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a0bd8a03d2faac7261a1627e834405975aa1c55c968b072ffa6db6c100d891c9b794deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000070000000066649ddb000000000131eb9a000000000000000000000000000000000000000000000000000000023c03238b0000000000000000000000000000000000000000000000000000000000000001427035b1edf748d109f4a751c5e2e33122340b0e22961600d8b76cfde3c7a6b50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
