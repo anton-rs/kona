@@ -58,8 +58,6 @@ pub fn exit(code: usize) -> ! {
 
 #[cfg(not(any(target_arch = "mips", target_arch = "riscv64", target_os = "zkvm")))]
 mod native_io {
-    extern crate std;
-
     use crate::{
         errors::{IOError, IOResult},
         io::FileDescriptor,
