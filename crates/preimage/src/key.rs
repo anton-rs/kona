@@ -1,6 +1,7 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
 //! the preimage oracle.
 
+use crate::errors::InvalidPreimageKeyType;
 use alloy_primitives::{B256, U256};
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
@@ -37,18 +38,19 @@ pub enum PreimageKeyType {
 }
 
 impl TryFrom<u8> for PreimageKeyType {
-    type Error = anyhow::Error;
+    type Error = InvalidPreimageKeyType;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(match value {
+        let key_type = match value {
             1 => PreimageKeyType::Local,
             2 => PreimageKeyType::Keccak256,
             3 => PreimageKeyType::GlobalGeneric,
             4 => PreimageKeyType::Sha256,
             5 => PreimageKeyType::Blob,
             6 => PreimageKeyType::Precompile,
-            _ => anyhow::bail!("Invalid preimage key type"),
-        })
+            _ => return Err(InvalidPreimageKeyType),
+        };
+        Ok(key_type)
     }
 }
 
@@ -114,7 +116,7 @@ impl From<PreimageKey> for B256 {
 }
 
 impl TryFrom<[u8; 32]> for PreimageKey {
-    type Error = anyhow::Error;
+    type Error = InvalidPreimageKeyType;
 
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
         let key_type = PreimageKeyType::try_from(value[0])?;

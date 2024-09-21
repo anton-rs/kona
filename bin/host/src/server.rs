@@ -9,7 +9,8 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use kona_preimage::{
-    HintReaderServer, HintRouter, PreimageFetcher, PreimageOracleServer, PreimageServerError,
+    errors::PreimageOracleError, HintReaderServer, HintRouter, PreimageFetcher,
+    PreimageOracleServer,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -88,10 +89,10 @@ where
             loop {
                 match server.next_preimage_request(fetcher).await {
                     Ok(_) => (),
-                    Err(PreimageServerError::BrokenPipe(_)) => return Ok(()),
-                    Err(PreimageServerError::Other(e)) => {
-                        error!("Failed to serve preimage request: {e:?}");
-                        return Err(e);
+                    Err(PreimageOracleError::IOError(_)) => return Ok(()),
+                    Err(e) => {
+                        error!("Failed to serve preimage request: {e}");
+                        return Err(anyhow!("Failed to serve preimage request: {e}"));
                     }
                 }
             }
@@ -119,10 +120,10 @@ where
             loop {
                 match server.next_hint(router).await {
                     Ok(_) => (),
-                    Err(PreimageServerError::BrokenPipe(_)) => return Ok(()),
-                    Err(PreimageServerError::Other(e)) => {
-                        error!("Failed to serve preimage request: {e:?}");
-                        return Err(e);
+                    Err(PreimageOracleError::IOError(_)) => return Ok(()),
+                    Err(e) => {
+                        error!("Failed to serve route hint: {e}");
+                        return Err(anyhow!("Failed to route hint: {e}"));
                     }
                 }
             }

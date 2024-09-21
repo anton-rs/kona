@@ -132,6 +132,7 @@ impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
                 .get(PreimageKey::new(*key, PreimageKeyType::Keccak256))
                 .await
                 .map(Into::into)
+                .map_err(Into::into)
         })
     }
 

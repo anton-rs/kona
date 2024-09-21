@@ -1,5 +1,4 @@
-use crate::{asterisc::syscall, BasicKernelInterface, FileDescriptor};
-use anyhow::Result;
+use crate::{asterisc::syscall, errors::IOResult, BasicKernelInterface, FileDescriptor};
 
 /// Concrete implementation of the [`KernelIO`] trait for the `riscv64` target architecture.
 #[derive(Debug)]
@@ -24,9 +23,9 @@ pub(crate) enum SyscallNumber {
 }
 
 impl BasicKernelInterface for AsteriscIO {
-    fn write(fd: FileDescriptor, buf: &[u8]) -> Result<usize> {
+    fn write(fd: FileDescriptor, buf: &[u8]) -> IOResult<usize> {
         unsafe {
-            Ok(syscall::syscall3(
+            crate::linux::from_ret(syscall::syscall3(
                 SyscallNumber::Write as usize,
                 fd.into(),
                 buf.as_ptr() as usize,
@@ -35,9 +34,9 @@ impl BasicKernelInterface for AsteriscIO {
         }
     }
 
-    fn read(fd: FileDescriptor, buf: &mut [u8]) -> Result<usize> {
+    fn read(fd: FileDescriptor, buf: &mut [u8]) -> IOResult<usize> {
         unsafe {
-            Ok(syscall::syscall3(
+            crate::linux::from_ret(syscall::syscall3(
                 SyscallNumber::Read as usize,
                 fd.into(),
                 buf.as_ptr() as usize,
@@ -48,7 +47,7 @@ impl BasicKernelInterface for AsteriscIO {
 
     fn exit(code: usize) -> ! {
         unsafe {
-            syscall::syscall1(SyscallNumber::Exit as usize, code);
+            let _ = syscall::syscall1(SyscallNumber::Exit as usize, code);
             panic!()
         }
     }

@@ -9,6 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+thiserror.workspace = true
 cfg-if.workspace = true
 linked_list_allocator.workspace = true

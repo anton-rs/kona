@@ -7,6 +7,8 @@
 
 extern crate alloc;
 
+pub mod errors;
+
 pub mod io;
 
 pub mod malloc;
@@ -19,6 +21,8 @@ pub use types::FileDescriptor;
 
 mod executor;
 pub use executor::block_on;
+
+pub(crate) mod linux;
 
 #[cfg(target_arch = "mips")]
 pub(crate) mod cannon;
