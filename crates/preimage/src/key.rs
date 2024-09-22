@@ -12,7 +12,6 @@ use serde::{Deserialize as SerdeDeserialize, Serialize as SerdeSerialize};
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
 #[cfg_attr(feature = "rkyv", derive(Archive, RkyvSerialize, RkyvDeserialize))]
-#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)))]
 #[cfg_attr(feature = "serde", derive(SerdeSerialize, SerdeDeserialize))]
 pub enum PreimageKeyType {
     /// Local key types are local to a given instance of a fault-proof and context dependent.
@@ -64,7 +63,6 @@ impl TryFrom<u8> for PreimageKeyType {
 /// | [1, 32) | Data        |
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "rkyv", derive(Archive, RkyvSerialize, RkyvDeserialize))]
-#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)))]
 #[cfg_attr(feature = "serde", derive(SerdeSerialize, SerdeDeserialize))]
 pub struct PreimageKey {
     data: [u8; 31],
