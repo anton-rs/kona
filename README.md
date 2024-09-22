@@ -53,7 +53,6 @@ rollup state transition in order to verify an [L2 output root][g-output-root] fr
 - [`mpt`](./crates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
 - [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
-  - [`plasma`](./crates/plasma/): Plasma extension to `kona-derive`
 
 ## Book
 
