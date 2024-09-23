@@ -281,7 +281,7 @@ impl SpanBatch {
                 let safe_block_payload = match fetcher.block_by_number(safe_block_num).await {
                     Ok(p) => p,
                     Err(e) => {
-                        warn!("failed to fetch payload for block number {safe_block_num}: {e}");
+                        warn!("failed to fetch block number {safe_block_num}: {e}");
                         return BatchValidity::Undecided;
                     }
                 };
@@ -425,7 +425,7 @@ mod tests {
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_eips::BlockNumHash;
-    use alloy_primitives::{b256, Bytes, B256};
+    use alloy_primitives::{b256, Bytes};
     use op_alloy_consensus::OpTxType;
     use op_alloy_genesis::ChainGenesis;
     use tracing::Level;
@@ -1368,7 +1368,7 @@ mod tests {
         );
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);
-        assert!(logs[0].contains("failed to fetch payload for block number 41: Payload not found"));
+        assert!(logs[0].contains("failed to fetch block number 41: L2 Block not found"));
     }
 
     // TODO: Test overlap block tx count mismatch
@@ -1431,8 +1431,8 @@ mod tests {
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);
         let str = alloc::format!(
-            "failed to extract L2BlockInfo from execution payload, hash: {}",
-            B256::default(),
+            "failed to extract L2BlockInfo from execution payload, hash: {:?}",
+            b256!("0e2ee9abe94ee4514b170d7039d8151a7469d434a8575dbab5bd4187a27732dd"),
         );
         assert!(logs[0].contains(&str));
     }
@@ -1444,7 +1444,7 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let payload_block_hash =
-            b256!("4444444444444444444444444444444444444444444444444444444444444444");
+            b256!("0e2ee9abe94ee4514b170d7039d8151a7469d434a8575dbab5bd4187a27732dd");
         let cfg = RollupConfig {
             seq_window_size: 100,
             delta_time: Some(0),
@@ -1477,14 +1477,8 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let block = OpBlock {
-            header: Header {
-                number: 41,
-                // TODO: correct hash
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let block =
+            OpBlock { header: Header { number: 41, ..Default::default() }, ..Default::default() };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             op_blocks: vec![block],
@@ -1514,7 +1508,7 @@ mod tests {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let payload_block_hash =
-            b256!("4444444444444444444444444444444444444444444444444444444444444444");
+            b256!("0e2ee9abe94ee4514b170d7039d8151a7469d434a8575dbab5bd4187a27732dd");
         let cfg = RollupConfig {
             seq_window_size: 100,
             delta_time: Some(0),
@@ -1553,14 +1547,8 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let block = OpBlock {
-            header: Header {
-                number: 41,
-                // TODO: correct hash
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let block =
+            OpBlock { header: Header { number: 41, ..Default::default() }, ..Default::default() };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             op_blocks: vec![block],
