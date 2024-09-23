@@ -4,7 +4,7 @@
 <head>
     <!-- Book generated using mdBook -->
     <meta charset="UTF-8">
-    <title>Prologue - The Kona Book</title>
+    <title>Custom Backend - The Kona Book</title>
 
 
     <!-- Custom HTML head -->
@@ -91,7 +91,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html" class="active"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../sdk/custom-backend.html" class="active"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -160,7 +160,7 @@
                         <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/fpp-dev/prologue.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/custom-backend.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -190,27 +190,113 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="prologue"><a class="header" href="#prologue">Prologue</a></h1>
-<p>The prologue stage of the program is commonly responsible for bootstrapping the program with inputs from an external
-source, pulled in through the <a href="./env.html#host---client-communication">Host &lt;-&gt; Client communication</a> implementation.</p>
-<p>As a rule of thumb, the prologue implementation should be kept minimal, and should not do much more than establish
-the inputs for the <a href="./execution.html">execution phase</a>.</p>
-<h2 id="example"><a class="header" href="#example">Example</a></h2>
-<p>As an example, the prologue stage of the <code>kona-client</code> program runs through several steps:</p>
-<ol>
-<li>Pull in the boot information over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">Preimage Oracle ABI</a>, containing:
+                        <h1 id="custom-backends"><a class="header" href="#custom-backends">Custom Backends</a></h1>
+<h2 id="understanding-the-op-stack-stf"><a class="header" href="#understanding-the-op-stack-stf">Understanding the OP Stack STF</a></h2>
+<p>The OP Stack state transition is comprised of two primary components:</p>
 <ul>
-<li>The L1 head hash containing all data required to reproduce the L2 safe chain at the claimed block height.</li>
-<li>The latest finalized <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a>.</li>
-<li>The <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
-<li>The block number of the <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
-<li>The L2 chain ID.</li>
+<li><strong>The <a href="https://specs.optimism.io/protocol/derivation.html">derivation pipeline</a></strong> (<code>kona-derive</code>)
+<ul>
+<li>Responsible for deriving L2 chain state from the DA layer.</li>
 </ul>
 </li>
-<li>Pull in the <code>RollupConfig</code> and <code>L2ChainConfig</code> corresponding to the passed L2 chain ID.</li>
-<li>Validate these values.</li>
-<li>Pass the boot information to the execution phase.</li>
+<li><strong>The <a href="https://specs.optimism.io/protocol/exec-engine.html#l2-execution-engine">execution engine</a></strong> (<code>kona-executor</code>)
+<ul>
+<li>Responsible for the execution of transactions and state commitments.</li>
+<li>Ensures correct application of derived L2 state.</li>
+</ul>
+</li>
+</ul>
+<p>To prove the correctness of the state transition, Kona composes these two components:</p>
+<ul>
+<li>It combines the derivation of the L2 chain with its execution in the same process.</li>
+<li>It pulls in necessary data from sources to complete the STF, verifiably unrolling the input commitments along the way.</li>
+</ul>
+<p><code>kona-client</code> serves as an implementation of this process, capable of deriving and executing a single L2 block in a
+verifiable manner.</p>
+<blockquote>
+<p>📖 Why just a single block by default?</p>
+<p>On the OP Stack, we employ an interactive bisection game that narrows in on the disagreed upon block -&gt; block state
+transition before requiring a fault proof to be ran. Because of this, the default implementation only serves
+to derive and execute the single block that the participants of the bisection game landed on.</p>
+</blockquote>
+<h2 id="backend-traits"><a class="header" href="#backend-traits">Backend Traits</a></h2>
+<p>Covered in the <a href="./fpvm-backend.html">FPVM Backend</a> section of the book, <code>kona-client</code> ships with an implementation of
+<code>kona-derive</code> and <code>kona-executor</code>'s data source traits which pull in data over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a>.</p>
+<p>However, running <code>kona-client</code> on top of a different verifiable environment, i.e. a zkVM or TEE, is also possible
+through custom implementations of these data source traits.</p>
+<p><a href="https://github.com/succinctlabs/op-succinct"><code>op-succinct</code></a> is an excellent example of both a custom backend and a custom
+program, implementing both <code>kona-derive</code> and <code>kona-executor</code>'s data source traits backed by <a href="https://docs.rs/sp1-lib/latest/sp1_lib/io/index.html">sp1_lib::io</a>
+in order to:</p>
+<ol>
+<li>Execute <code>kona-client</code> verbatim, proving a single block's derivation and execution on SP-1.</li>
+<li>Derive and execute an entire <a href="https://specs.optimism.io/protocol/delta/span-batches.html#span-batches">Span Batch</a>
+worth of L2 blocks, using <code>kona-derive</code> and <code>kona-executor</code>.</li>
 </ol>
+<p>This section of the book outlines how you can do the same for a different platform.</p>
+<h3 id="custom-kona-derive-sources"><a class="header" href="#custom-kona-derive-sources">Custom <code>kona-derive</code> sources</a></h3>
+<p>Before getting started, we need to create custom implementations of the following traits:</p>
+<div class="table-wrapper"><table><thead><tr><th>Trait</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.ChainProvider.html"><code>ChainProvider</code></a></td><td>The <code>ChainProvider</code> trait describes the minimal interface for fetching data from L1 during L2 chain derivation.</td></tr>
+<tr><td><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.L2ChainProvider.html"><code>L2ChainProvider</code></a></td><td>The <code>ChainProvider</code> trait describes the minimal interface for fetching data from the safe L2 chain during L2 chain derivation.</td></tr>
+<tr><td><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.BlobProvider.html"><code>BlobProvider</code></a></td><td>The <code>BlobProvider</code> trait describes an interface for fetching EIP-4844 blobs from the L1 consensus layer during L2 chain derivation.</td></tr>
+</tbody></table>
+</div>
+<p>Once these are implemented, constructing the pipeline is as simple as passing in the data sources to the <code>PipelineBuilder</code>. Keep in mind the requirements for validation of incoming data, depending on your platform. For example, programs
+targeting zkVMs must constrain that the incoming data is indeed valid, whereas fault proof programs can offload this validation to the on-chain implementation of the host.</p>
+<pre><code class="language-rs">let chain_provider = ...;
+let l2_chain_provider = ...;
+let blob_provider = ...;
+let l1_origin = ...;
+
+let cfg = Arc::new(RollupConfig::default());
+let attributes = StatefulAttributesBuilder::new(
+   cfg.clone(),
+   l2_chain_provider.clone(),
+   chain_provider.clone(),
+);
+let dap = EthereumDataSource::new(
+   chain_provider.clone(),
+   blob_provider,
+   cfg.as_ref()
+);
+
+// Construct a new derivation pipeline.
+let pipeline = PipelineBuilder::new()
+   .rollup_config(cfg)
+   .dap_source(dap)
+   .l2_chain_provider(l2_chain_provider)
+   .chain_provider(chain_provider)
+   .builder(attributes)
+   .origin(l1_origin)
+   .build();
+</code></pre>
+<p>From here, a custom derivation driver is needed to produce the desired execution payload(s). An example of this for
+<code>kona-client</code> can be found in the <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77">DerivationDriver</a>.</p>
+<h3 id="kona-mpt--kona-executor-sources"><a class="header" href="#kona-mpt--kona-executor-sources"><code>kona-mpt</code> / <code>kona-executor</code> sources</a></h3>
+<p>Before getting started, we need to create custom implementations of the following traits:</p>
+<div class="table-wrapper"><table><thead><tr><th>Trait</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="https://docs.rs/kona-mpt/latest/kona_mpt/trait.TrieDBFetcher.html"><code>TrieDBFetcher</code></a></td><td>The <code>TrieDBFetcher</code> trait describes the interface for fetching trie node preimages and chain information while executing a payload on the L2 chain.</td></tr>
+<tr><td><a href="https://docs.rs/kona-mpt/latest/kona_mpt/trait.TrieDBHinter.html"><code>TrieDBHinter</code></a></td><td>The <code>TrieDBHinter</code> trait describes the interface for requesting the host program to prepare trie proof preimages for the client's consumption. For targets with upfront witness generation, i.e. zkVMs, a no-op hinter is exported as <a href="https://docs.rs/kona-mpt/latest/kona_mpt/struct.NoopTrieDBHinter.html"><code>NoopTrieDBHinter</code></a>.</td></tr>
+</tbody></table>
+</div>
+<p>Once we have those, the <code>StatelessL2BlockExecutor</code> can be constructed like so:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let cfg = RollupConfig::default();
+let provider = ...;
+let hinter = ...;
+
+let executor = StatelessL2BlcokExecutor::builder(&amp;cfg, provider, hinter)
+   .with_parent_header(...)
+   .build();
+
+let header = executor.execute_payload(...).expect("Failed execution");
+<span class="boring">}</span></code></pre></pre>
+<h3 id="bringing-it-together"><a class="header" href="#bringing-it-together">Bringing it Together</a></h3>
+<p>Once your custom backend traits for both <code>kona-derive</code> and <code>kona-executor</code> have been implemented,
+your final binary may look something like <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/kona.rs">that of <code>kona-client</code>'s</a>.
+Alternatively, if you're looking to prove a wider range of blocks, <a href="https://github.com/succinctlabs/op-succinct/tree/main/programs/range"><code>op-succinct</code>'s <code>range</code> program</a>
+offers a good example of running the pipeline and executor across a string of contiguous blocks.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
@@ -219,12 +305,12 @@ the inputs for the <a href="./execution.html">execution phase</a>.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        <a rel="prev" href="../fpp-dev/targets.html" class="mobile-nav-chapters previous"
+                        <a rel="prev" href="../sdk/fpvm-backend.html" class="mobile-nav-chapters previous"
                             title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                             <i class="fa fa-angle-left"></i>
                         </a>
 
-                        <a rel="next prefetch" href="../fpp-dev/execution.html" class="mobile-nav-chapters next"
+                        <a rel="next prefetch" href="../sdk/exec-ext.html" class="mobile-nav-chapters next"
                             title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                             <i class="fa fa-angle-right"></i>
                         </a>
@@ -235,12 +321,12 @@ the inputs for the <a href="./execution.html">execution phase</a>.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                <a rel="prev" href="../fpp-dev/targets.html" class="nav-chapters previous" title="Previous chapter"
+                <a rel="prev" href="../sdk/fpvm-backend.html" class="nav-chapters previous" title="Previous chapter"
                     aria-label="Previous chapter" aria-keyshortcuts="Left">
                     <i class="fa fa-angle-left"></i>
                 </a>
 
-                <a rel="next prefetch" href="../fpp-dev/execution.html" class="nav-chapters next" title="Next chapter"
+                <a rel="next prefetch" href="../sdk/exec-ext.html" class="nav-chapters next" title="Next chapter"
                     aria-label="Next chapter" aria-keyshortcuts="Right">
                     <i class="fa fa-angle-right"></i>
                 </a>

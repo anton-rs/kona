@@ -4,7 +4,7 @@
 <head>
     <!-- Book generated using mdBook -->
     <meta charset="UTF-8">
-    <title>Prologue - The Kona Book</title>
+    <title>kona-executor Extensions - The Kona Book</title>
 
 
     <!-- Custom HTML head -->
@@ -91,7 +91,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html" class="active"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../sdk/exec-ext.html" class="active"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -160,7 +160,7 @@
                         <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/fpp-dev/prologue.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/exec-ext.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -190,27 +190,54 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="prologue"><a class="header" href="#prologue">Prologue</a></h1>
-<p>The prologue stage of the program is commonly responsible for bootstrapping the program with inputs from an external
-source, pulled in through the <a href="./env.html#host---client-communication">Host &lt;-&gt; Client communication</a> implementation.</p>
-<p>As a rule of thumb, the prologue implementation should be kept minimal, and should not do much more than establish
-the inputs for the <a href="./execution.html">execution phase</a>.</p>
-<h2 id="example"><a class="header" href="#example">Example</a></h2>
-<p>As an example, the prologue stage of the <code>kona-client</code> program runs through several steps:</p>
-<ol>
-<li>Pull in the boot information over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">Preimage Oracle ABI</a>, containing:
-<ul>
-<li>The L1 head hash containing all data required to reproduce the L2 safe chain at the claimed block height.</li>
-<li>The latest finalized <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a>.</li>
-<li>The <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
-<li>The block number of the <a href="https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction">L2 output root</a> claim.</li>
-<li>The L2 chain ID.</li>
-</ul>
-</li>
-<li>Pull in the <code>RollupConfig</code> and <code>L2ChainConfig</code> corresponding to the passed L2 chain ID.</li>
-<li>Validate these values.</li>
-<li>Pass the boot information to the execution phase.</li>
-</ol>
+                        <h1 id="kona-executor-extensions"><a class="header" href="#kona-executor-extensions"><code>kona-executor</code> Extensions</a></h1>
+<p>The <code>kona-executor</code> crate offers a to-spec, stateless implementation of the OP Stack STF. However, due to the
+power of <a href="https://github.com/bluealloy/revm"><code>revm</code></a>'s Handler abstractions, the logic of the STF can be easily modified.</p>
+<p>To register a custom handler, for example to add a custom precompile, modify the behavior of an EVM opcode,
+or change the fee handling, <code>StatelessL2BlockExecutorBuilder::with_handle_register</code> is your friend. It accepts a
+<a href="https://docs.rs/kona-executor/latest/kona_executor/type.KonaHandleRegister.html"><code>KonaHandleRegister</code></a>, which
+can be used to take full advantage of <a href="https://github.com/bluealloy/revm/blob/f57e3e639ee157c7e659e740bd175a7357003570/documentation/src/crates/revm/handler.md#handler"><code>revm</code>'s Handler API</a>.</p>
+<h2 id="example---custom-precompile"><a class="header" href="#example---custom-precompile">Example - Custom Precompile</a></h2>
+<pre><code class="language-rs">const MY_PRECOMPILE_ADDRESS: Address = u64_to_address(0xFF);
+
+fn my_precompile(input: &amp;Bytes, gas_limit: u64) -&gt; PrecompileResult {
+   Ok(PrecompileOutput::new(50, "hello, world!".as_bytes().into()))
+}
+
+fn custom_handle_register&lt;F, H&gt;(
+    handler: &amp;mut EvmHandler&lt;'_, (), &amp;mut State&lt;&amp;mut TrieDB&lt;F, H&gt;&gt;&gt;,
+) where
+   F: TrieProvider,
+   H: TrieHinter,
+{
+   let spec_id = handler.cfg.spec_id;
+
+   handler.pre_execution.load_precompiles = Arc::new(move || {
+      let mut ctx_precompiles = spec_to_generic!(spec_id, {
+         revm::optimism::load_precompiles::&lt;SPEC, (), &amp;mut State&lt;&amp;mut TrieDB&lt;F, H&gt;&gt;&gt;()
+      });
+
+      let precompile = PrecompileWithAddress(
+         MY_PRECOMPILE_ADDRESS,
+         Precompile::Standard(my_precompile)
+      );
+      ctx_precompiles.extend([precompile]);
+
+      ctx_precompiles
+   });
+}
+
+// - snip -
+
+let cfg = RollupConfig::default();
+let provider = ...;
+let hinter = ...;
+
+let executor = StatelessL2BlcokExecutor::builder(&amp;cfg, provider, hinter)
+   .with_parent_header(...)
+   .with_handle_register(custom_handle_register)
+   .build();
+</code></pre>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
@@ -219,12 +246,12 @@ the inputs for the <a href="./execution.html">execution phase</a>.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        <a rel="prev" href="../fpp-dev/targets.html" class="mobile-nav-chapters previous"
+                        <a rel="prev" href="../sdk/custom-backend.html" class="mobile-nav-chapters previous"
                             title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                             <i class="fa fa-angle-left"></i>
                         </a>
 
-                        <a rel="next prefetch" href="../fpp-dev/execution.html" class="mobile-nav-chapters next"
+                        <a rel="next prefetch" href="../glossary.html" class="mobile-nav-chapters next"
                             title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                             <i class="fa fa-angle-right"></i>
                         </a>
@@ -235,12 +262,12 @@ the inputs for the <a href="./execution.html">execution phase</a>.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                <a rel="prev" href="../fpp-dev/targets.html" class="nav-chapters previous" title="Previous chapter"
+                <a rel="prev" href="../sdk/custom-backend.html" class="nav-chapters previous" title="Previous chapter"
                     aria-label="Previous chapter" aria-keyshortcuts="Left">
                     <i class="fa fa-angle-left"></i>
                 </a>
 
-                <a rel="next prefetch" href="../fpp-dev/execution.html" class="nav-chapters next" title="Next chapter"
+                <a rel="next prefetch" href="../glossary.html" class="nav-chapters next" title="Next chapter"
                     aria-label="Next chapter" aria-keyshortcuts="Right">
                     <i class="fa fa-angle-right"></i>
                 </a>

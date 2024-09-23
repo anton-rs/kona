@@ -1,43 +1,46 @@
 <!DOCTYPE HTML>
-<html lang="en" class="light" dir="ltr">
-    <head>
-        <!-- Book generated using mdBook -->
-        <meta charset="UTF-8">
-        <title>The Kona Book</title>
-        <meta name="robots" content="noindex">
+<html lang="en" class="ferra" dir="ltr">
+
+<head>
+    <!-- Book generated using mdBook -->
+    <meta charset="UTF-8">
+    <title>The Kona Book</title>
+    <meta name="robots" content="noindex">
 
 
-        <!-- Custom HTML head -->
-        
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff">
+    <!-- Custom HTML head -->
+    
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+    <link rel="icon" href="favicon.svg">
+    <link rel="shortcut icon" href="favicon.png">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/general.css">
+    <link rel="stylesheet" href="css/chrome.css">
+    <link rel="stylesheet" href="css/print.css" media="print">
 
-        <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+    <!-- Fonts -->
+    <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+    <link rel="stylesheet" href="fonts/fonts.css">
 
-        <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+    <!-- Highlight.js Stylesheets -->
+    <link rel="stylesheet" href="highlight.css">
+    <link rel="stylesheet" href="tomorrow-night.css">
+    <link rel="stylesheet" href="ayu-highlight.css">
 
-        <!-- Custom theme stylesheets -->
+    <!-- Custom theme stylesheets -->
+    <link rel="stylesheet" href="custom.css">
 
-    </head>
-    <body class="sidebar-visible no-js">
+</head>
+
+<body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ferra" : "ferra";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
@@ -59,10 +62,10 @@
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
             var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('light')
+            html.classList.remove('ferra')
             html.classList.add(theme);
             var body = document.querySelector('body');
             body.classList.remove('no-js')
@@ -77,7 +80,7 @@
             var sidebar = null;
             var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
-                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch (e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
@@ -89,7 +92,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="CONTRIBUTING.html"><strong aria-hidden="true">4.</strong> Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -99,7 +102,7 @@
         <!-- Track and set sidebar scroll position -->
         <script>
             var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
-            sidebarScrollbox.addEventListener('click', function(e) {
+            sidebarScrollbox.addEventListener('click', function (e) {
                 if (e.target.tagName === 'A') {
                     sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
                 }
@@ -124,10 +127,14 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor"
+                            title="Toggle Table of Contents" aria-label="Toggle Table of Contents"
+                            aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
                         </label>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme"
+                            aria-label="Change theme" aria-haspopup="true" aria-expanded="false"
+                            aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
@@ -136,8 +143,11 @@
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ferra">Ferra</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)"
+                            aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S"
+                            aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -148,13 +158,17 @@
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
 
                     </div>
                 </div>
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..."
+                            aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -167,7 +181,7 @@
                 <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function (link) {
                         link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
                     });
                 </script>
@@ -176,7 +190,7 @@
                     <main>
                         <h1 id="kona-book"><a class="header" href="#kona-book">Kona Book</a></h1>
 <p><em>Documentation for the Kona project.</em></p>
-<p><a href="https://github.com/kona-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a></p>
+<p><a href="https://github.com/anton-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a></p>
 <blockquote>
 <p>📖 <code>kona</code> is in active development, and is not yet ready for use in production. During development, this book will evolve quickly and may contain inaccuracies.</p>
 <p>Please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> if you find any errors or have any suggestions for improvements, and also feel free to <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">contribute</a> to the project!</p>
@@ -253,9 +267,9 @@ when the <code>host</code> is the native implementation of the FPVM.</p>
 <center>
 <pre class="mermaid">sequenceDiagram
     Client-&gt;&gt;+Host: Hint preimage (no-op on-chain / read-only mode)
-    Host--&gt;&gt;Host: Prepare Preimage
     Host--&gt;&gt;-Client: Hint acknowledgement
     Client--&gt;&gt;+Host: Preimage Request
+    Host--&gt;&gt;Host: Prepare Preimage
     Host--&gt;&gt;-Client: Preimage Data
 </pre>
 </center>
@@ -285,89 +299,12 @@ which has the objective of verifying claims about the state of an <a href="https
 <div style="break-before: page; page-break-before: always;"></div><h1 id="supported-targets"><a class="header" href="#supported-targets">Supported Targets</a></h1>
 <p>Kona seeks to support all FPVM targets that LLVM and <code>rustc</code> can offer introductory support for. Below is a matrix of features that Kona offers
 for each FPVM target:</p>
-<div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th><th>Program Stages</th></tr></thead><tbody>
-<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
-<tr><td><code>asterisc</code></td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th></tr></thead><tbody>
+<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><code>asterisc</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
 </tbody></table>
 </div>
 <p>If there is a feature that you would like to see supported, please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
-<h2 id="cannon-mips32r2"><a class="header" href="#cannon-mips32r2">Cannon (MIPS32r2)</a></h2>
-<p>Cannon is based off of the <code>mips32r2</code> target architecture, supporting 55 instructions:</p>
-<div class="table-wrapper"><table><thead><tr><th>Category</th><th>Instruction</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>Arithmetic</code></td><td><code>addi</code></td><td>Add immediate (with sign-extension).</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>addiu</code></td><td>Add immediate unsigned (no overflow).</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>addu</code></td><td>Add unsigned (no overflow).</td></tr>
-<tr><td><code>Logical</code></td><td><code>and</code></td><td>Bitwise AND.</td></tr>
-<tr><td><code>Logical</code></td><td><code>andi</code></td><td>Bitwise AND immediate.</td></tr>
-<tr><td><code>Branch</code></td><td><code>b</code></td><td>Unconditional branch.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>beq</code></td><td>Branch on equal.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>beqz</code></td><td>Branch if equal to zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bgez</code></td><td>Branch on greater than or equal to zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bgtz</code></td><td>Branch on greater than zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>blez</code></td><td>Branch on less than or equal to zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bltz</code></td><td>Branch on less than zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bne</code></td><td>Branch on not equal.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bnez</code></td><td>Branch if not equal to zero.</td></tr>
-<tr><td><code>Logical</code></td><td><code>clz</code></td><td>Count leading zeros.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>divu</code></td><td>Divide unsigned.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>j</code></td><td>Jump.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>jal</code></td><td>Jump and link.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>jalr</code></td><td>Jump and link register.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>jr</code></td><td>Jump register.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lb</code></td><td>Load byte.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lbu</code></td><td>Load byte unsigned.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lui</code></td><td>Load upper immediate.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lw</code></td><td>Load word.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lwr</code></td><td>Load word right.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>mfhi</code></td><td>Move from HI register.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>mflo</code></td><td>Move from LO register.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>move</code></td><td>Move between registers.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>movn</code></td><td>Move conditional on not zero.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>movz</code></td><td>Move conditional on zero.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>mtlo</code></td><td>Move to LO register.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>mul</code></td><td>Multiply (to produce a word result).</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>multu</code></td><td>Multiply unsigned.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>negu</code></td><td>Negate unsigned.</td></tr>
-<tr><td><code>No Op</code></td><td><code>nop</code></td><td>No operation.</td></tr>
-<tr><td><code>Logical</code></td><td><code>not</code></td><td>Bitwise NOT (pseudo-instruction in MIPS).</td></tr>
-<tr><td><code>Logical</code></td><td><code>or</code></td><td>Bitwise OR.</td></tr>
-<tr><td><code>Logical</code></td><td><code>ori</code></td><td>Bitwise OR immediate.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>sb</code></td><td>Store byte.</td></tr>
-<tr><td><code>Logical</code></td><td><code>sll</code></td><td>Shift left logical.</td></tr>
-<tr><td><code>Logical</code></td><td><code>sllv</code></td><td>Shift left logical variable.</td></tr>
-<tr><td><code>Comparison</code></td><td><code>slt</code></td><td>Set on less than (signed).</td></tr>
-<tr><td><code>Comparison</code></td><td><code>slti</code></td><td>Set on less than immediate.</td></tr>
-<tr><td><code>Comparison</code></td><td><code>sltiu</code></td><td>Set on less than immediate unsigned.</td></tr>
-<tr><td><code>Comparison</code></td><td><code>sltu</code></td><td>Set on less than unsigned.</td></tr>
-<tr><td><code>Logical</code></td><td><code>sra</code></td><td>Shift right arithmetic.</td></tr>
-<tr><td><code>Logical</code></td><td><code>srl</code></td><td>Shift right logical.</td></tr>
-<tr><td><code>Logical</code></td><td><code>srlv</code></td><td>Shift right logical variable.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>subu</code></td><td>Subtract unsigned.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>sw</code></td><td>Store word.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>swr</code></td><td>Store word right.</td></tr>
-<tr><td><code>Serialization</code></td><td><code>sync</code></td><td>Synchronize shared memory.</td></tr>
-<tr><td><code>System Calls</code></td><td><code>syscall</code></td><td>System call.</td></tr>
-<tr><td><code>Logical</code></td><td><code>xor</code></td><td>Bitwise XOR.</td></tr>
-<tr><td><code>Logical</code></td><td><code>xori</code></td><td>Bitwise XOR immediate.</td></tr>
-</tbody></table>
-</div>
-<h3 id="syscalls"><a class="header" href="#syscalls">Syscalls</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>$v0</th><th>system call</th><th>$a0</th><th>$a1</th><th>$a2</th><th>Effect</th></tr></thead><tbody>
-<tr><td>4090</td><td>mmap</td><td>uint32 addr</td><td>uint32 len</td><td>🚫</td><td>Allocates a page from the heap. See <a href="fpp-dev/targets.html#heap">heap</a> for details.</td></tr>
-<tr><td>4045</td><td>brk</td><td>🚫</td><td>🚫</td><td>🚫</td><td>Returns a fixed address for the program break at <code>0x40000000</code></td></tr>
-<tr><td>4120</td><td>clone</td><td>🚫</td><td>🚫</td><td>🚫</td><td>Returns 1</td></tr>
-<tr><td>4246</td><td>exit_group</td><td>uint8 exit_code</td><td>🚫</td><td>🚫</td><td>Sets the Exited and ExitCode states to <code>true</code> and <code>$a0</code> respectively.</td></tr>
-<tr><td>4003</td><td>read</td><td>uint32 fd</td><td>char *buf</td><td>uint32 count</td><td>Similar behavior as Linux/MIPS with support for unaligned reads. See <a href="fpp-dev/targets.html#io">I/O</a> for more details.</td></tr>
-<tr><td>4004</td><td>write</td><td>uint32 fd</td><td>char *buf</td><td>uint32 count</td><td>Similar behavior as Linux/MIPS with support for unaligned writes. See <a href="fpp-dev/targets.html#io">I/O</a> for more details.</td></tr>
-<tr><td>4055</td><td>fcntl</td><td>uint32 fd</td><td>int32 cmd</td><td>🚫</td><td>Similar behavior as Linux/MIPS. Only the <code>F_GETFL</code> (3) cmd is supported. Sets errno to <code>0x16</code> for all other commands</td></tr>
-</tbody></table>
-</div>
-<p>For all of the above syscalls, an error is indicated by setting the return
-register (<code>$v0</code>) to <code>0xFFFFFFFF</code> (-1) and <code>errno</code> (<code>$a3</code>) is set accordingly.
-The VM must not modify any register other than <code>$v0</code> and <code>$a3</code> during syscall handling.
-For unsupported syscalls, the VM must do nothing except to zero out the syscall return (<code>$v0</code>)
-and errno (<code>$a3</code>) registers.</p>
-<p>Note that the above syscalls have identical syscall numbers and ABIs as Linux/MIPS.</p>
 <h2 id="asterisc-risc-v"><a class="header" href="#asterisc-risc-v">Asterisc (RISC-V)</a></h2>
 <p>Asterisc is based off of the <code>rv64gc</code> target architecture, which defines the following extensions:</p>
 <ul>
@@ -381,7 +318,6 @@ and errno (<code>$a3</code>) registers.</p>
 </ul>
 </li>
 <li><code>RV64I</code> support</li>
-<li><code>RV64C</code>: Compressed instructions</li>
 <li><code>RV32M</code>+<code>RV64M</code>: Multiplication support</li>
 <li><code>RV32A</code>+<code>RV64A</code>: Atomics support</li>
 <li><code>RV{32,64}{D,F,Q}</code>: no-op: No floating points support (since no IEEE754 determinism with rounding modes etc., nor worth the complexity)</li>
@@ -390,13 +326,17 @@ and errno (<code>$a3</code>) registers.</p>
 <li><code>Ztso</code>: no-op: no need for Total Store Ordering</li>
 <li>other: revert with error code on unrecognized instructions</li>
 </ul>
-<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/ethereum-optimism/asterisc">in the repository</a>. <code>kona</code> offers an interface for
+<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/ethereum-optimism/asterisc/blob/master/docs/golang.md#linux-syscalls-used-by-go">in the repository</a>. <code>kona</code> offers an interface for
 programs to directly invoke a select few syscalls:</p>
 <ol>
 <li><code>EXIT</code> - Terminate the process with the provided exit code.</li>
 <li><code>WRITE</code> - Write the passed buffer to the passed file descriptor.</li>
 <li><code>READ</code> - Read the specified number of bytes from the passed file descriptor.</li>
 </ol>
+<h2 id="cannon-mips32r2"><a class="header" href="#cannon-mips32r2">Cannon (MIPS32r2)</a></h2>
+<p>Cannon is based off of the <code>mips32r2</code> target architecture, specified in <a href="https://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf"><em>MIPS32™ Architecture For Programmers Volume III: The MIPS32™ Privileged Resource Architecture</em></a></p>
+<h3 id="syscalls"><a class="header" href="#syscalls">Syscalls</a></h3>
+<p>Syscalls supported by <code>cannon</code> can be found within the <code>cannon</code> specification <a href="https://specs.optimism.io/fault-proof/cannon-fault-proof-vm.html#syscalls">here</a>.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
@@ -456,6 +396,322 @@ to portions of the bootstrap data made available during the <a href="fpp-dev/./p
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="kona-sdk"><a class="header" href="#kona-sdk">Kona SDK</a></h1>
+<p>Welcome to the Kona SDK, a powerful set of libraries designed to revolutionize the way developers build proofs for the
+OP Stack STF on top of the OP Stack's FPVMs and other verifiable backends like <a href="https://github.com/succinct-labs/sp-1">SP-1</a>, <a href="https://github.com/risc0/risc0">Risc0</a>,
+<a href="https://www.intel.com/content/www/us/en/developer/tools/trust-domain-extensions/documentation.html">Intel TDX</a>, and <a href="https://www.amd.com/en/developer/sev.html">AMD SEV-SNP</a>. At its core, Kona is built on the principles of modularity, extensibility,
+and developer empowerment.</p>
+<h2 id="a-foundation-of-flexibility"><a class="header" href="#a-foundation-of-flexibility">A Foundation of Flexibility</a></h2>
+<p>The kona repository is more than a fault proof program for the OP Stack — it's an ecosystem of interoperable components,
+each crafted with reusability and extensibility as primary goals. While we provide
+<a href="sdk/./glossary.html#fault-proof-vm">Fault Proof VM</a>
+and "online" backends
+for key components like <code>kona-derive</code> and <code>kona-executor</code>, the true power of <code>kona</code> lies in its adaptability.</p>
+<h2 id="extend-without-forking"><a class="header" href="#extend-without-forking">Extend Without Forking</a></h2>
+<p>One of Kona's standout features is its ability to support custom features and data sources without requiring you to fork
+the entire project. Through careful use of Rust's powerful trait system and abstract interfaces, we've created a
+framework that allows you to plug in your own features and ideas seamlessly.</p>
+<h2 id="what-youll-learn"><a class="header" href="#what-youll-learn">What You'll Learn</a></h2>
+<p>In this section of the developer book, we'll dive deep into the Kona SDK, covering:</p>
+<ul>
+<li><strong>Building on the FPVM Backend</strong>: Learn how to leverage the Fault Proof VM tooling to create your own fault proof programs.</li>
+<li><strong>Creating Custom Backends</strong>: Discover the process of designing and implementing your own backend to run <code>kona-client</code> or a variation of it on different targets.</li>
+<li><strong>Extending Core Components</strong>: Explore techniques for creating new constructs that integrate smoothly with crates like <code>kona-derive</code> and <code>kona-executor</code>.</li>
+</ul>
+<p>Whether you're looking to use Kona as-is, extend its functionality, or create entirely new programs based on its libraries,
+this guide is intended to provide you with the knowledge and tools you need to succeed.</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="fpvm-backend"><a class="header" href="#fpvm-backend">FPVM Backend</a></h1>
+<blockquote>
+<p>📖 Before reading this section of the book, it is advised to read the <a href="sdk/../fpp-dev/env.html">Fault Proof Program Environment</a>
+section to familiarize yourself with the PreimageOracle IO pattern.</p>
+</blockquote>
+<p>Kona is effectively split into two parts:</p>
+<ul>
+<li>OP Stack state transition logic &amp; types (<code>kona-derive</code>, <code>kona-executor</code>, <code>kona-mpt</code>, <code>kona-primitives</code>)</li>
+<li><a href="sdk/./glossary.html#fault-proof-vm">Fault Proof VM</a>
+IO and utilities
+(<code>kona-common</code>, <code>kona-common-proc</code>, <code>kona-preimage</code>)</li>
+</ul>
+<p>This section of the book focuses on the usage of <code>kona-common</code> and <code>kona-preimage</code> to facilitate host&lt;-&gt;client
+communication for programs running on top of the <a href="sdk/../fpp-dev/env.html">FPVM targets</a>.</p>
+<h2 id="host---client-communication-api"><a class="header" href="#host---client-communication-api">Host &lt;-&gt; Client Communication API</a></h2>
+<p>The FPVM system API is built on several layers. In this document, we'll cover these layers, from lowest-level to
+highest-level API.</p>
+<h3 id="kona-common"><a class="header" href="#kona-common"><code>kona-common</code></a></h3>
+<p><code>kona-common</code> implements raw syscall dispatch, a default global memory allocator, and a blocking async runtime.
+<code>kona-common</code> relies on a minimal linux backend to function, supporting only the syscalls required to implement the
+<a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a> (<code>read</code>, <code>write</code>, <code>exit_group</code>).</p>
+<p>These syscalls are exposed to the user through the <code>io</code> module directly, with each supported platform implementing the
+<a href="https://docs.rs/kona-common/latest/kona_common/trait.BasicKernelInterface.html"><code>BasicKernelInterface</code></a> trait.</p>
+<p>To directly dispatch these syscalls, the <a href="https://docs.rs/kona-common/latest/kona_common/io/index.html"><code>io</code></a> module
+exposes a safe API:</p>
+<pre><code class="language-rs">use kona_common::{io, FileDescriptor};
+
+// Print to `stdout`. Infalliable, will panic if dispatch fails.
+io::print("Hello, world!");
+
+// Print to `stderr`. Infalliable, will panic if dispatch fails.
+io::print_err("Goodbye, world!");
+
+// Read from or write to a specified file descriptor. Returns a result with the
+// return value or syscall errno.
+let _ = io::write(FileDescriptor::StdOut, "Hello, world!".as_bytes());
+let mut buf = Vec::with_capacity(8);
+let _ = io::read(FileDescriptor::StdIn, buf.as_mut_slice());
+
+// Exit the program with a specified exit code.
+io::exit(0);
+</code></pre>
+<p>With this library, you can implement a custom host&lt;-&gt;client communication protocol, or extend the existing
+<a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a>. However, for most developers, we recommend sticking with <code>kona-preimage</code>
+when developing programs that target the <a href="sdk/../fpp-dev/env.html">FPVMs</a>, barring needs like printing directly to
+<code>stdout</code>.</p>
+<h3 id="kona-preimage"><a class="header" href="#kona-preimage"><code>kona-preimage</code></a></h3>
+<p><code>kona-preimage</code> is an implementation of the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a>, built on top of <code>kona-common</code>. This
+crate enables synchronous communication between the host and client program, described in
+<a href="sdk/../fpp-dev/env.html#host---client-communication">Host &lt;-&gt; Client Communication</a> in the FPP Dev environment section of the
+book.</p>
+<p>The crate is built around the <a href="https://docs.rs/kona-preimage/latest/kona_preimage/struct.PipeHandle.html"><code>PipeHandle</code></a>,
+which serves as a single end of a bidirectional pipe (see: <a href="https://man7.org/linux/man-pages/man2/pipe.2.html"><code>pipe</code> manpage</a>).</p>
+<p>Through this handle, the higher-level constructs can read and write data to the counterparty holding on to the other end
+of the pipe, following the protocol below:</p>
+<center>
+<pre class="mermaid">sequenceDiagram
+    Client-&gt;&gt;+Host: Hint preimage (no-op on-chain / read-only mode)
+    Host--&gt;&gt;-Client: Hint acknowledgement
+    Client--&gt;&gt;+Host: Preimage Request
+    Host--&gt;&gt;Host: Prepare Preimage
+    Host--&gt;&gt;-Client: Preimage Data
+</pre>
+</center>
+<p>The interfaces of each part of the above protocol are described by the following traits:</p>
+<ul>
+<li><a href="https://docs.rs/kona-preimage/latest/kona_preimage/trait.PreimageOracleClient.html"><code>PreimageOracleClient</code></a>
+<ul>
+<li>To-spec implementation: <a href="https://docs.rs/kona-preimage/latest/kona_preimage/struct.OracleReader.html"><code>OracleReader</code></a></li>
+</ul>
+</li>
+<li><a href="https://docs.rs/kona-preimage/latest/kona_preimage/trait.HintWriterClient.html"><code>HintWriterClient</code></a>
+<ul>
+<li>To-spec implementation: <a href="https://docs.rs/kona-preimage/latest/kona_preimage/struct.HintWriter.html"><code>HintWriter</code></a></li>
+</ul>
+</li>
+<li><a href="https://docs.rs/kona-preimage/latest/kona_preimage/trait.PreimageOracleServer.html"><code>PreimageOracleServer</code></a>
+<ul>
+<li>To-spec implementation: <a href="https://docs.rs/kona-preimage/latest/kona_preimage/struct.OracleServer.html"><code>OracleServer</code></a></li>
+</ul>
+</li>
+<li><a href="https://docs.rs/kona-preimage/latest/kona_preimage/trait.HintReaderServer.html"><code>HintReaderServer</code></a>
+<ul>
+<li>To-spec implementation: <a href="https://docs.rs/kona-preimage/latest/kona_preimage/struct.HintReader.html"><code>HintReader</code></a></li>
+</ul>
+</li>
+</ul>
+<p>Each of these traits, however, can be re-implemented to redefine the host&lt;-&gt;client communication protocol if the needs
+of the consumer are not covered by the to-<a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">spec</a> implementations.</p>
+<h3 id="kona-client---oracle-backed-sources-example"><a class="header" href="#kona-client---oracle-backed-sources-example"><code>kona-client</code> - Oracle-backed sources (example)</a></h3>
+<p>Finally, in <code>kona-client</code>, implementations of data source traits from <code>kona-derive</code> and <code>kona-executor</code> are implemented
+to pull in untyped data from the host by <code>PreimageKey</code>. These data source traits are covered in more detail within
+the <a href="sdk/./custom-backend.html">Custom Backend</a> section, but we'll quickly gloss over them here to build intuition.</p>
+<p>Let's take, for example, <a href="https://github.com/anton-rs/kona/blob/40a8d7ec3def4a1eeb26492a1e4338d8b032e428/bin/client/src/l1/chain_provider.rs#L16-L23"><code>OracleL1ChainProvider</code></a>.
+The <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.ChainProvider.html"><code>ChainProvider</code></a> trait in <code>kona-derive</code>
+defines a simple interface for fetching information about the L1 chain. In the <code>OracleL1ChainProvider</code>, this information
+is pulled in over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a>. There are many other examples of these data source traits,
+namely the <code>L2ChainProvider</code>, <code>BlobProvider</code>, <code>TrieProvider</code>, and <code>TrieHinter</code>, which enable the creation of different
+data-source backends.</p>
+<p>As an example, let's look at <code>OracleL1ChainProvider::header_by_hash</code>, built on top of the <code>CommsClient</code> trait, which
+is a composition trait of the <code>PreimageOracleClient + HintReaderServer</code> traits outlined above.</p>
+<pre><code class="language-rs">#[async_trait]
+impl&lt;T: CommsClient + Sync + Send&gt; ChainProvider for OracleL1ChainProvider&lt;T&gt; {
+    type Error = anyhow::Error;
+
+    async fn header_by_hash(&amp;mut self, hash: B256) -&gt; Result&lt;Header&gt; {
+        // Send a hint for the block header.
+        self.oracle.write(&amp;HintType::L1BlockHeader.encode_with(&amp;[hash.as_ref()])).await?;
+
+        // Fetch the header RLP from the oracle.
+        let header_rlp =
+            self.oracle.get(PreimageKey::new(*hash, PreimageKeyType::Keccak256)).await?;
+
+        // Decode the header RLP into a Header.
+        Header::decode(&amp;mut header_rlp.as_slice())
+            .map_err(|e| anyhow!("Failed to decode header RLP: {e}"))
+    }
+
+    // - snip -
+}
+</code></pre>
+<p>In <code>header_by_hash</code>, we use the inner <code>HintWriter</code> to send a hint to the host to prepare the block hash preimage.
+Then, once we've received an acknowledgement from the host that the preimage has been prepared, we reach out for
+the RLP (which is the preimage of the hash). After the RLP is received, we decode the <code>Header</code> type, and return
+it to the user.</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="custom-backends"><a class="header" href="#custom-backends">Custom Backends</a></h1>
+<h2 id="understanding-the-op-stack-stf"><a class="header" href="#understanding-the-op-stack-stf">Understanding the OP Stack STF</a></h2>
+<p>The OP Stack state transition is comprised of two primary components:</p>
+<ul>
+<li><strong>The <a href="https://specs.optimism.io/protocol/derivation.html">derivation pipeline</a></strong> (<code>kona-derive</code>)
+<ul>
+<li>Responsible for deriving L2 chain state from the DA layer.</li>
+</ul>
+</li>
+<li><strong>The <a href="https://specs.optimism.io/protocol/exec-engine.html#l2-execution-engine">execution engine</a></strong> (<code>kona-executor</code>)
+<ul>
+<li>Responsible for the execution of transactions and state commitments.</li>
+<li>Ensures correct application of derived L2 state.</li>
+</ul>
+</li>
+</ul>
+<p>To prove the correctness of the state transition, Kona composes these two components:</p>
+<ul>
+<li>It combines the derivation of the L2 chain with its execution in the same process.</li>
+<li>It pulls in necessary data from sources to complete the STF, verifiably unrolling the input commitments along the way.</li>
+</ul>
+<p><code>kona-client</code> serves as an implementation of this process, capable of deriving and executing a single L2 block in a
+verifiable manner.</p>
+<blockquote>
+<p>📖 Why just a single block by default?</p>
+<p>On the OP Stack, we employ an interactive bisection game that narrows in on the disagreed upon block -&gt; block state
+transition before requiring a fault proof to be ran. Because of this, the default implementation only serves
+to derive and execute the single block that the participants of the bisection game landed on.</p>
+</blockquote>
+<h2 id="backend-traits"><a class="header" href="#backend-traits">Backend Traits</a></h2>
+<p>Covered in the <a href="sdk/./fpvm-backend.html">FPVM Backend</a> section of the book, <code>kona-client</code> ships with an implementation of
+<code>kona-derive</code> and <code>kona-executor</code>'s data source traits which pull in data over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a>.</p>
+<p>However, running <code>kona-client</code> on top of a different verifiable environment, i.e. a zkVM or TEE, is also possible
+through custom implementations of these data source traits.</p>
+<p><a href="https://github.com/succinctlabs/op-succinct"><code>op-succinct</code></a> is an excellent example of both a custom backend and a custom
+program, implementing both <code>kona-derive</code> and <code>kona-executor</code>'s data source traits backed by <a href="https://docs.rs/sp1-lib/latest/sp1_lib/io/index.html">sp1_lib::io</a>
+in order to:</p>
+<ol>
+<li>Execute <code>kona-client</code> verbatim, proving a single block's derivation and execution on SP-1.</li>
+<li>Derive and execute an entire <a href="https://specs.optimism.io/protocol/delta/span-batches.html#span-batches">Span Batch</a>
+worth of L2 blocks, using <code>kona-derive</code> and <code>kona-executor</code>.</li>
+</ol>
+<p>This section of the book outlines how you can do the same for a different platform.</p>
+<h3 id="custom-kona-derive-sources"><a class="header" href="#custom-kona-derive-sources">Custom <code>kona-derive</code> sources</a></h3>
+<p>Before getting started, we need to create custom implementations of the following traits:</p>
+<div class="table-wrapper"><table><thead><tr><th>Trait</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.ChainProvider.html"><code>ChainProvider</code></a></td><td>The <code>ChainProvider</code> trait describes the minimal interface for fetching data from L1 during L2 chain derivation.</td></tr>
+<tr><td><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.L2ChainProvider.html"><code>L2ChainProvider</code></a></td><td>The <code>ChainProvider</code> trait describes the minimal interface for fetching data from the safe L2 chain during L2 chain derivation.</td></tr>
+<tr><td><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.BlobProvider.html"><code>BlobProvider</code></a></td><td>The <code>BlobProvider</code> trait describes an interface for fetching EIP-4844 blobs from the L1 consensus layer during L2 chain derivation.</td></tr>
+</tbody></table>
+</div>
+<p>Once these are implemented, constructing the pipeline is as simple as passing in the data sources to the <code>PipelineBuilder</code>. Keep in mind the requirements for validation of incoming data, depending on your platform. For example, programs
+targeting zkVMs must constrain that the incoming data is indeed valid, whereas fault proof programs can offload this validation to the on-chain implementation of the host.</p>
+<pre><code class="language-rs">let chain_provider = ...;
+let l2_chain_provider = ...;
+let blob_provider = ...;
+let l1_origin = ...;
+
+let cfg = Arc::new(RollupConfig::default());
+let attributes = StatefulAttributesBuilder::new(
+   cfg.clone(),
+   l2_chain_provider.clone(),
+   chain_provider.clone(),
+);
+let dap = EthereumDataSource::new(
+   chain_provider.clone(),
+   blob_provider,
+   cfg.as_ref()
+);
+
+// Construct a new derivation pipeline.
+let pipeline = PipelineBuilder::new()
+   .rollup_config(cfg)
+   .dap_source(dap)
+   .l2_chain_provider(l2_chain_provider)
+   .chain_provider(chain_provider)
+   .builder(attributes)
+   .origin(l1_origin)
+   .build();
+</code></pre>
+<p>From here, a custom derivation driver is needed to produce the desired execution payload(s). An example of this for
+<code>kona-client</code> can be found in the <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77">DerivationDriver</a>.</p>
+<h3 id="kona-mpt--kona-executor-sources"><a class="header" href="#kona-mpt--kona-executor-sources"><code>kona-mpt</code> / <code>kona-executor</code> sources</a></h3>
+<p>Before getting started, we need to create custom implementations of the following traits:</p>
+<div class="table-wrapper"><table><thead><tr><th>Trait</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="https://docs.rs/kona-mpt/latest/kona_mpt/trait.TrieDBFetcher.html"><code>TrieDBFetcher</code></a></td><td>The <code>TrieDBFetcher</code> trait describes the interface for fetching trie node preimages and chain information while executing a payload on the L2 chain.</td></tr>
+<tr><td><a href="https://docs.rs/kona-mpt/latest/kona_mpt/trait.TrieDBHinter.html"><code>TrieDBHinter</code></a></td><td>The <code>TrieDBHinter</code> trait describes the interface for requesting the host program to prepare trie proof preimages for the client's consumption. For targets with upfront witness generation, i.e. zkVMs, a no-op hinter is exported as <a href="https://docs.rs/kona-mpt/latest/kona_mpt/struct.NoopTrieDBHinter.html"><code>NoopTrieDBHinter</code></a>.</td></tr>
+</tbody></table>
+</div>
+<p>Once we have those, the <code>StatelessL2BlockExecutor</code> can be constructed like so:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let cfg = RollupConfig::default();
+let provider = ...;
+let hinter = ...;
+
+let executor = StatelessL2BlcokExecutor::builder(&amp;cfg, provider, hinter)
+   .with_parent_header(...)
+   .build();
+
+let header = executor.execute_payload(...).expect("Failed execution");
+<span class="boring">}</span></code></pre></pre>
+<h3 id="bringing-it-together"><a class="header" href="#bringing-it-together">Bringing it Together</a></h3>
+<p>Once your custom backend traits for both <code>kona-derive</code> and <code>kona-executor</code> have been implemented,
+your final binary may look something like <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/kona.rs">that of <code>kona-client</code>'s</a>.
+Alternatively, if you're looking to prove a wider range of blocks, <a href="https://github.com/succinctlabs/op-succinct/tree/main/programs/range"><code>op-succinct</code>'s <code>range</code> program</a>
+offers a good example of running the pipeline and executor across a string of contiguous blocks.</p>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="kona-executor-extensions"><a class="header" href="#kona-executor-extensions"><code>kona-executor</code> Extensions</a></h1>
+<p>The <code>kona-executor</code> crate offers a to-spec, stateless implementation of the OP Stack STF. However, due to the
+power of <a href="https://github.com/bluealloy/revm"><code>revm</code></a>'s Handler abstractions, the logic of the STF can be easily modified.</p>
+<p>To register a custom handler, for example to add a custom precompile, modify the behavior of an EVM opcode,
+or change the fee handling, <code>StatelessL2BlockExecutorBuilder::with_handle_register</code> is your friend. It accepts a
+<a href="https://docs.rs/kona-executor/latest/kona_executor/type.KonaHandleRegister.html"><code>KonaHandleRegister</code></a>, which
+can be used to take full advantage of <a href="https://github.com/bluealloy/revm/blob/f57e3e639ee157c7e659e740bd175a7357003570/documentation/src/crates/revm/handler.md#handler"><code>revm</code>'s Handler API</a>.</p>
+<h2 id="example---custom-precompile"><a class="header" href="#example---custom-precompile">Example - Custom Precompile</a></h2>
+<pre><code class="language-rs">const MY_PRECOMPILE_ADDRESS: Address = u64_to_address(0xFF);
+
+fn my_precompile(input: &amp;Bytes, gas_limit: u64) -&gt; PrecompileResult {
+   Ok(PrecompileOutput::new(50, "hello, world!".as_bytes().into()))
+}
+
+fn custom_handle_register&lt;F, H&gt;(
+    handler: &amp;mut EvmHandler&lt;'_, (), &amp;mut State&lt;&amp;mut TrieDB&lt;F, H&gt;&gt;&gt;,
+) where
+   F: TrieProvider,
+   H: TrieHinter,
+{
+   let spec_id = handler.cfg.spec_id;
+
+   handler.pre_execution.load_precompiles = Arc::new(move || {
+      let mut ctx_precompiles = spec_to_generic!(spec_id, {
+         revm::optimism::load_precompiles::&lt;SPEC, (), &amp;mut State&lt;&amp;mut TrieDB&lt;F, H&gt;&gt;&gt;()
+      });
+
+      let precompile = PrecompileWithAddress(
+         MY_PRECOMPILE_ADDRESS,
+         Precompile::Standard(my_precompile)
+      );
+      ctx_precompiles.extend([precompile]);
+
+      ctx_precompiles
+   });
+}
+
+// - snip -
+
+let cfg = RollupConfig::default();
+let provider = ...;
+let hinter = ...;
+
+let executor = StatelessL2BlcokExecutor::builder(&amp;cfg, provider, hinter)
+   .with_parent_header(...)
+   .with_handle_register(custom_handle_register)
+   .build();
+</code></pre>
+<!-- External -->
+<!-- Kona links -->
+<!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <p><em>This document contains definitions for terms used throughout the Kona book.</em></p>
 <h4 id="fault-proof-vm"><a class="header" href="#fault-proof-vm">Fault Proof VM</a></h4>
@@ -475,7 +731,7 @@ datastore. Full specifications for the <code>Preimage ABI</code> are available i
 <!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contributing-1"><a class="header" href="#contributing-1">Contributing</a></h1>
 <p>Thank you for wanting to contribute! Before contributing to this repository, please read through this document and
-discuss the change you wish to make via issue or in the development telegram.</p>
+discuss the change you wish to make via issue.</p>
 <h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
 <p>Before working with this repository locally, you'll need to install several dependencies:</p>
 <ul>
@@ -543,11 +799,12 @@ If not, the maintainer who approves your pull request will add it to the merge q
         <script src="mermaid-init.js"></script>
 
         <script>
-        window.addEventListener('load', function() {
-            window.setTimeout(window.print, 100);
-        });
+            window.addEventListener('load', function () {
+                window.setTimeout(window.print, 100);
+            });
         </script>
 
     </div>
-    </body>
+</body>
+
 </html>

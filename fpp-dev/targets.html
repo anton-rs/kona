@@ -1,42 +1,45 @@
 <!DOCTYPE HTML>
-<html lang="en" class="light" dir="ltr">
-    <head>
-        <!-- Book generated using mdBook -->
-        <meta charset="UTF-8">
-        <title>Supported Targets - The Kona Book</title>
+<html lang="en" class="ferra" dir="ltr">
+
+<head>
+    <!-- Book generated using mdBook -->
+    <meta charset="UTF-8">
+    <title>Supported Targets - The Kona Book</title>
 
 
-        <!-- Custom HTML head -->
-        
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff">
+    <!-- Custom HTML head -->
+    
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../favicon.svg">
-        <link rel="shortcut icon" href="../favicon.png">
-        <link rel="stylesheet" href="../css/variables.css">
-        <link rel="stylesheet" href="../css/general.css">
-        <link rel="stylesheet" href="../css/chrome.css">
-        <link rel="stylesheet" href="../css/print.css" media="print">
+    <link rel="icon" href="../favicon.svg">
+    <link rel="shortcut icon" href="../favicon.png">
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/general.css">
+    <link rel="stylesheet" href="../css/chrome.css">
+    <link rel="stylesheet" href="../css/print.css" media="print">
 
-        <!-- Fonts -->
-        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="../fonts/fonts.css">
+    <!-- Fonts -->
+    <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+    <link rel="stylesheet" href="../fonts/fonts.css">
 
-        <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../highlight.css">
-        <link rel="stylesheet" href="../tomorrow-night.css">
-        <link rel="stylesheet" href="../ayu-highlight.css">
+    <!-- Highlight.js Stylesheets -->
+    <link rel="stylesheet" href="../highlight.css">
+    <link rel="stylesheet" href="../tomorrow-night.css">
+    <link rel="stylesheet" href="../ayu-highlight.css">
 
-        <!-- Custom theme stylesheets -->
+    <!-- Custom theme stylesheets -->
+    <link rel="stylesheet" href="../custom.css">
 
-    </head>
-    <body class="sidebar-visible no-js">
+</head>
+
+<body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ferra" : "ferra";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
@@ -58,10 +61,10 @@
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
             var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('light')
+            html.classList.remove('ferra')
             html.classList.add(theme);
             var body = document.querySelector('body');
             body.classList.remove('no-js')
@@ -76,7 +79,7 @@
             var sidebar = null;
             var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
-                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch (e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
@@ -88,7 +91,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html" class="active"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">3.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">4.</strong> Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html" class="active"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -98,7 +101,7 @@
         <!-- Track and set sidebar scroll position -->
         <script>
             var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
-            sidebarScrollbox.addEventListener('click', function(e) {
+            sidebarScrollbox.addEventListener('click', function (e) {
                 if (e.target.tagName === 'A') {
                     sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
                 }
@@ -123,10 +126,14 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor"
+                            title="Toggle Table of Contents" aria-label="Toggle Table of Contents"
+                            aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
                         </label>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme"
+                            aria-label="Change theme" aria-haspopup="true" aria-expanded="false"
+                            aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
@@ -135,8 +142,11 @@
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ferra">Ferra</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)"
+                            aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S"
+                            aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -147,13 +157,20 @@
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/fpp-dev/targets.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
 
                     </div>
                 </div>
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..."
+                            aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -166,7 +183,7 @@
                 <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function (link) {
                         link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
                     });
                 </script>
@@ -176,89 +193,12 @@
                         <h1 id="supported-targets"><a class="header" href="#supported-targets">Supported Targets</a></h1>
 <p>Kona seeks to support all FPVM targets that LLVM and <code>rustc</code> can offer introductory support for. Below is a matrix of features that Kona offers
 for each FPVM target:</p>
-<div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th><th>Program Stages</th></tr></thead><tbody>
-<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
-<tr><td><code>asterisc</code></td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<div class="table-wrapper"><table><thead><tr><th>Target</th><th>Build Pipeline</th><th>IO</th><th>malloc</th></tr></thead><tbody>
+<tr><td><code>cannon</code> &amp; <code>cannon-rs</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><code>asterisc</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
 </tbody></table>
 </div>
 <p>If there is a feature that you would like to see supported, please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
-<h2 id="cannon-mips32r2"><a class="header" href="#cannon-mips32r2">Cannon (MIPS32r2)</a></h2>
-<p>Cannon is based off of the <code>mips32r2</code> target architecture, supporting 55 instructions:</p>
-<div class="table-wrapper"><table><thead><tr><th>Category</th><th>Instruction</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>Arithmetic</code></td><td><code>addi</code></td><td>Add immediate (with sign-extension).</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>addiu</code></td><td>Add immediate unsigned (no overflow).</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>addu</code></td><td>Add unsigned (no overflow).</td></tr>
-<tr><td><code>Logical</code></td><td><code>and</code></td><td>Bitwise AND.</td></tr>
-<tr><td><code>Logical</code></td><td><code>andi</code></td><td>Bitwise AND immediate.</td></tr>
-<tr><td><code>Branch</code></td><td><code>b</code></td><td>Unconditional branch.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>beq</code></td><td>Branch on equal.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>beqz</code></td><td>Branch if equal to zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bgez</code></td><td>Branch on greater than or equal to zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bgtz</code></td><td>Branch on greater than zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>blez</code></td><td>Branch on less than or equal to zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bltz</code></td><td>Branch on less than zero.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bne</code></td><td>Branch on not equal.</td></tr>
-<tr><td><code>Conditional Branch</code></td><td><code>bnez</code></td><td>Branch if not equal to zero.</td></tr>
-<tr><td><code>Logical</code></td><td><code>clz</code></td><td>Count leading zeros.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>divu</code></td><td>Divide unsigned.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>j</code></td><td>Jump.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>jal</code></td><td>Jump and link.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>jalr</code></td><td>Jump and link register.</td></tr>
-<tr><td><code>Unconditional Jump</code></td><td><code>jr</code></td><td>Jump register.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lb</code></td><td>Load byte.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lbu</code></td><td>Load byte unsigned.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lui</code></td><td>Load upper immediate.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lw</code></td><td>Load word.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>lwr</code></td><td>Load word right.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>mfhi</code></td><td>Move from HI register.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>mflo</code></td><td>Move from LO register.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>move</code></td><td>Move between registers.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>movn</code></td><td>Move conditional on not zero.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>movz</code></td><td>Move conditional on zero.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>mtlo</code></td><td>Move to LO register.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>mul</code></td><td>Multiply (to produce a word result).</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>multu</code></td><td>Multiply unsigned.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>negu</code></td><td>Negate unsigned.</td></tr>
-<tr><td><code>No Op</code></td><td><code>nop</code></td><td>No operation.</td></tr>
-<tr><td><code>Logical</code></td><td><code>not</code></td><td>Bitwise NOT (pseudo-instruction in MIPS).</td></tr>
-<tr><td><code>Logical</code></td><td><code>or</code></td><td>Bitwise OR.</td></tr>
-<tr><td><code>Logical</code></td><td><code>ori</code></td><td>Bitwise OR immediate.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>sb</code></td><td>Store byte.</td></tr>
-<tr><td><code>Logical</code></td><td><code>sll</code></td><td>Shift left logical.</td></tr>
-<tr><td><code>Logical</code></td><td><code>sllv</code></td><td>Shift left logical variable.</td></tr>
-<tr><td><code>Comparison</code></td><td><code>slt</code></td><td>Set on less than (signed).</td></tr>
-<tr><td><code>Comparison</code></td><td><code>slti</code></td><td>Set on less than immediate.</td></tr>
-<tr><td><code>Comparison</code></td><td><code>sltiu</code></td><td>Set on less than immediate unsigned.</td></tr>
-<tr><td><code>Comparison</code></td><td><code>sltu</code></td><td>Set on less than unsigned.</td></tr>
-<tr><td><code>Logical</code></td><td><code>sra</code></td><td>Shift right arithmetic.</td></tr>
-<tr><td><code>Logical</code></td><td><code>srl</code></td><td>Shift right logical.</td></tr>
-<tr><td><code>Logical</code></td><td><code>srlv</code></td><td>Shift right logical variable.</td></tr>
-<tr><td><code>Arithmetic</code></td><td><code>subu</code></td><td>Subtract unsigned.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>sw</code></td><td>Store word.</td></tr>
-<tr><td><code>Data Transfer</code></td><td><code>swr</code></td><td>Store word right.</td></tr>
-<tr><td><code>Serialization</code></td><td><code>sync</code></td><td>Synchronize shared memory.</td></tr>
-<tr><td><code>System Calls</code></td><td><code>syscall</code></td><td>System call.</td></tr>
-<tr><td><code>Logical</code></td><td><code>xor</code></td><td>Bitwise XOR.</td></tr>
-<tr><td><code>Logical</code></td><td><code>xori</code></td><td>Bitwise XOR immediate.</td></tr>
-</tbody></table>
-</div>
-<h3 id="syscalls"><a class="header" href="#syscalls">Syscalls</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>$v0</th><th>system call</th><th>$a0</th><th>$a1</th><th>$a2</th><th>Effect</th></tr></thead><tbody>
-<tr><td>4090</td><td>mmap</td><td>uint32 addr</td><td>uint32 len</td><td>🚫</td><td>Allocates a page from the heap. See <a href="#heap">heap</a> for details.</td></tr>
-<tr><td>4045</td><td>brk</td><td>🚫</td><td>🚫</td><td>🚫</td><td>Returns a fixed address for the program break at <code>0x40000000</code></td></tr>
-<tr><td>4120</td><td>clone</td><td>🚫</td><td>🚫</td><td>🚫</td><td>Returns 1</td></tr>
-<tr><td>4246</td><td>exit_group</td><td>uint8 exit_code</td><td>🚫</td><td>🚫</td><td>Sets the Exited and ExitCode states to <code>true</code> and <code>$a0</code> respectively.</td></tr>
-<tr><td>4003</td><td>read</td><td>uint32 fd</td><td>char *buf</td><td>uint32 count</td><td>Similar behavior as Linux/MIPS with support for unaligned reads. See <a href="#io">I/O</a> for more details.</td></tr>
-<tr><td>4004</td><td>write</td><td>uint32 fd</td><td>char *buf</td><td>uint32 count</td><td>Similar behavior as Linux/MIPS with support for unaligned writes. See <a href="#io">I/O</a> for more details.</td></tr>
-<tr><td>4055</td><td>fcntl</td><td>uint32 fd</td><td>int32 cmd</td><td>🚫</td><td>Similar behavior as Linux/MIPS. Only the <code>F_GETFL</code> (3) cmd is supported. Sets errno to <code>0x16</code> for all other commands</td></tr>
-</tbody></table>
-</div>
-<p>For all of the above syscalls, an error is indicated by setting the return
-register (<code>$v0</code>) to <code>0xFFFFFFFF</code> (-1) and <code>errno</code> (<code>$a3</code>) is set accordingly.
-The VM must not modify any register other than <code>$v0</code> and <code>$a3</code> during syscall handling.
-For unsupported syscalls, the VM must do nothing except to zero out the syscall return (<code>$v0</code>)
-and errno (<code>$a3</code>) registers.</p>
-<p>Note that the above syscalls have identical syscall numbers and ABIs as Linux/MIPS.</p>
 <h2 id="asterisc-risc-v"><a class="header" href="#asterisc-risc-v">Asterisc (RISC-V)</a></h2>
 <p>Asterisc is based off of the <code>rv64gc</code> target architecture, which defines the following extensions:</p>
 <ul>
@@ -272,7 +212,6 @@ and errno (<code>$a3</code>) registers.</p>
 </ul>
 </li>
 <li><code>RV64I</code> support</li>
-<li><code>RV64C</code>: Compressed instructions</li>
 <li><code>RV32M</code>+<code>RV64M</code>: Multiplication support</li>
 <li><code>RV32A</code>+<code>RV64A</code>: Atomics support</li>
 <li><code>RV{32,64}{D,F,Q}</code>: no-op: No floating points support (since no IEEE754 determinism with rounding modes etc., nor worth the complexity)</li>
@@ -281,13 +220,17 @@ and errno (<code>$a3</code>) registers.</p>
 <li><code>Ztso</code>: no-op: no need for Total Store Ordering</li>
 <li>other: revert with error code on unrecognized instructions</li>
 </ul>
-<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/ethereum-optimism/asterisc">in the repository</a>. <code>kona</code> offers an interface for
+<p><code>asterisc</code> supports a plethora of syscalls, documented <a href="https://github.com/ethereum-optimism/asterisc/blob/master/docs/golang.md#linux-syscalls-used-by-go">in the repository</a>. <code>kona</code> offers an interface for
 programs to directly invoke a select few syscalls:</p>
 <ol>
 <li><code>EXIT</code> - Terminate the process with the provided exit code.</li>
 <li><code>WRITE</code> - Write the passed buffer to the passed file descriptor.</li>
 <li><code>READ</code> - Read the specified number of bytes from the passed file descriptor.</li>
 </ol>
+<h2 id="cannon-mips32r2"><a class="header" href="#cannon-mips32r2">Cannon (MIPS32r2)</a></h2>
+<p>Cannon is based off of the <code>mips32r2</code> target architecture, specified in <a href="https://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf"><em>MIPS32™ Architecture For Programmers Volume III: The MIPS32™ Privileged Resource Architecture</em></a></p>
+<h3 id="syscalls"><a class="header" href="#syscalls">Syscalls</a></h3>
+<p>Syscalls supported by <code>cannon</code> can be found within the <code>cannon</code> specification <a href="https://specs.optimism.io/fault-proof/cannon-fault-proof-vm.html#syscalls">here</a>.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
@@ -296,13 +239,15 @@ programs to directly invoke a select few syscalls:</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../fpp-dev/env.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
-                            </a>
+                        <a rel="prev" href="../fpp-dev/env.html" class="mobile-nav-chapters previous"
+                            title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <i class="fa fa-angle-left"></i>
+                        </a>
 
-                            <a rel="next prefetch" href="../fpp-dev/prologue.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
+                        <a rel="next prefetch" href="../fpp-dev/prologue.html" class="mobile-nav-chapters next"
+                            title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -310,13 +255,15 @@ programs to directly invoke a select few syscalls:</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../fpp-dev/env.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
-                    </a>
+                <a rel="prev" href="../fpp-dev/env.html" class="nav-chapters previous" title="Previous chapter"
+                    aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <i class="fa fa-angle-left"></i>
+                </a>
 
-                    <a rel="next prefetch" href="../fpp-dev/prologue.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
+                <a rel="next prefetch" href="../fpp-dev/prologue.html" class="nav-chapters next" title="Next chapter"
+                    aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <i class="fa fa-angle-right"></i>
+                </a>
             </nav>
 
         </div>
@@ -343,5 +290,6 @@ programs to directly invoke a select few syscalls:</p>
 
 
     </div>
-    </body>
+</body>
+
 </html>
