@@ -20,7 +20,6 @@ type BatchQueueStage<DAP, P, T> = BatchQueue<ChannelReaderStage<DAP, P>, T>;
 type AttributesQueueStage<DAP, P, T, B> = AttributesQueue<BatchQueueStage<DAP, P, T>, B>;
 
 /// The `PipelineBuilder` constructs a [DerivationPipeline] using a builder pattern.
-#[cfg_attr(feature = "online", doc = include_str!("../../USAGE.md"))]
 #[derive(Debug)]
 pub struct PipelineBuilder<B, P, T, D>
 where

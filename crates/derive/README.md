@@ -48,6 +48,7 @@ let pipeline = PipelineBuilder::new()
 ```
 
 [p]: ./src/traits/pipeline.rs
+[pb]: ./src/pipeline/builder.rs
 [dp]: ./src/pipeline/core.rs
 
 ## Features
