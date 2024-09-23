@@ -1,10 +1,10 @@
 use core::fmt::Display;
 
+use crate::block::OpBlock;
 use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use async_trait::async_trait;
-use kona_primitives::L2ExecutionPayloadEnvelope;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
@@ -42,12 +42,9 @@ pub trait L2ChainProvider {
     /// Errors if the block does not exist.
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error>;
 
-    /// Returns an execution payload for a given number.
-    /// Errors if the execution payload does not exist.
-    async fn payload_by_number(
-        &mut self,
-        number: u64,
-    ) -> Result<L2ExecutionPayloadEnvelope, Self::Error>;
+    /// Returns the block for a given number.
+    /// Errors if no block is available for the given block number.
+    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock, Self::Error>;
 
     /// Returns the [SystemConfig] by L2 number.
     async fn system_config_by_number(

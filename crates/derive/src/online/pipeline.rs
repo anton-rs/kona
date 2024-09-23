@@ -8,6 +8,7 @@ use super::{
 use alloc::sync::Arc;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
+
 // Pipeline internal stages aren't re-exported at the module-level.
 use crate::stages::{
     AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval, L1Traversal,

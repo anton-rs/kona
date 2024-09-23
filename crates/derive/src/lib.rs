@@ -10,6 +10,7 @@ extern crate alloc;
 mod macros;
 
 pub mod batch;
+pub mod block;
 pub mod errors;
 pub mod params;
 pub mod pipeline;

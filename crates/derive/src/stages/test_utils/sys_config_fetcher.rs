@@ -1,11 +1,10 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use crate::traits::L2ChainProvider;
+use crate::{block::OpBlock, traits::L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc};
 use anyhow::Result;
 use async_trait::async_trait;
 use hashbrown::HashMap;
-use kona_primitives::L2ExecutionPayloadEnvelope;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
 
@@ -47,7 +46,7 @@ impl L2ChainProvider for MockSystemConfigL2Fetcher {
         unimplemented!()
     }
 
-    async fn payload_by_number(&mut self, _: u64) -> Result<L2ExecutionPayloadEnvelope> {
+    async fn block_by_number(&mut self, _: u64) -> Result<OpBlock> {
         unimplemented!()
     }
 }
