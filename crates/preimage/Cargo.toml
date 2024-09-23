@@ -10,7 +10,7 @@ homepage.workspace = true
 
 [dependencies]
 # General
-anyhow.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 alloy-primitives.workspace = true
 async-trait.workspace = true

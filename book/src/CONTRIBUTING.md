@@ -1,7 +1,7 @@
 # Contributing
 
 Thank you for wanting to contribute! Before contributing to this repository, please read through this document and
-discuss the change you wish to make via issue or in the development telegram.
+discuss the change you wish to make via issue.
 
 ## Dependencies
 

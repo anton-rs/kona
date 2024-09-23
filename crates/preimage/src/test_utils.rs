@@ -1,7 +1,7 @@
 //! Test utilities for the `kona-preimage` crate.
 
-use anyhow::{anyhow, Result};
 use os_pipe::{PipeReader, PipeWriter};
+use std::io::Result;
 
 /// A bidirectional pipe, with a client and host end.
 #[derive(Debug)]
@@ -19,8 +19,8 @@ pub(crate) struct Pipe {
 
 /// Creates a [BidirectionalPipe] instance.
 pub(crate) fn bidirectional_pipe() -> Result<BidirectionalPipe> {
-    let (ar, bw) = os_pipe::pipe().map_err(|e| anyhow!("Failed to create pipe: {e}"))?;
-    let (br, aw) = os_pipe::pipe().map_err(|e| anyhow!("Failed to create pipe: {e}"))?;
+    let (ar, bw) = os_pipe::pipe()?;
+    let (br, aw) = os_pipe::pipe()?;
 
     Ok(BidirectionalPipe {
         client: Pipe { read: ar, write: aw },

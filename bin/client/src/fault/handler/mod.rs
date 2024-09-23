@@ -3,7 +3,7 @@
 //! [KonaHandleRegister]: kona_executor::KonaHandleRegister
 
 use alloc::sync::Arc;
-use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
 use revm::{
     handler::register::EvmHandler,
     primitives::{spec_to_generic, SpecId},
@@ -20,8 +20,8 @@ mod kzg_point_eval;
 pub(crate) fn fpvm_handle_register<F, H>(
     handler: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>,
 ) where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     let spec_id = handler.cfg.spec_id;
 

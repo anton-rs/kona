@@ -3,15 +3,21 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
 mod db;
 pub use db::{TrieAccount, TrieDB};
 
+mod errors;
+pub use errors::{
+    OrderedListWalkerError, OrderedListWalkerResult, TrieDBError, TrieDBResult, TrieNodeError,
+    TrieNodeResult,
+};
+
 mod fetcher;
-pub use fetcher::{NoopTrieDBFetcher, NoopTrieDBHinter, TrieDBFetcher, TrieDBHinter};
+pub use fetcher::{NoopTrieHinter, NoopTrieProvider, TrieHinter, TrieProvider};
 
 mod node;
 pub use node::TrieNode;

@@ -2,8 +2,7 @@
 
 use crate::StatelessL2BlockExecutor;
 use alloy_consensus::{Header, Sealable, Sealed};
-use anyhow::Result;
-use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
 use revm::{db::State, handler::register::EvmHandler};
 
@@ -15,46 +14,34 @@ pub type KonaHandleRegister<F, H> =
 #[derive(Debug)]
 pub struct StatelessL2BlockExecutorBuilder<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
+    /// The [TrieProvider] to fetch the state trie preimages.
+    provider: F,
+    /// The [TrieHinter] to hint the state trie preimages.
+    hinter: H,
     /// The parent [Header] to begin execution from.
     parent_header: Option<Sealed<Header>>,
     /// The [KonaHandleRegister] to use during execution.
     handler_register: Option<KonaHandleRegister<F, H>>,
-    /// The [TrieDBFetcher] to fetch the state trie preimages.
-    fetcher: Option<F>,
-    /// The [TrieDBHinter] to hint the state trie preimages.
-    hinter: Option<H>,
 }
 
 impl<'a, F, H> StatelessL2BlockExecutorBuilder<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// Instantiate a new builder with the given [RollupConfig].
-    pub fn with_config(config: &'a RollupConfig) -> Self {
-        Self { config, parent_header: None, handler_register: None, fetcher: None, hinter: None }
+    pub fn new(config: &'a RollupConfig, provider: F, hinter: H) -> Self {
+        Self { config, provider, hinter, parent_header: None, handler_register: None }
     }
 
     /// Set the [Header] to begin execution from.
     pub fn with_parent_header(mut self, parent_header: Sealed<Header>) -> Self {
         self.parent_header = Some(parent_header);
-        self
-    }
-
-    /// Set the [TrieDBFetcher] to fetch the state trie preimages.
-    pub fn with_fetcher(mut self, fetcher: F) -> Self {
-        self.fetcher = Some(fetcher);
-        self
-    }
-
-    /// Set the [TrieDBHinter] to hint the state trie preimages.
-    pub fn with_hinter(mut self, hinter: H) -> Self {
-        self.hinter = Some(hinter);
         self
     }
 
@@ -65,19 +52,18 @@ where
     }
 
     /// Build the [StatelessL2BlockExecutor] from the builder configuration.
-    pub fn build(self) -> Result<StatelessL2BlockExecutor<'a, F, H>> {
-        let fetcher = self.fetcher.ok_or(anyhow::anyhow!("Fetcher not set"))?;
-        let hinter = self.hinter.ok_or(anyhow::anyhow!("Hinter not set"))?;
+    pub fn build(self) -> StatelessL2BlockExecutor<'a, F, H> {
         let parent_header = self.parent_header.unwrap_or_else(|| {
             let default_header = Header::default();
             default_header.seal_slow()
         });
 
-        let trie_db = TrieDB::new(parent_header.state_root, parent_header, fetcher, hinter);
-        Ok(StatelessL2BlockExecutor {
+        let trie_db =
+            TrieDB::new(parent_header.state_root, parent_header, self.provider, self.hinter);
+        StatelessL2BlockExecutor {
             config: self.config,
             trie_db,
             handler_register: self.handler_register,
-        })
+        }
     }
 }

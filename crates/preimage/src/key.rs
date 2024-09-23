@@ -1,6 +1,7 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
 //! the preimage oracle.
 
+use crate::errors::InvalidPreimageKeyType;
 use alloy_primitives::{B256, U256};
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
@@ -11,7 +12,6 @@ use serde::{Deserialize as SerdeDeserialize, Serialize as SerdeSerialize};
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
 #[cfg_attr(feature = "rkyv", derive(Archive, RkyvSerialize, RkyvDeserialize))]
-#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)))]
 #[cfg_attr(feature = "serde", derive(SerdeSerialize, SerdeDeserialize))]
 pub enum PreimageKeyType {
     /// Local key types are local to a given instance of a fault-proof and context dependent.
@@ -37,18 +37,19 @@ pub enum PreimageKeyType {
 }
 
 impl TryFrom<u8> for PreimageKeyType {
-    type Error = anyhow::Error;
+    type Error = InvalidPreimageKeyType;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(match value {
+        let key_type = match value {
             1 => PreimageKeyType::Local,
             2 => PreimageKeyType::Keccak256,
             3 => PreimageKeyType::GlobalGeneric,
             4 => PreimageKeyType::Sha256,
             5 => PreimageKeyType::Blob,
             6 => PreimageKeyType::Precompile,
-            _ => anyhow::bail!("Invalid preimage key type"),
-        })
+            _ => return Err(InvalidPreimageKeyType),
+        };
+        Ok(key_type)
     }
 }
 
@@ -62,7 +63,6 @@ impl TryFrom<u8> for PreimageKeyType {
 /// | [1, 32) | Data        |
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "rkyv", derive(Archive, RkyvSerialize, RkyvDeserialize))]
-#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)))]
 #[cfg_attr(feature = "serde", derive(SerdeSerialize, SerdeDeserialize))]
 pub struct PreimageKey {
     data: [u8; 31],
@@ -114,7 +114,7 @@ impl From<PreimageKey> for B256 {
 }
 
 impl TryFrom<[u8; 32]> for PreimageKey {
-    type Error = anyhow::Error;
+    type Error = InvalidPreimageKeyType;
 
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
         let key_type = PreimageKeyType::try_from(value[0])?;

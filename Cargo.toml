@@ -2,7 +2,7 @@
 version = "0.0.0"
 edition = "2021"
 license = "MIT"
-rust-version = "1.80"
+rust-version = "1.81"
 authors = ["clabby", "refcell"]
 repository = "https://github.com/anton-rs/kona"
 homepage = "https://github.com/anton-rs/kona"
@@ -47,22 +47,22 @@ kona-derive = { path = "crates/derive", version = "0.0.3", default-features = fa
 kona-primitives = { path = "crates/primitives", version = "0.0.2", default-features = false }
 
 # General
-anyhow = { version = "1.0.86", default-features = false }
+anyhow = { version = "1.0.89", default-features = false }
 thiserror = { git = "https://github.com/quartiq/thiserror", branch = "no-std", default-features = false }
 cfg-if = "1.0.0"
 hashbrown = "0.14.5"
 spin = { version = "0.9.8", features = ["mutex"] }
-lru = "0.12.3"
-async-trait = "0.1.80"
+lru = "0.12.4"
+async-trait = "0.1.82"
 lazy_static = "1.5.0"
 reqwest = "0.12"
 os_pipe = "1.2.1"
-actix-web = "4.8.0"
+actix-web = "4.9.0"
 rand = "0.8.5"
 futures = { version = "0.3.30", default-features = false }
 prometheus = { version = "0.13.4", features = ["process"] }
-tokio = { version = "1.38", features = ["full"] }
-clap = { version = "4.5.4", features = ["derive", "env"] }
+tokio = { version = "1.40", features = ["full"] }
+clap = { version = "4.5.18", features = ["derive", "env"] }
 sha2 = { version = "0.10.8", default-features = false }
 c-kzg = { version = "1.0.2", default-features = false }
 alloc-no-stdlib = "2.0.4"
@@ -79,18 +79,18 @@ miniz_oxide = "0.8.0"
 brotli = { version = "6.0.0", default-features = false }
 
 # Testing
-proptest = "1.4"
+proptest = "1.5"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 pprof = { version = "0.13.0", features = ["criterion", "flamegraph", "frame-pointer"] } 
 
 # Serialization
-rkyv = "0.7.44"
-serde = { version = "1.0.203", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0.125", default-features = false }
+rkyv = "0.8.8"
+serde = { version = "1.0.210", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.128", default-features = false }
 
 # Ethereum
 unsigned-varint = "0.8.0"
-revm = { version = "14.0", default-features = false }
+revm = { version = "14.0.2", default-features = false }
 
 # Optimism
 superchain = { version = "0.5", default-features = false }
@@ -100,17 +100,17 @@ rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
 
 # Alloy
 alloy-rlp = { version = "0.3.8", default-features = false }
-alloy-trie = { version = "0.5", default-features = false }
-alloy-eips = { version = "0.3.5", default-features = false }
-alloy-provider = { version = "0.3.5", default-features = false }
+alloy-trie = { version = "0.5.3", default-features = false }
+alloy-eips = { version = "0.3.6", default-features = false }
+alloy-provider = { version = "0.3.6", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
-alloy-consensus = { version = "0.3.5", default-features = false }
-alloy-transport = { version = "0.3.5", default-features = false }
-alloy-rpc-types = { version = "0.3.5", default-features = false }
-alloy-rpc-client = { version = "0.3.5", default-features = false }
-alloy-rpc-types-engine = { version = "0.3.5", default-features = false }
-alloy-node-bindings = { version = "0.3.5", default-features = false }
-alloy-transport-http = { version = "0.3.5", default-features = false }
+alloy-consensus = { version = "0.3.6", default-features = false }
+alloy-transport = { version = "0.3.6", default-features = false }
+alloy-rpc-types = { version = "0.3.6", default-features = false }
+alloy-rpc-client = { version = "0.3.6", default-features = false }
+alloy-rpc-types-engine = { version = "0.3.6", default-features = false }
+alloy-node-bindings = { version = "0.3.6", default-features = false }
+alloy-transport-http = { version = "0.3.6", default-features = false }
 
 # OP Alloy
 op-alloy-consensus = { version = "0.2.12", default-features = false }

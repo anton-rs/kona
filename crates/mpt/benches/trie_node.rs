@@ -2,7 +2,7 @@
 
 use alloy_trie::Nibbles;
 use criterion::{criterion_group, criterion_main, Criterion};
-use kona_mpt::{NoopTrieDBFetcher, NoopTrieDBHinter, TrieNode};
+use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieNode};
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 
@@ -20,7 +20,7 @@ fn trie(c: &mut Criterion) {
         b.iter(|| {
             let mut trie = TrieNode::Empty;
             for key in &keys {
-                trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+                trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
             }
         });
     });
@@ -32,7 +32,7 @@ fn trie(c: &mut Criterion) {
         b.iter(|| {
             let mut trie = TrieNode::Empty;
             for key in &keys {
-                trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+                trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
             }
         });
     });
@@ -46,13 +46,13 @@ fn trie(c: &mut Criterion) {
         let keys_to_delete = keys.choose_multiple(rng, 16).cloned().collect::<Vec<_>>();
 
         for key in &keys {
-            trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+            trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
         }
 
         b.iter(|| {
             let trie = &mut trie.clone();
             for key in &keys_to_delete {
-                trie.delete(key, &NoopTrieDBFetcher, &NoopTrieDBHinter).unwrap();
+                trie.delete(key, &NoopTrieProvider, &NoopTrieHinter).unwrap();
             }
         });
     });
@@ -62,7 +62,7 @@ fn trie(c: &mut Criterion) {
             (0..2usize.pow(16)).map(|_| Nibbles::unpack(rng.gen::<[u8; 32]>())).collect::<Vec<_>>();
         let mut trie = TrieNode::Empty;
         for key in &keys {
-            trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+            trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
         }
 
         let rng = &mut rand::thread_rng();
@@ -71,7 +71,7 @@ fn trie(c: &mut Criterion) {
         b.iter(|| {
             let trie = &mut trie.clone();
             for key in &keys_to_delete {
-                trie.delete(key, &NoopTrieDBFetcher, &NoopTrieDBHinter).unwrap();
+                trie.delete(key, &NoopTrieProvider, &NoopTrieHinter).unwrap();
             }
         });
     });
@@ -81,7 +81,7 @@ fn trie(c: &mut Criterion) {
             (0..2usize.pow(12)).map(|_| Nibbles::unpack(rng.gen::<[u8; 32]>())).collect::<Vec<_>>();
         let mut trie = TrieNode::Empty;
         for key in &keys {
-            trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+            trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
         }
 
         let rng = &mut rand::thread_rng();
@@ -89,7 +89,7 @@ fn trie(c: &mut Criterion) {
 
         b.iter(|| {
             for key in &keys_to_retrieve {
-                trie.open(key, &NoopTrieDBFetcher).unwrap();
+                trie.open(key, &NoopTrieProvider).unwrap();
             }
         });
     });
@@ -99,7 +99,7 @@ fn trie(c: &mut Criterion) {
             (0..2usize.pow(16)).map(|_| Nibbles::unpack(rng.gen::<[u8; 32]>())).collect::<Vec<_>>();
         let mut trie = TrieNode::Empty;
         for key in &keys {
-            trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+            trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
         }
 
         let rng = &mut rand::thread_rng();
@@ -107,7 +107,7 @@ fn trie(c: &mut Criterion) {
 
         b.iter(|| {
             for key in &keys_to_retrieve {
-                trie.open(key, &NoopTrieDBFetcher).unwrap();
+                trie.open(key, &NoopTrieProvider).unwrap();
             }
         });
     });
@@ -117,7 +117,7 @@ fn trie(c: &mut Criterion) {
             (0..2usize.pow(12)).map(|_| Nibbles::unpack(rng.gen::<[u8; 32]>())).collect::<Vec<_>>();
         let mut trie = TrieNode::Empty;
         for key in &keys {
-            trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+            trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
         }
 
         b.iter(|| {
@@ -131,7 +131,7 @@ fn trie(c: &mut Criterion) {
             (0..2usize.pow(16)).map(|_| Nibbles::unpack(rng.gen::<[u8; 32]>())).collect::<Vec<_>>();
         let mut trie = TrieNode::Empty;
         for key in &keys {
-            trie.insert(key, key.to_vec().into(), &NoopTrieDBFetcher).unwrap();
+            trie.insert(key, key.to_vec().into(), &NoopTrieProvider).unwrap();
         }
 
         b.iter(|| {

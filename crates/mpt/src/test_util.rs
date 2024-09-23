@@ -1,8 +1,6 @@
 //! Testing utilities for `kona-mpt`
 
-extern crate std;
-
-use crate::{ordered_trie_with_encoder, TrieDBFetcher};
+use crate::{ordered_trie_with_encoder, TrieProvider};
 use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{keccak256, Bytes, Log, B256};
@@ -116,7 +114,7 @@ pub(crate) async fn get_live_derivable_transactions_list(
     Ok((root, preimages, consensus_txs))
 }
 
-/// A mock [TrieDBFetcher] for testing that serves in-memory preimages.
+/// A mock [TrieProvider] for testing that serves in-memory preimages.
 pub(crate) struct TrieNodeProvider {
     preimages: BTreeMap<B256, Bytes>,
     bytecode: BTreeMap<B256, Bytes>,
@@ -133,7 +131,9 @@ impl TrieNodeProvider {
     }
 }
 
-impl TrieDBFetcher for TrieNodeProvider {
+impl TrieProvider for TrieNodeProvider {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         self.preimages.get(&key).cloned().ok_or_else(|| anyhow!("Key not found"))
     }

@@ -10,6 +10,8 @@
 [preimage-specs]: https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle
 [cannon-specs]: https://specs.optimism.io/experimental/fault-proof/cannon-fault-proof-vm.html#cannon-fault-proof-virtual-machine
 [l2-output-root]: https://specs.optimism.io/protocol/proposals.html#l2-output-commitment-construction
+[op-succinct]: https://github.com/succinctlabs/op-succinct
+[revm]: https://github.com/bluealloy/revm
 
 <!-- Kona links -->
 

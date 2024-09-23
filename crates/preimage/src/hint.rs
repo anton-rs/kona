@@ -1,9 +1,9 @@
 use crate::{
-    traits::{HintRouter, HintWriterClient, PreimageServerError},
+    errors::{PreimageOracleError, PreimageOracleResult},
+    traits::{HintRouter, HintWriterClient},
     HintReaderServer, PipeHandle,
 };
-use alloc::{boxed::Box, string::String, vec};
-use anyhow::Result;
+use alloc::{boxed::Box, format, string::String, vec};
 use async_trait::async_trait;
 use tracing::{error, trace};
 
@@ -25,7 +25,7 @@ impl HintWriter {
 impl HintWriterClient for HintWriter {
     /// Write a hint to the host. This will overwrite any existing hint in the pipe, and block until
     /// all data has been written.
-    async fn write(&self, hint: &str) -> Result<()> {
+    async fn write(&self, hint: &str) -> PreimageOracleResult<()> {
         // Form the hint into a byte buffer. The format is a 4-byte big-endian length prefix
         // followed by the hint string.
         let mut hint_bytes = vec![0u8; hint.len() + 4];
@@ -65,28 +65,25 @@ impl HintReader {
 
 #[async_trait]
 impl HintReaderServer for HintReader {
-    async fn next_hint<R>(&self, hint_router: &R) -> Result<(), PreimageServerError>
+    async fn next_hint<R>(&self, hint_router: &R) -> PreimageOracleResult<()>
     where
         R: HintRouter + Send + Sync,
     {
         // Read the length of the raw hint payload.
         let mut len_buf = [0u8; 4];
-        self.pipe_handle.read_exact(&mut len_buf).await.map_err(PreimageServerError::BrokenPipe)?;
+        self.pipe_handle.read_exact(&mut len_buf).await?;
         let len = u32::from_be_bytes(len_buf);
 
         // Read the raw hint payload.
         let mut raw_payload = vec![0u8; len as usize];
-        self.pipe_handle
-            .read_exact(raw_payload.as_mut_slice())
-            .await
-            .map_err(PreimageServerError::BrokenPipe)?;
+        self.pipe_handle.read_exact(raw_payload.as_mut_slice()).await?;
         let payload = match String::from_utf8(raw_payload) {
             Ok(p) => p,
             Err(e) => {
                 // Write back on error to prevent blocking the client.
-                self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
+                self.pipe_handle.write(&[0x00]).await?;
 
-                return Err(PreimageServerError::Other(anyhow::anyhow!(
+                return Err(PreimageOracleError::Other(format!(
                     "Failed to decode hint payload: {e}"
                 )));
             }
@@ -97,14 +94,14 @@ impl HintReaderServer for HintReader {
         // Route the hint
         if let Err(e) = hint_router.route_hint(payload).await {
             // Write back on error to prevent blocking the client.
-            self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
+            self.pipe_handle.write(&[0x00]).await?;
 
             error!("Failed to route hint: {e}");
-            return Err(PreimageServerError::Other(e));
+            return Err(e);
         }
 
         // Write back an acknowledgement to the client to unblock their process.
-        self.pipe_handle.write(&[0x00]).await.map_err(PreimageServerError::BrokenPipe)?;
+        self.pipe_handle.write(&[0x00]).await?;
 
         trace!(target: "hint_reader", "Successfully routed and acknowledged hint");
 
@@ -114,13 +111,11 @@ impl HintReaderServer for HintReader {
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use super::*;
     use crate::test_utils::bidirectional_pipe;
     use alloc::{string::ToString, sync::Arc, vec::Vec};
     use kona_common::FileDescriptor;
-    use std::os::fd::AsRawFd;
+    use std::os::unix::io::AsRawFd;
     use tokio::sync::Mutex;
 
     struct TestRouter {
@@ -129,7 +124,7 @@ mod test {
 
     #[async_trait]
     impl HintRouter for TestRouter {
-        async fn route_hint(&self, hint: String) -> Result<()> {
+        async fn route_hint(&self, hint: String) -> PreimageOracleResult<()> {
             self.incoming_hints.lock().await.push(hint);
             Ok(())
         }
@@ -139,8 +134,8 @@ mod test {
 
     #[async_trait]
     impl HintRouter for TestFailRouter {
-        async fn route_hint(&self, _hint: String) -> Result<()> {
-            anyhow::bail!("Failed to route hint")
+        async fn route_hint(&self, _hint: String) -> PreimageOracleResult<()> {
+            Err(PreimageOracleError::KeyNotFound)
         }
     }
 
@@ -172,7 +167,7 @@ mod test {
         let (c, h) = tokio::join!(client, host);
         c.unwrap().unwrap();
         assert!(h.unwrap().is_err_and(|e| {
-            let PreimageServerError::Other(e) = e else {
+            let PreimageOracleError::Other(e) = e else {
                 return false;
             };
             e.to_string().contains("Failed to decode hint payload")
@@ -203,12 +198,7 @@ mod test {
 
         let (c, h) = tokio::join!(client, host);
         c.unwrap().unwrap();
-        assert!(h.unwrap().is_err_and(|e| {
-            let PreimageServerError::Other(e) = e else {
-                return false;
-            };
-            e.to_string() == "Failed to route hint"
-        }));
+        assert!(h.unwrap().is_err_and(|e| matches!(e, PreimageOracleError::KeyNotFound)));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

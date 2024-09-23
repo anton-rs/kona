@@ -28,9 +28,9 @@ when the `host` is the native implementation of the FPVM.
 ```mermaid
 sequenceDiagram
     Client->>+Host: Hint preimage (no-op on-chain / read-only mode)
-    Host-->>Host: Prepare Preimage
     Host-->>-Client: Hint acknowledgement
     Client-->>+Host: Preimage Request
+    Host-->>Host: Prepare Preimage
     Host-->>-Client: Preimage Data
 ```
 

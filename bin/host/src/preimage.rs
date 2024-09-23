@@ -1,9 +1,11 @@
 //! Contains the implementations of the [HintRouter] and [PreimageFetcher] traits.]
 
 use crate::{fetcher::Fetcher, kv::KeyValueStore};
-use anyhow::Result;
 use async_trait::async_trait;
-use kona_preimage::{HintRouter, PreimageFetcher, PreimageKey};
+use kona_preimage::{
+    errors::{PreimageOracleError, PreimageOracleResult},
+    HintRouter, PreimageFetcher, PreimageKey,
+};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -21,9 +23,12 @@ impl<KV> PreimageFetcher for OnlinePreimageFetcher<KV>
 where
     KV: KeyValueStore + Send + Sync + ?Sized,
 {
-    async fn get_preimage(&self, key: PreimageKey) -> Result<Vec<u8>> {
+    async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         let fetcher = self.inner.read().await;
-        fetcher.get_preimage(key.into()).await
+        fetcher
+            .get_preimage(key.into())
+            .await
+            .map_err(|e| PreimageOracleError::Other(e.to_string()))
     }
 }
 
@@ -51,9 +56,9 @@ impl<KV> PreimageFetcher for OfflinePreimageFetcher<KV>
 where
     KV: KeyValueStore + Send + Sync + ?Sized,
 {
-    async fn get_preimage(&self, key: PreimageKey) -> Result<Vec<u8>> {
+    async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         let kv_store = self.inner.read().await;
-        kv_store.get(key.into()).ok_or_else(|| anyhow::anyhow!("Key not found"))
+        kv_store.get(key.into()).ok_or(PreimageOracleError::KeyNotFound)
     }
 }
 
@@ -81,7 +86,7 @@ impl<KV> HintRouter for OnlineHintRouter<KV>
 where
     KV: KeyValueStore + Send + Sync + ?Sized,
 {
-    async fn route_hint(&self, hint: String) -> Result<()> {
+    async fn route_hint(&self, hint: String) -> PreimageOracleResult<()> {
         let mut fetcher = self.inner.write().await;
         fetcher.hint(&hint);
         Ok(())
@@ -104,7 +109,7 @@ pub struct OfflineHintRouter;
 
 #[async_trait]
 impl HintRouter for OfflineHintRouter {
-    async fn route_hint(&self, _hint: String) -> Result<()> {
+    async fn route_hint(&self, _hint: String) -> PreimageOracleResult<()> {
         Ok(())
     }
 }

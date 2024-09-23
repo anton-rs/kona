@@ -1,6 +1,5 @@
-use crate::PreimageKey;
+use crate::{errors::PreimageOracleResult, PreimageKey};
 use alloc::{boxed::Box, string::String, vec::Vec};
-use anyhow::Result;
 use async_trait::async_trait;
 
 /// A [PreimageOracleClient] is a high-level interface to read data from the host, keyed by a
@@ -13,7 +12,7 @@ pub trait PreimageOracleClient {
     /// # Returns
     /// - `Ok(Vec<u8>)` if the data was successfully fetched from the host.
     /// - `Err(_)` if the data could not be fetched from the host.
-    async fn get(&self, key: PreimageKey) -> Result<Vec<u8>>;
+    async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>>;
 
     /// Get the data corresponding to the currently set key from the host. Writes the data into the
     /// provided buffer.
@@ -21,7 +20,7 @@ pub trait PreimageOracleClient {
     /// # Returns
     /// - `Ok(())` if the data was successfully written into the buffer.
     /// - `Err(_)` if the data could not be written into the buffer.
-    async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> Result<()>;
+    async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()>;
 }
 
 /// A [HintWriterClient] is a high-level interface to the hint pipe. It provides a way to write
@@ -34,7 +33,7 @@ pub trait HintWriterClient {
     /// # Returns
     /// - `Ok(())` if the hint was successfully written to the host.
     /// - `Err(_)` if the hint could not be written to the host.
-    async fn write(&self, hint: &str) -> Result<()>;
+    async fn write(&self, hint: &str) -> PreimageOracleResult<()>;
 }
 
 /// A [CommsClient] is a trait that combines the [PreimageOracleClient] and [HintWriterClient]
@@ -42,16 +41,6 @@ pub trait CommsClient: PreimageOracleClient + Clone + HintWriterClient {}
 
 // Implement the super trait for any type that satisfies the bounds
 impl<T: PreimageOracleClient + Clone + HintWriterClient> CommsClient for T {}
-
-/// A [PreimageServerError] is an enum that differentiates pipe-related errors from other errors
-/// in the [PreimageOracleServer] and [HintReaderServer] implementations.
-#[derive(Debug)]
-pub enum PreimageServerError {
-    /// The pipe has been broken.
-    BrokenPipe(anyhow::Error),
-    /// Other errors.
-    Other(anyhow::Error),
-}
 
 /// A [PreimageOracleServer] is a high-level interface to accept read requests from the client and
 /// write the preimage data to the client pipe.
@@ -62,7 +51,7 @@ pub trait PreimageOracleServer {
     /// # Returns
     /// - `Ok(())` if the data was successfully written into the client pipe.
     /// - `Err(_)` if the data could not be written to the client.
-    async fn next_preimage_request<F>(&self, get_preimage: &F) -> Result<(), PreimageServerError>
+    async fn next_preimage_request<F>(&self, get_preimage: &F) -> PreimageOracleResult<()>
     where
         F: PreimageFetcher + Send + Sync;
 }
@@ -77,7 +66,7 @@ pub trait HintReaderServer {
     /// - `Ok(())` if the hint was received and the client was notified of the host's
     ///   acknowledgement.
     /// - `Err(_)` if the hint was not received correctly.
-    async fn next_hint<R>(&self, route_hint: &R) -> Result<(), PreimageServerError>
+    async fn next_hint<R>(&self, route_hint: &R) -> PreimageOracleResult<()>
     where
         R: HintRouter + Send + Sync;
 }
@@ -93,7 +82,7 @@ pub trait HintRouter {
     /// # Returns
     /// - `Ok(())` if the hint was successfully routed.
     /// - `Err(_)` if the hint could not be routed.
-    async fn route_hint(&self, hint: String) -> Result<()>;
+    async fn route_hint(&self, hint: String) -> PreimageOracleResult<()>;
 }
 
 /// A [PreimageFetcher] is a high-level interface to fetch preimages during preimage requests.
@@ -107,5 +96,5 @@ pub trait PreimageFetcher {
     /// # Returns
     /// - `Ok(Vec<u8>)` if the preimage was successfully fetched.
     /// - `Err(_)` if the preimage could not be fetched.
-    async fn get_preimage(&self, key: PreimageKey) -> Result<Vec<u8>>;
+    async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>>;
 }

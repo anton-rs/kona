@@ -9,7 +9,7 @@ use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::{block::OpBlock, traits::L2ChainProvider};
-use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{OrderedListWalker, TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -119,7 +119,9 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
     }
 }
 
-impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
+impl<T: CommsClient> TrieProvider for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L2, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
@@ -128,6 +130,7 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
                 .get(PreimageKey::new(*key, PreimageKeyType::Keccak256))
                 .await
                 .map(Into::into)
+                .map_err(Into::into)
         })
     }
 
@@ -140,6 +143,7 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
                 .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
                 .await
                 .map(Into::into)
+                .map_err(Into::into)
         })
     }
 
@@ -156,10 +160,15 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
     }
 }
 
-impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
+impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn hint_trie_node(&self, hash: B256) -> Result<()> {
         kona_common::block_on(async move {
-            self.oracle.write(&HintType::L2StateNode.encode_with(&[hash.as_slice()])).await
+            self.oracle
+                .write(&HintType::L2StateNode.encode_with(&[hash.as_slice()]))
+                .await
+                .map_err(Into::into)
         })
     }
 
@@ -171,6 +180,7 @@ impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
                         .encode_with(&[block_number.to_be_bytes().as_ref(), address.as_slice()]),
                 )
                 .await
+                .map_err(Into::into)
         })
     }
 
@@ -188,6 +198,7 @@ impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
                     slot.to_be_bytes::<32>().as_ref(),
                 ]))
                 .await
+                .map_err(Into::into)
         })
     }
 }
