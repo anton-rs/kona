@@ -2,14 +2,15 @@
 //! [DataAvailabilityProvider] trait for the Ethereum protocol.
 
 use crate::{
+    errors::PipelineResult,
     sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},
     traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
-use anyhow::Result;
 use async_trait::async_trait;
-use kona_primitives::{BlockInfo, RollupConfig};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::BlockInfo;
 
 /// A factory for creating an Ethereum data source provider.
 #[derive(Debug, Clone, Copy)]
@@ -61,7 +62,7 @@ where
     type Item = Bytes;
     type DataIter = EthereumDataSourceVariant<C, B>;
 
-    async fn open_data(&self, block_ref: &BlockInfo) -> Result<Self::DataIter> {
+    async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::DataIter> {
         let ecotone_enabled =
             self.ecotone_timestamp.map(|e| block_ref.timestamp >= e).unwrap_or(false);
         if ecotone_enabled {
@@ -88,7 +89,8 @@ mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::address;
-    use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
+    use op_alloy_genesis::{RollupConfig, SystemConfig};
+    use op_alloy_protocol::BlockInfo;
 
     use crate::{
         sources::{EthereumDataSource, EthereumDataSourceVariant},

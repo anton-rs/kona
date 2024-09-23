@@ -1,7 +1,7 @@
 [package]
 name = "kona-executor"
 description = "An no_std implementation of a stateless L2 block executor for the OP Stack."
-version = "0.0.1"
+version = "0.0.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -10,25 +10,28 @@ homepage.workspace = true
 
 [dependencies]
 # General
-anyhow.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-eips.workspace = true
-alloy-consensus.workspace = true
+alloy-consensus = { workspace = true, features = ["k256"] }
 op-alloy-consensus.workspace = true
+op-alloy-genesis.workspace = true
+op-alloy-rpc-types-engine.workspace = true
 revm = { workspace = true, features = ["optimism"] }
 
 # Workspace
 kona-mpt.workspace = true
-kona-primitives.workspace = true
 
 [dev-dependencies]
+anyhow.workspace = true
 alloy-rlp.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 rand.workspace = true
 criterion.workspace = true
 pprof.workspace = true 
+alloy-rpc-types-engine.workspace = true
 
 [[bench]]
 name = "execution"

@@ -3,8 +3,8 @@
 use kona_common::FileDescriptor;
 use kona_preimage::{HintWriter, OracleReader, PipeHandle};
 
-mod precompiles;
-pub(crate) use precompiles::FPVMPrecompileOverride;
+mod handler;
+pub(crate) use handler::fpvm_handle_register;
 
 /// The global preimage oracle reader pipe.
 static ORACLE_READER_PIPE: PipeHandle =

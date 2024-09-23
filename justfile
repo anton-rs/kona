@@ -1,12 +1,12 @@
 set positional-arguments
 alias t := tests
-alias tn := test
-alias l := lint
-alias ln := lint-native
-alias fmt := fmt-native-fix
+alias la := lint-all
+alias l := lint-native
+alias f := fmt-native-fix
 alias b := build
 alias d := docker-build-ts
 alias r := docker-run-ts
+alias h := hack
 
 # default recipe to display help information
 default:
@@ -15,12 +15,45 @@ default:
 # Run all tests
 tests: test test-docs
 
+# Runs `cargo hack check` against the workspace
+hack:
+  cargo hack check --feature-powerset --no-dev-deps
+
 # Test for the native target with all features
 test *args='':
   cargo nextest run --workspace --all --all-features $@
 
+# Run action tests for the client program on the native target
+action-tests test_name='Test_ProgramAction':
+  #!/bin/bash
+
+  if [ ! -d "monorepo" ]; then
+    echo "Monorepo not found. Cloning..."
+    git clone https://github.com/ethereum-optimism/monorepo
+  fi
+
+  if [ ! -d "monorepo/.devnet" ]; then
+    echo "Building devnet allocs for the monorepo"
+    (cd monorepo && make devnet-allocs)
+  fi
+
+  echo "Building client and host programs for the native target"
+  just build-native --bin kona --profile release-client-lto --features tracing-subscriber && \
+    just build-native --bin kona-host --release
+
+  echo "Running action tests for the client program on the native target"
+  export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"
+  export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
+
+  cd monorepo/op-e2e/actions/proofs && \
+    go test -run "{{test_name}}" -v ./...
+
+# Clean the action tests directory
+clean-actions:
+  rm -rf monorepo/
+
 # Lint the workspace for all available targets
-lint: lint-native lint-cannon lint-asterisc lint-docs
+lint-all: lint-native lint-cannon lint-asterisc lint-docs
 
 # Fixes the formatting of the workspace
 fmt-native-fix:
@@ -31,7 +64,7 @@ fmt-native-check:
   cargo +nightly fmt --all -- --check
 
 # Lint the workspace
-lint-native: fmt-native-check
+lint-native: fmt-native-check lint-docs
   cargo +nightly clippy --workspace --all --all-features --all-targets -- -D warnings
 
 # Lint the workspace (mips arch). Currently, only the `kona-common` crate is linted for the `cannon` target, as it is the only crate with architecture-specific code.
@@ -41,7 +74,7 @@ lint-cannon:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo +nightly clippy -p kona-common --all-features --target /mips-unknown-none.json -Zbuild-std -- -D warnings
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo +nightly clippy -p kona-common --all-features --target /mips-unknown-none.json -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the workspace (risc-v arch). Currently, only the `kona-common` crate is linted for the `asterisc` target, as it is the only crate with architecture-specific code.
 lint-asterisc:
@@ -50,7 +83,7 @@ lint-asterisc:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo +nightly clippy -p kona-common --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std -- -D warnings
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo +nightly clippy -p kona-common --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the Rust documentation
 lint-docs:
@@ -65,7 +98,7 @@ build: build-native build-cannon build-asterisc
 
 # Build for the native target
 build-native *args='':
-  cargo build --workspace --all $@
+  cargo build --workspace $@
 
 # Build for the `cannon` target. Any crates that require the stdlib are excluded from the build for this target.
 build-cannon *args='':
@@ -74,7 +107,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -83,7 +116,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --workspace --all -Zbuild-std $@ --exclude kona-host --exclude trusted-sync
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync
 
 # Build the `trusted-sync` docker image
 docker-build-ts *args='':
@@ -124,4 +157,5 @@ build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-a
     --output $OUTPUT_DIR \
     --build-arg CLIENT_TAG={{kona_tag}} \
     --build-arg ASTERISC_TAG={{asterisc_tag}} \
+    --platform linux/amd64 \
     .

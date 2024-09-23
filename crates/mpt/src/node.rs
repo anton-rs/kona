@@ -2,14 +2,15 @@
 //! Patricia Trie.
 
 use crate::{
+    errors::TrieNodeResult,
     util::{rlp_list_element_length, unpack_path_to_nibbles},
-    TrieDBFetcher, TrieDBHinter,
+    TrieHinter, TrieNodeError, TrieProvider,
 };
-use alloc::{boxed::Box, vec, vec::Vec};
-use alloy_primitives::{keccak256, Bytes, B256};
+use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
+use alloy_primitives::{hex, keccak256, Bytes, B256};
 use alloy_rlp::{length_of_length, Buf, Decodable, Encodable, Header, EMPTY_STRING_CODE};
 use alloy_trie::{Nibbles, EMPTY_ROOT_HASH};
-use anyhow::{anyhow, Result};
+use core::fmt::Display;
 
 /// The length of the branch list when RLP encoded
 const BRANCH_LIST_LENGTH: usize = 17;
@@ -91,6 +92,22 @@ pub enum TrieNode {
     },
 }
 
+impl Display for TrieNode {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            TrieNode::Empty => write!(f, "Empty"),
+            TrieNode::Blinded { commitment } => write!(f, "Blinded({})", commitment),
+            TrieNode::Leaf { prefix, value } => {
+                write!(f, "Leaf({}, {})", hex::encode(prefix.as_ref()), hex::encode(value.as_ref()))
+            }
+            TrieNode::Extension { prefix, node } => {
+                write!(f, "Extension({}, {})", hex::encode(prefix.as_ref()), node)
+            }
+            TrieNode::Branch { .. } => write!(f, "Branch"),
+        }
+    }
+}
+
 impl TrieNode {
     /// Creates a new [TrieNode::Blinded] node.
     ///
@@ -128,15 +145,17 @@ impl TrieNode {
     }
 
     /// Unblinds the [TrieNode] if it is a [TrieNode::Blinded] node.
-    pub fn unblind<F: TrieDBFetcher>(&mut self, fetcher: &F) -> Result<()> {
+    pub fn unblind<F: TrieProvider>(&mut self, fetcher: &F) -> TrieNodeResult<()> {
         if let TrieNode::Blinded { commitment } = self {
             if *commitment == EMPTY_ROOT_HASH {
                 // If the commitment is the empty root hash, the node is empty, and we don't need to
                 // reach out to the fetcher.
                 *self = TrieNode::Empty;
             } else {
-                *self = TrieNode::decode(&mut fetcher.trie_node_preimage(*commitment)?.as_ref())
-                    .map_err(|e| anyhow!(e))?;
+                let rlp = fetcher
+                    .trie_node_preimage(*commitment)
+                    .map_err(|e| TrieNodeError::Provider(e.to_string()))?;
+                *self = TrieNode::decode(&mut rlp.as_ref()).map_err(TrieNodeError::RLPError)?;
             }
         }
         Ok(())
@@ -154,11 +173,11 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not retrieve the node with the given key from the trie.
     /// - `Ok((_, _))` - The key and value of the node
-    pub fn open<'a, F: TrieDBFetcher>(
+    pub fn open<'a, F: TrieProvider>(
         &'a mut self,
         path: &Nibbles,
         fetcher: &F,
-    ) -> Result<Option<&'a mut Bytes>> {
+    ) -> TrieNodeResult<Option<&'a mut Bytes>> {
         match self {
             TrieNode::Branch { ref mut stack } => {
                 let branch_nibble = path[0] as usize;
@@ -198,12 +217,12 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not insert the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully inserted at the given path.
-    pub fn insert<F: TrieDBFetcher>(
+    pub fn insert<F: TrieProvider>(
         &mut self,
         path: &Nibbles,
         value: Bytes,
         fetcher: &F,
-    ) -> Result<()> {
+    ) -> TrieNodeResult<()> {
         match self {
             TrieNode::Empty => {
                 // If the trie node is null, insert the leaf node at the current path.
@@ -313,28 +332,26 @@ impl TrieNode {
     /// ## Returns
     /// - `Err(_)` - Could not delete the node at the given path in the trie.
     /// - `Ok(())` - The node was successfully deleted at the given path.
-    pub fn delete<F: TrieDBFetcher, H: TrieDBHinter>(
+    pub fn delete<F: TrieProvider, H: TrieHinter>(
         &mut self,
         path: &Nibbles,
         fetcher: &F,
         hinter: &H,
-    ) -> Result<()> {
+    ) -> TrieNodeResult<()> {
         match self {
-            TrieNode::Empty => {
-                anyhow::bail!("Key does not exist in trie (empty node)")
-            }
+            TrieNode::Empty => Err(TrieNodeError::KeyNotFound(self.to_string())),
             TrieNode::Leaf { prefix, .. } => {
                 if path == prefix {
                     *self = TrieNode::Empty;
                     Ok(())
                 } else {
-                    anyhow::bail!("Key does not exist in trie (leaf node mismatch)")
+                    Err(TrieNodeError::KeyNotFound(self.to_string()))
                 }
             }
             TrieNode::Extension { prefix, node } => {
                 let shared_nibbles = path.common_prefix_length(prefix);
                 if shared_nibbles < prefix.len() {
-                    anyhow::bail!("Key does not exist in trie (extension node mismatch)")
+                    return Err(TrieNodeError::KeyNotFound(self.to_string()));
                 } else if shared_nibbles == path.len() {
                     *self = TrieNode::Empty;
                     return Ok(());
@@ -405,11 +422,11 @@ impl TrieNode {
     /// ## Returns
     /// - `Ok(())` - The node was successfully collapsed
     /// - `Err(_)` - Could not collapse the node
-    fn collapse_if_possible<F: TrieDBFetcher, H: TrieDBHinter>(
+    fn collapse_if_possible<F: TrieProvider, H: TrieHinter>(
         &mut self,
         fetcher: &F,
         hinter: &H,
-    ) -> Result<()> {
+    ) -> TrieNodeResult<()> {
         match self {
             TrieNode::Extension { prefix, node } => match node.as_mut() {
                 TrieNode::Extension { prefix: child_prefix, node: child_node } => {
@@ -472,7 +489,9 @@ impl TrieNode {
                             // In this special case, we need to send a hint to fetch the preimage of
                             // the blinded node, since it is outside of the paths that have been
                             // traversed so far.
-                            hinter.hint_trie_node(*commitment)?;
+                            hinter
+                                .hint_trie_node(*commitment)
+                                .map_err(|e| TrieNodeError::Provider(e.to_string()))?;
 
                             non_empty_node.unblind(fetcher)?;
                             self.collapse_if_possible(fetcher, hinter)?;
@@ -491,14 +510,14 @@ impl TrieNode {
     ///
     /// **Note:** This function assumes that the passed reader has already consumed the RLP header
     /// of the [TrieNode::Leaf] or [TrieNode::Extension] node.
-    fn try_decode_leaf_or_extension_payload(buf: &mut &[u8]) -> Result<Self> {
+    fn try_decode_leaf_or_extension_payload(buf: &mut &[u8]) -> TrieNodeResult<Self> {
         // Decode the path and value of the leaf or extension node.
-        let path = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
+        let path = Bytes::decode(buf).map_err(TrieNodeError::RLPError)?;
         let first_nibble = path[0] >> NIBBLE_WIDTH;
         let first = match first_nibble {
             PREFIX_EXTENSION_ODD | PREFIX_LEAF_ODD => Some(path[0] & 0x0F),
             PREFIX_EXTENSION_EVEN | PREFIX_LEAF_EVEN => None,
-            _ => anyhow::bail!("Unexpected path identifier in high-order nibble"),
+            _ => return Err(TrieNodeError::InvalidNodeType),
         };
 
         // Check the high-order nibble of the path to determine the type of node.
@@ -506,7 +525,7 @@ impl TrieNode {
             PREFIX_EXTENSION_EVEN | PREFIX_EXTENSION_ODD => {
                 // Extension node
                 let extension_node_value =
-                    TrieNode::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
+                    TrieNode::decode(buf).map_err(TrieNodeError::RLPError)?;
                 Ok(TrieNode::Extension {
                     prefix: unpack_path_to_nibbles(first, path[1..].as_ref()),
                     node: Box::new(extension_node_value),
@@ -514,15 +533,13 @@ impl TrieNode {
             }
             PREFIX_LEAF_EVEN | PREFIX_LEAF_ODD => {
                 // Leaf node
-                let value = Bytes::decode(buf).map_err(|e| anyhow!("Failed to decode: {e}"))?;
+                let value = Bytes::decode(buf).map_err(TrieNodeError::RLPError)?;
                 Ok(TrieNode::Leaf {
                     prefix: unpack_path_to_nibbles(first, path[1..].as_ref()),
                     value,
                 })
             }
-            _ => {
-                anyhow::bail!("Unexpected path identifier in high-order nibble")
-            }
+            _ => Err(TrieNodeError::InvalidNodeType),
         }
     }
 
@@ -671,8 +688,8 @@ impl Decodable for TrieNode {
 mod test {
     use super::*;
     use crate::{
-        fetcher::NoopTrieDBFetcher, ordered_trie_with_encoder, test_util::TrieNodeProvider,
-        NoopTrieDBHinter, TrieNode,
+        fetcher::NoopTrieProvider, ordered_trie_with_encoder, test_util::TrieNodeProvider,
+        NoopTrieHinter, TrieNode,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
     use alloy_primitives::{b256, bytes, hex, keccak256};
@@ -806,7 +823,7 @@ mod test {
     #[test]
     fn test_insert_static() {
         let mut node = TrieNode::Empty;
-        let noop_fetcher = NoopTrieDBFetcher;
+        let noop_fetcher = NoopTrieProvider;
         node.insert(&Nibbles::unpack(hex!("012345")), bytes!("01"), &noop_fetcher).unwrap();
         node.insert(&Nibbles::unpack(hex!("012346")), bytes!("02"), &noop_fetcher).unwrap();
 
@@ -850,7 +867,7 @@ mod test {
 
             for key in keys {
                 hb.add_leaf(Nibbles::unpack(key), key.as_ref());
-                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieProvider).unwrap();
             }
 
             node.blind();
@@ -876,12 +893,12 @@ mod test {
                 if !deleted_keys.contains(&key) {
                     hb.add_leaf(Nibbles::unpack(key), key.as_ref());
                 }
-                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieDBFetcher).unwrap();
+                node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieProvider).unwrap();
             }
 
             // Delete the keys that were randomly selected from the trie node.
             for deleted_key in deleted_keys {
-                node.delete(&Nibbles::unpack(deleted_key), &NoopTrieDBFetcher, &NoopTrieDBHinter)
+                node.delete(&Nibbles::unpack(deleted_key), &NoopTrieProvider, &NoopTrieHinter)
                     .unwrap();
             }
 

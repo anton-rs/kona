@@ -1,7 +1,6 @@
 # ref: https://docs.codecov.com/docs/codecovyml-reference
 coverage:
-  # TODO: Raise coverage requirements
-  range: 25..100
+  range: 75..100
   round: down
   precision: 1
   status:
@@ -10,11 +9,19 @@ coverage:
       default:
         # Avoid false negatives
         threshold: 1%
+    patch:
+      default:
+        target: auto
+        # Avoid false negatives
+        threshold: 1%
+        base: auto 
+        only_pulls: true
 
 ignore:
   - "tests"
-  - "test_util*"
-  - "test_utils"
+  - "test_util.rs"
+  - "test_utils.rs"
+  - "crates/derive/src/stages/test_utils"
   - "bin/"
 
 # Make comments less noisy

@@ -1,14 +1,16 @@
 //! Contains the core derivation pipeline.
 
 use super::{
-    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResettableStage,
-    StageError, StepResult,
+    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
+    PipelineResult, ResettableStage, StepResult,
 };
-use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use anyhow::bail;
+use crate::errors::PipelineErrorKind;
+use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo, RollupConfig};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
@@ -21,8 +23,9 @@ where
     /// A handle to the next attributes.
     pub attributes: S,
     /// Reset provider for the pipeline.
-    /// A list of prepared [L2AttributesWithParent] to be used by the derivation pipeline consumer.
-    pub prepared: VecDeque<L2AttributesWithParent>,
+    /// A list of prepared [OptimismAttributesWithParent] to be used by the derivation pipeline
+    /// consumer.
+    pub prepared: VecDeque<OptimismAttributesWithParent>,
     /// The rollup config.
     pub rollup_config: Arc<RollupConfig>,
     /// The L2 Chain Provider used to fetch the system config on reset.
@@ -55,7 +58,7 @@ where
     S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    type Item = L2AttributesWithParent;
+    type Item = OptimismAttributesWithParent;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.prepared.pop_front()
@@ -68,8 +71,8 @@ where
     S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    /// Peeks at the next prepared [L2AttributesWithParent] from the pipeline.
-    fn peek(&self) -> Option<&L2AttributesWithParent> {
+    /// Peeks at the next prepared [OptimismAttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&OptimismAttributesWithParent> {
         self.prepared.front()
     }
 
@@ -91,17 +94,21 @@ where
         &mut self,
         l2_block_info: BlockInfo,
         l1_block_info: BlockInfo,
-    ) -> anyhow::Result<()> {
+    ) -> PipelineResult<()> {
         let system_config = self
             .l2_chain_provider
             .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
-            .await?;
+            .await
+            .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
         match self.attributes.reset(l1_block_info, &system_config).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
-            Err(StageError::Eof) => trace!(target: "pipeline", "Stages reset with EOF"),
             Err(err) => {
-                error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                bail!(err);
+                if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
+                    trace!(target: "pipeline", "Stages reset with EOF");
+                } else {
+                    error!(target: "pipeline", "Stage reset errored: {:?}", err);
+                    return Err(err);
+                }
             }
         }
         Ok(())
@@ -111,12 +118,14 @@ where
     ///
     /// ## Returns
     ///
-    /// A [StageError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
+    /// A [PipelineError::Eof] is returned if the pipeline is blocked by waiting for new L1 data.
     /// Any other error is critical and the derivation pipeline should be reset.
     /// An error is expected when the underlying source closes.
     ///
     /// When [DerivationPipeline::step] returns [Ok(())], it should be called again, to continue the
     /// derivation process.
+    ///
+    /// [PipelineError]: crate::errors::PipelineError
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
         match self.attributes.next_attributes(cursor).await {
             Ok(a) => {
@@ -124,17 +133,19 @@ where
                 self.prepared.push_back(a);
                 StepResult::PreparedAttributes
             }
-            Err(StageError::Eof) => {
-                trace!(target: "pipeline", "Pipeline advancing origin");
-                if let Err(e) = self.attributes.advance_origin().await {
-                    return StepResult::OriginAdvanceErr(e);
+            Err(err) => match err {
+                PipelineErrorKind::Temporary(PipelineError::Eof) => {
+                    trace!(target: "pipeline", "Pipeline advancing origin");
+                    if let Err(e) = self.attributes.advance_origin().await {
+                        return StepResult::OriginAdvanceErr(e);
+                    }
+                    StepResult::AdvancedOrigin
                 }
-                StepResult::AdvancedOrigin
-            }
-            Err(err) => {
-                warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
-                StepResult::StepFailed(err)
-            }
+                _ => {
+                    warn!(target: "pipeline", "Attributes queue step failed: {:?}", err);
+                    StepResult::StepFailed(err)
+                }
+            },
         }
     }
 }

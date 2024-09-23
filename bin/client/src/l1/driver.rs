@@ -1,26 +1,31 @@
-//! Contains the [DerivationDriver] struct, which handles the [L2PayloadAttributes] derivation
+//! Contains the [DerivationDriver] struct, which handles the [OptimismPayloadAttributes] derivation
 //! process.
 //!
-//! [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
+//! [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
 
 use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
+use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
+    errors::PipelineErrorKind,
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{BlobProvider, ChainProvider, L2ChainProvider},
+    traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
 };
-use kona_mpt::TrieDBFetcher;
+use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
+use kona_mpt::{TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{BlockInfo, L2AttributesWithParent, L2BlockInfo};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use tracing::{info, warn};
 
 /// An oracle-backed derivation pipeline.
@@ -48,13 +53,13 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
     OracleAttributesBuilder<O>,
 >;
 
-/// The [DerivationDriver] struct is responsible for handling the [L2PayloadAttributes] derivation
-/// process.
+/// The [DerivationDriver] struct is responsible for handling the [OptimismPayloadAttributes]
+/// derivation process.
 ///
 /// It contains an inner [OraclePipeline] that is used to derive the attributes, backed by
 /// oracle-based data sources.
 ///
-/// [L2PayloadAttributes]: kona_primitives::L2PayloadAttributes
+/// [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
 #[derive(Debug)]
 pub struct DerivationDriver<O, B>
 where
@@ -148,14 +153,58 @@ where
         Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
     }
 
-    /// Produces the disputed [L2AttributesWithParent] payload, directly after the starting L2
+    /// Produces the output root of the next L2 block.
+    ///
+    /// ## Takes
+    /// - `cfg`: The rollup configuration.
+    /// - `provider`: The trie provider.
+    /// - `hinter`: The trie hinter.
+    /// - `handle_register`: The handle register for the EVM.
+    ///
+    /// ## Returns
+    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
+    ///   output root.
+    /// - `Err(e)` - An error if the block could not be produced.
+    pub async fn produce_output<P, H>(
+        &mut self,
+        cfg: &RollupConfig,
+        provider: &P,
+        hinter: &H,
+        handle_register: KonaHandleRegister<P, H>,
+    ) -> Result<(u64, B256)>
+    where
+        P: TrieProvider + Send + Sync + Clone,
+        H: TrieHinter + Send + Sync + Clone,
+    {
+        loop {
+            let OptimismAttributesWithParent { attributes, .. } = self.produce_payload().await?;
+
+            let mut executor =
+                StatelessL2BlockExecutor::builder(cfg, provider.clone(), hinter.clone())
+                    .with_parent_header(self.l2_safe_head_header().clone())
+                    .with_handle_register(handle_register)
+                    .build();
+
+            let number = match executor.execute_payload(attributes) {
+                Ok(Header { number, .. }) => *number,
+                Err(e) => {
+                    tracing::error!(target: "client", "Failed to execute L2 block: {}", e);
+                    continue;
+                }
+            };
+            let output_root = executor.compute_output_root()?;
+
+            return Ok((number, output_root));
+        }
+    }
+
+    /// Produces the disputed [OptimismAttributesWithParent] payload, directly after the starting L2
     /// output root passed through the [BootInfo].
-    pub async fn produce_disputed_payload(&mut self) -> Result<L2AttributesWithParent> {
+    async fn produce_payload(&mut self) -> Result<OptimismAttributesWithParent> {
         // As we start the safe head at the disputed block's parent, we step the pipeline until the
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.
-        let mut attributes = None;
-        while attributes.is_none() {
+        loop {
             match self.pipeline.step(self.l2_safe_head).await {
                 StepResult::PreparedAttributes => {
                     info!(target: "client_derivation_driver", "Stepped derivation pipeline")
@@ -163,18 +212,35 @@ where
                 StepResult::AdvancedOrigin => {
                     info!(target: "client_derivation_driver", "Advanced origin")
                 }
-                StepResult::OriginAdvanceErr(e) => {
-                    warn!(target: "client_derivation_driver", "Failed to advance origin: {:?}", e)
-                }
-                StepResult::StepFailed(e) => {
-                    warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e)
+                StepResult::OriginAdvanceErr(e) | StepResult::StepFailed(e) => {
+                    warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e);
+
+                    // Break the loop unless the error signifies that there is not enough data to
+                    // complete the current step. In this case, we retry the step to see if other
+                    // stages can make progress.
+                    match e {
+                        PipelineErrorKind::Temporary(_) => { /* continue */ }
+                        PipelineErrorKind::Reset(_) => {
+                            // Reset the pipeline to the initial L2 safe head and L1 origin,
+                            // and try again.
+                            self.pipeline
+                                .reset(
+                                    self.l2_safe_head.block_info,
+                                    self.pipeline
+                                        .origin()
+                                        .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                )
+                                .await?;
+                        }
+                        PipelineErrorKind::Critical(_) => return Err(e.into()),
+                    }
                 }
             }
 
-            attributes = self.pipeline.next();
+            if let Some(attrs) = self.pipeline.next() {
+                return Ok(attrs);
+            }
         }
-
-        Ok(attributes.expect("Must be some"))
     }
 
     /// Finds the startup information for the derivation pipeline.

@@ -1,9 +1,9 @@
 //! Contains logic specific to Canyon hardfork activation.
 
+use crate::errors::ExecutorResult;
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
-use anyhow::Result;
-use kona_mpt::{TrieDB, TrieDBFetcher, TrieDBHinter};
-use kona_primitives::RollupConfig;
+use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
+use op_alloy_genesis::RollupConfig;
 use revm::{
     primitives::{Account, Bytecode, HashMap},
     DatabaseCommit, State,
@@ -26,10 +26,10 @@ pub(crate) fn ensure_create2_deployer_canyon<F, H>(
     db: &mut State<&mut TrieDB<F, H>>,
     config: &RollupConfig,
     timestamp: u64,
-) -> Result<()>
+) -> ExecutorResult<()>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     // If the canyon hardfork is active at the current timestamp, and it was not active at the
     // previous block timestamp, then we need to force-deploy the create2 deployer contract.

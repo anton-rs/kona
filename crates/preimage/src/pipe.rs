@@ -1,7 +1,6 @@
 //! This module contains a rudamentary pipe between two file descriptors, using [kona_common::io]
 //! for reading and writing from the file descriptors.
 
-use anyhow::Result;
 use core::{
     cell::RefCell,
     cmp::Ordering,
@@ -9,7 +8,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use kona_common::{io, FileDescriptor};
+use kona_common::{errors::IOResult, io, FileDescriptor};
 
 /// [PipeHandle] is a handle for one end of a bidirectional pipe.
 #[derive(Debug, Clone, Copy)]
@@ -27,17 +26,17 @@ impl PipeHandle {
     }
 
     /// Read from the pipe into the given buffer.
-    pub fn read(&self, buf: &mut [u8]) -> Result<usize> {
+    pub fn read(&self, buf: &mut [u8]) -> IOResult<usize> {
         io::read(self.read_handle, buf)
     }
 
     /// Reads exactly `buf.len()` bytes into `buf`.
-    pub fn read_exact<'a>(&self, buf: &'a mut [u8]) -> impl Future<Output = Result<usize>> + 'a {
+    pub fn read_exact<'a>(&self, buf: &'a mut [u8]) -> impl Future<Output = IOResult<usize>> + 'a {
         ReadFuture { pipe_handle: *self, buf: RefCell::new(buf), read: 0 }
     }
 
     /// Write the given buffer to the pipe.
-    pub fn write<'a>(&self, buf: &'a [u8]) -> impl Future<Output = Result<usize>> + 'a {
+    pub fn write<'a>(&self, buf: &'a [u8]) -> impl Future<Output = IOResult<usize>> + 'a {
         WriteFuture { pipe_handle: *self, buf, written: 0 }
     }
 
@@ -63,7 +62,7 @@ struct ReadFuture<'a> {
 }
 
 impl Future for ReadFuture<'_> {
-    type Output = Result<usize>;
+    type Output = IOResult<usize>;
 
     fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut buf = self.buf.borrow_mut();
@@ -97,7 +96,7 @@ struct WriteFuture<'a> {
 }
 
 impl Future for WriteFuture<'_> {
-    type Output = Result<usize>;
+    type Output = IOResult<usize>;
 
     fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         match io::write(self.pipe_handle.write_handle(), &self.buf[self.written..]) {

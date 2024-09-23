@@ -1,10 +1,9 @@
 //! EIP4844 Blob Type
 
 use alloc::vec;
+use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 use alloy_primitives::{Bytes, B256};
-use anyhow::Result;
-
-use super::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
+use thiserror::Error;
 
 /// The blob encoding version
 pub(crate) const BLOB_ENCODING_VERSION: u8 = 0;
@@ -32,15 +31,19 @@ impl PartialEq for IndexedBlobHash {
 }
 
 /// Blob Decuding Error
-#[derive(Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum BlobDecodingError {
     /// Invalid field element
+    #[error("Invalid field element")]
     InvalidFieldElement,
     /// Invalid encoding version
+    #[error("Invalid encoding version")]
     InvalidEncodingVersion,
     /// Invalid length
+    #[error("Invalid length")]
     InvalidLength,
     /// Missing Data
+    #[error("Missing data")]
     MissingData,
 }
 
@@ -172,18 +175,18 @@ impl BlobData {
     /// Fills in the pointers to the fetched blob bodies.
     /// There should be exactly one placeholder blobOrCalldata
     /// element for each blob, otherwise an error is returned.
-    pub fn fill(&mut self, blobs: &[Blob], index: usize) -> Result<()> {
+    pub fn fill(&mut self, blobs: &[Blob], index: usize) -> Result<(), BlobDecodingError> {
         // Do not fill if there is no calldata to fill
         if self.calldata.as_ref().map_or(false, |data| data.is_empty()) {
             return Ok(());
         }
 
         if index >= blobs.len() {
-            return Err(anyhow::anyhow!("Insufficient blob count"));
+            return Err(BlobDecodingError::InvalidLength);
         }
 
         if blobs[index].is_empty() {
-            return Err(anyhow::anyhow!("Empty blob"));
+            return Err(BlobDecodingError::MissingData);
         }
 
         self.data = Some(Bytes::from(blobs[index]));

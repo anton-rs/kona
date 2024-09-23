@@ -1,22 +1,27 @@
 //! Contains an online implementation of the [BlobProvider] trait.
 
-use alloc::{boxed::Box, string::String, vec::Vec};
-use anyhow::{anyhow, ensure};
-use async_trait::async_trait;
-use core::marker::PhantomData;
-use kona_primitives::{APIBlobSidecar, Blob, BlobSidecar, BlockInfo, IndexedBlobHash};
-use tracing::warn;
-
 use crate::{
+    ensure,
     errors::BlobProviderError,
     online::{BeaconClient, OnlineBeaconClient},
     traits::BlobProvider,
 };
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
+use alloy_eips::eip4844::Blob;
+use async_trait::async_trait;
+use core::marker::PhantomData;
+use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
+use op_alloy_protocol::BlockInfo;
+use tracing::warn;
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
     /// Converts a timestamp to a slot number.
-    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> anyhow::Result<u64>;
+    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError>;
 }
 
 /// An online implementation of the [BlobProvider] trait.
@@ -45,11 +50,24 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
     /// Loads the beacon genesis and config spec
     pub async fn load_configs(&mut self) -> Result<(), BlobProviderError> {
         if self.genesis_time.is_none() {
-            self.genesis_time = Some(self.beacon_client.beacon_genesis().await?.data.genesis_time);
+            self.genesis_time = Some(
+                self.beacon_client
+                    .beacon_genesis()
+                    .await
+                    .map_err(|e| BlobProviderError::Backend(e.to_string()))?
+                    .data
+                    .genesis_time,
+            );
         }
         if self.slot_interval.is_none() {
-            self.slot_interval =
-                Some(self.beacon_client.config_spec().await?.data.seconds_per_slot);
+            self.slot_interval = Some(
+                self.beacon_client
+                    .config_spec()
+                    .await
+                    .map_err(|e| BlobProviderError::Backend(e.to_string()))?
+                    .data
+                    .seconds_per_slot,
+            );
         }
         Ok(())
     }
@@ -63,7 +81,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         self.beacon_client
             .beacon_blob_side_cars(slot, hashes)
             .await
-            .map_err(BlobProviderError::Custom)
+            .map_err(|e| BlobProviderError::Backend(e.to_string()))
     }
 
     /// Fetches blob sidecars for the given block reference and blob hashes.
@@ -81,8 +99,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         let interval = self.slot_interval.expect("Config Spec Loaded");
 
         // Calculate the slot for the given timestamp.
-        let slot =
-            S::slot(genesis, interval, block_ref.timestamp).map_err(BlobProviderError::Slot)?;
+        let slot = S::slot(genesis, interval, block_ref.timestamp)?;
 
         // Fetch blob sidecars for the slot using the given blob hashes.
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
@@ -108,11 +125,8 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
 pub struct SimpleSlotDerivation;
 
 impl SlotDerivation for SimpleSlotDerivation {
-    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> anyhow::Result<u64> {
-        ensure!(
-            timestamp >= genesis,
-            "provided timestamp ({timestamp}) precedes genesis time ({genesis})"
-        );
+    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError> {
+        ensure!(timestamp >= genesis, BlobProviderError::SlotDerivation);
         Ok((timestamp - genesis) / slot_time)
     }
 }
@@ -123,6 +137,8 @@ where
     B: BeaconClient + Send + Sync,
     S: SlotDerivation + Send + Sync,
 {
+    type Error = BlobProviderError;
+
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. The blobs are validated for their index and hashes using the specified
     /// [IndexedBlobHash].
@@ -130,7 +146,7 @@ where
         &mut self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, BlobProviderError> {
+    ) -> Result<Vec<Blob>, Self::Error> {
         crate::inc!(PROVIDER_CALLS, &["blob_provider", "get_blobs"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
@@ -159,19 +175,21 @@ where
             .into_iter()
             .enumerate()
             .map(|(i, sidecar)| {
-                let hash = blob_hashes.get(i).ok_or(anyhow!("failed to get blob hash"))?;
+                let hash = blob_hashes
+                    .get(i)
+                    .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
                 match sidecar.verify_blob(hash) {
                     Ok(_) => Ok(sidecar.blob),
-                    Err(e) => Err(e),
+                    Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                 }
             })
-            .collect::<anyhow::Result<Vec<Blob>>>()
+            .collect::<Result<Vec<Blob>, BlobProviderError>>()
         {
             Ok(blobs) => blobs,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
                 crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "verify_blob"]);
-                return Err(BlobProviderError::Custom(e));
+                return Err(BlobProviderError::Backend(e.to_string()));
             }
         };
 
@@ -191,7 +209,7 @@ pub trait BlobSidecarProvider {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> anyhow::Result<Vec<APIBlobSidecar>>;
+    ) -> Result<Vec<APIBlobSidecar>, BlobProviderError>;
 }
 
 /// Blanket implementation of the [BlobSidecarProvider] trait for all types that
@@ -202,8 +220,10 @@ impl<B: BeaconClient + Send + Sync> BlobSidecarProvider for B {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> anyhow::Result<Vec<APIBlobSidecar>> {
-        self.beacon_blob_side_cars(slot, hashes).await
+    ) -> Result<Vec<APIBlobSidecar>, BlobProviderError> {
+        self.beacon_blob_side_cars(slot, hashes)
+            .await
+            .map_err(|e| BlobProviderError::Backend(e.to_string()))
     }
 }
 
@@ -244,9 +264,9 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<BlobSidecar>, BlobProviderError> {
         let Some(fallback) = self.fallback.as_ref() else {
-            return Err(BlobProviderError::Custom(anyhow::anyhow!(
-                "cannot fetch blobs: the primary blob provider failed, and no fallback is configured"
-            )));
+            return Err(BlobProviderError::Backend(
+                "cannot fetch blobs: the primary blob provider failed, and no fallback is configured".to_string()
+            ));
         };
 
         if blob_hashes.is_empty() {
@@ -258,8 +278,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
             self.primary.genesis_time.expect("Genesis Config Loaded"),
             self.primary.slot_interval.expect("Config Spec Loaded"),
             block_ref.timestamp,
-        )
-        .map_err(BlobProviderError::Slot)?;
+        )?;
 
         // Fetch blob sidecars for the given block reference and blob hashes.
         let sidecars = fallback.beacon_blob_side_cars(slot, blob_hashes).await?;
@@ -287,6 +306,8 @@ where
     F: BlobSidecarProvider + Send + Sync,
     S: SlotDerivation + Send + Sync,
 {
+    type Error = BlobProviderError;
+
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. The blobs are validated for their index and hashes using the specified
     /// [IndexedBlobHash].
@@ -320,15 +341,15 @@ where
                     .into_iter()
                     .enumerate()
                     .map(|(i, sidecar)| {
-                        let hash = blob_hashes
-                            .get(i)
-                            .ok_or(anyhow!("fallback: failed to get blob hash"))?;
+                        let hash = blob_hashes.get(i).ok_or(BlobProviderError::Backend(
+                            "fallback: failed to get blob hash".to_string(),
+                        ))?;
                         match sidecar.verify_blob(hash) {
                             Ok(_) => Ok(sidecar.blob),
-                            Err(e) => Err(e),
+                            Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                         }
                     })
-                    .collect::<anyhow::Result<Vec<Blob>>>()
+                    .collect::<Result<Vec<Blob>, BlobProviderError>>()
                 {
                     Ok(blobs) => blobs,
                     Err(e) => {
@@ -336,7 +357,7 @@ where
                             PROVIDER_ERRORS,
                             &["blob_provider", "get_blobs", "fallback_verify_blob"]
                         );
-                        return Err(BlobProviderError::Custom(e));
+                        return Err(e);
                     }
                 };
 
@@ -542,7 +563,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
-            BlobProviderError::Custom(anyhow::anyhow!("failed to get beacon genesis"))
+            BlobProviderError::Backend("beacon_genesis not set".to_string())
         );
     }
 
@@ -559,7 +580,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
-            BlobProviderError::Custom(anyhow::anyhow!("failed to get config spec"))
+            BlobProviderError::Backend("config_spec not set".to_string())
         );
     }
 
@@ -575,12 +596,7 @@ mod tests {
         let block_ref = BlockInfo { timestamp: 5, ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
-        assert_eq!(
-            result.unwrap_err(),
-            BlobProviderError::Slot(anyhow::anyhow!(
-                "provided timestamp (5) precedes genesis time (10)"
-            ))
-        );
+        assert_eq!(result.unwrap_err(), BlobProviderError::SlotDerivation);
     }
 
     #[tokio::test]
@@ -597,7 +613,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
-            BlobProviderError::Custom(anyhow::anyhow!("blob_sidecars not set"))
+            BlobProviderError::Backend("blob_sidecars not set".to_string())
         );
     }
 
@@ -657,9 +673,10 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
-            BlobProviderError::Custom(anyhow::anyhow!(
+            BlobProviderError::Backend(
                 "invalid sidecar ordering, blob hash index 4 does not match sidecar index 0"
-            ))
+                    .to_string()
+            )
         );
     }
 
@@ -681,10 +698,10 @@ mod tests {
             ..Default::default()
         }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
-        assert_eq!(result.unwrap_err(), BlobProviderError::Custom(anyhow::anyhow!("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1")));
+        assert_eq!(result.unwrap_err(), BlobProviderError::Backend("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1".to_string()));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_get_blobs_failed_verification() {
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
@@ -703,8 +720,8 @@ mod tests {
         }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
-            result.unwrap_err(),
-            BlobProviderError::Custom(anyhow::anyhow!("blob at index 0 failed verification"))
+            result,
+            Err(BlobProviderError::Backend("blob at index 0 failed verification".to_string()))
         );
     }
 

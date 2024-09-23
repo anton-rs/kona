@@ -1,11 +1,13 @@
 //! This module contains the [OrderedListWalker] struct, which allows for traversing an MPT root of
 //! a derivable ordered list.
 
-use crate::{TrieDBFetcher, TrieNode};
-use alloc::{collections::VecDeque, vec};
+use crate::{
+    errors::{OrderedListWalkerError, OrderedListWalkerResult},
+    TrieNode, TrieNodeError, TrieProvider,
+};
+use alloc::{collections::VecDeque, string::ToString, vec};
 use alloy_primitives::{Bytes, B256};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
-use anyhow::{anyhow, Result};
 use core::marker::PhantomData;
 
 /// A [OrderedListWalker] allows for traversing over a Merkle Patricia Trie containing a derivable
@@ -14,7 +16,7 @@ use core::marker::PhantomData;
 /// Once it has ben hydrated with [Self::hydrate], the elements in the derivable list can be
 /// iterated over using the [Iterator] implementation.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct OrderedListWalker<F: TrieDBFetcher> {
+pub struct OrderedListWalker<F: TrieProvider> {
     /// The Merkle Patricia Trie root.
     root: B256,
     /// The leaf nodes of the derived list, in order. [None] if the tree has yet to be fully
@@ -26,7 +28,7 @@ pub struct OrderedListWalker<F: TrieDBFetcher> {
 
 impl<F> OrderedListWalker<F>
 where
-    F: TrieDBFetcher,
+    F: TrieProvider,
 {
     /// Creates a new [OrderedListWalker], yet to be hydrated.
     pub fn new(root: B256) -> Self {
@@ -35,7 +37,7 @@ where
 
     /// Creates a new [OrderedListWalker] and hydrates it with [Self::hydrate] and the given fetcher
     /// immediately.
-    pub fn try_new_hydrated(root: B256, fetcher: &F) -> Result<Self> {
+    pub fn try_new_hydrated(root: B256, fetcher: &F) -> OrderedListWalkerResult<Self> {
         let mut walker = Self { root, inner: None, _phantom: PhantomData };
         walker.hydrate(fetcher)?;
         Ok(walker)
@@ -43,10 +45,10 @@ where
 
     /// Hydrates the [OrderedListWalker]'s iterator with the leaves of the derivable list. If
     /// `Self::inner` is [Some], this function will fail fast.
-    pub fn hydrate(&mut self, fetcher: &F) -> Result<()> {
+    pub fn hydrate(&mut self, fetcher: &F) -> OrderedListWalkerResult<()> {
         // Do not allow for re-hydration if `inner` is `Some` and still contains elements.
         if self.inner.is_some() && self.inner.as_ref().map(|s| s.len()).unwrap_or_default() > 0 {
-            anyhow::bail!("Iterator is already hydrated, and has not been consumed entirely.")
+            return Err(OrderedListWalkerError::AlreadyHydrated);
         }
 
         // Get the preimage to the root node.
@@ -59,13 +61,12 @@ where
         if !ordered_list.is_empty() {
             if ordered_list.len() <= EMPTY_STRING_CODE as usize {
                 // If the list length is < 0x80, the final element is the first element.
-                let first = ordered_list.pop_back().ok_or(anyhow!("Empty list fetched"))?;
+                let first = ordered_list.pop_back().expect("Cannot be empty");
                 ordered_list.push_front(first);
             } else {
                 // If the list length is > 0x80, the element at index 0x80-1 is the first element.
-                let first = ordered_list
-                    .remove((EMPTY_STRING_CODE - 1) as usize)
-                    .ok_or(anyhow!("Empty list fetched"))?;
+                let first =
+                    ordered_list.remove((EMPTY_STRING_CODE - 1) as usize).expect("Cannot be empty");
                 ordered_list.push_front(first);
             }
         }
@@ -81,7 +82,10 @@ where
     }
 
     /// Traverses a [TrieNode], returning all values of child [TrieNode::Leaf] variants.
-    fn fetch_leaves(trie_node: &TrieNode, fetcher: &F) -> Result<VecDeque<(Bytes, Bytes)>> {
+    fn fetch_leaves(
+        trie_node: &TrieNode,
+        fetcher: &F,
+    ) -> OrderedListWalkerResult<VecDeque<(Bytes, Bytes)>> {
         match trie_node {
             TrieNode::Branch { stack } => {
                 let mut leaf_values = VecDeque::with_capacity(stack.len());
@@ -117,24 +121,29 @@ where
                     node => Ok(Self::fetch_leaves(node, fetcher)?),
                 }
             }
-            _ => anyhow::bail!("Invalid trie node type encountered"),
+            TrieNode::Empty => Ok(VecDeque::new()),
+            _ => Err(TrieNodeError::InvalidNodeType.into()),
         }
     }
 
     /// Grabs the preimage of `hash` using `fetcher`, and attempts to decode the preimage data into
     /// a [TrieNode]. Will error if the conversion of `T` into [B256] fails.
-    fn get_trie_node<T>(hash: T, fetcher: &F) -> Result<TrieNode>
+    fn get_trie_node<T>(hash: T, fetcher: &F) -> OrderedListWalkerResult<TrieNode>
     where
         T: Into<B256>,
     {
-        let preimage = fetcher.trie_node_preimage(hash.into())?;
-        TrieNode::decode(&mut preimage.as_ref()).map_err(|e| anyhow!(e))
+        let preimage = fetcher
+            .trie_node_preimage(hash.into())
+            .map_err(|e| TrieNodeError::Provider(e.to_string()))?;
+        TrieNode::decode(&mut preimage.as_ref())
+            .map_err(TrieNodeError::RLPError)
+            .map_err(Into::into)
     }
 }
 
 impl<F> Iterator for OrderedListWalker<F>
 where
-    F: TrieDBFetcher,
+    F: TrieProvider,
 {
     type Item = (Bytes, Bytes);
 
@@ -161,6 +170,7 @@ mod test {
             get_live_derivable_receipts_list, get_live_derivable_transactions_list,
             TrieNodeProvider,
         },
+        NoopTrieProvider,
     };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};
@@ -220,5 +230,12 @@ mod test {
                 .collect::<Vec<_>>(),
             VALUES
         );
+    }
+
+    #[test]
+    fn test_empty_list_walker() {
+        assert!(OrderedListWalker::fetch_leaves(&TrieNode::Empty, &NoopTrieProvider)
+            .expect("Failed to traverse empty trie")
+            .is_empty());
     }
 }

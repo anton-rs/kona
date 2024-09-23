@@ -1,7 +1,7 @@
 //! Raw Span Batch
 
 use alloc::{vec, vec::Vec};
-use kona_primitives::{RawTransaction, RollupConfig};
+use op_alloy_genesis::RollupConfig;
 
 use super::{SpanBatch, SpanBatchElement, SpanBatchError, SpanBatchPayload, SpanBatchPrefix};
 use crate::batch::{BatchType, SpanDecodingError};
@@ -121,7 +121,7 @@ impl RawSpanBatch {
             acc.push(SpanBatchElement {
                 epoch_num: block_origin_nums[i as usize],
                 timestamp: genesis_time + self.prefix.rel_timestamp + block_time * i,
-                transactions: transactions.into_iter().map(|v| RawTransaction(v.into())).collect(),
+                transactions: transactions.into_iter().map(|v| v.into()).collect(),
             });
             acc
         });

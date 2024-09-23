@@ -1,16 +1,19 @@
 //! Contains logic to validate derivation pipeline outputs.
 
+use alloy_primitives::Bytes;
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, BlockTransactionsKind, Header};
+use alloy_rpc_types_engine::PayloadAttributes;
 use alloy_transport::TransportResult;
 use anyhow::Result;
-use kona_primitives::{L2AttributesWithParent, L2PayloadAttributes, RawTransaction, RollupConfig};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAttributes};
 use std::vec::Vec;
 use tracing::{error, warn};
 
 /// OnlineValidator
 ///
-/// Validates the [`L2AttributesWithParent`] by fetching the associated L2 block from
+/// Validates the [`OptimismAttributesWithParent`] by fetching the associated L2 block from
 /// a trusted L2 RPC and constructing the L2 Attributes from the block.
 #[derive(Debug, Clone)]
 pub struct OnlineValidator {
@@ -36,10 +39,7 @@ impl OnlineValidator {
     ///
     /// This method needs to fetch the non-hydrated block and then
     /// fetch the raw transactions using the `debug_*` namespace.
-    pub(crate) async fn get_block(
-        &self,
-        tag: BlockNumberOrTag,
-    ) -> Result<(Header, Vec<RawTransaction>)> {
+    pub(crate) async fn get_block(&self, tag: BlockNumberOrTag) -> Result<(Header, Vec<Bytes>)> {
         // Don't hydrate the block so we only get a list of transaction hashes.
         let block = self
             .provider
@@ -50,7 +50,7 @@ impl OnlineValidator {
         // For each transaction hash, fetch the raw transaction RLP.
         let mut txs = vec![];
         for tx in block.transactions.hashes() {
-            let tx: TransportResult<RawTransaction> =
+            let tx: TransportResult<Bytes> =
                 self.provider.raw_request("debug_getRawTransaction".into(), [tx]).await;
             if let Ok(tx) = tx {
                 txs.push(tx);
@@ -63,26 +63,31 @@ impl OnlineValidator {
     }
 
     /// Gets the payload for the specified [BlockNumberOrTag].
-    pub(crate) async fn get_payload(&self, tag: BlockNumberOrTag) -> Result<L2PayloadAttributes> {
+    pub(crate) async fn get_payload(
+        &self,
+        tag: BlockNumberOrTag,
+    ) -> Result<OptimismPayloadAttributes> {
         let (header, transactions) = self.get_block(tag).await?;
-        Ok(L2PayloadAttributes {
-            timestamp: header.timestamp,
-            prev_randao: header.mix_hash.unwrap_or_default(),
-            fee_recipient: header.miner,
-            // Withdrawals on optimism are always empty, *after* canyon (Shanghai) activation
-            withdrawals: (header.timestamp >= self.canyon_activation).then_some(Vec::default()),
-            parent_beacon_block_root: header.parent_beacon_block_root,
-            transactions,
-            no_tx_pool: true,
+        Ok(OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: header.timestamp,
+                suggested_fee_recipient: header.miner,
+                prev_randao: header.mix_hash.unwrap_or_default(),
+                // Withdrawals on optimism are always empty, *after* canyon (Shanghai) activation
+                withdrawals: (header.timestamp >= self.canyon_activation).then_some(Vec::default()),
+                parent_beacon_block_root: header.parent_beacon_block_root,
+            },
+            transactions: Some(transactions),
+            no_tx_pool: Some(true),
             gas_limit: Some(header.gas_limit as u64),
         })
     }
 
-    /// Validates the given [`L2AttributesWithParent`].
+    /// Validates the given [`OptimismAttributesWithParent`].
     pub async fn validate(
         &self,
-        attributes: &L2AttributesWithParent,
-    ) -> Result<(bool, L2PayloadAttributes)> {
+        attributes: &OptimismAttributesWithParent,
+    ) -> Result<(bool, OptimismPayloadAttributes)> {
         let expected = attributes.parent.block_info.number + 1;
         let tag = BlockNumberOrTag::from(expected);
         match self.get_payload(tag).await {

@@ -5,10 +5,11 @@
 //! [HintWriter]: kona_preimage::HintWriter
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use anyhow::Result;
 use async_trait::async_trait;
 use core::num::NonZeroUsize;
-use kona_preimage::{HintWriterClient, PreimageKey, PreimageOracleClient};
+use kona_preimage::{
+    errors::PreimageOracleResult, HintWriterClient, PreimageKey, PreimageOracleClient,
+};
 use lru::LruCache;
 use spin::Mutex;
 
@@ -58,7 +59,7 @@ where
     OR: PreimageOracleClient + Sync,
     HW: HintWriterClient + Sync,
 {
-    async fn get(&self, key: PreimageKey) -> Result<Vec<u8>> {
+    async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         let mut cache_lock = self.cache.lock();
         if let Some(value) = cache_lock.get(&key) {
             Ok(value.clone())
@@ -69,7 +70,7 @@ where
         }
     }
 
-    async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> Result<()> {
+    async fn get_exact(&self, key: PreimageKey, buf: &mut [u8]) -> PreimageOracleResult<()> {
         let mut cache_lock = self.cache.lock();
         if let Some(value) = cache_lock.get(&key) {
             // SAFETY: The value never enters the cache unless the preimage length matches the
@@ -90,7 +91,7 @@ where
     OR: PreimageOracleClient + Sync,
     HW: HintWriterClient + Sync,
 {
-    async fn write(&self, hint: &str) -> Result<()> {
+    async fn write(&self, hint: &str) -> PreimageOracleResult<()> {
         self.hint_writer.write(hint).await
     }
 }

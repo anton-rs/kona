@@ -8,19 +8,15 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
-use alloy_consensus::Header;
 use kona_client::{
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
     l2::OracleL2ChainProvider,
     BootInfo, CachingOracle,
 };
 use kona_common_proc::client_entry;
-use kona_executor::StatelessL2BlockExecutor;
-use kona_preimage::{HintWriter, OracleReader};
-use kona_primitives::L2AttributesWithParent;
 
 pub(crate) mod fault;
-use fault::{FPVMPrecompileOverride, HINT_WRITER, ORACLE_READER};
+use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
@@ -51,6 +47,7 @@ fn main() -> Result<()> {
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
 
+        // Create a new derivation driver with the given boot information and oracle.
         let mut driver = DerivationDriver::new(
             boot.as_ref(),
             oracle.as_ref(),
@@ -59,27 +56,32 @@ fn main() -> Result<()> {
             l2_provider.clone(),
         )
         .await?;
-        let L2AttributesWithParent { attributes, .. } = driver.produce_disputed_payload().await?;
 
-        let precompile_overrides = FPVMPrecompileOverride::<
-            OracleL2ChainProvider<CachingOracle<OracleReader, HintWriter>>,
-            OracleL2ChainProvider<CachingOracle<OracleReader, HintWriter>>,
-        >::default();
-        let mut executor = StatelessL2BlockExecutor::builder(&boot.rollup_config)
-            .with_parent_header(driver.take_l2_safe_head_header())
-            .with_fetcher(l2_provider.clone())
-            .with_hinter(l2_provider)
-            .with_precompile_overrides(precompile_overrides)
-            .build()?;
-        let Header { number, .. } = *executor.execute_payload(attributes)?;
-        let output_root = executor.compute_output_root()?;
+        // Run the derivation pipeline until we are able to produce the output root of the claimed
+        // L2 block.
+        let (number, output_root) = driver
+            .produce_output(&boot.rollup_config, &l2_provider, &l2_provider, fpvm_handle_register)
+            .await?;
 
         ////////////////////////////////////////////////////////////////
         //                          EPILOGUE                          //
         ////////////////////////////////////////////////////////////////
 
-        assert_eq!(number, boot.l2_claim_block);
-        assert_eq!(output_root, boot.l2_claim);
+        if number != boot.l2_claim_block || output_root != boot.l2_claim {
+            tracing::error!(
+                target: "client",
+                "Failed to validate L2 block #{number} with output root {output_root}",
+                number = number,
+                output_root = output_root
+            );
+            kona_common::io::print(&alloc::format!(
+                "Failed to validate L2 block #{} with output root {}\n",
+                number,
+                output_root
+            ));
+
+            kona_common::io::exit(1);
+        }
 
         tracing::info!(
             target: "client",

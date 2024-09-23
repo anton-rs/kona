@@ -1,7 +1,7 @@
 [package]
 name = "kona-common"
 description = "Common traits and system interfaces for developing client programs on top of Fault Proof VMs."
-version = "0.0.2"
+version = "0.0.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -9,6 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+thiserror.workspace = true
 cfg-if.workspace = true
 linked_list_allocator.workspace = true

@@ -4,7 +4,7 @@
 use alloy_primitives::{B256, U256};
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
-use kona_primitives::RollupConfig;
+use op_alloy_genesis::RollupConfig;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 

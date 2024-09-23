@@ -65,12 +65,7 @@ pub(crate) unsafe fn syscall1(n: usize, arg1: usize) -> usize {
 
 /// Issues a raw system call with 3 arguments. (e.g. read, write)
 #[inline]
-pub(crate) unsafe fn syscall3(
-    n: usize,
-    arg1: usize,
-    arg2: usize,
-    arg3: usize,
-) -> Result<usize, i32> {
+pub(crate) unsafe fn syscall3(n: usize, arg1: usize, arg2: usize, arg3: usize) -> usize {
     let mut err: usize;
     let mut ret: usize;
     asm!(
@@ -94,12 +89,5 @@ pub(crate) unsafe fn syscall3(
         options(nostack, preserves_flags)
     );
 
-    let value = (err == 0).then_some(ret).unwrap_or_else(|| ret.wrapping_neg());
-
-    (value <= -4096isize as usize).then_some(value).ok_or_else(|| {
-        // Truncation of the error value is guaranteed to never occur due to
-        // the above check. This is the same check that musl uses:
-        // https://git.musl-libc.org/cgit/musl/tree/src/internal/syscall_ret.c?h=v1.1.15
-        -(value as i32)
-    })
+    (err == 0).then_some(ret).unwrap_or_else(|| ret.wrapping_neg())
 }

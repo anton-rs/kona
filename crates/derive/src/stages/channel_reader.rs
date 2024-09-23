@@ -2,18 +2,18 @@
 
 use crate::{
     batch::Batch,
-    errors::{StageError, StageResult},
+    errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchQueueProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
-use kona_primitives::{BlockInfo, RollupConfig, SystemConfig};
-
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::BlockInfo;
 use tracing::{debug, error, warn};
 
 /// ZLIB Deflate Compression Method.
@@ -32,7 +32,7 @@ pub trait ChannelReaderProvider {
     /// of the channel bank prior to loading data in (unlike most other stages). This is to
     /// ensure maintain consistency around channel bank pruning which depends upon the order
     /// of operations.
-    async fn next_data(&mut self) -> StageResult<Option<Bytes>>;
+    async fn next_data(&mut self) -> PipelineResult<Option<Bytes>>;
 }
 
 /// [ChannelReader] is a stateful stage that does the following:
@@ -60,9 +60,10 @@ where
     }
 
     /// Creates the batch reader from available channel data.
-    async fn set_batch_reader(&mut self) -> StageResult<()> {
+    async fn set_batch_reader(&mut self) -> PipelineResult<()> {
         if self.next_batch.is_none() {
-            let channel = self.prev.next_data().await?.ok_or(StageError::NoChannel)?;
+            let channel =
+                self.prev.next_data().await?.ok_or(PipelineError::ChannelReaderEmpty.temp())?;
             self.next_batch = Some(BatchReader::from(&channel[..]));
         }
         Ok(())
@@ -80,7 +81,7 @@ impl<P> OriginAdvancer for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn advance_origin(&mut self) -> StageResult<()> {
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
@@ -90,7 +91,7 @@ impl<P> BatchQueueProvider for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn next_batch(&mut self) -> StageResult<Batch> {
+    async fn next_batch(&mut self) -> PipelineResult<Batch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
             debug!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
@@ -103,7 +104,7 @@ where
             .as_mut()
             .expect("Cannot be None")
             .next_batch(self.cfg.as_ref())
-            .ok_or(StageError::NotEnoughData)
+            .ok_or(PipelineError::NotEnoughData.temp())
         {
             Ok(batch) => Ok(batch),
             Err(e) => {
@@ -129,7 +130,7 @@ impl<P> ResettableStage for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> StageResult<()> {
+    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
         self.prev.reset(base, cfg).await?;
         self.next_channel();
         crate::inc!(STAGE_RESETS, &["channel-reader"]);
@@ -220,7 +221,7 @@ impl<T: Into<Vec<u8>>> From<T> for BatchReader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::stages::test_utils::MockChannelReaderProvider;
+    use crate::{errors::PipelineErrorKind, stages::test_utils::MockChannelReaderProvider};
     use alloc::vec;
 
     fn new_compressed_batch_data() -> Bytes {
@@ -233,9 +234,9 @@ mod test {
 
     #[tokio::test]
     async fn test_next_batch_batch_reader_set_fails() {
-        let mock = MockChannelReaderProvider::new(vec![Err(StageError::Eof)]);
+        let mock = MockChannelReaderProvider::new(vec![Err(PipelineError::Eof.temp())]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        assert_eq!(reader.next_batch().await, Err(StageError::Eof));
+        assert_eq!(reader.next_batch().await, Err(PipelineError::Eof.temp()));
         assert!(reader.next_batch.is_none());
     }
 
@@ -243,7 +244,10 @@ mod test {
     async fn test_next_batch_batch_reader_no_data() {
         let mock = MockChannelReaderProvider::new(vec![Ok(None)]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        assert_eq!(reader.next_batch().await, Err(StageError::NoChannel));
+        assert!(matches!(
+            reader.next_batch().await.unwrap_err(),
+            PipelineErrorKind::Temporary(PipelineError::ChannelReaderEmpty)
+        ));
         assert!(reader.next_batch.is_none());
     }
 
@@ -253,7 +257,7 @@ mod test {
         let second = first.split_to(first.len() / 2);
         let mock = MockChannelReaderProvider::new(vec![Ok(Some(first)), Ok(Some(second))]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        assert_eq!(reader.next_batch().await, Err(StageError::NotEnoughData));
+        assert_eq!(reader.next_batch().await, Err(PipelineError::NotEnoughData.temp()));
         assert!(reader.next_batch.is_none());
     }
 

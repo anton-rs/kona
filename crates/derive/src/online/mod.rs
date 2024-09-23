@@ -8,9 +8,6 @@ pub use crate::{
     traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
 };
 
-// Re-export kona primitives types.
-pub use kona_primitives::{BlockInfo, RollupConfig};
-
 mod pipeline;
 pub use pipeline::{
     new_online_pipeline, OnlineAttributesBuilder, OnlineAttributesQueue, OnlineDataProvider,

@@ -2,7 +2,7 @@
 #                Build Asterisc @ `ASTERISC_TAG`               #
 ################################################################
 
-FROM ubuntu:22.04 as asterisc-build
+FROM ubuntu:22.04 AS asterisc-build
 SHELL ["/bin/bash", "-c"]
 
 ARG ASTERISC_TAG
@@ -14,7 +14,7 @@ ENV GO_VERSION=1.21.1
 
 # Fetch go manually, rather than using a Go base image, so we can copy the installation into the final stage
 RUN curl -sL https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz -o go$GO_VERSION.linux-amd64.tar.gz && \
-  tar -C /usr/local/ -xzvf go$GO_VERSION.linux-amd64.tar.gz
+  tar -C /usr/local/ -xzf go$GO_VERSION.linux-amd64.tar.gz
 ENV GOPATH=/go
 ENV PATH=/usr/local/go/bin:$GOPATH/bin:$PATH
 
@@ -29,7 +29,7 @@ RUN git clone https://github.com/ethereum-optimism/asterisc && \
 #               Build kona-client @ `CLIENT_TAG`               #
 ################################################################
 
-FROM ghcr.io/ethereum-optimism/kona/asterisc-builder@sha256:dc3a8e45dc4f7fa8e264987ba04c1d83d3eb4c8f3c666e4f9a431b90ea029503 as client-build
+FROM ghcr.io/anton-rs/kona/asterisc-builder@sha256:523f0455b25b28917a8e7d02cd3ecb8c8af93e5e5b85ec7d7bcf2df4458e65a5 AS client-build
 SHELL ["/bin/bash", "-c"]
 
 ARG CLIENT_TAG
@@ -45,16 +45,53 @@ COPY ./bin ./bin
 # Install deps
 RUN apt-get update && apt-get install -y --no-install-recommends git
 
-# Build kona on the latest tag
+# Build kona-client on the selected tag
 RUN git checkout $CLIENT_TAG && \
-  cargo build -Zbuild-std --workspace --bin kona --locked --profile release-client-lto --exclude kona-host --exclude trusted-sync && \
+  cargo build -Zbuild-std=core,alloc --workspace --bin kona --locked --profile release-client-lto --exclude kona-host --exclude trusted-sync && \
   mv ./target/riscv64gc-unknown-none-elf/release-client-lto/kona /kona-client-elf
+
+################################################################
+#                Build kona-host @ `CLIENT_TAG`                #
+################################################################
+
+FROM ubuntu:22.04 AS host-build 
+SHELL ["/bin/bash", "-c"]
+
+ARG CLIENT_TAG
+
+# Copy the Rust workspace from the host
+COPY ./.git ./.git
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./crates ./crates
+COPY ./examples ./examples
+COPY ./bin ./bin
+
+# Install deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  curl \
+  ca-certificates \
+  libssl-dev \
+  clang \
+  pkg-config
+
+# Install rust
+ENV RUST_VERSION=1.80.0
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain ${RUST_VERSION} --component rust-src
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Build kona-host on the selected tag
+RUN git checkout $CLIENT_TAG && \
+  cargo build --workspace --bin kona-host --release && \
+  mv ./target/release/kona-host /kona-host
 
 ################################################################
 #        Create `prestate.json` + `prestate-proof.json`        #
 ################################################################
 
-FROM ubuntu:22.04 as prestate-build
+FROM ubuntu:22.04 AS prestate-build
 SHELL ["/bin/bash", "-c"]
 
 # Set env
@@ -88,9 +125,10 @@ RUN $ASTERISC_BIN_PATH run \
 #                       Export Artifacts                       #
 ################################################################
 
-FROM scratch as export-stage
+FROM scratch AS export-stage
 
 COPY --from=prestate-build /asterisc .
 COPY --from=prestate-build /kona-client-elf .
 COPY --from=prestate-build /prestate.json .
 COPY --from=prestate-build /prestate-proof.json .
+COPY --from=host-build /kona-host .

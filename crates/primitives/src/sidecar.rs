@@ -5,13 +5,16 @@ use alloy_eips::eip4844::Blob;
 use alloy_primitives::FixedBytes;
 
 #[cfg(feature = "online")]
+use alloy_eips::eip4844::VERSIONED_HASH_VERSION_KZG;
+
+#[cfg(feature = "online")]
 use crate::IndexedBlobHash;
 #[cfg(feature = "online")]
 use alloy_primitives::B256;
 #[cfg(feature = "online")]
-use c_kzg::{Bytes48, KzgProof, KzgSettings};
+use c_kzg::{Bytes48, KzgProof};
 #[cfg(feature = "online")]
-use revm::primitives::kzg::{G1_POINTS, G2_POINTS};
+use revm::primitives::EnvKzgSettings;
 #[cfg(feature = "online")]
 use sha2::{Digest, Sha256};
 #[cfg(feature = "online")]
@@ -28,10 +31,6 @@ pub const KZG_PROOF_SIZE: usize = 48;
 
 /// KZG Commitment Size
 pub const KZG_COMMITMENT_SIZE: usize = 48;
-
-/// The versioned hash version for KZG.
-#[cfg(feature = "online")]
-pub(crate) const VERSIONED_HASH_VERSION_KZG: u8 = 0x01;
 
 #[cfg(feature = "serde")]
 fn parse_u64_string<'de, T, D>(de: D) -> Result<T, D::Error>
@@ -99,8 +98,8 @@ impl BlobSidecar {
         let blob = c_kzg::Blob::from_bytes(self.blob.as_slice()).map_err(how)?;
         let commitment = Bytes48::from_bytes(self.kzg_commitment.as_slice()).map_err(how)?;
         let kzg_proof = Bytes48::from_bytes(self.kzg_proof.as_slice()).map_err(how)?;
-        let settings = KzgSettings::load_trusted_setup(&G1_POINTS.0, &G2_POINTS.0).map_err(how)?;
-        match KzgProof::verify_blob_kzg_proof(&blob, &commitment, &kzg_proof, &settings) {
+        let settings = EnvKzgSettings::Default.get();
+        match KzgProof::verify_blob_kzg_proof(&blob, &commitment, &kzg_proof, settings) {
             Ok(_) => Ok(true),
             Err(e) => {
                 warn!("Failed to verify blob KZG proof: {:?}", e);

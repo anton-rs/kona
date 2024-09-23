@@ -1,13 +1,21 @@
 //! This module contains all CLI-specific code for the host binary.
 
-use crate::kv::{
-    DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
-    SplitKeyValueStore,
+use crate::{
+    kv::{
+        DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
+        SplitKeyValueStore,
+    },
+    util,
 };
 use alloy_primitives::B256;
+use alloy_provider::ReqwestProvider;
 use anyhow::{anyhow, Result};
-use clap::{ArgAction, Parser};
-use kona_primitives::RollupConfig;
+use clap::{
+    builder::styling::{AnsiColor, Color, Style},
+    ArgAction, Parser,
+};
+use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
+use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
@@ -18,60 +26,131 @@ pub(crate) use parser::parse_b256;
 mod tracing_util;
 pub use tracing_util::init_tracing_subscriber;
 
+const ABOUT: &str = "
+kona-host is a CLI application that runs the Kona pre-image server and client program. The host
+can run in two modes: server mode and native mode. In server mode, the host runs the pre-image
+server and waits for the client program in the parent process to request pre-images. In native
+mode, the host runs the client program in a child process with the pre-image server in the primary
+thread.
+";
+
 /// The host binary CLI application arguments.
-#[derive(Parser, Serialize, Clone, Debug)]
+#[derive(Default, Parser, Serialize, Clone, Debug)]
+#[command(about = ABOUT, version, styles = cli_styles())]
 pub struct HostCli {
-    /// Verbosity level (0-4)
-    #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
+    /// Verbosity level (0-2)
+    #[arg(long, short, action = ArgAction::Count)]
     pub v: u8,
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256)]
     pub l1_head: B256,
-    /// Hash of the L2 block at the L2 Output Root.
+    /// Hash of the L2 block committed to by `--l2-output-root`.
     #[clap(long, value_parser = parse_b256)]
     pub l2_head: B256,
     /// Agreed L2 Output Root to start derivation from.
     #[clap(long, value_parser = parse_b256)]
     pub l2_output_root: B256,
-    /// Claimed L2 output root to validate
+    /// Claimed L2 output root at block # `--l2-block-number` to validate.
     #[clap(long, value_parser = parse_b256)]
     pub l2_claim: B256,
-    /// Number of the L2 block that the claim is from.
+    /// Number of the L2 block that the claim commits to.
     #[clap(long)]
     pub l2_block_number: u64,
-    /// The L2 chain ID.
-    #[clap(long)]
-    pub l2_chain_id: u64,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
-    #[clap(long)]
+    #[clap(
+        long,
+        visible_alias = "l2",
+        requires = "l1_node_address",
+        requires = "l1_beacon_address"
+    )]
     pub l2_node_address: Option<String>,
-    /// Address of L1 JSON-RPC endpoint to use (eth namespace required)
-    #[clap(long)]
+    /// Address of L1 JSON-RPC endpoint to use (eth and debug namespace required)
+    #[clap(
+        long,
+        visible_alias = "l1",
+        requires = "l2_node_address",
+        requires = "l1_beacon_address"
+    )]
     pub l1_node_address: Option<String>,
     /// Address of the L1 Beacon API endpoint to use.
-    #[clap(long)]
+    #[clap(
+        long,
+        visible_alias = "beacon",
+        requires = "l1_node_address",
+        requires = "l2_node_address"
+    )]
     pub l1_beacon_address: Option<String>,
-    /// The Data Directory for preimage data storage. Default uses in-memory storage.
-    #[clap(long)]
+    /// The Data Directory for preimage data storage. Optional if running in online mode,
+    /// required if running in offline mode.
+    #[clap(
+        long,
+        visible_alias = "db",
+        required_unless_present_all = ["l2_node_address", "l1_node_address", "l1_beacon_address"]
+    )]
     pub data_dir: Option<PathBuf>,
-    /// Run the specified client program as a separate process detached from the host. Default is
-    /// to run the client program in the host process.
-    #[clap(long)]
+    /// Run the specified client program natively as a separate process detached from the host.
+    #[clap(long, conflicts_with = "server", required_unless_present = "server")]
     pub exec: Option<String>,
-    /// Run in pre-image server mode without executing any client program. Defaults to `false`.
-    #[clap(long)]
+    /// Run in pre-image server mode without executing any client program. If not provided, the
+    /// host will run the client program in the host process.
+    #[clap(long, conflicts_with = "exec", required_unless_present = "exec")]
     pub server: bool,
-    /// Path to rollup config
-    #[clap(long)]
+    /// The L2 chain ID of a supported chain. If provided, the host will look for the corresponding
+    /// rollup config in the superchain registry.
+    #[clap(
+        long,
+        conflicts_with = "rollup_config_path",
+        required_unless_present = "rollup_config_path"
+    )]
+    pub l2_chain_id: Option<u64>,
+    /// Path to rollup config. If provided, the host will use this config instead of attempting to
+    /// look up the config in the superchain registry.
+    #[clap(
+        long,
+        alias = "rollup-cfg",
+        conflicts_with = "l2_chain_id",
+        required_unless_present = "l2_chain_id"
+    )]
     pub rollup_config_path: Option<PathBuf>,
 }
 
 impl HostCli {
     /// Returns `true` if the host is running in offline mode.
     pub fn is_offline(&self) -> bool {
-        self.l1_node_address.is_none() ||
-            self.l2_node_address.is_none() ||
+        self.l1_node_address.is_none() &&
+            self.l2_node_address.is_none() &&
             self.l1_beacon_address.is_none()
+    }
+
+    /// Creates the providers associated with the [HostCli] configuration.
+    ///
+    /// ## Returns
+    /// - A [ReqwestProvider] for the L1 node.
+    /// - An [OnlineBlobProvider] for the L1 beacon node.
+    /// - A [ReqwestProvider] for the L2 node.
+    pub async fn create_providers(
+        &self,
+    ) -> Result<(
+        ReqwestProvider,
+        OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
+        ReqwestProvider,
+    )> {
+        let beacon_client = OnlineBeaconClient::new_http(
+            self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
+        );
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
+        blob_provider
+            .load_configs()
+            .await
+            .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
+        let l1_provider = util::http_provider(
+            self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
+        );
+        let l2_provider = util::http_provider(
+            self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
+        );
+
+        Ok((l1_provider, blob_provider, l2_provider))
     }
 
     /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is
@@ -107,5 +186,87 @@ impl HostCli {
         // Deserialize the config and return it.
         serde_json::from_str(&ser_config)
             .map_err(|e| anyhow!("Error deserializing RollupConfig: {e}"))
+    }
+}
+
+/// Styles for the CLI application.
+fn cli_styles() -> clap::builder::Styles {
+    clap::builder::Styles::styled()
+        .usage(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
+        .header(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
+        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green))))
+        .invalid(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
+        .error(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
+        .valid(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Green))))
+        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::White))))
+}
+
+#[cfg(test)]
+mod test {
+    use crate::HostCli;
+    use alloy_primitives::B256;
+    use clap::Parser;
+
+    #[test]
+    fn test_flags() {
+        let zero_hash_str = &B256::ZERO.to_string();
+        let default_flags = [
+            "host",
+            "--l1-head",
+            zero_hash_str,
+            "--l2-head",
+            zero_hash_str,
+            "--l2-output-root",
+            zero_hash_str,
+            "--l2-claim",
+            zero_hash_str,
+            "--l2-block-number",
+            "0",
+        ];
+
+        let cases = [
+            // valid
+            (["--server", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
+            (["--server", "--rollup-config-path", "dummy", "--data-dir", "dummy"].as_slice(), true),
+            (["--exec", "dummy", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
+            (
+                ["--exec", "dummy", "--rollup-config-path", "dummy", "--data-dir", "dummy"]
+                    .as_slice(),
+                true,
+            ),
+            (
+                [
+                    "--l1-node-address",
+                    "dummy",
+                    "--l2-node-address",
+                    "dummy",
+                    "--l1-beacon-address",
+                    "dummy",
+                    "--server",
+                    "--l2-chain-id",
+                    "0",
+                ]
+                .as_slice(),
+                true,
+            ),
+            // invalid
+            (["--server", "--exec", "dummy", "--l2-chain-id", "0"].as_slice(), false),
+            (["--l2-chain-id", "0", "--rollup-config-path", "dummy", "--server"].as_slice(), false),
+            (["--server"].as_slice(), false),
+            (["--exec", "dummy"].as_slice(), false),
+            (["--rollup-config-path", "dummy"].as_slice(), false),
+            (["--l2-chain-id", "0"].as_slice(), false),
+            (["--l1-node-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),
+            (["--l2-node-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),
+            (["--l1-beacon-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),
+            ([].as_slice(), false),
+        ];
+
+        for (args_ext, valid) in cases.into_iter() {
+            let args = default_flags.iter().chain(args_ext.iter()).cloned().collect::<Vec<_>>();
+
+            let parsed = HostCli::try_parse_from(args);
+            assert_eq!(parsed.is_ok(), valid);
+        }
     }
 }

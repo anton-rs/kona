@@ -9,9 +9,9 @@ use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::traits::ChainProvider;
-use kona_mpt::{OrderedListWalker, TrieDBFetcher};
+use kona_mpt::{OrderedListWalker, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::BlockInfo;
+use op_alloy_protocol::BlockInfo;
 
 /// The oracle-backed L1 chain provider for the client program.
 #[derive(Debug, Clone)]
@@ -31,6 +31,8 @@ impl<T: CommsClient> OracleL1ChainProvider<T> {
 
 #[async_trait]
 impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
+    type Error = anyhow::Error;
+
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
         // Send a hint for the block header.
         self.oracle.write(&HintType::L1BlockHeader.encode_with(&[hash.as_ref()])).await?;
@@ -119,7 +121,9 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     }
 }
 
-impl<T: CommsClient> TrieDBFetcher for OracleL1ChainProvider<T> {
+impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L1, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
@@ -128,14 +132,15 @@ impl<T: CommsClient> TrieDBFetcher for OracleL1ChainProvider<T> {
                 .get(PreimageKey::new(*key, PreimageKeyType::Keccak256))
                 .await
                 .map(Into::into)
+                .map_err(Into::into)
         })
     }
 
     fn bytecode_by_hash(&self, _: B256) -> Result<Bytes> {
-        unimplemented!("TrieDBFetcher::bytecode_by_hash unimplemented for OracleL1ChainProvider")
+        unimplemented!("TrieProvider::bytecode_by_hash unimplemented for OracleL1ChainProvider")
     }
 
     fn header_by_hash(&self, _: B256) -> Result<Header> {
-        unimplemented!("TrieDBFetcher::header_by_hash unimplemented for OracleL1ChainProvider")
+        unimplemented!("TrieProvider::header_by_hash unimplemented for OracleL1ChainProvider")
     }
 }

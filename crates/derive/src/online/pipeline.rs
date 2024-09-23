@@ -1,11 +1,13 @@
 //! Contains online pipeline types.
 
 use super::{
-    AlloyChainProvider, AlloyL2ChainProvider, BlockInfo, DerivationPipeline, EthereumDataSource,
-    OnlineBeaconClient, OnlineBlobProviderWithFallback, PipelineBuilder, RollupConfig,
-    SimpleSlotDerivation, StatefulAttributesBuilder,
+    AlloyChainProvider, AlloyL2ChainProvider, DerivationPipeline, EthereumDataSource,
+    OnlineBeaconClient, OnlineBlobProviderWithFallback, PipelineBuilder, SimpleSlotDerivation,
+    StatefulAttributesBuilder,
 };
 use alloc::sync::Arc;
+use op_alloy_genesis::RollupConfig;
+use op_alloy_protocol::BlockInfo;
 // Pipeline internal stages aren't re-exported at the module-level.
 use crate::stages::{
     AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval, L1Traversal,

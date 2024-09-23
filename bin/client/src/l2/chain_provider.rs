@@ -9,12 +9,12 @@ use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
-use kona_mpt::{OrderedListWalker, TrieDBFetcher, TrieDBHinter};
+use kona_mpt::{OrderedListWalker, TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_primitives::{
-    L2BlockInfo, L2ExecutionPayloadEnvelope, OpBlock, RollupConfig, SystemConfig,
-};
+use kona_primitives::{L2ExecutionPayloadEnvelope, OpBlock};
 use op_alloy_consensus::OpTxEnvelope;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_protocol::L2BlockInfo;
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]
@@ -69,12 +69,14 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
 
 #[async_trait]
 impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
         // Get the payload at the given block number.
         let payload = self.payload_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_l2_block_ref(&self.boot_info.rollup_config)
+        payload.to_l2_block_ref(&self.boot_info.rollup_config).map_err(Into::into)
     }
 
     async fn payload_by_number(&mut self, number: u64) -> Result<L2ExecutionPayloadEnvelope> {
@@ -114,11 +116,13 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
         let payload = self.payload_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_system_config(rollup_config.as_ref())
+        payload.to_system_config(rollup_config.as_ref()).map_err(Into::into)
     }
 }
 
-impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
+impl<T: CommsClient> TrieProvider for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
         // On L2, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
@@ -127,6 +131,7 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
                 .get(PreimageKey::new(*key, PreimageKeyType::Keccak256))
                 .await
                 .map(Into::into)
+                .map_err(Into::into)
         })
     }
 
@@ -139,6 +144,7 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
                 .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
                 .await
                 .map(Into::into)
+                .map_err(Into::into)
         })
     }
 
@@ -155,10 +161,15 @@ impl<T: CommsClient> TrieDBFetcher for OracleL2ChainProvider<T> {
     }
 }
 
-impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
+impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
+    type Error = anyhow::Error;
+
     fn hint_trie_node(&self, hash: B256) -> Result<()> {
         kona_common::block_on(async move {
-            self.oracle.write(&HintType::L2StateNode.encode_with(&[hash.as_slice()])).await
+            self.oracle
+                .write(&HintType::L2StateNode.encode_with(&[hash.as_slice()]))
+                .await
+                .map_err(Into::into)
         })
     }
 
@@ -170,6 +181,7 @@ impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
                         .encode_with(&[block_number.to_be_bytes().as_ref(), address.as_slice()]),
                 )
                 .await
+                .map_err(Into::into)
         })
     }
 
@@ -187,6 +199,7 @@ impl<T: CommsClient> TrieDBHinter for OracleL2ChainProvider<T> {
                     slot.to_be_bytes::<32>().as_ref(),
                 ]))
                 .await
+                .map_err(Into::into)
         })
     }
 }

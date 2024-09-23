@@ -18,7 +18,7 @@ docker run \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/cannon-builder:main cargo build --release -Zbuild-std
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --release -Zbuild-std=core,alloc
 ```
 
 **asterisc**
@@ -29,5 +29,5 @@ docker run \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/ethereum-optimism/kona/asterisc-builder:main cargo build --release -Zbuild-std
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --release -Zbuild-std=core,alloc
 ```

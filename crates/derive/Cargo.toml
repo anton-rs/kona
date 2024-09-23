@@ -1,7 +1,7 @@
 [package]
 name = "kona-derive"
 description = "A no_std derivation pipeline implementation for the OP Stack"
-version = "0.0.2"
+version = "0.0.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -14,7 +14,11 @@ alloy-eips.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256"] }
+alloy-rpc-types-engine.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
+op-alloy-protocol.workspace = true
+op-alloy-genesis.workspace = true
+op-alloy-rpc-types-engine.workspace = true
 
 # General
 hashbrown.workspace = true
@@ -22,8 +26,7 @@ unsigned-varint.workspace = true
 miniz_oxide.workspace = true
 brotli.workspace = true
 alloc-no-stdlib.workspace = true
-lru.workspace = true
-anyhow.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 
@@ -34,6 +37,7 @@ kona-primitives.workspace = true
 serde = { workspace = true, optional = true }
 
 # `online` feature dependencies
+lru = { workspace = true, optional = true }
 alloy-transport = { workspace = true, optional = true }
 alloy-provider = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
@@ -48,8 +52,13 @@ alloy-rpc-client = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 alloy-node-bindings = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true } 
+anyhow = { workspace = true, optional = true }
 
 [dev-dependencies]
+spin.workspace = true
+anyhow.workspace = true
+alloy-rpc-client.workspace = true
+alloy-transport-http.workspace = true
 tokio.workspace = true
 proptest.workspace = true
 tracing-subscriber.workspace = true
@@ -63,19 +72,28 @@ serde = [
   "kona-primitives/serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
-  "op-alloy-consensus/serde"
+  "op-alloy-consensus/serde",
+  "op-alloy-protocol/serde",
+  "op-alloy-genesis/serde",
+  "op-alloy-rpc-types-engine/serde",
 ]
 metrics = ["dep:prometheus", "dep:lazy_static"]
 online = [
   "dep:alloy-provider",
   "dep:alloy-transport",
   "dep:reqwest",
+  "dep:lru",
   "alloy-provider/reqwest",
   "alloy-consensus/serde",
   "kona-primitives/online",
+  "kona-primitives/serde",
+  "op-alloy-consensus/std",
+  "op-alloy-protocol/std",
+  "op-alloy-genesis/std",
 ]
 test-utils = [
   "dep:spin",
+  "dep:anyhow",
   "dep:alloy-transport-http",
   "dep:alloy-node-bindings",
   "dep:tracing-subscriber",

@@ -24,8 +24,10 @@ alloy-rlp.workspace = true
 alloy-provider.workspace = true
 alloy-transport-http.workspace = true 
 alloy-rpc-client.workspace = true 
-alloy-rpc-types.workspace = true
+alloy-rpc-types = { workspace = true, features = ["eth"] }
 alloy-primitives = { workspace = true, features = ["serde"] }
+op-alloy-genesis = { workspace = true, features = ["std", "serde"] }
+op-alloy-protocol = { workspace = true, features = ["std", "serde"] }
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 
 # General
@@ -41,3 +43,7 @@ serde_json.workspace = true
 tracing-subscriber.workspace = true
 command-fds.workspace = true
 os_pipe.workspace = true
+rocksdb.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

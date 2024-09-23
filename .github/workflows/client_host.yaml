@@ -25,6 +25,12 @@ jobs:
         with:
           cache-on-failure: true
           prefix-key: ${{ matrix.target }}-${{ matrix.name }}
+      - name: Log into ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: rui314/setup-mold@v1
       - name: Clone `asterisc` repository
         if: "!contains(matrix.target, 'native')"
@@ -67,5 +73,4 @@ jobs:
             $L2_OUTPUT_ROOT \
             $L2_HEAD \
             $L1_HEAD \
-            $L2_CHAIN_ID \
-            -vv
+            $L2_CHAIN_ID

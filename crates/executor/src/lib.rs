@@ -3,7 +3,7 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
@@ -11,10 +11,10 @@ use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
-use anyhow::{anyhow, Result};
-use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBFetcher, TrieDBHinter};
-use kona_primitives::{L2PayloadAttributes, RawTransaction, RollupConfig};
+use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBError, TrieHinter, TrieProvider};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
+use op_alloy_genesis::RollupConfig;
+use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
     primitives::{
@@ -25,11 +25,11 @@ use revm::{
 };
 use tracing::{debug, info};
 
-mod builder;
-pub use builder::StatelessL2BlockExecutorBuilder;
+mod errors;
+pub use errors::{ExecutorError, ExecutorResult};
 
-mod precompile;
-pub use precompile::{NoPrecompileOverride, PrecompileOverride};
+mod builder;
+pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
 
 mod eip4788;
 use eip4788::pre_block_beacon_root_contract_call;
@@ -43,29 +43,31 @@ use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_enve
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F, H, PO>
+pub struct StatelessL2BlockExecutor<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
-    PO: PrecompileOverride<F, H>,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
     /// The inner state database component.
     trie_db: TrieDB<F, H>,
-    /// Phantom data for the precompile overrides.
-    _phantom: core::marker::PhantomData<PO>,
+    /// The [KonaHandleRegister] to use during execution.
+    handler_register: Option<KonaHandleRegister<F, H>>,
 }
 
-impl<'a, F, H, PO> StatelessL2BlockExecutor<'a, F, H, PO>
+impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
 where
-    F: TrieDBFetcher,
-    H: TrieDBHinter,
-    PO: PrecompileOverride<F, H>,
+    F: TrieProvider,
+    H: TrieHinter,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
-    pub fn builder(config: &'a RollupConfig) -> StatelessL2BlockExecutorBuilder<'a, F, H, PO> {
-        StatelessL2BlockExecutorBuilder::with_config(config)
+    pub fn builder(
+        config: &'a RollupConfig,
+        provider: F,
+        hinter: H,
+    ) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
+        StatelessL2BlockExecutorBuilder::new(config, provider, hinter)
     }
 
     /// Executes the given block, returning the resulting state root.
@@ -84,26 +86,28 @@ where
     /// 4. Merge all state transitions into the cache state.
     /// 5. Compute the [state root, transactions root, receipts root, logs bloom] for the processed
     ///    block.
-    pub fn execute_payload(&mut self, payload: L2PayloadAttributes) -> Result<&Header> {
+    pub fn execute_payload(
+        &mut self,
+        payload: OptimismPayloadAttributes,
+    ) -> ExecutorResult<&Header> {
         // Prepare the `revm` environment.
         let initialized_block_env = Self::prepare_block_env(
-            self.revm_spec_id(payload.timestamp),
+            self.revm_spec_id(payload.payload_attributes.timestamp),
             self.config,
             self.trie_db.parent_block_header(),
             &payload,
         );
-        let initialized_cfg = self.evm_cfg_env(payload.timestamp);
+        let initialized_cfg = self.evm_cfg_env(payload.payload_attributes.timestamp);
         let block_number = initialized_block_env.number.to::<u64>();
         let base_fee = initialized_block_env.basefee.to::<u128>();
-        let gas_limit =
-            payload.gas_limit.ok_or(anyhow!("Gas limit not provided in payload attributes"))?;
+        let gas_limit = payload.gas_limit.ok_or(ExecutorError::MissingGasLimit)?;
 
         info!(
             target: "client_executor",
             "Executing block # {block_number} | Gas limit: {gas_limit} | Tx count: {tx_len}",
             block_number = block_number,
             gas_limit = gas_limit,
-            tx_len = payload.transactions.len()
+            tx_len = payload.transactions.as_ref().map(|txs| txs.len()).unwrap_or_default(),
         );
 
         let mut state =
@@ -120,33 +124,48 @@ where
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        ensure_create2_deployer_canyon(&mut state, self.config, payload.timestamp)?;
+        ensure_create2_deployer_canyon(
+            &mut state,
+            self.config,
+            payload.payload_attributes.timestamp,
+        )?;
 
         let mut cumulative_gas_used = 0u64;
-        let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(payload.transactions.len());
-        let is_regolith = self.config.is_regolith_active(payload.timestamp);
+        let mut receipts: Vec<OpReceiptEnvelope> =
+            Vec::with_capacity(payload.transactions.as_ref().map(|t| t.len()).unwrap_or_default());
+        let is_regolith = self.config.is_regolith_active(payload.payload_attributes.timestamp);
 
         // Construct the block-scoped EVM with the given configuration.
         // The transaction environment is set within the loop for each transaction.
-        let mut evm = Evm::builder()
-            .with_db(&mut state)
-            .with_env_with_handler_cfg(EnvWithHandlerCfg::new_with_cfg_env(
-                initialized_cfg.clone(),
-                initialized_block_env.clone(),
-                Default::default(),
-            ))
-            .append_handler_register(PO::set_precompiles)
-            .build();
+        let mut evm = {
+            let mut base = Evm::builder().with_db(&mut state).with_env_with_handler_cfg(
+                EnvWithHandlerCfg::new_with_cfg_env(
+                    initialized_cfg.clone(),
+                    initialized_block_env.clone(),
+                    Default::default(),
+                ),
+            );
+
+            // If a handler register is provided, append it to the base EVM.
+            if let Some(handler) = self.handler_register {
+                base = base.append_handler_register(handler);
+            }
+
+            base.build()
+        };
 
         // Execute the transactions in the payload.
-        let transactions = payload
-            .transactions
-            .iter()
-            .map(|raw_tx| {
-                let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref()).map_err(|e| anyhow!(e))?;
-                Ok((tx, raw_tx.as_ref()))
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let transactions = if let Some(ref txs) = payload.transactions {
+            txs.iter()
+                .map(|raw_tx| {
+                    let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref())
+                        .map_err(ExecutorError::RLPError)?;
+                    Ok((tx, raw_tx.as_ref()))
+                })
+                .collect::<ExecutorResult<Vec<_>>>()?
+        } else {
+            Vec::new()
+        };
         for (transaction, raw_transaction) in transactions {
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
@@ -154,12 +173,12 @@ where
             if extract_tx_gas_limit(&transaction) > block_available_gas &&
                 (is_regolith || !is_system_transaction(&transaction))
             {
-                anyhow::bail!("Transaction gas limit exceeds block gas limit")
+                return Err(ExecutorError::BlockGasLimitExceeded);
             }
 
             // Reject any EIP-4844 transactions.
             if matches!(transaction, OpTxEnvelope::Eip4844(_)) {
-                anyhow::bail!("EIP-4844 transactions are not supported");
+                return Err(ExecutorError::UnsupportedTransactionType(transaction.tx_type() as u8));
             }
 
             // Modify the transaction environment with the current transaction.
@@ -189,7 +208,7 @@ where
                 target: "client_executor",
                 "Executing transaction: {tx_hash}",
             );
-            let result = evm.transact_commit().map_err(|e| anyhow!("Fatal EVM Error: {e}"))?;
+            let result = evm.transact_commit().map_err(ExecutorError::ExecutionError)?;
             debug!(
                 target: "client_executor",
                 "Transaction executed: {tx_hash} | Gas used: {gas_used} | Success: {status}",
@@ -211,7 +230,11 @@ where
                     .map(|depositor| depositor.account_info().unwrap_or_default().nonce),
                 depositor
                     .is_some()
-                    .then(|| self.config.is_canyon_active(payload.timestamp).then_some(1))
+                    .then(|| {
+                        self.config
+                            .is_canyon_active(payload.payload_attributes.timestamp)
+                            .then_some(1)
+                    })
                     .flatten(),
             );
             receipts.push(receipt);
@@ -223,7 +246,7 @@ where
             cumulative_gas_used = cumulative_gas_used
         );
 
-        // Drop the EVM to rid the exclusive reference to the database.
+        // Drop the EVM to free the exclusive reference to the database.
         drop(evm);
 
         // Merge all state transitions into the cache state.
@@ -236,8 +259,13 @@ where
         // Recompute the header roots.
         let state_root = state.database.state_root(&bundle)?;
 
-        let transactions_root = Self::compute_transactions_root(payload.transactions.as_slice());
-        let receipts_root = Self::compute_receipts_root(&receipts, self.config, payload.timestamp);
+        let transactions_root =
+            Self::compute_transactions_root(payload.transactions.unwrap_or_default().as_slice());
+        let receipts_root = Self::compute_receipts_root(
+            &receipts,
+            self.config,
+            payload.payload_attributes.timestamp,
+        );
         debug!(
             target: "client_executor",
             "Computed transactions root: {transactions_root} | receipts root: {receipts_root}",
@@ -245,8 +273,10 @@ where
 
         // The withdrawals root on OP Stack chains, after Canyon activation, is always the empty
         // root hash.
-        let withdrawals_root =
-            self.config.is_canyon_active(payload.timestamp).then_some(EMPTY_ROOT_HASH);
+        let withdrawals_root = self
+            .config
+            .is_canyon_active(payload.payload_attributes.timestamp)
+            .then_some(EMPTY_ROOT_HASH);
 
         // Compute logs bloom filter for the block.
         let logs_bloom = logs_bloom(receipts.iter().flat_map(|receipt| receipt.logs()));
@@ -254,7 +284,7 @@ where
         // Compute Cancun fields, if active.
         let (blob_gas_used, excess_blob_gas) = self
             .config
-            .is_ecotone_active(payload.timestamp)
+            .is_ecotone_active(payload.payload_attributes.timestamp)
             .then(|| {
                 let parent_header = state.database.parent_block_header();
                 let excess_blob_gas = if self.config.is_ecotone_active(parent_header.timestamp) {
@@ -274,7 +304,7 @@ where
         let header = Header {
             parent_hash: state.database.parent_block_header().seal(),
             ommers_hash: EMPTY_OMMER_ROOT_HASH,
-            beneficiary: payload.fee_recipient,
+            beneficiary: payload.payload_attributes.suggested_fee_recipient,
             state_root,
             transactions_root,
             receipts_root,
@@ -285,13 +315,13 @@ where
             number: block_number,
             gas_limit: gas_limit.into(),
             gas_used: cumulative_gas_used as u128,
-            timestamp: payload.timestamp,
-            mix_hash: payload.prev_randao,
+            timestamp: payload.payload_attributes.timestamp,
+            mix_hash: payload.payload_attributes.prev_randao,
             nonce: Default::default(),
             base_fee_per_gas: Some(base_fee),
             blob_gas_used,
             excess_blob_gas,
-            parent_beacon_block_root: payload.parent_beacon_block_root,
+            parent_beacon_block_root: payload.payload_attributes.parent_beacon_block_root,
             // Provide no extra data on OP Stack chains
             extra_data: Bytes::default(),
         }
@@ -324,7 +354,7 @@ where
     /// ## Returns
     /// - `Ok(output_root)`: The computed output root.
     /// - `Err(_)`: If an error occurred while computing the output root.
-    pub fn compute_output_root(&mut self) -> Result<B256> {
+    pub fn compute_output_root(&mut self) -> ExecutorResult<B256> {
         const OUTPUT_ROOT_VERSION: u8 = 0;
         const L2_TO_L1_MESSAGE_PASSER_ADDRESS: Address =
             address!("4200000000000000000000000000000000000016");
@@ -332,13 +362,13 @@ where
         // Fetch the L2 to L1 message passer account from the cache or underlying trie.
         let storage_root = match self.trie_db.storage_roots().get(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)
         {
-            Some(storage_root) => storage_root
-                .blinded_commitment()
-                .ok_or(anyhow!("Account storage root is unblinded"))?,
+            Some(storage_root) => {
+                storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)?
+            }
             None => {
                 self.trie_db
                     .get_trie_account(&L2_TO_L1_MESSAGE_PASSER_ADDRESS)?
-                    .ok_or(anyhow!("L2 to L1 message passer account not found in trie"))?
+                    .ok_or(TrieDBError::MissingAccountInfo)?
                     .storage_root
             }
         };
@@ -455,11 +485,11 @@ where
     ///
     /// ## Returns
     /// The computed transactions root.
-    fn compute_transactions_root(transactions: &[RawTransaction]) -> B256 {
+    fn compute_transactions_root(transactions: &[Bytes]) -> B256 {
         ordered_trie_with_encoder(transactions, |tx, buf| buf.put_slice(tx.as_ref())).root()
     }
 
-    /// Prepares a [BlockEnv] with the given [L2PayloadAttributes].
+    /// Prepares a [BlockEnv] with the given [OptimismPayloadAttributes].
     ///
     /// ## Takes
     /// - `payload`: The payload to prepare the environment for.
@@ -468,7 +498,7 @@ where
         spec_id: SpecId,
         config: &RollupConfig,
         parent_header: &Header,
-        payload_attrs: &L2PayloadAttributes,
+        payload_attrs: &OptimismPayloadAttributes,
     ) -> BlockEnv {
         let blob_excess_gas_and_price = parent_header
             .next_block_excess_blob_gas()
@@ -476,8 +506,9 @@ where
             .map(|x| BlobExcessGasAndPrice::new(x as u64));
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
-        let base_fee_params = if config.is_canyon_active(payload_attrs.timestamp) {
-            config.canyon_base_fee_params.expect("Canyon base fee params not provided")
+        let base_fee_params = if config.is_canyon_active(payload_attrs.payload_attributes.timestamp)
+        {
+            config.canyon_base_fee_params
         } else {
             config.base_fee_params
         };
@@ -487,11 +518,11 @@ where
         BlockEnv {
             number: U256::from(parent_header.number + 1),
             coinbase: address!("4200000000000000000000000000000000000011"),
-            timestamp: U256::from(payload_attrs.timestamp),
+            timestamp: U256::from(payload_attrs.payload_attributes.timestamp),
             gas_limit: U256::from(payload_attrs.gas_limit.expect("Gas limit not provided")),
             basefee: U256::from(next_block_base_fee),
             difficulty: U256::ZERO,
-            prevrandao: Some(payload_attrs.prev_randao),
+            prevrandao: Some(payload_attrs.payload_attributes.prev_randao),
             blob_excess_gas_and_price,
         }
     }
@@ -505,14 +536,15 @@ where
     /// ## Returns
     /// - `Ok(())` if the environment was successfully prepared.
     /// - `Err(_)` if an error occurred while preparing the environment.
-    fn prepare_tx_env(transaction: &OpTxEnvelope, encoded_transaction: &[u8]) -> Result<TxEnv> {
+    fn prepare_tx_env(
+        transaction: &OpTxEnvelope,
+        encoded_transaction: &[u8],
+    ) -> ExecutorResult<TxEnv> {
         let mut env = TxEnv::default();
         match transaction {
             OpTxEnvelope::Legacy(signed_tx) => {
                 let tx = signed_tx.tx();
-                env.caller = signed_tx
-                    .recover_signer()
-                    .map_err(|e| anyhow!("Failed to recover signer: {}", e))?;
+                env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
                 env.gas_limit = tx.gas_limit as u64;
                 env.gas_price = U256::from(tx.gas_price);
                 env.gas_priority_fee = None;
@@ -537,9 +569,7 @@ where
             }
             OpTxEnvelope::Eip2930(signed_tx) => {
                 let tx = signed_tx.tx();
-                env.caller = signed_tx
-                    .recover_signer()
-                    .map_err(|e| anyhow!("Failed to recover signer: {}", e))?;
+                env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
                 env.gas_limit = tx.gas_limit as u64;
                 env.gas_price = U256::from(tx.gas_price);
                 env.gas_priority_fee = None;
@@ -564,9 +594,7 @@ where
             }
             OpTxEnvelope::Eip1559(signed_tx) => {
                 let tx = signed_tx.tx();
-                env.caller = signed_tx
-                    .recover_signer()
-                    .map_err(|e| anyhow!("Failed to recover signer: {}", e))?;
+                env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
                 env.gas_limit = tx.gas_limit as u64;
                 env.gas_price = U256::from(tx.max_fee_per_gas);
                 env.gas_priority_fee = Some(U256::from(tx.max_priority_fee_per_gas));
@@ -611,32 +639,32 @@ where
                 };
                 Ok(env)
             }
-            _ => anyhow::bail!("Unexpected tx type"),
+            _ => Err(ExecutorError::UnsupportedTransactionType(transaction.tx_type() as u8)),
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    extern crate std;
-
     use super::*;
     use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
-    use kona_mpt::NoopTrieDBHinter;
-    use kona_primitives::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
+    use alloy_rpc_types_engine::PayloadAttributes;
+    use anyhow::{anyhow, Result};
+    use kona_mpt::NoopTrieHinter;
+    use op_alloy_genesis::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
     use serde::Deserialize;
-    use std::{collections::HashMap, format};
+    use std::collections::HashMap;
 
-    /// A [TrieDBFetcher] implementation that fetches trie nodes and bytecode from the local
+    /// A [TrieProvider] implementation that fetches trie nodes and bytecode from the local
     /// testdata folder.
     #[derive(Deserialize)]
-    struct TestdataTrieDBFetcher {
+    struct TestdataTrieProvider {
         preimages: HashMap<B256, Bytes>,
     }
 
-    impl TestdataTrieDBFetcher {
-        /// Constructs a new [TestdataTrieDBFetcher] with the given testdata folder.
+    impl TestdataTrieProvider {
+        /// Constructs a new [TestdataTrieProvider] with the given testdata folder.
         pub(crate) fn new(testdata_folder: &str) -> Self {
             let file_name = format!("testdata/{}/output.json", testdata_folder);
             let preimages = serde_json::from_str::<HashMap<B256, Bytes>>(
@@ -647,7 +675,9 @@ mod test {
         }
     }
 
-    impl TrieDBFetcher for TestdataTrieDBFetcher {
+    impl TrieProvider for TestdataTrieProvider {
+        type Error = anyhow::Error;
+
         fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
             self.preimages
                 .get(&key)
@@ -684,7 +714,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -695,26 +725,30 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #120794431's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_120794432_exec"))
-            .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_120794432_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(header.seal_slow())
+        .build();
 
         let raw_tx = hex!("7ef8f8a003b511b9b71520cd62cad3b5fd5b1b8eaebd658447723c31c7f1eba87cfe98c894deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000300000000665a33a70000000001310e960000000000000000000000000000000000000000000000000000000214d2697300000000000000000000000000000000000000000000000000000000000000015346d208a396843018a2e666c8e7832067358433fb87ca421273c6a4e69f78d50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985");
-        let payload_attrs = L2PayloadAttributes {
-            fee_recipient: address!("4200000000000000000000000000000000000011"),
+        let payload_attrs = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 0x665a3439,
+                withdrawals: Default::default(),
+                parent_beacon_block_root: Some(b256!(
+                    "917693152c4a041efbc196e9d169087093336da96a8bb3af1e55fce447a7b8a9"
+                )),
+                prev_randao: b256!(
+                    "edba75784acf3165bffd96df8b78ffdb3781db91f886f22b4bee0a6f722df939"
+                ),
+                suggested_fee_recipient: address!("4200000000000000000000000000000000000011"),
+            },
             gas_limit: Some(0x1c9c380),
-            timestamp: 0x665a3439,
-            prev_randao: b256!("edba75784acf3165bffd96df8b78ffdb3781db91f886f22b4bee0a6f722df939"),
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(b256!(
-                "917693152c4a041efbc196e9d169087093336da96a8bb3af1e55fce447a7b8a9"
-            )),
-            transactions: alloc::vec![raw_tx.into()],
-            no_tx_pool: false,
+            transactions: Some(alloc::vec![raw_tx.into()]),
+            no_tx_pool: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -738,7 +772,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -749,30 +783,34 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121049888's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121049889_exec"))
-            .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121049889_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a01e6036fa5dc5d76e0095f42fef2c4aa7d6589b4f496f9c4bea53daef1b4a24c194deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc50000000000000000000000006661ff73000000000131b40700000000000000000000000000000000000000000000000000000005c9ea450a0000000000000000000000000000000000000000000000000000000000000001e885b088376fedbd0490a7991be47854872f6467c476d255eed3151d5f6a95940000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
             hex!("02f9010b0a8301b419835009eb840439574783030fc3940000000000002bdbf1bf3279983603ec279cc6df8702c2ad68fd9000b89666e0daa0001e80001ec0001d0220001e01001e01000bfe1561df392590b0cb3ec093b711066774ca96cd001e01001e20001ee49dbb844d000b3678862f04290e565cca2ef163baeb92bb76790c001e01001e01001ea0000b38873c13509d36077a4638183f4a9a72f8a66b91001e20000bcaaef30cf6e70a0118e59cd3fb88164de6d144b5003a01001802c2ad68fd900000012b817fc001a098c44ee6585f33a4fbc9c999b2469697dd8007b986c79569ae6f3d077de45a1ca035c3ea5e954ae76fdf75f7d7ce215a339ac20a772081b62908d5fcf551693e3a").into(),
             hex!("02f904920a828a19834c4b408403dce3e7837a1200944d75a5ce454b264b187bee9e189af1564a68408d80b90424b1dc65a400018958e0d17c70a7bddf525ee0a3bf00f5c8f886a03156c522c0b256cb884d00000000000000000000000000000000000000000000000000000000001814035a6bc28056dae2cfa8a6479f5e50eee95bb3ae2b65be853a4440f15cb60211ba00000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000026000000000000000000000000000000000000000000000000000000000000003400000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000b2c639c533813f4aa9d7837caf62653d097ff85000000000000000000000000000000000000000000000000000000e8d4a510000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000606ecf709c09afd92138cca6ee144be81e1c6ef231d4586a22eb7fc801826e837691e208839c1c58d50a31826c8b47c5218c3898ee6671f734bd9b9584ce210e8b1fb287f374f07a99bbce2ddedc655ee5c94f8fee715db21644ae134638af8c32d18b1d27dbc2e12b205ea25ab6bb4ec447ee7f40dba560e511a20fd8a3775d04ad83bf593e3587be1dd85ab9b2053d1386fae00c5fdea56a68ea147b706e5ced65ab296b8d9248aa943787a5c8aa4fd56ba7133d087e84a625fe1c3d8a390b5000000000000000000000000000000000000000000000000000000000000000666634013473fce9d0696d9f0375be4260a81518a85f2482b3f5336848f8fa3ce1a3f7032124577ee2a755122f916e4fe757fc42eb5561216892ed806d368908b69c4d4d1cd06897a3a2f02c17ffba7a762e4cbbdb086a1181f1111874f88f38f3b86fa03508822346a167de3f6afc9066cc274103cf18d62c7d6a4d93dcd000b7842951fd9a14a647148dac543f446cd9427dedbc3c3ca5ed2b36f5c27ce76de46d4291be6ef3b41679501c8f0341d35cf6afc9f7d91d56ad1a8ae34fc0e708ac001a013f549ca84754e18fae518daa617d19dfbdff6da7bc794bab89e7a17288cb5b5a00c4913669beb11412e9e04bd4311ed5b11443b9e34f7fb25488e58047ddd8820").into()
         ];
-        let payload_attrs = L2PayloadAttributes {
-            fee_recipient: address!("4200000000000000000000000000000000000011"),
+        let payload_attrs = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 1717698555,
+                withdrawals: Default::default(),
+                suggested_fee_recipient: address!("4200000000000000000000000000000000000011"),
+                prev_randao: b256!(
+                    "d91ae18a8b94471ef1b15686ef8a6144a109b837c28488a0f1a2a4e4ad29d5af"
+                ),
+                parent_beacon_block_root: Some(b256!(
+                    "5e7da14ac6b18e62306c84d9d555387d4b4a6c3d122df22a2af2b68bf219860d"
+                )),
+            },
             gas_limit: Some(30000000),
-            timestamp: 1717698555,
-            prev_randao: b256!("d91ae18a8b94471ef1b15686ef8a6144a109b837c28488a0f1a2a4e4ad29d5af"),
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(b256!(
-                "5e7da14ac6b18e62306c84d9d555387d4b4a6c3d122df22a2af2b68bf219860d"
-            )),
-            transactions: raw_txs,
-            no_tx_pool: false,
+            transactions: Some(raw_txs),
+            no_tx_pool: Some(false),
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -796,7 +834,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -807,13 +845,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121003240's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121003241_exec"))
-            .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121003241_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a02c3adbd572915b3ef2fe7c81418461cb32407df8cb1bd4c1f5f4b45e474bfce694deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000400000000666092ff00000000013195d800000000000000000000000000000000000000000000000000000004da0e1101000000000000000000000000000000000000000000000000000000000000000493a1359bf7a89d8b2b2073a153c47f9c399f8f7a864e4f25744d6832cb6fadd80000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -827,17 +865,21 @@ mod test {
             hex!("02f905720a820a1e830f42408404606a2c83044bc0940000000071727de22e5e9d8baf0edac6f37da03280b90504765e827f00000000000000000000000000000000000000000000000000000000000000400000000000000000000000004337016838785634c63fce393bfc6222564436c4000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000006a2aad2e20ef62b5b56e4e2b5e342e53ee7fa04f000017719c140000000000000000000000000000000005300000000000000002000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000002265a0000000000000000000000000001d4c00000000000000000000000000000000000000000000000000000000000010a370000000000000000000000000010c8e000000000000000000000000004d4157c00000000000000000000000000000000000000000000000000000000000003200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a4e9ae5c530100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000006668bc6eea73404b4da5775c774fafc815b66b36000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000efe1bfc13a0f086066fbe23a18c896eb697ca5cc00000000000000000000000000000000000000000000000000000001a13b8600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b59d0021a869f1ed3a661ffe8c9b41ec6244261d9800000000000000000000000000004e8a0000000000000000000000000000000100000000000000000000000000000000000000000000000000000000666095e00000000000000000000000000000000000000000000000000000000000000000dcc3f422395fc31d9308eb3c4805623ddc445433eb04f7d4d7b07a9b4abb16886820d7c9a50f7bb450cff51271a9ff789322e9a72c65cf58da188c6b77093fdb1b00000000000000000000000000000000000000000000000000000000000000000000000000000000000042fff34f0b4b601ea1d21ac1184895b6d6b81662b95d14e59dfb768ef963838ca29f67dcaf0423b47312bd82d9f498976b28765bec3e79153ca76f644f04ef14dc001b000000000000000000000000000000000000000000000000000000000000c001a0ccd6f3e292c0acaea26b3fd6fee4bc1840fd38553b01637e01990ade4b6b26d4a05daf9fa73f7c0c0ae24097e01d04ed2d6548cd9a3668f8aa18abdb5eca623e08").into(),
             hex!("02f901920a820112830c5c06840af2724a830473c694a062ae8a9c5e11aaa026fc2670b0d65ccc8b285880b901245a47ddc3000000000000000000000000cb8fa9a76b8e203d8c3797bf438d8fb81ea3326a0000000000000000000000008ae125e8653821e851f12a49f7765db9a9ce73840000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000564edf7ae333278800000000000000000000000000000000000000000000000033f7ab48c542f25d000000000000000000000000000000000000000000000000564ca9d9ed92184200000000000000000000000000000000000000000000000033f656b5d849c5b30000000000000000000000004049d8f3f83365555e55e3594993fbeb30ccdc350000000000000000000000000000000000000000000000000000000066609a8ac080a071ef15fac388b7c5c9b56282610f0c7c5bde00ec3dcb07121fa04c64a0c53ccea0746f4a4cf21cf08f75ae7c078efcf148f910000986add1b7998d81874f5de009").into(),
         ];
-        let payload_attrs = L2PayloadAttributes {
-            fee_recipient: address!("4200000000000000000000000000000000000011"),
+        let payload_attrs = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 0x6660938b,
+                withdrawals: Default::default(),
+                suggested_fee_recipient: address!("4200000000000000000000000000000000000011"),
+                prev_randao: b256!(
+                    "22e77867678dc60aace7567ee344620f47a66be343eac90a82bf619ea37de357"
+                ),
+                parent_beacon_block_root: Some(b256!(
+                    "50f4a35e2f059621cba649e719d23a2a9d030189fd19172a689c76d3adf39fec"
+                )),
+            },
             gas_limit: Some(0x1c9c380),
-            timestamp: 0x6660938b,
-            prev_randao: b256!("22e77867678dc60aace7567ee344620f47a66be343eac90a82bf619ea37de357"),
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(b256!(
-                "50f4a35e2f059621cba649e719d23a2a9d030189fd19172a689c76d3adf39fec"
-            )),
-            transactions: raw_txs,
-            no_tx_pool: false,
+            transactions: Some(raw_txs),
+            no_tx_pool: Some(false),
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -861,7 +903,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -872,13 +914,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121057303_exec"))
-            .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121057303_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a01a2c45522a69a90b583aa08a0968847a6fbbdc5480fe6f967b5fcb9384f46e9594deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000010000000066623963000000000131b8d700000000000000000000000000000000000000000000000000000003ec02c0240000000000000000000000000000000000000000000000000000000000000001c10a3bb5847ad354f9a70b56f253baaea1c3841647851c4c62e10b22fe4e86940000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -886,17 +928,21 @@ mod test {
             hex!("f9032d8301c3338406244dd88304c7fc941111111254eeb25477b68fb85ed929f73a96058280b902c412aa3caf000000000000000000000000b63aae6c353636d66df13b89ba4425cfe13d10ba000000000000000000000000420000000000000000000000000000000000000600000000000000000000000068f180fcce6836688e9084f035309e29bf0a2095000000000000000000000000b63aae6c353636d66df13b89ba4425cfe13d10ba0000000000000000000000003f343211f0487eb43af2e0e773ba012015e6651a000000000000000000000000000000000000000000000000074a17b261ebbf4000000000000000000000000000000000000000000000000000000000002b13e70000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001120000000000000000000000000000000000000000000000000000000000f400a0c9e75c48000000000000000020120000000000000000000000000000000000000000000000000000c600006302a000000000000000000000000000000000000000000000000000000000000f5b3fee63c1e581e1b9cc9cc17616ce81f0fa5b958d36f789fb2c0042000000000000000000000000000000000000061111111254eeb25477b68fb85ed929f73a96058202a000000000000000000000000000000000000000000000000000000000001b4ccdee63c1e58185c31ffa3706d1cce9d525a00f1c7d4a2911754c42000000000000000000000000000000000000061111111254eeb25477b68fb85ed929f73a960582000000000000000000000000000037a088fb0295e0b68236fa1742c8d1ee86d682e86928ce4b32f27c2010addbdb7020a01310030aba22db3e46766fb7bc3ba666535d25dfd9df5f13d55632ec8638d01b").into(),
             hex!("02f901d30a8303cd348316e36084608dcd0e8302cde8945800249621da520adfdca16da20d8a5fc0f814d880b901640ddedd8400000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000002d9f4000000000000000000000000000000000000000000000000005d423c655aa00000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000eb22708b72cc00b04346eee1767c0e147f8db2d00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000769127d620c000000000000000000000000000000000000000000000000000000000000000016692be0dfa2ce53a3d8c88ebcab639cf00c16197a717bc3ddeab46bbab181bbec001a0bdfb7260ed744771034511f4823380f16bb50427e1888f352c9c94d5d569e66da05cabb47cf62ed550d06af2f9555ff290f4b403fee7e32f67f19d3948db0dc1cb").into()
         ];
-        let payload_attrs = L2PayloadAttributes {
-            fee_recipient: address!("4200000000000000000000000000000000000011"),
+        let payload_attrs = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 1717713383,
+                withdrawals: Default::default(),
+                prev_randao: b256!(
+                    "d8ecef54b9a072a935b297c177b54dbbd5ee9e0fd811a2b69de4b1f28656ad16"
+                ),
+                suggested_fee_recipient: address!("4200000000000000000000000000000000000011"),
+                parent_beacon_block_root: Some(b256!(
+                    "fa918fbee01a47f475d70995e78b4505bd8714962012720cab27f7e66ec4ea5b"
+                )),
+            },
             gas_limit: Some(30_000_000),
-            timestamp: 1717713383,
-            prev_randao: b256!("d8ecef54b9a072a935b297c177b54dbbd5ee9e0fd811a2b69de4b1f28656ad16"),
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(b256!(
-                "fa918fbee01a47f475d70995e78b4505bd8714962012720cab27f7e66ec4ea5b"
-            )),
-            transactions: raw_txs,
-            no_tx_pool: false,
+            transactions: Some(raw_txs),
+            no_tx_pool: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -920,7 +966,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -931,13 +977,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121065789_exec"))
-            .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121065789_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a0dd829082801fa06ba178080ec514ae92ae90b5fd6799fcedc5a582a54f1358c094deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000050000000066627b9f000000000131be5400000000000000000000000000000000000000000000000000000001e05d6a160000000000000000000000000000000000000000000000000000000000000001dc97827f5090fcc3425f1f8a22ac4603b0b176a11997a423006eb61cf64d817a0000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -954,17 +1000,21 @@ mod test {
             hex!("02f920340a8306969b84032a47f984039387008349857a94087000a300de7200382b55d40045000000e5d60e80b91fc482ad56cb0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000003e0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000008200000000000000000000000000000000000000000000000000000000000000a400000000000000000000000000000000000000000000000000000000000000c600000000000000000000000000000000000000000000000000000000000000e8000000000000000000000000000000000000000000000000000000000000010a000000000000000000000000000000000000000000000000000000000000012c000000000000000000000000000000000000000000000000000000000000014e0000000000000000000000000000000000000000000000000000000000000170000000000000000000000000000000000000000000000000000000000000019200000000000000000000000000000000000000000000000000000000000001b400000000000000000000000000000000000000000000000000000000000001d600000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000cbf61a54ebe5e9152e1f6b81cbffd3027062642928942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61d460bd138ee32c939dfd8e49c57a95ef4dcef2f88b92e5a1d5e2905f86d787328bb4c7a1e4eb3b8db4d59a38321cd444d510a700551beb6fdfcdc88068c02f70506c41903052ed62b6913f66c9595a218d5726ea3128be80d62f7c69887816a22f613c865b39a6e228b0d90313dad896d11000afe422c2412aa8eef93fb1a1e0cd8be0d3226796e106d56c9f3d6ea5f189f88353aecab6565a256034ee48fd00bafdf7b018aa742f06a35f8ac0442c02d1a4f75186798a33cb57b53f3b2a09507ca58f2e94f1bc503faaabb19812e52adc5446d0d3a2eaa3c37c96cd6b3937014ef84689357e91ccced5dbfda2cbcff66f237923aa145326a831953620b7fc711e8faedc7ef58112a00cf6e13cbc0f005606720fb034d7a57f591ebcf33a66c000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb00000000000000000000000000000000000000000000000000000000000000230000000000000000000000007cdb62cd44f27416d3d80060887b79edbc66eed428942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae627cd53af047b648a62ebbc6b7022738934e337451e6934e285bcb17ed151e9a2156cee556c24689d42cf8d19d308cdaf32215270100cb7de2300b61d6f3805e61fad747173364b42a1fbc54501d3fe6689204bb44e095ca5aca1652d4ce018070bbbad2a1406c2ed33020899c296fb67957c0dafa5e7630c6f15eed2d85ca3921f78322e092ee4289f1f00dbc46793221e1b2439129fb05b1f185cfa857baf812e9ba7fecd26f0671e1fbc3796ab226a8484095d31360f45222167cd7dab33f11a13d59918ab5dbcbd350d47b8d48d3b52e275887e0663b63b9cba34e97377af15def44fb6d6227bc92d17b372a4779d53d4117357d4e372f15ead01502b0cc3006542ebe7436861a0a015643024b8eb364ecc758dc76e38f5cbbf461c18a73b000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb000000000000000000000000000000000000000000000000000000000000002300000000000000000000000060de5ca48792914e8ed36f8294c571cb64cbc86228942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61c2f5918a5841520443a45ccf49a742a50bcd4548fd8ad248a1b8742aa75b46417c1fc6a32babcf3b5960b1cfb35d98a261641322b811053ace79049d236019205960ca817a496c09847350c58899c0008ab73f124204dacff678139ae80c95c1d7877bf7f5c4b37f570321a76e604b5a140229e1564216e722102a0131c6f442933d8de999cee105ba504babd60abf0d97ff47ccf6395159a8c2a24d24ed918029a1cde683c17c594cad199facdf9928066a73025189be71671e2df5314c0cd00c501e761df7d4b8a0cc152d6870bdf5a3f5f7ad8bdbc2d0f11ce6cdcc829bc1acb667ba2d8c86243659458f23b0c5c46fef1761cc7013ce20c5a55bf9f28481c42002db11bd87e9f501a27ffa16297536ff3bd04d44cf8385c66913b259f94000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb00000000000000000000000000000000000000000000000000000000000000230000000000000000000000004427395e8d53ec91fe009b9f9f7d108a6d046fa328942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae60e8eb84cafb9b1049f380e248ee56e410da056b3ac4fae01e640bf76dfa9b32c089f372414a1aa9c722f3af366ab7f4dbf700d8cfd8376f90c5125df5211c0240c1b68b374253a99342db518fff6ecc0605c35d0abc5cb9fd58d13b554ca1204306006c533a0d4e84cbdc3d1a219f562df9e5afc90dd541b8b2332ba63eba2062b9aeaa5722b7ae0e7d60a977dfc2cc05bf7064b1ed2aa897c306236b1adea8528a850bbec99f23a3c0b9a747c2f285474f266424bf6d336d0c4ec119877f5a9109eafdf5d0f879f6907ecdc9cbd20f41d43dff8d94caf9c4486f017f7d10c511da1f9629b4d2e0232c0bf208a0f9408134b1f6fcf77b33ca549ea32536e43b900f4fbb5c755d3221871fdd7c7118c1fec5559871922b1b462a5f0502b9e14e9000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000ff7fa1fcf8df81ea158cfebdad80d00d49790c1b28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae6142c5c102e9eb810eec6a0fe8cb214c224de98a8ae9e73f46897df36bffe668f15c5b544e21b5c7495900a1bcba9a3b9ff362e192a88c24be1834cecbbebcb172be37dcbd251b8ad00f6a589bf6a296eadba57dbebca0ec879f7c0b101c5a2d12849f2cb39082e9a68623d3793562d40de78acc164ece4ba819b9cd41c60ddb0155ce47cccdd81c62bd4850644937385e494c711b794ea61c3f876cfae88e05805ef8c12ea3890fb78f382fd4757b43fb31e9b711d5eb6179b302bc187b621e806dcecbe346e981b671c871b81d963a58c674ba7b5aaf83203e8b6480104b02006491322421291c323149a72e34c1c9c793b6797eb2a83408faba857a60d810f0f64bf23f7d507c895edfb71d617ccdc2f1f819e16bd07cb467ee77794bfc9b6000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000f34c1f7627c21d08affe689360b68e3b86bddd8e28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae603f4f9d9e44ecdfa78b3f822a00aac0a80fbde1675bed218b4e9daf3018c75c2274fc133f9df6704f4926e8201f000cdb3f5288f5bab86b24f4501734b001faa06b1f228701b430c5f77357668d11abb9aa246ec200026b8835fc8ea038dbc3721978e874ed6e196d0ee6ef1baed881ec1a8fdc818fca586e49adf1a01014d630b247457164a28f47dbef855ff71f85bc3d2d114f450bc209463a532cff56aa9183a29e8599a51c0a5a46435d21e0421a5ee0b31590e2670431f59948523a3840a6914dfcdaa1d8f4acc0999bff181168bc97f59d2e76914b8fe40da7cfd767510fcf9dce7c0aa00f582fcb232b250941dc3acdfb71328c97fb21804ad1abb181f04e30fe89e260a50e3ecff6b402e0796a12625cbb28e218565ca449bfc5d54000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000b6816921690bbb13022ce4279c741e9f10f6d25028942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae60c7d7a2327da7193adb6e7da1a0011071990b12213c823686963a0fba1a43683034744575541f9edc32e3ce969ca106604b4a989340584ddc55b9728c7e2e735074515993dfc63a646b2d8f748414d5dbcd64394118e0f89d165c746caf2434209bb608dd08ab880aad6440c7340c1c684403cb97e2276590bd18963940d98eb1e1a272569a949e07dfe4a665893154eceb132e728555b80e40a51b6134c6a1e0a6fba21519df338be4c257b4a5300e8b8f22fd006f2e9fa8e2d72b60f3818e72de6b2584eda4a90fc2d78b98dc1b5ccbdf1f3c20e733bbff817158df22fbdba1d8e56cd2b62522af6b23891f4f2494e565ded4983941326df46f8895df90b261eddd0dbf8d65704970292fd40ea3c440b4f7004f8a988eaa0124ca04acc2f80000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb000000000000000000000000000000000000000000000000000000000000002300000000000000000000000046cd855658bcbb261645dac5de9bcf3e86338ca528942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61a678665a7ae5d9945c98f2448bf68e73e80475cbba2f1601c5be074171c21082ad67f4b03530e704fb1b232b3cddf83ed3cc000fcc0cc5137b6f4c3e89d59fe0f02287c98f5c39229b9ea0ecb3b2e927f66c5bd814bcf032c28d3b9227d3cb91154886e38171ac9cb09ad8f8a7898fe624c216c1f2753fdf2126f1e06adbecc0647e62c17a2c83ba39b269533b35a377b069f0b4ef684142f7f38360feb6e832ac89f308bf01ac0fe322a4d106b404f192b2c279299e97be3a5344516ca21ea105a99ffa98dca692c8c3f52addc90eda18cb19336aaa6d085e40463d74d3b8e0f317e0047e3c6f7f9ea5e99a7adf0afc1acffad89ac728808bb2ac3cd57c5aa2b0ccbc0976152d5b67b89e939da3ba4e0490d962b8035782ff36db7f05a23a3000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb00000000000000000000000000000000000000000000000000000000000000230000000000000000000000004ef8a049f19848666c00d958723dda15310a88aa28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae629342c1f6c1e951de321ada9f9dd51886c7da9f435a971f21dcce3e8067d80b20edc4b5a3a2982f4bb2825f7e82dba0143325323491b7810c291cbcbd76e35242f9e523c196e71f608c01dc6fdda1f5a6fa0f60ee6422f0363313332b7f6c4ed2d2daaa8ded8a06a27765e33668632033a783e6a452d32f2d327f629e25106560c6251b41c8d03f2fd7617f7f3c745c899f32353223f8ab32b56f813e430391d0686a6604ba4f73d140c25c0d30a8f7aacc24696207d256f14a2d5f3e217f8a70a9254141d4351a6cfda264150d89b2a35140530990449b767f05689709488f00e227ac767806f1c3dfc1173d3886189057e5a55d147166005840d7ca50f17861700af52ea29cab029a6808d6dc6f82acaf942f9254adea7ac455916f0da4452000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000944618cd80dae4191c7f7f21c58ab13bdf81738a28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61b7951b069b65c12393920364d045f8d76add6c1d9f29245188781b12600d6be0d5d127d6bd399a6ef83d157093e1f5a7f3e9a1edf67993b678a7f6b2be9b65129827246aee4b32f7d33af5d8363c7edd2b8fa882103655c0e57999d5127aee113a7fe6d4e694ec0e96cca8218f2cac3ea45a958cdb8e7a77e5b0a7f65834f12178510f9a90038299b02ca079f79890aa550ecd77b0b88e6ada0b411255a560c0e214079f6191a523d2f8dac0a1426ddb1b7aaa51f4ab184341392492f727cad29d9439d19f56f626ff8a8482bd148134d5cad497b01d310680537b8e3dbad9705cc9230d48983aee1839334e024c271ea9560ced93bfa54b880901249fc647713b1931335356f6f2c35ac21de1c2a6c3302763a0eea4461c757fb18bf8bdad3000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000f2a05e7c62af3f2f02a24b43c2ae13b08890fd4628942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae622cde3d420dbb6ff32a2b0cae2a9e25945c539ad843317103de9e09595f424b328dada7a73b9e990c662830d82148ef6c90879c37ded18d7f24f9dea6c6cf01504184ca216206879d98b04f4e0eb97f6a6128a309e699e7d160201ed34f76d070c5377a5dc4baa602431b5034dce504c8e8fcb3033e605a7f9d43f5e9e4738c30c9021ba9dde79e0338b9843fbdfa7507174fbf43a28fa11b90f39bd4d0c697c0bc0c8292d6d79489b492324735a57da87a52f3fc56c83706711c86188e4734317b57e8482be2fbddd7b8999c6c403b1649ca77cae53ccb33a7466c0ba2e43670717bb2502de19dd83165e63ac0bdf45f628e77f314131766965730a44a947ab2d37be9216c866637b04e5ee682cb7fc17f92ce5c77cf9113abb1030a1997ab2000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000cbd0a779c26eb779769cc9d3a42f61c97c99602928942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae60396cdbbacab4ca173328793d82669df272d72cbd5f355277324d1cf707995f82b320ecd46b4bc60e11394a891aa160cc8e87ac44ae214a23cddf356c8ef90990d7c8f0c9da0e89ce98f30d4b468df256397afae21430e552c0ab9a4fac037710c7ac7c8858a6d26323a0ef3e40bd3c62fccf473eaa83aebcf6b545a7bc6fd9105811a4341bdab25b827b79253700ac63f5df83cf602db53efa3c93aef66c99d0a5b385aa594eaa55cc8eba9fc5bb179bc1745e4fa1b988e58bd438c1b6a23be0a19671d950886a2c5d8adeb93b36d55c2a6a3fd577fa1f1645edd71a36c37581a5ff14720ee29643e09096dd01785828380c42c9dbe38d2fb89ea391af5deff2ebbaf11c9e1370f4786ae7deb76760ea476ebbbb2bdfce20159706bc2e18fd5000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000377a5093c2531aeaf4f72b4d0b2c48d3d6c8684a28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae62375d5b21debe1c780d2dcf962266b2df4937663d6b6e93bcf22f1d64af660b51760dd6af28c91232ef017518ba734b91d159c4146074d8f8bdf5d0ca47f220f2d03765f35c93d02340b24d19aec48cbdc3f1fc9788ac2aad187ef5b9bc6bca6038a078c76db57cc594712c5c73c31afd34a7a441743799e3543968c33f76634138cd4cb56addade4da332152eee582c4bb8e416e45d3fc7f3f8ed0b7073337e2bcaf837d7d01edb32e38abf2439fa2aa55b077c1c7b60640d4dab03bf59c7f305c8ca9cd7a20b79807a5180f921a14acd7f30aa74882bc531c0b42c6e08d66904d07970d54795b0c30c383228090d4ed088af846c318e4de7c25ae9dc01e5352ed242f8f39a28c8dd178f364beed17820829d319729f3b3fbc85908339f1220000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb000000000000000000000000000000000000000000000000000000000000002300000000000000000000000083b664be1badd9f38133826ed0d1051c473e474e28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61b96cb848a7076d907b26de483e289c97c2d7a37b74db23961df4cf3b7a77618019266266d91c62ff228e6016a2f9cb3635b8d7431b80a2284ea13e8692a049f0e81c6a92b69cf67abe95986bf1fd34f17bd458cf13668f47e11edc991a4aac313e246126ed023db3b6d19112f7acf890b77efb0300868a91e09d52a966e6d0315c21f20fe7630e06a0e648cd21e430e9cc12c920bb2df8ff89966830faae7243018fe0cb624573d66479c635f8d7ce04fa45292d39aafd96caeea287e08ca6210ee7e000e89bfbc77617a1f1c2c92bc25f4ca5bc4cb9fa8cff4039e27345baa09b9db170f8e1e9655ced30f72be9edefa5257ce44ad8cd3855cc9fcbaaa443923c51df11ed2f8b830c7bf83c18a77600b170ed08e7a0545c690e1357bc9cf4200000000000000000000000000000000000000000000000000000000c080a0b2ba45b0c4cabc8981799c254b90d90c019b757833e05c2742c13f52e82c7bcfa0296885d0ea2c68aa6020ac3881d89a110471efeef6327af2eb295481571c4386").into(),
             hex!("02f920340a8306969c84016c2d0e84039387008349cef494087000a300de7200382b55d40045000000e5d60e80b91fc482ad56cb0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000003e0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000008200000000000000000000000000000000000000000000000000000000000000a400000000000000000000000000000000000000000000000000000000000000c600000000000000000000000000000000000000000000000000000000000000e8000000000000000000000000000000000000000000000000000000000000010a000000000000000000000000000000000000000000000000000000000000012c000000000000000000000000000000000000000000000000000000000000014e0000000000000000000000000000000000000000000000000000000000000170000000000000000000000000000000000000000000000000000000000000019200000000000000000000000000000000000000000000000000000000000001b400000000000000000000000000000000000000000000000000000000000001d600000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000050a76afb1154d01d6eba284069708d356d9969928942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae6204472fcf9520f9fb2076ff97de783931cff4485b9028f260839f5a3518c0b7c2dedb9ba79cbf3ce5e0eca92a12da266d66f21c58bc107fb961e7fdce9538d4c195256b732f3eae1f49cde40c25294963146d06212e318cfba43ec8ec274d1bf22c8f77a99a5797161aad10de1fb3f3754df5fc20ccede01674a7c7284f7bd690484bc65d8c32f6a062c6e886f8563ce28e02d2e58485273eca71a27aeb19dc70860db898acf6d32b0140c8b90355e8b4b4bcc0d01f2761d44a573421bf4af1c0e6bcc3f1b2cd42af6830438342270b83e244cb2d680021a46c6a0416683e1e10fcb9e36c27546a590b8bfdaab06385ae9c72b22160622aa8acaf404bfafa50c2fd454af5d6f6d7dc38a9fd1dc115b8f1a55b7f9a2fac0e080cc6e7acf472955000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000fd176b56e03a2a4d400c61cade47630196614e6a28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61f480e5d05a2821f7b6a0da7912130ca375498b472fe02cdd1635bf57e3fc79d0e99986102ae4e27760a6d33cab28b4b77c5fc177b0030d8021b67017f7b4c931a69139b25a75a2023160dd6d6f02a21e95d3005308ce63c45c423de987d8e4b1dbec338be731bba82354b115902c3f4d702178bedea57978eb5b174459fc1b1270ea499e3a908cbda58d2c091f5616d9c2b18687adda6c24017833ce90acec200e87b2cc129df7a4f39d8f6e2c3b2a8d3f3e0905c3d4bff8ede401310ae1d9f276d6239c4c32dc9e627a1dbe6a60ea37e4f7de95512de72696e37de529686d0212ee16598faeb5445f37c581fd9a60bd3d22b1fd965a9cea3dd677df95c9fb3151ba48ffa3b5e7454aa32c6850bbed3457f6cccaac2f5cc9e399a68196b29e4000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000897e11089a878542836ec8e77b825a51ef8829b528942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae600164253f8e62ae2671abad4b06d54a890f9abc01afec02287a15cf1115068951c9bdbc96cb8adaafae3aa83c4110616113c066688bb00fecc39bdeb64a1390a2917725d914fcc89e3c18a87a8ed00d9540700ec7320ab345baafb920b0441ad07c4a7e6b2dc434e9934277572be6f581fff0eb7be0857f48ddfa68c2e66cfce21fe5a394f6fcc4844335bae1029ebb014c6c08c2403aa11fbbf18cf6bffc425060e00ed6a571e020461981b6429019c35ef9f1be8bcbde05745a1c537b9472d03cba89ce21b3cb28eb03f08d7c97f1d94e8c0b55d3fd2586b74da048726ddbc1c8eb5ff64d606c6bacc97d6428a1ff83517a46b8f3d5194714a98957d2f1cd905a46fdce4364f2512312c238f9dc59ee6faffe30ee2d7f5887ab0eecd596b40000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb00000000000000000000000000000000000000000000000000000000000000230000000000000000000000006bc063c2b6c1c94490329f632725e22237456b3f28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae62ad99a00f80269a3a77de4fc3bd9976e9ef2a94954860a99c785b2bf1b63accc26de5151dac27c1c3d92571dfba7a67ca017482bee0be2188fa571875c660e5d221a475b95129123030032cf5243f78a2e6cf478c6c3c549d46fe6811a59c3900578aa1407face18fc14174b56571888ef0c471fd66aa52a53206215429d0f8405511b5377d2e625d010030d49045e1828e2366e8d5df27068e8eb9b89891b170a61b2f39e61d48c97c6117b1f04e5ac104311785063e3acc3cbe7358b13082204a43390431779d8fad127b39c5853f9926e94e6985a0fba609e7453db8a9e7c26d930a97127bc0cb549e5723f4b92f8cc7e5f800368ef108411f31e8c2476b80eac922344044afde8e958a3af9422dda01d35584d76526fc1a2a13ae59dbd0f000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb000000000000000000000000000000000000000000000000000000000000002300000000000000000000000033200fe170f61ed4ac8a09b43e3798e4ac8f195b28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae62d3092e1316ce6abb3acc796d98205e786e22c1345c132b0e61070095b83993b136fae2ec9bb03d161cef5cad8bff5335812f32cea2191dfd42df867f64981542b7fc99748f6833af03f2d7c93ad8d3cfe6b5103a510deebbb029e4005dec5a201326eee2a5598f72b7500f0aedebc83563faef710c75cf0a8f69ee75645ecf0053f00c5847f869a0b27d58d6ca7314f590766b4e4eb305c3c31e64b206df10d02ae3cf650459570d00f74f002fdfa92e68bf056c8b974c07b189a33442281c51748d8cfeb75803b470f289144f38d5648bc6d2def5caf65d0cab9583dc0220f17c983c93039ed5fff9d82b233a207a1069f00bfee072c1ce04211e6571df5c825dc3cacbeb084a77f015460798ebf9a2a5e546013bbd245b57ccb3a3a60579b000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000f1ba6cef8ccb2990ce7de325b7fa407906125bf328942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae620c0644be433481651df7035bc5cc1247d8eb024f08f06646a9f1a81e475902711574aa82220fd71bc6cd5f1e7a2f1c66f6cdec680e04c449fd5f65f0606f84207dac5ae5563747e3e74aca6b92fe8be94a591ba654763f2c376a984ab6bac5a07cf890ae88d46cebfabe94398e2d8aef0a277caa1de32e3a81377e564286b1e02161e7871b40c0a388af9e732df270970cd74b6bb71ec71479a1144789da3ab279ba62160fbc729e5ce188fe5925e3ec9d04988f62adfbb9c8cef7246cd0d5720705aafd2bd6f4735dc9b19b03d606a70aabb86c38e2c3fdf2f53ef92e7eb64207335417ad2b241b88d9ae80418ca07eb457f2c557a5bd4c1eb2ef3c3fcbe3120e195a0a41d0dc2aec8703992711bc3ca34432f04012e6b771841b9862a7447000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000785cb80c25d8d3618ca7962b2dd85e7513b0fda528942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae6291ca2fbeb9e08a732b6937ff647309d7152fb770052fe37d3c7ca22911a6bec11b0f463565e65e5c255bb13afa8fb025bf41cc4aee8f4b8d00d1826c6ab90f813e024024e4c916186ca0ec32ab1688a6a09a156462027b218f39a1f4dd4b964243e8898fc270f9621c0a45380bcb5bc9b14a236680180a042258fac8aae0c9e1dd0ec39787afd536b51527426964ccbc2ddc1ae16b0d6f11d9241d1cb53b94e0e989e1624568bb59dea3cce55fd0b21696e6153034d29e5144b91afaebbc1ca28e9eacaa694821f267617c5cc3b5812f914315097b210e50c31cccc33dcc3310166b0c3a00a800e11be916b0e02875105e99127e4b458784594de119c5be391096f4f245bd3e19ce16a035f8f784a255e4b91bf5af58e6c8b25b0ea151a74c9000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb000000000000000000000000000000000000000000000000000000000000002300000000000000000000000033090fc05f8e16cae75f332ebd31bb92135ee43028942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61293b778ea3a0add86d973685193aac98de614c89ed36878548b7e2a4abb37bf244289929b41c2ca77197403e44de06d465b59e36f189cbff475f4507f7676d0080338e4831274e7ebb54e58c60ad99e45273c61a7e8928f22a52784987e49d61d915117aeeeeeb6619849969af3e29831e98e5fef5b7ee074710aa86a76bd1c27b1e5fb6cd2e22786fce1f03564cdc8c1ed37a9a7d8f036351132437c16c2bf1edf147d96e5946d37803b5b60606971186736514563b075e15c871aa8072f552659fc082dc7dde5907057306ea98d5c1d82a96fc92a5ccd31fed314579e5ce92e1c0ef05de09ea78c2b62c8b4b51b33235fbea7ec6cd6fb6678ba6a81ecfb0b09b380a270901fe8ecf3b5c8875cfafcefc3ac58e44d7233756d97e0844234f5000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb00000000000000000000000000000000000000000000000000000000000000230000000000000000000000006a63428000c4d1f428c3a7546dbc2b897336304a28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae612cd2880f852b8d726ec68101fa2ee3011c46c3e3c111a39db1356bba256244c2b88c6ff827347a3a00d18c54feff6f30519ac8f95a4851f05c148b15072f8b20aa1e91b77afa9bbd05aef46c2b90b138a1e6117c9d87a73f682e5db6ae890232a5a58a0063bd20022baba8317a33105e3f9ed5ff9786fe114c8bcf9c93d8d092bcda239c922faf406ae57773acab2fadebcf4fde5763153fabdbf198c36146010a39e592415cd62fc4eefe6e6f00c24aee3c626c1d8e4efe0ff664324d172441e993b5f28bb82d89c318f23c0c8b34b8d3d22fa692be9918ecc1e813144be9b014021eb71ccc2649f3a3c0cb7b56eccc633b41daee6f51fc3acca801201a69620784e86e0894942c024878b4b0040040851c2bf0ca42b34381e95fc28e28a28000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000e38fb18ff3738c39b1d9f9352f2468c4426ce4ae28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61c4102b911ae374a542f5c3c2629332d107f87c9d7f084e58ad6686b8ca032d02e4945598231c20938d0af0ce8567fb69936139c2ba3d6e8e1d9c7d986367a9f29a32ba151998a6732af0747596e22828161d91a3a92ed6664a99b7a0d988c2302b6f9af088ccf5d117a451d93d5b97a4555853aae24178279175905606d3af91c3f6e575377a0504d03e34de54894bc2caec9be3dac382a8d39be54a37069442f58d5cedd52832dddece59733cd2b4a6d370681b5a48b52bc76667902f20c0d1011a2c4396ef44f6003ae3bfb73948a1ecfa6f1855984b0d211ac0f4870a7682cd9ba5ecf6858e550b4fdc10893a899d9bc5327885047c271380499c3c0a7f51be5923b17ea743f23538d8b463fd7d142301174b8b9253f11b7e74310b4c17d000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb00000000000000000000000000000000000000000000000000000000000000230000000000000000000000006d012fe8cdfd1b3db63e95c8d7a06dc9e0b66aef28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae61f92267a1575d60651f0ca0a74d2ab67989f3ccc976b18246b504fca3df8cef31db8c4f95b1afeb35f826a69dca4995c5d2efcf3e9e459bbf99cca255ca1e8ea08c230b042609463c274ed7e6439e545d730c770ff035643c98c03bc419ef0c82eb48d9897932b8f919dc0684164b261d640c0a25e7064de8413beeb515d95121b47662c8e2fc34190f77919fa05e41226a1fa236d464cdd0c46e5d0822fdb4226ab9297b1ac2763b87897e4001bb5fd117ba894621c4f19291b31e074f4614523259e4884d735dbd2f0be3a5e687ccd4824a0a501cc311578f49a13b82beb0e18f3a1aca9688d95856c04b6a6c453397b08301bbb222c83e0a5ef28a116dce41c8ee0133596865178948427ffbfacf1856dbf317bc0d10ecb2ca1aa33dee293000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb000000000000000000000000000000000000000000000000000000000000002300000000000000000000000049c0d6a9e6f273c4494f3568e55d0a313c2edcfc28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae612c4c6415c49c164f8c81c76939fde44b1e6619d1946eb673ac203903dc36a00001c8c09a245beacc76f69f41def1da2219a0cd1ea328134e3aba603e29770fc1ef007c81d6fec56f2f1633d4a5f0b185fad2f719a8b92c624c1441eb2a2f9633020b4b1a0c2a6b16dea1fe908f0d5ab7c2d6f9d7ab50abd9135c25936c317a200f31f339962c0bba6bf3878088ee151d5163df24097350d02cc00f3d5f3a2e316554592f12df06777fc2eeb343641083f6299f66bd6f6f4ae3c125da8cc15680d35cfdfc71d15f59e6e37bae016dfc96da646aea2fbdba7be6fd334c53490ee008c2f1d877ed983a8afe7f98529da6e8186cb1874695070aeb5dc126d4235ad1fd76af0b23372d37b7f5181db3da8d2a46848cf4a473d55ccd23def6db02d46000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000485d8a98bb5dc09f1735aecbc8144ab2db7b545428942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae60543198b027d09bba2e1a841d4d3abd89256be8b84db977f5f651fbadf879efa05b9205ea53264deb3985cd04a071d90646a7f7f598d2caf2d2d005ad498943e15e5e0bbe91d868a0ee665e0651f8ffb6c6d2ac509c43d5bb53d805bc6c15f6d06909f64060d8c1a9519cf2b2c06a4542594ef2c3f03628ab85816700d9e6d4115ae7319fb08e0d7cc7755a766fe2be37a6f41332c900b23330c78cfb42e965b0fb6968782b33ec1dc44e79704c6eab3264b4a1a95caa47f3c1eeba76ab83dea260c18ce79fef579dacdc214b521666a9cb9c5ecd0ef82199e2b045ab073bd0926ccbdd591bacf2f04ce8b13437ec5ee71061c37a3bbd68879e0917ddf157ff5082b9767119e087ee6979a6ba346d99a2f6755aab877b680bd1973b7e6c96563000000000000000000000000000000000000000000000000000000000000000000000000000000007b46ffbc976db2f94c3b3cdd9ebbe4ab50e3d77d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000184a41e6ceb0000000000000000000000000000000000000000000000000000000000000023000000000000000000000000231a2f44fde5788ee99c2ea163be421714ee47fc28942a4cc38d6ce636ded96f848bf0f3f547664e91b63f3daa080fbebc7d6ae624bd26434331113463b0801bad03295369f09b001551e3039be9a5c86f7c463d0fdd76dae5e472d7738264ac9db2ef6179e1d90a2e2f7931de1b862d24e4cacc171d8f1057095e652a2276423f70ec952dc43abb32bc72ca8080ae10451098b40aca120d5b8822848412087d67b40498eeab7246254d95db1b49b2b77838bee02597c0796b870fe29d3e0fcb8cd2d3148cc5d29ac0e0fe3cc1b42310b6f06cc90f771c1c8425d1e6ee1929cbc01986def1ea012780d606b41cf378682c9a0a2a13e44d09eac7239b532e1c5d99fc76a5b0c0e184edc31aea2b1ded286a8b7b8b1b8c744c3b5b68a413b7710a4106993e0e3aa97c148bbc46e7bd475e4a4a0bf71a64ba3b34be6656b6760ccd4b3c080019735cbf852cd50a5608d56ead05ffe900000000000000000000000000000000000000000000000000000000c080a0f613146bcf55b47f690f88aa4d95f8e188b28065b0ddbd49f689c7776a4049b3a00b4d55033092f80ca9df1123c6437f52372e2548cb8fbeca54722d9fe760e3c2").into()
         ];
-        let payload_attrs = L2PayloadAttributes {
-            fee_recipient: address!("4200000000000000000000000000000000000011"),
+        let payload_attrs = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 1717730355,
+                suggested_fee_recipient: address!("4200000000000000000000000000000000000011"),
+                withdrawals: Default::default(),
+                prev_randao: b256!(
+                    "c7acc30c856d749a81902d811e879e8dae5de2e022091aaa7eb4b586dcd3d052"
+                ),
+                parent_beacon_block_root: Some(b256!(
+                    "a4414c4984ce7285b82bd9b21c642af30f0f648fb6f4929b67753e7345a06bab"
+                )),
+            },
             gas_limit: Some(30_000_000),
-            timestamp: 1717730355,
-            prev_randao: b256!("c7acc30c856d749a81902d811e879e8dae5de2e022091aaa7eb4b586dcd3d052"),
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(b256!(
-                "a4414c4984ce7285b82bd9b21c642af30f0f648fb6f4929b67753e7345a06bab"
-            )),
-            transactions: raw_txs,
-            no_tx_pool: false,
+            transactions: Some(raw_txs),
+            no_tx_pool: Some(false),
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -988,7 +1038,7 @@ mod test {
             delta_time: Some(0),
             ecotone_time: Some(0),
             base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: Some(OP_CANYON_BASE_FEE_PARAMS),
+            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
             ..Default::default()
         };
 
@@ -999,13 +1049,13 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121135703's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(&rollup_config)
-            .with_parent_header(parent_header.seal_slow())
-            .with_fetcher(TestdataTrieDBFetcher::new("block_121135704_exec"))
-            .with_hinter(NoopTrieDBHinter)
-            .with_precompile_overrides(NoPrecompileOverride)
-            .build()
-            .unwrap();
+        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+            &rollup_config,
+            TestdataTrieProvider::new("block_121135704_exec"),
+            NoopTrieHinter,
+        )
+        .with_parent_header(parent_header.seal_slow())
+        .build();
 
         let raw_txs = alloc::vec![
             hex!("7ef8f8a0bd8a03d2faac7261a1627e834405975aa1c55c968b072ffa6db6c100d891c9b794deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc500000000000000070000000066649ddb000000000131eb9a000000000000000000000000000000000000000000000000000000023c03238b0000000000000000000000000000000000000000000000000000000000000001427035b1edf748d109f4a751c5e2e33122340b0e22961600d8b76cfde3c7a6b50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985").into(),
@@ -1027,17 +1077,21 @@ mod test {
             hex!("02f904da0a83012933830f424084045e2f258305e39c9400000000fc04c910a0b5fea33b03e0447ad0b0aa8702e5763b5ce075b90464a44c9ce7000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff5f082dbf2d2f930eb3d2b51bb2f1010a4d5a8900000000000000000000000000000000fcb080a4d6c39a9354da9eb9bc104cd7000000000000000000000000000000000000000000000000000000006664a0bd00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000041819edf15e18a545cbbabbd24c9f3e136a3dcec10c65f5ce19d6fb903e586e6db5f2e154210d25768487e89cb7d9b62cc611421c3456538c7d9ac39f0fd619e111c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000006664a0bd000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000000205183a065a3c67e765796c2969e67b960d2ae041a36070a7ed719b18b5682bdda0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000023c000000000000000000000000002ef790dd7993a35fd847c053eddae940d0555960000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000006664a0bd0000000000000000000000000000000000000000000000000000000000000041dd6bb97a2c5250e07ba4b0df71715c81ac9adc5ee1111a0f8ff3845321ac7d5262a7cdd80df46391bc4e41b5f1492110a42badfb7b6ebdd8944e2c3c9a9d8e621c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041d5ae1701d2a1750e608e1f2b5d10280db952ddb14cc35f819f7334e9eb5133a5072108be5f5134ac6c061fa9e3bcee464ad8c8e13e206cd5c6b632a7294cd34b1c00000000000000000000000000000000000000000000000000000000000000c001a0994107041475defdb265cdbe6da3df610516ec50a81dd9c0a3602c20d1c72b22a04b28a32d391ebdc15e63ffd26dc3a91e6c3c0565538e33e04558a9d1c9d70b3f").into(),
             hex!("02f8b50a01830f424084045a3cc98306213f942a5c54c625220cb2166c94dd9329be1f8785977d866e5ceb32785cb844f5c358c60000000000000000000000000000000000000000000000000000000000000504000000000000000000000000000000000000000000000000000000000263b143c001a051a2584f761c7ef2216652d41840cb1e84c0576d076c72f06906777cb043d45aa02bdbb191600306e5f3ff6d65991f61979f8a10d60d0c6ccaaf1f6d5c7515dac2").into()
         ];
-        let payload_attrs = L2PayloadAttributes {
-            fee_recipient: address!("4200000000000000000000000000000000000011"),
+        let payload_attrs = OptimismPayloadAttributes {
+            payload_attributes: PayloadAttributes {
+                timestamp: 1717870185,
+                prev_randao: b256!(
+                    "23b3d2cb1b7216ef94837fdf94767b6235ce735a19de4f3feee7c1d603f2d10b"
+                ),
+                withdrawals: Default::default(),
+                suggested_fee_recipient: address!("4200000000000000000000000000000000000011"),
+                parent_beacon_block_root: Some(b256!(
+                    "8ab0d68c0fc4fe40d31baf01bcf73de45ddf15ab58e66738ca6c60648676f9af"
+                )),
+            },
             gas_limit: Some(30_000_000),
-            timestamp: 1717870185,
-            prev_randao: b256!("23b3d2cb1b7216ef94837fdf94767b6235ce735a19de4f3feee7c1d603f2d10b"),
-            withdrawals: Default::default(),
-            parent_beacon_block_root: Some(b256!(
-                "8ab0d68c0fc4fe40d31baf01bcf73de45ddf15ab58e66738ca6c60648676f9af"
-            )),
-            transactions: raw_txs,
-            no_tx_pool: false,
+            transactions: Some(raw_txs),
+            no_tx_pool: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
