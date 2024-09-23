@@ -39,6 +39,17 @@ fn custom_handle_register<F, H>(
       ctx_precompiles
    });
 }
+
+// - snip -
+
+let cfg = RollupConfig::default();
+let provider = ...;
+let hinter = ...;
+
+let executor = StatelessL2BlcokExecutor::builder(&cfg, provider, hinter)
+   .with_parent_header(...)
+   .with_handle_register(custom_handle_register)
+   .build();
 ```
 
 {{ #include ../links.md }}

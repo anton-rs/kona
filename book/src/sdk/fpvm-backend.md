@@ -20,7 +20,7 @@ highest-level API.
 ### `kona-common`
 
 `kona-common` implements raw syscall dispatch, a default global memory allocator, and a blocking async runtime.
-`kona-common` rely on a minified linux backend to function, supporting only the syscalls required to implement the
+`kona-common` relies on a minimal linux backend to function, supporting only the syscalls required to implement the
 [PreimageOracle ABI][preimage-specs] (`read`, `write`, `exit_group`).
 
 These syscalls are exposed to the user through the `io` module directly, with each supported platform implementing the
@@ -55,7 +55,7 @@ when developing programs that target the [FPVMs](../fpp-dev/env.md), barring nee
 
 ### `kona-preimage`
 
-`kona-preimage` is an implementation of the [PreimageOracle ABI][preimage-specs], built on top of `kona-client`. This
+`kona-preimage` is an implementation of the [PreimageOracle ABI][preimage-specs], built on top of `kona-common`. This
 crate enables synchronous communication between the host and client program, described in
 [Host <-> Client Communication](../fpp-dev/env.md#host---client-communication) in the FPP Dev environment section of the
 book.

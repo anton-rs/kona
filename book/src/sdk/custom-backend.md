@@ -40,7 +40,7 @@ in order to:
 1. Derive and execute an entire [Span Batch](https://specs.optimism.io/protocol/delta/span-batches.html#span-batches)
    worth of L2 blocks, using `kona-derive` and `kona-executor`.
 
-This section of the book outlines how you can do the same.
+This section of the book outlines how you can do the same for a different platform.
 
 ### Custom `kona-derive` sources
 
@@ -52,7 +52,8 @@ Before getting started, we need to create custom implementations of the followin
 | [`L2ChainProvider`](https://docs.rs/kona-derive/latest/kona_derive/traits/trait.L2ChainProvider.html) | The `ChainProvider` trait describes the minimal interface for fetching data from the safe L2 chain during L2 chain derivation.      |
 | [`BlobProvider`](https://docs.rs/kona-derive/latest/kona_derive/traits/trait.BlobProvider.html)       | The `BlobProvider` trait describes an interface for fetching EIP-4844 blobs from the L1 consensus layer during L2 chain derivation. |
 
-Once these are implemented, constructing the pipeline is as simple as passing in the data sources to the `PipelineBuilder`.
+Once these are implemented, constructing the pipeline is as simple as passing in the data sources to the `PipelineBuilder`. Keep in mind the requirements for validation of incoming data, depending on your platform. For example, programs
+targeting zkVMs must constrain that the incoming data is indeed valid, whereas fault proof programs can offload this validation to the on-chain implementation of the host.
 
 ```rs
 let chain_provider = ...;

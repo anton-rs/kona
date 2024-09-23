@@ -1,8 +1,9 @@
 # Kona SDK
 
-Welcome to the Kona SDK, a powerful set of libraries designed to revolutionize the way developers build verifiable programs 
-on top of the OP Stack's FPVMs and other verifiable backends like [SP-1][sp-1], [Risc0][rzero], [Intel TDX][tdx], and [AMD SEV-SNP][sev-snp].
-At its core, Kona is built on the principles of modularity, extensibility, and developer empowerment.
+Welcome to the Kona SDK, a powerful set of libraries designed to revolutionize the way developers build proofs for the
+OP Stack STF on top of the OP Stack's FPVMs and other verifiable backends like [SP-1][sp-1], [Risc0][rzero], 
+[Intel TDX][tdx], and [AMD SEV-SNP][sev-snp]. At its core, Kona is built on the principles of modularity, extensibility,
+and developer empowerment.
 
 ## A Foundation of Flexibility
 
