@@ -2460,15 +2460,10 @@ dependencies = [
 name = "kona-primitives"
 version = "0.0.2"
 dependencies = [
- "alloy-consensus",
  "alloy-eips",
  "alloy-primitives",
- "alloy-rlp",
  "anyhow",
  "c-kzg",
- "op-alloy-consensus",
- "op-alloy-genesis",
- "op-alloy-protocol",
  "revm",
  "serde",
  "serde_json",

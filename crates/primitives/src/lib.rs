@@ -7,14 +7,6 @@
 
 extern crate alloc;
 
-pub mod block;
-pub use block::{Block, BlockKind, OpBlock};
-
-pub mod payload;
-pub use payload::{
-    L2ExecutionPayload, L2ExecutionPayloadEnvelope, PAYLOAD_MEM_FIXED_COST, PAYLOAD_TX_MEM_OVERHEAD,
-};
-
 pub mod blob;
 pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
 
