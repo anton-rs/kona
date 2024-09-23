@@ -28,6 +28,16 @@ the block execution logic.
 Built on top of these libraries, this repository also features a [fault proof program][fpp-specs] designed to deterministically execute the
 rollup state transition in order to verify an [L2 output root][g-output-root] from the L1 inputs it was [derived from][g-derivation-pipeline].
 
+### Alternative Backends
+
+Kona's libraries were built with alternative backend support and extensibility in mind - it is not just a fault proof 
+program! Kona is also used by:
+
+- [`op-succinct`][op-succinct]
+
+To build your own backend for kona, or build a new application on top of its libraries,
+see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html).
+
 ### Development Status
 
 `kona` is currently in active development, and is not yet ready for use in production.
@@ -70,6 +80,7 @@ The [book][book] contains a more in-depth overview of the project, contributor g
 [asterisc]: https://github.com/etheruem-optimism/asterisc
 [fpp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html
 [book]: https://anton-rs.github.io/kona/
+[op-succinct]: https://github.com/succinctlabs/op-succinct
 [op-labs]: https://github.com/ethereum-optimism
 [bad-boi-labs]: https://github.com/BadBoiLabs
 [g-output-root]: https://specs.optimism.io/glossary.html#l2-output-root
