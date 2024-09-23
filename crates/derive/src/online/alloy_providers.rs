@@ -8,7 +8,7 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
 use alloy_transport::{RpcError, TransportErrorKind, TransportResult};
 use async_trait::async_trait;
-use core::{num::NonZeroUsize, str::FromStr};
+use core::num::NonZeroUsize;
 use lru::LruCache;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
@@ -60,17 +60,14 @@ impl AlloyChainProvider {
         Self::new(inner)
     }
 
+    /// Returns the latest L2 block number.
+    pub async fn latest_block_number(&mut self) -> Result<u64, RpcError<TransportErrorKind>> {
+        self.inner.get_block_number().await
+    }
+
     /// Returns the chain ID.
     pub async fn chain_id(&mut self) -> Result<u64, RpcError<TransportErrorKind>> {
-        let chain_id: TransportResult<alloc::string::String> =
-            self.inner.raw_request("eth_chainId".into(), ()).await;
-        let chain_id = match chain_id {
-            Ok(s) => {
-                U64::from_str(s.as_str()).map_err(|e| RpcError::LocalUsageError(Box::new(e)))?
-            }
-            Err(e) => return Err(e),
-        };
-        Ok(chain_id.to::<u64>())
+        self.inner.get_chain_id().await
     }
 }
 
@@ -294,26 +291,12 @@ impl AlloyL2ChainProvider {
 
     /// Returns the chain ID.
     pub async fn chain_id(&mut self) -> Result<u64, RpcError<TransportErrorKind>> {
-        let chain_id: TransportResult<alloc::string::String> =
-            self.inner.raw_request("eth_chainId".into(), ()).await;
-        let chain_id = match chain_id {
-            Ok(s) => {
-                U64::from_str(s.as_str()).map_err(|e| RpcError::LocalUsageError(Box::new(e)))?
-            }
-            Err(e) => return Err(e),
-        };
-        Ok(chain_id.to::<u64>())
+        self.inner.get_chain_id().await
     }
 
     /// Returns the latest L2 block number.
     pub async fn latest_block_number(&mut self) -> Result<u64, RpcError<TransportErrorKind>> {
-        let s = self
-            .inner
-            .raw_request::<(), alloc::string::String>("eth_blockNumber".into(), ())
-            .await?;
-        U64::from_str(s.as_str())
-            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))
-            .map(|u| u.to::<u64>())
+        self.inner.get_block_number().await
     }
 
     /// Creates a new [AlloyL2ChainProvider] from the provided [reqwest::Url].
