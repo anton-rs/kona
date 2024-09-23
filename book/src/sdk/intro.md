@@ -8,8 +8,8 @@ and developer empowerment.
 ## A Foundation of Flexibility
 
 The kona repository is more than a fault proof program for the OP Stack — it's an ecosystem of interoperable components,
-each crafted with reusability and extensibility as primary goals. While we provide a robust 
-{{#template ../../templates/glossary-link.md root=./ ref=fault-proof-vm text=Fault Proof VM}} and a "online" backend
+each crafted with reusability and extensibility as primary goals. While we provide 
+{{#template ../../templates/glossary-link.md root=./ ref=fault-proof-vm text=Fault Proof VM}} and "online" backends
 for key components like `kona-derive` and `kona-executor`, the true power of `kona` lies in its adaptability.
 
 ## Extend Without Forking
