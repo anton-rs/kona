@@ -38,5 +38,4 @@ online = [
   "dep:revm",
   "dep:tracing",
   "revm/default",
-  "alloy-primitives/std"
 ]
