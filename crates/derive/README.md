@@ -8,22 +8,59 @@ A `no_std` compatible implementation of the OP Stack's [derivation pipeline][der
 
 [derive]: (https://specs.optimism.io/protocol/derivation.html#l2-chain-derivation-specification).
 
+## Usage
+
+The intended way of working with `kona-derive` is to use the [`DerivationPipeline`][dp] which implements the [`Pipeline`][p] trait. To create an instance of the [`DerivationPipeline`][dp], it's recommended to use the [`PipelineBuilder`][pb] as follows.
+
+```rust,ignore
+use std::sync::Arc;
+use op_alloy_genesis::RollupConfig;
+use kona_derive::sources::EthereumDataSource;
+use kona_derive::pipeline::PipelineBuilder;
+use kona_derive::stages::{StatefulAttributesBuilder};
+
+let chain_provider = ...;
+let l2_chain_provider = ...;
+let blob_provider = ...;
+let l1_origin = ...;
+
+let cfg = Arc::new(RollupConfig::default());
+let attributes = StatefulAttributesBuilder::new(
+   cfg.clone(),
+   l2_chain_provider.clone(),
+   chain_provider.clone(),
+);
+let dap = EthereumDataSource::new(
+   chain_provider.clone(),
+   blob_provider,
+   cfg.as_ref()
+);
+
+// Construct a new derivation pipeline.
+let pipeline = PipelineBuilder::new()
+   .rollup_config(cfg)
+   .dap_source(dap)
+   .l2_chain_provider(l2_chain_provider)
+   .chain_provider(chain_provider)
+   .builder(attributes)
+   .origin(l1_origin)
+   .build();
+```
+
+[p]: ./src/traits/pipeline.rs
+[dp]: ./src/pipeline/core.rs
+
 ## Features
 
 The most up-to-date feature list will be available on the [docs.rs `Feature Flags` tab][ff] of the `kona-derive` crate.
 
 Some features include the following.
 - `serde`: Serialization and Deserialization support for `kona-derive` types.
-- `k256`: [secp256k1][k] public key recovery support.
+- `metrics`: Enables prometheus metric collection. _Note: This requires an `std` environment._
 - `online`: Exposes an [alloy-provider][ap] powered data source using "online" HTTP requests.
+- `test-utils`: Test utilities for downstream libraries.
 
-By default, `kona-derive` enables features `serde` and `k256`.
+By default, `kona-derive` enables the `serde` feature.
 
-Key recovery using the [secp256k1][k] curve sits behind a `k256` feature flag so that when compiled in `offline` mode,
-secp recovery can fall through to the fpp host, accelerating key recovery. This was necessary since invalid instructions
-were found when compiling `k256` recovery down to a bare-metal MIPS target. Since public key recovery requires elliptic
-curve pairings, `k256` fall-through host recovery should drastically accelerate derivation on the FPVM.
-
-[k]: https://en.bitcoin.it/wiki/Secp256k1 
 [ap]: https://docs.rs/crate/alloy-providers/latest
 [ff]: https://docs.rs/crate/kona-derive/latest/features
