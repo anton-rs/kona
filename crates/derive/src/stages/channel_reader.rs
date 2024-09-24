@@ -35,7 +35,15 @@ pub trait ChannelReaderProvider {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>>;
 }
 
-/// [ChannelReader] is a stateful stage that does the following:
+/// [ChannelReader] is a stateful stage that reads [Batch]es from `Channel`s.
+///
+/// The [ChannelReader] pulls `Channel`s from the channel bank as raw data
+/// and pipes it into a `BatchReader`. Since the raw data is compressed,
+/// the `BatchReader` first decompresses the data using the first bytes as
+/// a compression algorithm identifier.
+///
+/// Once the data is decompressed, it is decoded into a `Batch` and passed
+/// to the next stage in the pipeline.
 #[derive(Debug)]
 pub struct ChannelReader<P>
 where
