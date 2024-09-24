@@ -18,7 +18,7 @@ use kona_derive::{
         AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal, StatefulAttributesBuilder,
     },
-    traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
+    traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider, PipelineReset},
 };
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
 use kona_mpt::{TrieHinter, TrieProvider};
@@ -72,6 +72,8 @@ where
     l2_safe_head_header: Sealed<Header>,
     /// The inner pipeline.
     pipeline: OraclePipeline<O, B>,
+    /// Whether the pipeline has been reset yet for holocene.
+    holocene_reset: bool,
 }
 
 impl<O, B> DerivationDriver<O, B>
@@ -150,7 +152,7 @@ where
             .origin(l1_origin)
             .build();
 
-        Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
+        Ok(Self { l2_safe_head, l2_safe_head_header, pipeline, holocene_reset: false })
     }
 
     /// Produces the output root of the next L2 block.
@@ -210,7 +212,16 @@ where
                     info!(target: "client_derivation_driver", "Stepped derivation pipeline")
                 }
                 StepResult::AdvancedOrigin => {
-                    info!(target: "client_derivation_driver", "Advanced origin")
+                    info!(target: "client_derivation_driver", "Advanced origin");
+                    if !self.holocene_reset {
+                        let origin =
+                            self.pipeline.origin().ok_or_else(|| anyhow!("Missing L1 origin"))?;
+                        if self.pipeline.rollup_config.is_holocene_active(origin.timestamp) {
+                            self.pipeline.reset(PipelineReset::Partial).await?;
+                            self.holocene_reset = true;
+                            info!(target: "client_derivation_driver", "Reset pipeline for holocene");
+                        }
+                    }
                 }
                 StepResult::OriginAdvanceErr(e) | StepResult::StepFailed(e) => {
                     warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e);
@@ -224,12 +235,12 @@ where
                             // Reset the pipeline to the initial L2 safe head and L1 origin,
                             // and try again.
                             self.pipeline
-                                .reset(
+                                .reset(PipelineReset::Full(
                                     self.l2_safe_head.block_info,
                                     self.pipeline
                                         .origin()
                                         .ok_or_else(|| anyhow!("Missing L1 origin"))?,
-                                )
+                                ))
                                 .await?;
                         }
                         PipelineErrorKind::Critical(_) => return Err(e.into()),

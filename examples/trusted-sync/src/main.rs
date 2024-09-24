@@ -3,6 +3,7 @@ use clap::Parser;
 use kona_derive::{
     errors::{PipelineError, PipelineErrorKind},
     online::*,
+    traits::PipelineReset,
 };
 use std::sync::Arc;
 use superchain::ROLLUP_CONFIGS;
@@ -105,6 +106,7 @@ async fn sync(cli: cli::Cli) -> Result<()> {
     // Continuously step on the pipeline and validate payloads.
     let mut advance_cursor_flag = false;
     let mut retries = 0;
+    let mut holocene_reset = false;
     loop {
         // Update the reference l2 head.
         match l2_provider.latest_block_number().await {
@@ -145,7 +147,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 continue;
                             };
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
-                            if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
+                            if let Err(e) = pipeline
+                                .reset(PipelineReset::Full(c.block_info, l1_block_info))
+                                .await
+                            {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                                 continue;
                             }
@@ -172,7 +177,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 continue;
                             };
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
-                            if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
+                            if let Err(e) = pipeline
+                                .reset(PipelineReset::Full(c.block_info, l1_block_info))
+                                .await
+                            {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                                 continue;
                             }
@@ -213,6 +221,14 @@ async fn sync(cli: cli::Cli) -> Result<()> {
             StepResult::AdvancedOrigin => {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance"]).inc();
                 trace!(target: "loop", "Advanced origin");
+                if !holocene_reset {
+                    let origin = pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?;
+                    if pipeline.rollup_config.is_holocene_active(origin.timestamp) {
+                        pipeline.reset(PipelineReset::Partial).await?;
+                        holocene_reset = true;
+                        trace!(target: "loop", "Reset pipeline for holocene");
+                    }
+                }
             }
             StepResult::OriginAdvanceErr(e) => {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
@@ -229,10 +245,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     metrics::PIPELINE_STEPS.with_label_values(&["reset"]).inc();
                     warn!(target: "loop", "Resetting pipeline: {:?}", e);
                     pipeline
-                        .reset(
+                        .reset(PipelineReset::Full(
                             cursor.block_info,
                             pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?,
-                        )
+                        ))
                         .await?;
                 }
                 _ => {

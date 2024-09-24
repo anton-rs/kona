@@ -12,8 +12,8 @@ use crate::{
     errors::PipelineErrorKind,
     pipeline::{PipelineError, PipelineResult},
     traits::{
-        L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResetType,
-        ResettableStage, StepResult,
+        L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineReset,
+        ResetType, ResettableStage, StepResult,
     },
 };
 
@@ -94,26 +94,27 @@ where
     ///
     /// The `l1_block_info` is the new L1 origin set in the [crate::stages::L1Traversal]
     /// stage.
-    async fn reset(
-        &mut self,
-        l2_block_info: BlockInfo,
-        l1_block_info: BlockInfo,
-    ) -> PipelineResult<()> {
-        let system_config = self
-            .l2_chain_provider
-            .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
-            .await
-            .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
-        match self.attributes.reset(&ResetType::Full(l1_block_info, &system_config)).await {
-            Ok(()) => trace!(target: "pipeline", "Stages reset"),
-            Err(err) => {
-                if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
-                    trace!(target: "pipeline", "Stages reset with EOF");
-                } else {
-                    error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                    return Err(err);
+    async fn reset(&mut self, ty: PipelineReset) -> PipelineResult<()> {
+        match ty {
+            PipelineReset::Full(l1_block_info, l2_block_info) => {
+                let system_config = self
+                    .l2_chain_provider
+                    .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
+                    .await
+                    .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
+                match self.attributes.reset(&ResetType::Full(l1_block_info, &system_config)).await {
+                    Ok(()) => trace!(target: "pipeline", "Stages reset"),
+                    Err(err) => {
+                        if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
+                            trace!(target: "pipeline", "Stages reset with EOF");
+                        } else {
+                            error!(target: "pipeline", "Stage reset errored: {:?}", err);
+                            return Err(err);
+                        }
+                    }
                 }
             }
+            PipelineReset::Partial => self.attributes.reset(&ResetType::Partial).await?,
         }
         Ok(())
     }
