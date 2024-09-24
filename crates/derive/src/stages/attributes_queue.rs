@@ -14,12 +14,6 @@ use crate::{
     traits::{AttributesBuilder, NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
 };
 
-mod deposits;
-pub(crate) use deposits::derive_deposits;
-
-mod builder;
-pub use builder::StatefulAttributesBuilder;
-
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
 ///
 /// [BatchQueue]: crate::stages::BatchQueue

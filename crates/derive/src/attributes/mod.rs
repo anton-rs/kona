@@ -1,21 +1,26 @@
 //! The [`AttributesBuilder`] and it's default implementation.
 
-use super::derive_deposits;
 use crate::{
-    errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
-    params::SEQUENCER_FEE_VAULT_ADDRESS,
+    errors::{
+        BuilderError, PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult,
+    },
     traits::{AttributesBuilder, ChainProvider, L2ChainProvider},
 };
 use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
+use alloy_consensus::{Eip658Value, Receipt};
 use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
-use alloy_primitives::Bytes;
+use alloy_primitives::{address, Address, Bytes, B256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{L1BlockInfoTx, L2BlockInfo};
+use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
+
+/// The sequencer fee vault address.
+pub const SEQUENCER_FEE_VAULT_ADDRESS: Address =
+    address!("4200000000000000000000000000000000000011");
 
 /// A stateful implementation of the [AttributesBuilder].
 #[derive(Debug, Default)]
@@ -190,6 +195,38 @@ where
     }
 }
 
+/// Derive deposits for transaction receipts.
+///
+/// Successful deposits must be emitted by the deposit contract and have the correct event
+/// signature. So the receipt address must equal the specified deposit contract and the first topic
+/// must be the [DEPOSIT_EVENT_ABI_HASH].
+async fn derive_deposits(
+    block_hash: B256,
+    receipts: &[Receipt],
+    deposit_contract: Address,
+) -> Result<Vec<Bytes>, PipelineEncodingError> {
+    let mut global_index = 0;
+    let mut res = Vec::new();
+    for r in receipts.iter() {
+        if Eip658Value::Eip658(false) == r.status {
+            continue;
+        }
+        for l in r.logs.iter() {
+            let curr_index = global_index;
+            global_index += 1;
+            if !l.data.topics().first().map_or(false, |i| *i == DEPOSIT_EVENT_ABI_HASH) {
+                continue;
+            }
+            if l.address != deposit_contract {
+                continue;
+            }
+            let decoded = decode_deposit(block_hash, curr_index, l)?;
+            res.push(decoded);
+        }
+    }
+    Ok(res)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,10 +234,109 @@ mod tests {
         errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher,
         traits::test_utils::TestChainProvider,
     };
+    use alloc::vec;
     use alloy_consensus::Header;
-    use alloy_primitives::B256;
+    use alloy_primitives::{Log, LogData, B256, U256, U64};
     use op_alloy_genesis::SystemConfig;
-    use op_alloy_protocol::BlockInfo;
+    use op_alloy_protocol::{BlockInfo, DepositError};
+
+    fn generate_valid_log() -> Log {
+        let deposit_contract = address!("1111111111111111111111111111111111111111");
+        let mut data = vec![0u8; 192];
+        let offset: [u8; 8] = U64::from(32).to_be_bytes();
+        data[24..32].copy_from_slice(&offset);
+        let len: [u8; 8] = U64::from(128).to_be_bytes();
+        data[56..64].copy_from_slice(&len);
+        // Copy the u128 mint value
+        let mint: [u8; 16] = 10_u128.to_be_bytes();
+        data[80..96].copy_from_slice(&mint);
+        // Copy the tx value
+        let value: [u8; 32] = U256::from(100).to_be_bytes();
+        data[96..128].copy_from_slice(&value);
+        // Copy the gas limit
+        let gas: [u8; 8] = 1000_u64.to_be_bytes();
+        data[128..136].copy_from_slice(&gas);
+        // Copy the isCreation flag
+        data[136] = 1;
+        let from = address!("2222222222222222222222222222222222222222");
+        let mut from_bytes = vec![0u8; 32];
+        from_bytes[12..32].copy_from_slice(from.as_slice());
+        let to = address!("3333333333333333333333333333333333333333");
+        let mut to_bytes = vec![0u8; 32];
+        to_bytes[12..32].copy_from_slice(to.as_slice());
+        Log {
+            address: deposit_contract,
+            data: LogData::new_unchecked(
+                vec![
+                    DEPOSIT_EVENT_ABI_HASH,
+                    B256::from_slice(&from_bytes),
+                    B256::from_slice(&to_bytes),
+                    B256::default(),
+                ],
+                Bytes::from(data),
+            ),
+        }
+    }
+
+    fn generate_valid_receipt() -> Receipt {
+        let mut bad_dest_log = generate_valid_log();
+        bad_dest_log.data.topics_mut()[1] = B256::default();
+        let mut invalid_topic_log = generate_valid_log();
+        invalid_topic_log.data.topics_mut()[0] = B256::default();
+        Receipt {
+            status: Eip658Value::Eip658(true),
+            logs: vec![generate_valid_log(), bad_dest_log, invalid_topic_log],
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn test_derive_deposits_empty() {
+        let receipts = vec![];
+        let deposit_contract = Address::default();
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_derive_deposits_non_deposit_events_filtered_out() {
+        let deposit_contract = address!("1111111111111111111111111111111111111111");
+        let mut invalid = generate_valid_receipt();
+        invalid.logs[0].data = LogData::new_unchecked(vec![], Bytes::default());
+        let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
+        assert_eq!(result.unwrap().len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_derive_deposits_non_deposit_contract_addr() {
+        let deposit_contract = address!("1111111111111111111111111111111111111111");
+        let mut invalid = generate_valid_receipt();
+        invalid.logs[0].address = Address::default();
+        let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
+        assert_eq!(result.unwrap().len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_derive_deposits_decoding_errors() {
+        let deposit_contract = address!("1111111111111111111111111111111111111111");
+        let mut invalid = generate_valid_receipt();
+        invalid.logs[0].data =
+            LogData::new_unchecked(vec![DEPOSIT_EVENT_ABI_HASH], Bytes::default());
+        let receipts = vec![generate_valid_receipt(), generate_valid_receipt(), invalid];
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
+        let downcasted = result.unwrap_err();
+        assert_eq!(downcasted, DepositError::UnexpectedTopicsLen(1).into());
+    }
+
+    #[tokio::test]
+    async fn test_derive_deposits_succeeds() {
+        let deposit_contract = address!("1111111111111111111111111111111111111111");
+        let receipts = vec![generate_valid_receipt(), generate_valid_receipt()];
+        let result = derive_deposits(B256::default(), &receipts, deposit_contract).await;
+        assert_eq!(result.unwrap().len(), 4);
+    }
 
     #[tokio::test]
     async fn test_prepare_payload_block_mismatch_epoch_reset() {
