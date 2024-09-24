@@ -4,14 +4,14 @@ use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
     params::MAX_CHANNEL_BANK_SIZE,
     stages::ChannelReaderProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, Bytes};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use hashbrown::HashMap;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Channel, ChannelId, Frame};
 use tracing::{trace, warn};
 
@@ -254,12 +254,9 @@ impl<P> ResettableStage for ChannelBank<P>
 where
     P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn reset(
-        &mut self,
-        block_info: BlockInfo,
-        system_config: &SystemConfig,
-    ) -> PipelineResult<()> {
-        self.prev.reset(block_info, system_config).await?;
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        self.prev.reset(ty).await?;
+        // For both full and partial resets, we clear the channel bank.
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         crate::inc!(STAGE_RESETS, &["channel-bank"]);

@@ -3,13 +3,12 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::ChannelBankProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, Frame};
 use tracing::{debug, error, trace};
 
@@ -113,12 +112,9 @@ impl<P> ResettableStage for FrameQueue<P>
 where
     P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    async fn reset(
-        &mut self,
-        block_info: BlockInfo,
-        system_config: &SystemConfig,
-    ) -> PipelineResult<()> {
-        self.prev.reset(block_info, system_config).await?;
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        self.prev.reset(ty).await?;
+        // For both partial and full resets, clear the frame queue.
         self.queue = VecDeque::default();
         crate::inc!(STAGE_RESETS, &["frame-queue"]);
         Ok(())

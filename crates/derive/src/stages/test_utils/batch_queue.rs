@@ -4,11 +4,10 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::batch_queue::BatchQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
 /// A mock provider for the [BatchQueue] stage.
@@ -49,7 +48,7 @@ impl OriginAdvancer for MockBatchQueueProvider {
 
 #[async_trait]
 impl ResettableStage for MockBatchQueueProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+    async fn reset(&mut self, _: &ResetType<'_>) -> PipelineResult<()> {
         Ok(())
     }
 }

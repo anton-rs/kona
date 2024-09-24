@@ -3,7 +3,7 @@
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
     stages::L1RetrievalProvider,
-    traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{ChainProvider, OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::Address;
@@ -122,10 +122,15 @@ impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
 
 #[async_trait]
 impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.block = Some(base);
-        self.done = false;
-        self.system_config = *cfg;
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        match ty {
+            ResetType::Full(base, cfg) => {
+                self.block = Some(*base);
+                self.done = false;
+                self.system_config = **cfg;
+            }
+            ResetType::Partial => { /* noop */ }
+        }
         crate::inc!(STAGE_RESETS, &["l1-traversal"]);
         Ok(())
     }

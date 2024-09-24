@@ -1,10 +1,5 @@
 //! Contains the core derivation pipeline.
 
-use super::{
-    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
-    PipelineResult, ResettableStage, StepResult,
-};
-use crate::errors::PipelineErrorKind;
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -12,6 +7,15 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 use tracing::{error, trace, warn};
+
+use crate::{
+    errors::PipelineErrorKind,
+    pipeline::{PipelineError, PipelineResult},
+    traits::{
+        L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResetType,
+        ResettableStage, StepResult,
+    },
+};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
@@ -100,7 +104,7 @@ where
             .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
             .await
             .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
-        match self.attributes.reset(l1_block_info, &system_config).await {
+        match self.attributes.reset(&ResetType::Full(l1_block_info, &system_config)).await {
             Ok(()) => trace!(target: "pipeline", "Stages reset"),
             Err(err) => {
                 if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {

@@ -3,7 +3,7 @@
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAttributes};
 use tracing::info;
@@ -11,7 +11,7 @@ use tracing::info;
 use crate::{
     batch::SingleBatch,
     errors::{PipelineError, PipelineResult, ResetError},
-    traits::{NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{NextAttributes, OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 
 mod deposits;
@@ -200,14 +200,15 @@ where
     P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     AB: AttributesBuilder + Send + Debug,
 {
-    async fn reset(
-        &mut self,
-        block_info: BlockInfo,
-        system_config: &SystemConfig,
-    ) -> PipelineResult<()> {
-        self.prev.reset(block_info, system_config).await?;
-        self.batch = None;
-        self.is_last_in_span = false;
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        self.prev.reset(ty).await?;
+        match ty {
+            ResetType::Full(_, _) => {
+                self.batch = None;
+                self.is_last_in_span = false;
+            }
+            ResetType::Partial => { /* noop */ }
+        };
         crate::inc!(STAGE_RESETS, &["attributes-queue"]);
         Ok(())
     }

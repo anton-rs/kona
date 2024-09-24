@@ -4,12 +4,11 @@ use crate::{
     batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     stages::attributes_queue::{AttributesBuilder, AttributesProvider},
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
@@ -62,7 +61,7 @@ impl OriginAdvancer for MockAttributesProvider {
 
 #[async_trait]
 impl ResettableStage for MockAttributesProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+    async fn reset(&mut self, _: &ResetType<'_>) -> PipelineResult<()> {
         Ok(())
     }
 }

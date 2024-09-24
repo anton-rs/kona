@@ -4,12 +4,12 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
 
@@ -425,16 +425,24 @@ where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
-    async fn reset(&mut self, base: BlockInfo, system_config: &SystemConfig) -> PipelineResult<()> {
-        self.prev.reset(base, system_config).await?;
-        self.origin = Some(base);
-        self.batches.clear();
-        // Include the new origin as an origin to build on.
-        // This is only for the initialization case.
-        // During normal resets we will later throw out this block.
-        self.l1_blocks.clear();
-        self.l1_blocks.push(base);
-        self.next_spans.clear();
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        self.prev.reset(ty).await?;
+        match ty {
+            ResetType::Full(base, _) => {
+                self.origin = Some(*base);
+                self.batches.clear();
+                // Include the new origin as an origin to build on.
+                // This is only for the initialization case.
+                // During normal resets we will later throw out this block.
+                self.l1_blocks.clear();
+                self.l1_blocks.push(*base);
+                self.next_spans.clear();
+            }
+            ResetType::Partial => {
+                self.batches.clear();
+                self.next_spans.clear();
+            }
+        };
         crate::inc!(STAGE_RESETS, &["batch-queue"]);
         Ok(())
     }

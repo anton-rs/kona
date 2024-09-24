@@ -4,7 +4,7 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchQueueProvider},
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
@@ -12,7 +12,7 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
 use tracing::{debug, error, warn};
 
@@ -130,9 +130,16 @@ impl<P> ResettableStage for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.prev.reset(base, cfg).await?;
-        self.next_channel();
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        self.prev.reset(ty).await?;
+        match ty {
+            ResetType::Full(_, _) => {
+                self.next_channel();
+            }
+            ResetType::Partial => {
+                self.next_batch = None;
+            }
+        }
         crate::inc!(STAGE_RESETS, &["channel-reader"]);
         Ok(())
     }

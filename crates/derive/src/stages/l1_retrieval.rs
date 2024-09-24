@@ -4,13 +4,13 @@ use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
     stages::FrameQueueProvider,
     traits::{
-        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
+        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResetType,
+        ResettableStage,
     },
 };
 use alloc::boxed::Box;
 use alloy_primitives::Address;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
 /// Provides L1 blocks for the [L1Retrieval] stage.
@@ -123,9 +123,14 @@ where
     DAP: DataAvailabilityProvider + Send,
     P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.prev.reset(base, cfg).await?;
-        self.data = Some(self.provider.open_data(&base).await?);
+    async fn reset(&mut self, ty: &ResetType<'_>) -> PipelineResult<()> {
+        self.prev.reset(ty).await?;
+        match ty {
+            ResetType::Full(base, _) => {
+                self.data = Some(self.provider.open_data(base).await?);
+            }
+            ResetType::Partial => { /* noop */ }
+        }
         crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
         Ok(())
     }

@@ -3,12 +3,11 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::FrameQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
 /// A mock [FrameQueueProvider] for testing the [FrameQueue] stage.
@@ -49,7 +48,7 @@ impl FrameQueueProvider for MockFrameQueueProvider {
 
 #[async_trait]
 impl ResettableStage for MockFrameQueueProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+    async fn reset(&mut self, _: &ResetType<'_>) -> PipelineResult<()> {
         Ok(())
     }
 }

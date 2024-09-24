@@ -3,11 +3,10 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::ChannelBankProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, Frame};
 
 /// A mock [ChannelBankProvider] for testing the [ChannelBank] stage.
@@ -52,7 +51,7 @@ impl ChannelBankProvider for MockChannelBankProvider {
 
 #[async_trait]
 impl ResettableStage for MockChannelBankProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+    async fn reset(&mut self, _: &ResetType<'_>) -> PipelineResult<()> {
         Ok(())
     }
 }

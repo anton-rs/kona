@@ -3,12 +3,11 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::ChannelReaderProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResetType, ResettableStage},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
 /// A mock [ChannelReaderProvider] for testing the [ChannelReader] stage.
@@ -49,7 +48,7 @@ impl ChannelReaderProvider for MockChannelReaderProvider {
 
 #[async_trait]
 impl ResettableStage for MockChannelReaderProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+    async fn reset(&mut self, _: &ResetType<'_>) -> PipelineResult<()> {
         Ok(())
     }
 }
