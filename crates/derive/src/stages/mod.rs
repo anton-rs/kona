@@ -33,9 +33,7 @@ mod batch_queue;
 pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
 mod attributes_queue;
-pub use attributes_queue::{
-    AttributesBuilder, AttributesProvider, AttributesQueue, StatefulAttributesBuilder,
-};
+pub use attributes_queue::{AttributesProvider, AttributesQueue, StatefulAttributesBuilder};
 
 mod utils;
 pub use utils::decompress_brotli;
