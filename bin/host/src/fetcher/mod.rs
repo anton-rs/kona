@@ -12,9 +12,9 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
-use kona_derive::online::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_primitives::IndexedBlobHash;
+use kona_providers::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;

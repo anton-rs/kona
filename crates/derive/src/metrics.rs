@@ -62,29 +62,6 @@ lazy_static! {
         "Compression ratio of batches"
     ).expect("Batch Compression Ratio failed to register");
 
-    /// Tracks the number of provider method calls.
-    pub static ref PROVIDER_CALLS: CounterVec = register_counter_vec!(
-        "kona_derive_provider_calls",
-        "Number of provider method calls",
-        &["provider", "method"]
-    ).expect("Provider Calls failed to register");
-
-    /// Tracks the number of errors in provider methods.
-    pub static ref PROVIDER_ERRORS: CounterVec = register_counter_vec!(
-        "kona_derive_provider_errors",
-        "Number of provider errors",
-        &["provider", "method", "error"]
-    ).expect("Provider Errors failed to register");
-
-    /// Tracks the time taken for provider methods.
-    pub static ref PROVIDER_RESPONSE_TIME: HistogramVec = register_histogram_vec!(
-        "kona_derive_provider_response_time_seconds",
-        "Provider response times",
-        &["provider", "method"],
-        RESPONSE_TIME_CUSTOM_BUCKETS.to_vec()
-    )
-    .expect("Failed to register histogram vec");
-
     /// Tracks the time taken for stage advance methods.
     pub static ref STAGE_ADVANCE_RESPONSE_TIME: HistogramVec = register_histogram_vec!(
         "kona_derive_stage_advance_response_time_seconds",

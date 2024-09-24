@@ -1,19 +1,17 @@
-//! This module contains concrete implementations of the data provider traits, using an alloy
-//! provider on the backend.
+//! Providers that use alloy provider types on the backend.
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{Bytes, B256, U64};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
 use alloy_transport::{RpcError, TransportErrorKind, TransportResult};
 use async_trait::async_trait;
-use core::num::NonZeroUsize;
 use lru::LruCache;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use std::{boxed::Box, num::NonZeroUsize, sync::Arc, vec::Vec};
 
-use crate::{
+use kona_derive::{
     block::{Block, OpBlock},
     traits::{ChainProvider, L2ChainProvider},
 };
