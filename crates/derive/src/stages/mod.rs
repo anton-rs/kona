@@ -29,6 +29,9 @@ pub use channel_bank::{ChannelBank, ChannelBankProvider};
 mod channel_reader;
 pub use channel_reader::{ChannelReader, ChannelReaderProvider};
 
+mod batch_stream;
+pub use batch_stream::BatchStream;
+
 mod batch_queue;
 pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
