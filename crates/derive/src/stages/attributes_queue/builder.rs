@@ -4,7 +4,7 @@ use super::derive_deposits;
 use crate::{
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     params::SEQUENCER_FEE_VAULT_ADDRESS,
-    traits::{ChainProvider, L2ChainProvider},
+    traits::{AttributesBuilder, ChainProvider, L2ChainProvider},
 };
 use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
 use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
@@ -16,24 +16,6 @@ use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{L1BlockInfoTx, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
-
-/// The [AttributesBuilder] is responsible for preparing [OptimismPayloadAttributes]
-/// that can be used to construct an L2 Block containing only deposits.
-#[async_trait]
-pub trait AttributesBuilder {
-    /// Prepares a template [OptimismPayloadAttributes] that is ready to be used to build an L2
-    /// block. The block will contain deposits only, on top of the given L2 parent, with the L1
-    /// origin set to the given epoch.
-    /// By default, the [OptimismPayloadAttributes] template will have `no_tx_pool` set to true,
-    /// and no sequencer transactions. The caller has to modify the template to add transactions.
-    /// This can be done by either setting the `no_tx_pool` to false as sequencer, or by appending
-    /// batch transactions as the verifier.
-    async fn prepare_payload_attributes(
-        &mut self,
-        l2_parent: L2BlockInfo,
-        epoch: BlockNumHash,
-    ) -> PipelineResult<OptimismPayloadAttributes>;
-}
 
 /// A stateful implementation of the [AttributesBuilder].
 #[derive(Debug, Default)]

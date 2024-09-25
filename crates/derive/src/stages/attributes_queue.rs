@@ -11,14 +11,14 @@ use tracing::info;
 use crate::{
     batch::SingleBatch,
     errors::{PipelineError, PipelineResult, ResetError},
-    traits::{NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{AttributesBuilder, NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
 };
 
 mod deposits;
 pub(crate) use deposits::derive_deposits;
 
 mod builder;
-pub use builder::{AttributesBuilder, StatefulAttributesBuilder};
+pub use builder::StatefulAttributesBuilder;
 
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
 ///

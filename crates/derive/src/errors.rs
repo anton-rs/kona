@@ -158,7 +158,7 @@ pub enum BatchDecompressionError {
 
 /// An [AttributesBuilder] Error.
 ///
-/// [AttributesBuilder]: crate::stages::AttributesBuilder
+/// [AttributesBuilder]: crate::traits::AttributesBuilder
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum BuilderError {
     /// Mismatched blocks.

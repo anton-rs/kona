@@ -5,7 +5,7 @@ mod pipeline;
 pub use pipeline::{Pipeline, StepResult};
 
 mod attributes;
-pub use attributes::NextAttributes;
+pub use attributes::{AttributesBuilder, NextAttributes};
 
 mod data_sources;
 pub use data_sources::{AsyncIterator, BlobProvider, DataAvailabilityProvider};
