@@ -104,7 +104,7 @@ impl PipelineError {
 }
 
 /// A reset error
-#[derive(Error, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub enum ResetError {
     /// The batch has a bad parent hash.
     /// The first argument is the expected parent hash, and the second argument is the actual
@@ -127,6 +127,16 @@ pub enum ResetError {
     /// Attributes builder error variant, with [BuilderError].
     #[error("Attributes builder error: {0}")]
     AttributesBuilder(#[from] BuilderError),
+    /// A Holocene activation temporary error.
+    #[error("Holocene activation reset")]
+    HoloceneActivation,
+}
+
+impl ResetError {
+    /// Wrap [self] as a [PipelineErrorKind::Reset].
+    pub const fn reset(self) -> PipelineErrorKind {
+        PipelineErrorKind::Reset(self)
+    }
 }
 
 /// A decoding error.
@@ -159,7 +169,7 @@ pub enum BatchDecompressionError {
 /// An [AttributesBuilder] Error.
 ///
 /// [AttributesBuilder]: crate::traits::AttributesBuilder
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Clone, Debug, PartialEq, Eq)]
 pub enum BuilderError {
     /// Mismatched blocks.
     #[error("Block mismatch. Expected {0:?}, got {1:?}")]
@@ -198,4 +208,28 @@ pub enum BlobProviderError {
     /// Error pertaining to the backend transport.
     #[error("{0}")]
     Backend(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reset_error_kinds() {
+        let reset_errors = [
+            ResetError::BadParentHash(Default::default(), Default::default()),
+            ResetError::BadTimestamp(0, 0),
+            ResetError::L1OriginMismatch(0, 0),
+            ResetError::ReorgDetected(Default::default(), Default::default()),
+            ResetError::AttributesBuilder(BuilderError::BlockMismatch(
+                Default::default(),
+                Default::default(),
+            )),
+            ResetError::HoloceneActivation,
+        ];
+        for error in reset_errors.into_iter() {
+            let expected = PipelineErrorKind::Reset(error.clone());
+            assert_eq!(error.reset(), expected);
+        }
+    }
 }
