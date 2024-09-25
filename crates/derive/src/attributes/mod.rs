@@ -195,7 +195,7 @@ where
     }
 }
 
-/// Derive deposits for transaction receipts.
+/// Derive deposits as `Vec<Bytes>` for transaction receipts.
 ///
 /// Successful deposits must be emitted by the deposit contract and have the correct event
 /// signature. So the receipt address must equal the specified deposit contract and the first topic
