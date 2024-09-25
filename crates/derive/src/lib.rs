@@ -9,6 +9,7 @@ extern crate alloc;
 
 mod macros;
 
+pub mod attributes;
 pub mod batch;
 pub mod block;
 pub mod errors;

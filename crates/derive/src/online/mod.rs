@@ -2,9 +2,9 @@
 
 // Re-export types for the online pipeline construction.
 pub use crate::{
+    attributes::StatefulAttributesBuilder,
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
-    stages::StatefulAttributesBuilder,
     traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
 };
 
