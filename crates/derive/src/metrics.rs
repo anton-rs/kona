@@ -48,6 +48,14 @@ lazy_static! {
         &["error"]
     ).expect("Batch Reader Errors failed to register");
 
+    /// Tracks the number of times the channel queue was detected
+    /// non-empty during a frame ingestion, and new channel creation
+    /// was attempted post-holocene.
+    pub static ref CHANNEL_QUEUE_NON_EMPTY: IntGauge = register_int_gauge!(
+        "kona_derive_channel_queue_non_empty",
+        "Number of times a channel was attempted to be created in the channel bank, but the queue is non-empty post-holocene."
+    ).expect("Channel Queue Non Empty failed to register");
+
     /// Tracks the compression ratio of batches.
     pub static ref BATCH_COMPRESSION_RATIO: IntGauge = register_int_gauge!(
         "kona_derive_batch_compression_ratio",
