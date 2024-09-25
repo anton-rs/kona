@@ -50,12 +50,9 @@ where
 
     /// Returns if the [BatchStream] stage is active based on the
     /// origin timestamp and holocene activation timestamp.
-    pub fn is_active(&self) -> bool {
-        // If the origin cannot be fetched, cannot be active.
-        let Some(origin) = self.prev.origin() else {
-            return false;
-        };
-        self.config.is_holocene_active(origin.timestamp)
+    pub fn is_active(&self) -> PipelineResult<bool> {
+        let origin = self.prev.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+        Ok(self.config.is_holocene_active(origin.timestamp))
     }
 
     /// Gets a [SingleBatch] from the in-memory buffer.
@@ -73,7 +70,7 @@ where
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
         // If the stage is not active, "pass" the next batch
         // through this stage to the BatchQueue stage.
-        if !self.is_active() {
+        if !self.is_active()? {
             trace!(target: "batch_span", "BatchStream stage is inactive, pass-through.");
             return self.prev.next_batch().await;
         }
@@ -156,7 +153,7 @@ mod test {
         let mut stream = BatchStream::new(prev, config.clone());
 
         // The stage should not be active.
-        assert!(!stream.is_active());
+        assert!(!stream.is_active().unwrap());
 
         // The next batch should be passed through to the [BatchQueue] stage.
         let batch = stream.next_batch().await.unwrap();
