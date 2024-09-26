@@ -45,7 +45,7 @@ impl SpanBatchEip1559TransactionData {
                 )?,
             ),
             gas_limit: gas as u128,
-            to: if let Some(to) = to { TxKind::Call(to) } else { TxKind::Create },
+            to: to.map_or(TxKind::Create, TxKind::Call),
             value: self.value,
             input: self.data.clone().into(),
             access_list: self.access_list.clone(),

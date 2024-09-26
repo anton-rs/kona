@@ -79,7 +79,7 @@ impl AttributesProvider for MockAttributesProvider {
 }
 
 /// Creates a new [`MockAttributesProvider`] with the given origin and batches.
-pub fn new_attributes_provider(
+pub const fn new_attributes_provider(
     origin: Option<BlockInfo>,
     batches: Vec<PipelineResult<SingleBatch>>,
 ) -> MockAttributesProvider {

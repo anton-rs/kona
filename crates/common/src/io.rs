@@ -1,4 +1,4 @@
-//! This module contains the [ClientIO] struct, which is used to perform various IO operations
+//! This module contains the `ClientIO` struct, which is used to perform various IO operations
 //! inside of the FPVM kernel within a `client` program.
 
 use crate::{errors::IOResult, BasicKernelInterface, FileDescriptor};
@@ -7,16 +7,16 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(target_arch = "mips")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture."]
-        pub type ClientIO = crate::cannon::io::CannonIO;
+        pub(crate) type ClientIO = crate::cannon::io::CannonIO;
     } else if #[cfg(target_arch = "riscv64")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
-        pub type ClientIO = crate::asterisc::io::AsteriscIO;
+        pub(crate)  type ClientIO = crate::asterisc::io::AsteriscIO;
     } else if #[cfg(target_os = "zkvm")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `SP1` target architecture."]
-        pub type ClientIO = crate::zkvm::io::ZkvmIO;
+        pub(crate) type ClientIO = crate::zkvm::io::ZkvmIO;
     } else {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `native` target architecture."]
-        pub type ClientIO = native_io::NativeIO;
+        pub(crate) type ClientIO = native_io::NativeIO;
     }
 }
 
@@ -56,8 +56,9 @@ pub fn exit(code: usize) -> ! {
     ClientIO::exit(code)
 }
 
+/// Native IO Module
 #[cfg(not(any(target_arch = "mips", target_arch = "riscv64", target_os = "zkvm")))]
-mod native_io {
+pub(crate) mod native_io {
     use crate::{
         errors::{IOError, IOResult},
         io::FileDescriptor,
@@ -71,7 +72,7 @@ mod native_io {
 
     /// Mock IO implementation for native tests.
     #[derive(Debug)]
-    pub struct NativeIO;
+    pub(crate) struct NativeIO;
 
     impl BasicKernelInterface for NativeIO {
         fn write(fd: FileDescriptor, buf: &[u8]) -> IOResult<usize> {

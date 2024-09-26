@@ -2,7 +2,7 @@ use crate::{errors::IOResult, BasicKernelInterface, FileDescriptor};
 
 /// Concrete implementation of the [`KernelIO`] trait for the `SP1` target architecture.
 #[derive(Debug)]
-pub struct ZkvmIO;
+pub(crate) struct ZkvmIO;
 
 impl BasicKernelInterface for ZkvmIO {
     fn write(_fd: FileDescriptor, _buf: &[u8]) -> IOResult<usize> {

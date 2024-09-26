@@ -169,10 +169,7 @@ where
 
         let channel_data =
             (0..self.channel_queue.len()).find_map(|i| self.try_read_channel_at_index(i).ok());
-        match channel_data {
-            Some(data) => Ok(Some(data)),
-            None => Err(PipelineError::Eof.temp()),
-        }
+        channel_data.map_or_else(|| Err(PipelineError::Eof.temp()), |data| Ok(Some(data)))
     }
 
     /// Attempts to read the channel at the specified index. If the channel is not ready or timed

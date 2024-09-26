@@ -8,6 +8,9 @@ repository.workspace = true
 homepage.workspace = true
 publish = false
 
+[lints]
+workspace = true
+
 [dependencies]
 # Workspace
 kona-mpt.workspace = true

@@ -41,7 +41,7 @@ where
     B: BlobProvider + Send,
 {
     /// Creates a new blob source.
-    pub fn new(
+    pub const fn new(
         chain_provider: F,
         blob_fetcher: B,
         batcher_address: Address,

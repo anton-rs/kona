@@ -24,7 +24,7 @@ where
     R: KeyValueStore,
 {
     /// Create a new [SplitKeyValueStore] with the given left and right [KeyValueStore]s.
-    pub fn new(local_store: L, remote_store: R) -> Self {
+    pub const fn new(local_store: L, remote_store: R) -> Self {
         Self { local_store, remote_store }
     }
 }

@@ -46,7 +46,7 @@ mod element;
 pub use element::SpanBatchElement;
 
 mod signature;
-pub(crate) use signature::SpanBatchSignature;
+pub use signature::SpanBatchSignature;
 
 mod tx_data;
 pub use tx_data::{

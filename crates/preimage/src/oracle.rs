@@ -93,7 +93,7 @@ pub struct OracleServer {
 
 impl OracleServer {
     /// Create a new [OracleServer] from a [PipeHandle].
-    pub fn new(pipe_handle: PipeHandle) -> Self {
+    pub const fn new(pipe_handle: PipeHandle) -> Self {
         Self { pipe_handle }
     }
 }

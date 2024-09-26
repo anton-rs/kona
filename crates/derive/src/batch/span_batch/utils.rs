@@ -43,7 +43,7 @@ pub(crate) fn read_tx_data(r: &mut &[u8]) -> Result<(Vec<u8>, TxType), SpanBatch
 }
 
 /// Converts a `v` value to a y parity bit, from the transaaction type.
-pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: TxType) -> Result<bool, SpanBatchError> {
+pub(crate) const fn convert_v_to_y_parity(v: u64, tx_type: TxType) -> Result<bool, SpanBatchError> {
     match tx_type {
         TxType::Legacy => {
             if v != 27 && v != 28 {
@@ -60,7 +60,7 @@ pub(crate) fn convert_v_to_y_parity(v: u64, tx_type: TxType) -> Result<bool, Spa
 }
 
 /// Checks if the signature of the passed [TxEnvelope] is protected.
-pub(crate) fn is_protected_v(tx: &TxEnvelope) -> bool {
+pub(crate) const fn is_protected_v(tx: &TxEnvelope) -> bool {
     match tx {
         TxEnvelope::Legacy(tx) => {
             let v = tx.signature().v().to_u64();

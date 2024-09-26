@@ -38,6 +38,6 @@ impl From<FileDescriptor> for usize {
 
 impl From<FileDescriptor> for i32 {
     fn from(fd: FileDescriptor) -> Self {
-        usize::from(fd) as i32
+        usize::from(fd) as Self
     }
 }

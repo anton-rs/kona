@@ -200,7 +200,7 @@ pub struct APIGenesisResponse {
 
 impl APIGenesisResponse {
     /// Creates a new API genesis response.
-    pub fn new(genesis_time: u64) -> Self {
+    pub const fn new(genesis_time: u64) -> Self {
         Self { data: ReducedGenesisData { genesis_time } }
     }
 }
@@ -225,7 +225,7 @@ pub struct APIConfigResponse {
 
 impl APIConfigResponse {
     /// Creates a new API config response.
-    pub fn new(seconds_per_slot: u64) -> Self {
+    pub const fn new(seconds_per_slot: u64) -> Self {
         Self { data: ReducedConfigData { seconds_per_slot } }
     }
 }

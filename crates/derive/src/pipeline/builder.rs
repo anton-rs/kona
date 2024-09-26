@@ -74,7 +74,7 @@ where
     }
 
     /// Sets the origin L1 block for the pipeline.
-    pub fn origin(mut self, origin: BlockInfo) -> Self {
+    pub const fn origin(mut self, origin: BlockInfo) -> Self {
         self.origin = Some(origin);
         self
     }
@@ -138,6 +138,6 @@ where
             AttributesQueue::new(rollup_config.clone(), batch_queue, attributes_builder);
 
         // Create the pipeline.
-        DerivationPipeline::new(attributes, rollup_config, l2_chain_provider)
+        Self::new(attributes, rollup_config, l2_chain_provider)
     }
 }

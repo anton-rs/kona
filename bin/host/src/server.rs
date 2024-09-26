@@ -45,7 +45,7 @@ where
     /// Create a new [PreimageServer] with the given [PreimageOracleServer],
     /// [HintReaderServer], and [KeyValueStore]. Holds onto the file descriptors for the pipes
     /// that are created, so that the pipes are not closed until the server is dropped.
-    pub fn new(
+    pub const fn new(
         oracle_server: P,
         hint_reader: H,
         kv_store: Arc<RwLock<KV>>,

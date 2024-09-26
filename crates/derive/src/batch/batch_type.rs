@@ -21,8 +21,8 @@ pub enum BatchType {
 impl From<u8> for BatchType {
     fn from(val: u8) -> Self {
         match val {
-            SINGLE_BATCH_TYPE => BatchType::Single,
-            SPAN_BATCH_TYPE => BatchType::Span,
+            SINGLE_BATCH_TYPE => Self::Single,
+            SPAN_BATCH_TYPE => Self::Span,
             _ => panic!("Invalid batch type: {val}"),
         }
     }
@@ -30,15 +30,15 @@ impl From<u8> for BatchType {
 
 impl From<&[u8]> for BatchType {
     fn from(buf: &[u8]) -> Self {
-        BatchType::from(buf[0])
+        Self::from(buf[0])
     }
 }
 
 impl Encodable for BatchType {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         let val = match self {
-            BatchType::Single => SINGLE_BATCH_TYPE,
-            BatchType::Span => SPAN_BATCH_TYPE,
+            Self::Single => SINGLE_BATCH_TYPE,
+            Self::Span => SPAN_BATCH_TYPE,
         };
         val.encode(out);
     }
@@ -47,7 +47,7 @@ impl Encodable for BatchType {
 impl Decodable for BatchType {
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         let val = u8::decode(buf)?;
-        Ok(BatchType::from(val))
+        Ok(Self::from(val))
     }
 }
 

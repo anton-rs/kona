@@ -20,7 +20,7 @@ pub struct MockFrameQueueProvider {
 
 impl MockFrameQueueProvider {
     /// Creates a new [MockFrameQueueProvider] with the given data.
-    pub fn new(data: Vec<PipelineResult<Bytes>>) -> Self {
+    pub const fn new(data: Vec<PipelineResult<Bytes>>) -> Self {
         Self { data }
     }
 }

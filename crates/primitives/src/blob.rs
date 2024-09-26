@@ -194,7 +194,7 @@ impl BlobData {
     }
 
     /// Returns if a blob is empty.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.data.is_none() && self.calldata.is_none()
     }
 

@@ -38,7 +38,11 @@ where
     P: L2ChainProvider + Send + Sync + Debug,
 {
     /// Creates a new instance of the [DerivationPipeline].
-    pub fn new(attributes: S, rollup_config: Arc<RollupConfig>, l2_chain_provider: P) -> Self {
+    pub const fn new(
+        attributes: S,
+        rollup_config: Arc<RollupConfig>,
+        l2_chain_provider: P,
+    ) -> Self {
         Self { attributes, prepared: VecDeque::new(), rollup_config, l2_chain_provider }
     }
 }

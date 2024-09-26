@@ -31,7 +31,7 @@ where
     F: TrieProvider,
 {
     /// Creates a new [OrderedListWalker], yet to be hydrated.
-    pub fn new(root: B256) -> Self {
+    pub const fn new(root: B256) -> Self {
         Self { root, inner: None, _phantom: PhantomData }
     }
 

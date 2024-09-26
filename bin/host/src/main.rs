@@ -1,3 +1,5 @@
+//! Main entrypoint for the host binary.
+
 use anyhow::Result;
 use clap::Parser;
 use kona_host::{init_tracing_subscriber, start_server, start_server_and_native_client, HostCli};

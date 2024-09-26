@@ -32,7 +32,7 @@ impl SingleBatch {
     }
 
     /// Returns the [BlockNumHash] of the batch.
-    pub fn epoch(&self) -> BlockNumHash {
+    pub const fn epoch(&self) -> BlockNumHash {
         BlockNumHash { number: self.epoch_num, hash: self.epoch_hash }
     }
 

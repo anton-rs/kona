@@ -16,7 +16,7 @@ pub fn block_on<T>(f: impl Future<Output = T>) -> T {
     fn noop_clone(_: *const ()) -> RawWaker {
         noop_raw_waker()
     }
-    fn noop(_: *const ()) {}
+    const fn noop(_: *const ()) {}
     fn noop_raw_waker() -> RawWaker {
         let vtable = &RawWakerVTable::new(noop_clone, noop, noop, noop);
         RawWaker::new(core::ptr::null(), vtable)

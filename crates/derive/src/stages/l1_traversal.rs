@@ -63,7 +63,7 @@ impl<F: ChainProvider> L1Traversal<F> {
     }
 
     /// Retrieves a reference to the inner data source of the [L1Traversal] stage.
-    pub fn data_source(&self) -> &F {
+    pub const fn data_source(&self) -> &F {
         &self.data_source
     }
 }

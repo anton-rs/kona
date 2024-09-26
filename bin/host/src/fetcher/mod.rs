@@ -48,7 +48,7 @@ where
     KV: KeyValueStore + ?Sized,
 {
     /// Create a new [Fetcher] with the given [KeyValueStore].
-    pub fn new(
+    pub const fn new(
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
         blob_provider: OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
@@ -253,18 +253,16 @@ where
                 let precompile_input = hint_data[20..].to_vec();
                 let input_hash = keccak256(hint_data.as_ref());
 
-                let result = match precompiles::execute(precompile_address, precompile_input) {
-                    Ok(raw_res) => {
-                        let mut res = Vec::with_capacity(1 + raw_res.len());
-                        res.push(0x01); // success type byte
-                        res.extend_from_slice(&raw_res);
-                        res
-                    }
-                    Err(_) => {
-                        // failure type byte
-                        vec![0u8; 1]
-                    }
-                };
+                let result = precompiles::execute(precompile_address, precompile_input)
+                    .map_or_else(
+                        |_| vec![0u8; 1],
+                        |raw_res| {
+                            let mut res = Vec::with_capacity(1 + raw_res.len());
+                            res.push(0x01);
+                            res.extend_from_slice(&raw_res);
+                            res
+                        },
+                    );
 
                 // Acquire a lock on the key-value store and set the preimages.
                 let mut kv_lock = self.kv_store.write().await;

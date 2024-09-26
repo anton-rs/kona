@@ -41,12 +41,12 @@ impl TryFrom<u8> for PreimageKeyType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         let key_type = match value {
-            1 => PreimageKeyType::Local,
-            2 => PreimageKeyType::Keccak256,
-            3 => PreimageKeyType::GlobalGeneric,
-            4 => PreimageKeyType::Sha256,
-            5 => PreimageKeyType::Blob,
-            6 => PreimageKeyType::Precompile,
+            1 => Self::Local,
+            2 => Self::Keccak256,
+            3 => Self::GlobalGeneric,
+            4 => Self::Sha256,
+            5 => Self::Blob,
+            6 => Self::Precompile,
             _ => return Err(InvalidPreimageKeyType),
         };
         Ok(key_type)
@@ -87,12 +87,12 @@ impl PreimageKey {
     }
 
     /// Returns the [PreimageKeyType] for the [PreimageKey].
-    pub fn key_type(&self) -> PreimageKeyType {
+    pub const fn key_type(&self) -> PreimageKeyType {
         self.key_type
     }
 
     /// Returns the value of the [PreimageKey] as a [U256].
-    pub fn key_value(&self) -> U256 {
+    pub const fn key_value(&self) -> U256 {
         U256::from_be_slice(self.data.as_slice())
     }
 }
@@ -109,7 +109,7 @@ impl From<PreimageKey> for [u8; 32] {
 impl From<PreimageKey> for B256 {
     fn from(value: PreimageKey) -> Self {
         let raw: [u8; 32] = value.into();
-        B256::from(raw)
+        Self::from(raw)
     }
 }
 

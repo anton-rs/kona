@@ -116,7 +116,7 @@ where
     }
 
     /// Returns a shared reference to the root [TrieNode] of the trie DB.
-    pub fn root_node_ref(&self) -> &TrieNode {
+    pub const fn root_node_ref(&self) -> &TrieNode {
         &self.root_node
     }
 
@@ -132,7 +132,7 @@ where
     }
 
     /// Returns the mapping of [Address]es to storage roots.
-    pub fn storage_roots(&self) -> &HashMap<Address, TrieNode> {
+    pub const fn storage_roots(&self) -> &HashMap<Address, TrieNode> {
         &self.storage_roots
     }
 
@@ -175,7 +175,7 @@ where
     }
 
     /// Returns a reference to the current parent block header of the trie DB.
-    pub fn parent_block_header(&self) -> &Sealed<Header> {
+    pub const fn parent_block_header(&self) -> &Sealed<Header> {
         &self.parent_block_header
     }
 

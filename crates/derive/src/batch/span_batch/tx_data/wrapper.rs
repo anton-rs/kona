@@ -42,7 +42,7 @@ impl Decodable for SpanBatchTransactionData {
     fn decode(r: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         if !r.is_empty() && r[0] > 0x7F {
             // Legacy transaction
-            return Ok(SpanBatchTransactionData::Legacy(SpanBatchLegacyTransactionData::decode(r)?));
+            return Ok(Self::Legacy(SpanBatchLegacyTransactionData::decode(r)?));
         }
         // Non-legacy transaction (EIP-2718 envelope encoding)
         Self::decode_typed(r)
@@ -56,7 +56,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
         match tx_envelope {
             TxEnvelope::Legacy(s) => {
                 let s = s.tx();
-                Ok(SpanBatchTransactionData::Legacy(SpanBatchLegacyTransactionData {
+                Ok(Self::Legacy(SpanBatchLegacyTransactionData {
                     value: s.value,
                     gas_price: U256::from(s.gas_price),
                     data: Bytes::from(s.input().to_vec()),
@@ -64,7 +64,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
             }
             TxEnvelope::Eip2930(s) => {
                 let s = s.tx();
-                Ok(SpanBatchTransactionData::Eip2930(SpanBatchEip2930TransactionData {
+                Ok(Self::Eip2930(SpanBatchEip2930TransactionData {
                     value: s.value,
                     gas_price: U256::from(s.gas_price),
                     data: Bytes::from(s.input().to_vec()),
@@ -73,7 +73,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
             }
             TxEnvelope::Eip1559(s) => {
                 let s = s.tx();
-                Ok(SpanBatchTransactionData::Eip1559(SpanBatchEip1559TransactionData {
+                Ok(Self::Eip1559(SpanBatchEip1559TransactionData {
                     value: s.value,
                     max_fee_per_gas: U256::from(s.max_fee_per_gas),
                     max_priority_fee_per_gas: U256::from(s.max_priority_fee_per_gas),
@@ -88,7 +88,7 @@ impl TryFrom<&TxEnvelope> for SpanBatchTransactionData {
 
 impl SpanBatchTransactionData {
     /// Returns the transaction type of the [SpanBatchTransactionData].
-    pub fn tx_type(&self) -> TxType {
+    pub const fn tx_type(&self) -> TxType {
         match self {
             Self::Legacy(_) => TxType::Legacy,
             Self::Eip2930(_) => TxType::Eip2930,
@@ -103,12 +103,12 @@ impl SpanBatchTransactionData {
         }
 
         match b[0].try_into().map_err(|_| alloy_rlp::Error::Custom("Invalid tx type"))? {
-            TxType::Eip2930 => Ok(SpanBatchTransactionData::Eip2930(
-                SpanBatchEip2930TransactionData::decode(&mut &b[1..])?,
-            )),
-            TxType::Eip1559 => Ok(SpanBatchTransactionData::Eip1559(
-                SpanBatchEip1559TransactionData::decode(&mut &b[1..])?,
-            )),
+            TxType::Eip2930 => {
+                Ok(Self::Eip2930(SpanBatchEip2930TransactionData::decode(&mut &b[1..])?))
+            }
+            TxType::Eip1559 => {
+                Ok(Self::Eip1559(SpanBatchEip1559TransactionData::decode(&mut &b[1..])?))
+            }
             _ => Err(alloy_rlp::Error::Custom("Invalid transaction type")),
         }
     }

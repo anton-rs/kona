@@ -27,7 +27,7 @@ impl TryFrom<SpanBatch> for RawSpanBatch {
         let span_start = value.batches.first().ok_or(SpanBatchError::EmptySpanBatch)?;
         let span_end = value.batches.last().ok_or(SpanBatchError::EmptySpanBatch)?;
 
-        Ok(RawSpanBatch {
+        Ok(Self {
             prefix: SpanBatchPrefix {
                 rel_timestamp: span_start.timestamp - value.genesis_timestamp,
                 l1_origin_num: span_end.epoch_num,
@@ -46,12 +46,12 @@ impl TryFrom<SpanBatch> for RawSpanBatch {
 
 impl RawSpanBatch {
     /// Returns the batch type
-    pub fn get_batch_type(&self) -> BatchType {
+    pub const fn get_batch_type(&self) -> BatchType {
         BatchType::Span
     }
 
     /// Returns the timestamp for the span batch.
-    pub fn timestamp(&self) -> u64 {
+    pub const fn timestamp(&self) -> u64 {
         self.prefix.rel_timestamp
     }
 
@@ -63,14 +63,14 @@ impl RawSpanBatch {
     /// Encodes the [RawSpanBatch] into a writer.
     pub fn encode(&self, w: &mut Vec<u8>, cfg: &RollupConfig) -> Result<(), SpanBatchError> {
         self.prefix.encode_prefix(w);
-        let is_fjord_active = RawSpanBatch::is_fjord_active(&self.prefix, cfg);
+        let is_fjord_active = Self::is_fjord_active(&self.prefix, cfg);
         self.payload.encode_payload(w, is_fjord_active)
     }
 
     /// Decodes the [RawSpanBatch] from a reader.]
     pub fn decode(r: &mut &[u8], cfg: &RollupConfig) -> Result<Self, SpanBatchError> {
         let prefix = SpanBatchPrefix::decode_prefix(r)?;
-        let is_fjord_active = RawSpanBatch::is_fjord_active(&prefix, cfg);
+        let is_fjord_active = Self::is_fjord_active(&prefix, cfg);
         let payload = SpanBatchPayload::decode_payload(r, is_fjord_active)?;
         Ok(Self { prefix, payload })
     }

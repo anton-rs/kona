@@ -21,7 +21,7 @@ pub struct LocalKeyValueStore {
 
 impl LocalKeyValueStore {
     /// Create a new [LocalKeyValueStore] with the given [HostCli] config.
-    pub fn new(cfg: HostCli) -> Self {
+    pub const fn new(cfg: HostCli) -> Self {
         Self { cfg }
     }
 }

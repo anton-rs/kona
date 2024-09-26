@@ -3,7 +3,7 @@ use crate::{cannon::syscall, errors::IOResult, BasicKernelInterface, FileDescrip
 /// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target
 /// architecture. Exposes a safe interface for performing IO operations within the FPVM kernel.
 #[derive(Debug)]
-pub struct CannonIO;
+pub(crate) struct CannonIO;
 
 /// Relevant system call numbers for the `MIPS32rel1` target architecture.
 ///
