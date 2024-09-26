@@ -240,6 +240,7 @@ where
         let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
         if data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await.is_drop() {
+            self.prev.flush();
             return Ok(());
         }
         self.batches.push(data);
