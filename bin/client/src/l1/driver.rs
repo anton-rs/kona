@@ -16,8 +16,8 @@ use kona_derive::{
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
-        AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
-        L1Traversal,
+        AttributesQueue, BatchQueue, BatchStream, ChannelBank, ChannelReader, FrameQueue,
+        L1Retrieval, L1Traversal,
     },
     traits::{BlobProvider, ChainProvider, L2ChainProvider, OriginProvider},
 };
@@ -46,8 +46,10 @@ pub type OracleAttributesBuilder<O> =
 /// An oracle-backed attributes queue for the derivation pipeline.
 pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
     BatchQueue<
-        ChannelReader<
-            ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<OracleL1ChainProvider<O>>>>>,
+        BatchStream<
+            ChannelReader<
+                ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<OracleL1ChainProvider<O>>>>>,
+            >,
         >,
         OracleL2ChainProvider<O>,
     >,

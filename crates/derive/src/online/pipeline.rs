@@ -11,7 +11,8 @@ use op_alloy_protocol::BlockInfo;
 
 // Pipeline internal stages aren't re-exported at the module-level.
 use crate::stages::{
-    AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval, L1Traversal,
+    AttributesQueue, BatchQueue, BatchStream, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+    L1Traversal,
 };
 
 /// An online derivation pipeline.
@@ -32,7 +33,11 @@ pub type OnlineAttributesBuilder =
 /// An `online` attributes queue for the derivation pipeline.
 pub type OnlineAttributesQueue<DAP> = AttributesQueue<
     BatchQueue<
-        ChannelReader<ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider>>>>>,
+        BatchStream<
+            ChannelReader<
+                ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider>>>>,
+            >,
+        >,
         AlloyL2ChainProvider,
     >,
     OnlineAttributesBuilder,
