@@ -4,7 +4,8 @@ use super::{
     AttributesBuilder, ChainProvider, DataAvailabilityProvider, DerivationPipeline, L2ChainProvider,
 };
 use crate::stages::{
-    AttributesQueue, BatchQueue, ChannelBank, ChannelReader, FrameQueue, L1Retrieval, L1Traversal,
+    AttributesQueue, BatchQueue, BatchStream, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
+    L1Traversal,
 };
 use alloc::sync::Arc;
 use core::fmt::Debug;
@@ -16,7 +17,8 @@ type L1RetrievalStage<DAP, P> = L1Retrieval<DAP, L1TraversalStage<P>>;
 type FrameQueueStage<DAP, P> = FrameQueue<L1RetrievalStage<DAP, P>>;
 type ChannelBankStage<DAP, P> = ChannelBank<FrameQueueStage<DAP, P>>;
 type ChannelReaderStage<DAP, P> = ChannelReader<ChannelBankStage<DAP, P>>;
-type BatchQueueStage<DAP, P, T> = BatchQueue<ChannelReaderStage<DAP, P>, T>;
+type BatchStreamStage<DAP, P> = BatchStream<ChannelReaderStage<DAP, P>>;
+type BatchQueueStage<DAP, P, T> = BatchQueue<BatchStreamStage<DAP, P>, T>;
 type AttributesQueueStage<DAP, P, T, B> = AttributesQueue<BatchQueueStage<DAP, P, T>, B>;
 
 /// The `PipelineBuilder` constructs a [DerivationPipeline] using a builder pattern.
@@ -132,8 +134,9 @@ where
         let frame_queue = FrameQueue::new(l1_retrieval);
         let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);
         let channel_reader = ChannelReader::new(channel_bank, Arc::clone(&rollup_config));
+        let batch_stream = BatchStream::new(channel_reader, rollup_config.clone());
         let batch_queue =
-            BatchQueue::new(rollup_config.clone(), channel_reader, l2_chain_provider.clone());
+            BatchQueue::new(rollup_config.clone(), batch_stream, l2_chain_provider.clone());
         let attributes =
             AttributesQueue::new(rollup_config.clone(), batch_queue, attributes_builder);
 

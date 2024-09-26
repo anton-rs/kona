@@ -35,6 +35,9 @@ impl OriginProvider for MockBatchQueueProvider {
 
 #[async_trait]
 impl BatchQueueProvider for MockBatchQueueProvider {
+    fn flush(&mut self) { /* noop */
+    }
+
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
         self.batches.pop().ok_or(PipelineError::Eof.temp())?
     }
