@@ -57,6 +57,20 @@ impl SpanBatch {
         self.parent_check == hash[..20]
     }
 
+    /// Perform holocene checks on the span batch.
+    pub fn is_batch_holocene_valid(&self, l2_safe_head: L2BlockInfo, block_time: u64) -> bool {
+        let next_timestamp = l2_safe_head.block_info.timestamp + block_time;
+        if self.timestamp() > next_timestamp {
+            warn!(
+                "received out-of-order batch for future processing after next batch ({} > {})",
+                self.timestamp(),
+                next_timestamp
+            );
+            return false;
+        }
+        true
+    }
+
     /// Checks if the span batch is valid.
     pub async fn check_batch<BF: L2ChainProvider>(
         &self,

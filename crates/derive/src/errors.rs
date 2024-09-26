@@ -89,6 +89,11 @@ pub enum PipelineError {
     /// Provider error variant.
     #[error("Blob provider error: {0}")]
     Provider(String),
+    /// An invalid span batch is found by the [BatchStream] stage.
+    ///
+    /// [BatchStream]: crate::stages::BatchStream
+    #[error("Invalid span batch")]
+    InvalidSpanBatch,
 }
 
 impl PipelineError {

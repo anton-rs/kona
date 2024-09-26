@@ -9,7 +9,7 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
 use op_alloy_genesis::SystemConfig;
-use op_alloy_protocol::BlockInfo;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 /// A mock provider for the [BatchQueue] stage.
 #[derive(Debug, Default)]
@@ -38,7 +38,7 @@ impl BatchQueueProvider for MockBatchQueueProvider {
     fn flush(&mut self) { /* noop */
     }
 
-    async fn next_batch(&mut self) -> PipelineResult<Batch> {
+    async fn next_batch(&mut self, _: L2BlockInfo) -> PipelineResult<Batch> {
         self.batches.pop().ok_or(PipelineError::Eof.temp())?
     }
 }
