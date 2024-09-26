@@ -56,10 +56,7 @@ impl DataAvailabilityProvider for TestDAP {
         let results = self
             .results
             .iter()
-            .map(|i| match i {
-                Ok(r) => Ok(r.clone()),
-                Err(_) => Err(PipelineError::Eof.temp()),
-            })
+            .map(|i| i.as_ref().map_or_else(|_| Err(PipelineError::Eof.temp()), |r| Ok(r.clone())))
             .collect::<Vec<PipelineResult<Bytes>>>();
         Ok(TestIter { open_data_calls: vec![(*block_ref, self.batch_inbox_address)], results })
     }
@@ -229,7 +226,7 @@ pub struct TestL2ChainProvider {
 
 impl TestL2ChainProvider {
     /// Creates a new [MockBlockFetcher] with the given origin and batches.
-    pub fn new(
+    pub const fn new(
         blocks: Vec<L2BlockInfo>,
         op_blocks: Vec<OpBlock>,
         system_configs: HashMap<u64, SystemConfig>,

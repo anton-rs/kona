@@ -19,7 +19,7 @@ pub struct SpanBatchElement {
 
 impl From<SingleBatch> for SpanBatchElement {
     fn from(batch: SingleBatch) -> Self {
-        SpanBatchElement {
+        Self {
             epoch_num: batch.epoch_num,
             timestamp: batch.timestamp,
             transactions: batch.transactions,

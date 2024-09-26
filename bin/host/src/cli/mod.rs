@@ -116,7 +116,7 @@ pub struct HostCli {
 
 impl HostCli {
     /// Returns `true` if the host is running in offline mode.
-    pub fn is_offline(&self) -> bool {
+    pub const fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() &&
             self.l2_node_address.is_none() &&
             self.l1_beacon_address.is_none()
@@ -190,7 +190,7 @@ impl HostCli {
 }
 
 /// Styles for the CLI application.
-fn cli_styles() -> clap::builder::Styles {
+const fn cli_styles() -> clap::builder::Styles {
     clap::builder::Styles::styled()
         .usage(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
         .header(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))

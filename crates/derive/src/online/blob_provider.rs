@@ -43,7 +43,11 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
     /// The `genesis_time` and `slot_interval` arguments are _optional_ and the
     /// [OnlineBlobProvider] will attempt to load them dynamically at runtime if they are not
     /// provided.
-    pub fn new(beacon_client: B, genesis_time: Option<u64>, slot_interval: Option<u64>) -> Self {
+    pub const fn new(
+        beacon_client: B,
+        genesis_time: Option<u64>,
+        slot_interval: Option<u64>,
+    ) -> Self {
         Self { beacon_client, genesis_time, slot_interval, _slot_derivation: PhantomData }
     }
 
@@ -252,7 +256,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 {
     /// Creates a new instance of the [OnlineBlobProviderWithFallback] with the
     /// specified primary and fallback providers.
-    pub fn new(primary: OnlineBlobProvider<B, S>, fallback: Option<F>) -> Self {
+    pub const fn new(primary: OnlineBlobProvider<B, S>, fallback: Option<F>) -> Self {
         Self { primary, fallback, _slot_derivation: PhantomData }
     }
 
@@ -416,13 +420,13 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
     }
 
     /// Adds a genesis time to the builder. This is optional.
-    pub fn with_genesis_time(mut self, genesis_time: u64) -> Self {
+    pub const fn with_genesis_time(mut self, genesis_time: u64) -> Self {
         self.genesis_time = Some(genesis_time);
         self
     }
 
     /// Adds a slot interval to the builder. This is optional.
-    pub fn with_slot_interval(mut self, slot_interval: u64) -> Self {
+    pub const fn with_slot_interval(mut self, slot_interval: u64) -> Self {
         self.slot_interval = Some(slot_interval);
         self
     }

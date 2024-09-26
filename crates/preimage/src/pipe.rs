@@ -41,12 +41,12 @@ impl PipeHandle {
     }
 
     /// Returns the read handle for the pipe.
-    pub fn read_handle(&self) -> FileDescriptor {
+    pub const fn read_handle(&self) -> FileDescriptor {
         self.read_handle
     }
 
     /// Returns the write handle for the pipe.
-    pub fn write_handle(&self) -> FileDescriptor {
+    pub const fn write_handle(&self) -> FileDescriptor {
         self.write_handle
     }
 }

@@ -40,7 +40,7 @@ pub struct CollectingLayer {
 
 impl CollectingLayer {
     /// Creates a new collecting layer with the specified storage.
-    pub fn new(storage: TraceStorage) -> Self {
+    pub const fn new(storage: TraceStorage) -> Self {
         Self { storage }
     }
 }

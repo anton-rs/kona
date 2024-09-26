@@ -43,7 +43,7 @@ where
     L2P: L2ChainProvider + Debug,
 {
     /// Create a new [StatefulAttributesBuilder] with the given epoch.
-    pub fn new(rcfg: Arc<RollupConfig>, sys_cfg_fetcher: L2P, receipts: L1P) -> Self {
+    pub const fn new(rcfg: Arc<RollupConfig>, sys_cfg_fetcher: L2P, receipts: L1P) -> Self {
         Self { rollup_cfg: rcfg, config_fetcher: sys_cfg_fetcher, receipts_fetcher: receipts }
     }
 }

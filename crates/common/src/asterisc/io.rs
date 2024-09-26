@@ -2,7 +2,7 @@ use crate::{asterisc::syscall, errors::IOResult, BasicKernelInterface, FileDescr
 
 /// Concrete implementation of the [`KernelIO`] trait for the `riscv64` target architecture.
 #[derive(Debug)]
-pub struct AsteriscIO;
+pub(crate) struct AsteriscIO;
 
 /// Relevant system call numbers for the `riscv64` target architecture.
 ///

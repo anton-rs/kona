@@ -32,7 +32,7 @@ where
 
 impl<CP: ChainProvider + Send> CalldataSource<CP> {
     /// Creates a new calldata source.
-    pub fn new(
+    pub const fn new(
         chain_provider: CP,
         batch_inbox_address: Address,
         block_ref: BlockInfo,

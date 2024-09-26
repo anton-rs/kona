@@ -37,7 +37,7 @@ where
     KV: KeyValueStore + ?Sized,
 {
     /// Create a new [OnlinePreimageFetcher] from the given [Fetcher].
-    pub fn new(fetcher: Arc<RwLock<Fetcher<KV>>>) -> Self {
+    pub const fn new(fetcher: Arc<RwLock<Fetcher<KV>>>) -> Self {
         Self { inner: fetcher }
     }
 }
@@ -67,7 +67,7 @@ where
     KV: KeyValueStore + ?Sized,
 {
     /// Create a new [OfflinePreimageFetcher] from the given [KeyValueStore].
-    pub fn new(kv_store: Arc<RwLock<KV>>) -> Self {
+    pub const fn new(kv_store: Arc<RwLock<KV>>) -> Self {
         Self { inner: kv_store }
     }
 }
@@ -98,7 +98,7 @@ where
     KV: KeyValueStore + ?Sized,
 {
     /// Create a new [OnlineHintRouter] from the given [Fetcher].
-    pub fn new(fetcher: Arc<RwLock<Fetcher<KV>>>) -> Self {
+    pub const fn new(fetcher: Arc<RwLock<Fetcher<KV>>>) -> Self {
         Self { inner: fetcher }
     }
 }

@@ -122,7 +122,7 @@ pub(crate) struct TrieNodeProvider {
 }
 
 impl TrieNodeProvider {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         preimages: BTreeMap<B256, Bytes>,
         bytecode: BTreeMap<B256, Bytes>,
         headers: BTreeMap<B256, alloy_consensus::Header>,

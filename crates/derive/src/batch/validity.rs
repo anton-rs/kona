@@ -19,7 +19,7 @@ pub enum BatchValidity {
 
 impl BatchValidity {
     /// Returns if the batch is dropped.
-    pub fn is_drop(&self) -> bool {
-        matches!(self, BatchValidity::Drop)
+    pub const fn is_drop(&self) -> bool {
+        matches!(self, Self::Drop)
     }
 }

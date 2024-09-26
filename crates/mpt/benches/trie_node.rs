@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! Contains benchmarks for the [TrieNode].
 
 use alloy_trie::Nibbles;

@@ -33,8 +33,8 @@ where
 
     async fn next(&mut self) -> PipelineResult<Self::Item> {
         match self {
-            EthereumDataSourceVariant::Calldata(c) => c.next().await,
-            EthereumDataSourceVariant::Blob(b) => b.next().await,
+            Self::Calldata(c) => c.next().await,
+            Self::Blob(b) => b.next().await,
         }
     }
 }

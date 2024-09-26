@@ -51,8 +51,8 @@ impl Drop for DiskKeyValueStore {
 impl TryFrom<DiskKeyValueStore> for MemoryKeyValueStore {
     type Error = anyhow::Error;
 
-    fn try_from(disk_store: DiskKeyValueStore) -> Result<MemoryKeyValueStore> {
-        let mut memory_store = MemoryKeyValueStore::new();
+    fn try_from(disk_store: DiskKeyValueStore) -> Result<Self> {
+        let mut memory_store = Self::new();
         let mut db_iter = disk_store.db.full_iterator(rocksdb::IteratorMode::Start);
 
         while let Some(Ok((key, value))) = db_iter.next() {

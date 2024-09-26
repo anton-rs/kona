@@ -22,7 +22,7 @@ impl AsRef<[u8]> for SpanBatchBits {
 }
 
 impl From<SpanBatchBits> for Vec<u8> {
-    fn from(bits: SpanBatchBits) -> Vec<u8> {
+    fn from(bits: SpanBatchBits) -> Self {
         bits.0
     }
 }
@@ -56,7 +56,7 @@ impl SpanBatchBits {
             b.advance(buffer_len);
             v
         };
-        let sb_bits = SpanBatchBits(bits);
+        let sb_bits = Self(bits);
 
         if sb_bits.bit_len() > bit_length {
             return Err(SpanBatchError::BitfieldTooLong);
@@ -72,7 +72,7 @@ impl SpanBatchBits {
     pub fn encode(
         w: &mut Vec<u8>,
         bit_length: usize,
-        bits: &SpanBatchBits,
+        bits: &Self,
         is_fjord_active: bool,
     ) -> Result<(), SpanBatchError> {
         if bits.bit_len() > bit_length {

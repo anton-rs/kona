@@ -93,12 +93,12 @@ pub enum PipelineError {
 
 impl PipelineError {
     /// Wrap [self] as a [PipelineErrorKind::Critical].
-    pub fn crit(self) -> PipelineErrorKind {
+    pub const fn crit(self) -> PipelineErrorKind {
         PipelineErrorKind::Critical(self)
     }
 
     /// Wrap [self] as a [PipelineErrorKind::Temporary].
-    pub fn temp(self) -> PipelineErrorKind {
+    pub const fn temp(self) -> PipelineErrorKind {
         PipelineErrorKind::Temporary(self)
     }
 }

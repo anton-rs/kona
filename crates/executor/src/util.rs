@@ -71,7 +71,7 @@ pub(crate) fn extract_tx_gas_limit(tx: &OpTxEnvelope) -> u128 {
 }
 
 /// Returns whether or not an [OpTxEnvelope] is a system transaction.
-pub(crate) fn is_system_transaction(tx: &OpTxEnvelope) -> bool {
+pub(crate) const fn is_system_transaction(tx: &OpTxEnvelope) -> bool {
     match tx {
         OpTxEnvelope::Deposit(tx) => tx.is_system_transaction,
         _ => false,

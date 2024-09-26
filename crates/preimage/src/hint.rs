@@ -58,7 +58,7 @@ pub struct HintReader {
 
 impl HintReader {
     /// Create a new [HintReader] from a [PipeHandle].
-    pub fn new(pipe_handle: PipeHandle) -> Self {
+    pub const fn new(pipe_handle: PipeHandle) -> Self {
         Self { pipe_handle }
     }
 }
@@ -113,7 +113,7 @@ impl HintReaderServer for HintReader {
 mod test {
     use super::*;
     use crate::test_utils::bidirectional_pipe;
-    use alloc::{string::ToString, sync::Arc, vec::Vec};
+    use alloc::{sync::Arc, vec::Vec};
     use kona_common::FileDescriptor;
     use std::os::unix::io::AsRawFd;
     use tokio::sync::Mutex;
@@ -170,7 +170,7 @@ mod test {
             let PreimageOracleError::Other(e) = e else {
                 return false;
             };
-            e.to_string().contains("Failed to decode hint payload")
+            e.contains("Failed to decode hint payload")
         }));
     }
 

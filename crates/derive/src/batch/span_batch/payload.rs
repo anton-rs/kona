@@ -52,7 +52,7 @@ impl SpanBatchPayload {
     }
 
     /// Returns the max span batch size based on the Fjord hardfork.
-    pub fn max_span_batch_size(&self, is_fjord_active: bool) -> usize {
+    pub const fn max_span_batch_size(&self, is_fjord_active: bool) -> usize {
         if is_fjord_active {
             FJORD_MAX_SPAN_BATCH_BYTES as usize
         } else {

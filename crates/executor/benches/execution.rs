@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! Benches for the [StatelessL2BlockExecutor] implementation.
 
 use alloy_consensus::{Header, Sealable};
@@ -63,7 +64,7 @@ fn op_mainnet_exec_bench(
     data_folder: &str,
     pre_state_header: Header,
     payload_attrs: OptimismPayloadAttributes,
-    bencher: &mut Bencher,
+    bencher: &mut Bencher<'_>,
 ) {
     // Make a mock rollup config for OP mainnet, with Ecotone activated at timestamp = 0.
     let rollup_config = RollupConfig {

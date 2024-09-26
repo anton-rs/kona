@@ -44,7 +44,7 @@ where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// Create a new [BatchStream] stage.
-    pub fn new(prev: P, config: Arc<RollupConfig>) -> Self {
+    pub const fn new(prev: P, config: Arc<RollupConfig>) -> Self {
         Self { prev, span: None, buffer: Vec::new(), config }
     }
 
@@ -93,10 +93,8 @@ where
         self.span = Some(b);
 
         // Attempt to pull a SingleBatch out of the SpanBatch.
-        match self.get_single_batch() {
-            Some(b) => Ok(Batch::Single(b)),
-            None => Err(PipelineError::NotEnoughData.temp()),
-        }
+        self.get_single_batch()
+            .map_or_else(|| Err(PipelineError::NotEnoughData.temp()), |b| Ok(Batch::Single(b)))
     }
 }
 
