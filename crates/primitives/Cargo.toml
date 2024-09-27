@@ -40,5 +40,9 @@ online = [
   "dep:sha2",
   "dep:revm",
   "dep:tracing",
-  "revm/default",
+  "revm/blst",
+  "revm/portable",
+  "revm/secp256k1",
+  "revm/kzg-rs",
+  "revm/std",
 ]
