@@ -121,7 +121,7 @@ where
             }
         };
 
-        //
+        // <some comment / remove comment>
         if let Ok(frames) = Frame::parse_frames(&data.into()) {
             crate::inc!(DERIVED_FRAMES_COUNT, frames.len() as f64, &["success"]);
             self.queue.extend(frames);
