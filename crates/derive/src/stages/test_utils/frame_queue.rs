@@ -16,18 +16,25 @@ use op_alloy_protocol::BlockInfo;
 pub struct MockFrameQueueProvider {
     /// The data to return.
     pub data: Vec<PipelineResult<Bytes>>,
+    /// The origin to return.
+    pub origin: Option<BlockInfo>,
 }
 
 impl MockFrameQueueProvider {
     /// Creates a new [MockFrameQueueProvider] with the given data.
     pub const fn new(data: Vec<PipelineResult<Bytes>>) -> Self {
-        Self { data }
+        Self { data, origin: None }
+    }
+
+    /// Sets the origin for the [MockFrameQueueProvider].
+    pub fn set_origin(&mut self, origin: BlockInfo) {
+        self.origin = Some(origin);
     }
 }
 
 impl OriginProvider for MockFrameQueueProvider {
     fn origin(&self) -> Option<BlockInfo> {
-        None
+        self.origin
     }
 }
 

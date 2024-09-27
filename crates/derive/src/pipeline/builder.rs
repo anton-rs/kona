@@ -131,7 +131,7 @@ where
         let mut l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
         l1_traversal.block = Some(builder.origin.expect("origin must be set"));
         let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
-        let frame_queue = FrameQueue::new(l1_retrieval);
+        let frame_queue = FrameQueue::new(l1_retrieval, Arc::clone(&rollup_config));
         let channel_bank = ChannelBank::new(Arc::clone(&rollup_config), frame_queue);
         let channel_reader = ChannelReader::new(channel_bank, Arc::clone(&rollup_config));
         let batch_stream = BatchStream::new(channel_reader, rollup_config.clone());
