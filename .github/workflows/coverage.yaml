@@ -26,7 +26,7 @@ jobs:
         run: cargo generate-lockfile
       - name: cargo llvm-cov
         run: |
-          cargo llvm-cov nextest --locked --workspace --lcov --output-path lcov.info --features test-utils --profile ci && \
+          RUST_MIN_STACK=33554432 cargo llvm-cov nextest --locked --workspace --lcov --output-path lcov.info --features test-utils --profile ci && \
             mv ./target/nextest/ci/junit.xml ./junit.xml
       - name: Record Rust version
         run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
