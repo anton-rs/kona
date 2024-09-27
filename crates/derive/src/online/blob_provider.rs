@@ -705,28 +705,41 @@ mod tests {
         assert_eq!(result.unwrap_err(), BlobProviderError::Backend("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1".to_string()));
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn test_get_blobs_failed_verification() {
-        let beacon_client = MockBeaconClient {
-            beacon_genesis: Some(APIGenesisResponse::new(10)),
-            config_spec: Some(APIConfigResponse::new(12)),
-            blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar { inner: BlobSidecar::default(), ..Default::default() }],
-            }),
-            ..Default::default()
-        };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
-        let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
-        let blob_hashes = vec![IndexedBlobHash {
-            hash: b256!("01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"),
-            ..Default::default()
-        }];
-        let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
-        assert_eq!(
-            result,
-            Err(BlobProviderError::Backend("blob at index 0 failed verification".to_string()))
-        );
+    #[test]
+    fn test_get_blobs_failed_verification() {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_stack_size(8 * 32 * 32 * 1024) // 8 MiB
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                let beacon_client = MockBeaconClient {
+                    beacon_genesis: Some(APIGenesisResponse::new(10)),
+                    config_spec: Some(APIConfigResponse::new(12)),
+                    blob_sidecars: Some(APIGetBlobSidecarsResponse {
+                        data: vec![APIBlobSidecar {
+                            inner: BlobSidecar::default(),
+                            ..Default::default()
+                        }],
+                    }),
+                    ..Default::default()
+                };
+                let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
+                    OnlineBlobProvider::new(beacon_client, None, None);
+                let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
+                let blob_hashes = vec![IndexedBlobHash {
+                    hash: b256!("01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"),
+                    ..Default::default()
+                }];
+                let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
+                assert_eq!(
+                    result,
+                    Err(BlobProviderError::Backend(
+                        "blob at index 0 failed verification".to_string()
+                    ))
+                );
+            })
     }
 
     #[tokio::test]
