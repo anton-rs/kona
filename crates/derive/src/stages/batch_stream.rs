@@ -67,6 +67,12 @@ impl<P> BatchQueueProvider for BatchStream<P>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
+    fn flush(&mut self) {
+        if self.is_active().unwrap_or(false) {
+            self.buffer.clear();
+        }
+    }
+
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
         // If the stage is not active, "pass" the next batch
         // through this stage to the BatchQueue stage.

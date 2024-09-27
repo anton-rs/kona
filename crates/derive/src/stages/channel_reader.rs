@@ -99,6 +99,9 @@ impl<P> BatchQueueProvider for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
+    fn flush(&mut self) { /* noop */
+    }
+
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
