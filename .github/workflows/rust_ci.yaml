@@ -10,11 +10,16 @@ jobs:
   cargo-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      matrix:
+        mode: ["online", "offline"]
+    name: test-${{ matrix.mode }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
           submodules: true
+      - uses: taiki-e/install-action@just
       - name: Install Rust stable toolchain
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -22,7 +27,12 @@ jobs:
           cache-on-failure: true
       - uses: taiki-e/install-action@nextest
       - name: cargo test
-        run: RUST_MIN_STACK=33554432 cargo nextest run --release --workspace --all --all-features --locked
+        run: |
+          if [[ ${{ contains(matrix.mode, 'online') }} == true ]]; then
+            just test-online
+          else
+            just test
+          fi
   cargo-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 20

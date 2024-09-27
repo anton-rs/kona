@@ -179,7 +179,7 @@ mod test {
     use alloy_rlp::Encodable;
 
     #[tokio::test]
-    async fn test_list_walker_online_receipts() {
+    async fn test_online_list_walker_receipts() {
         let (root, preimages, envelopes) = get_live_derivable_receipts_list().await.unwrap();
         let fetcher = TrieNodeProvider::new(preimages, BTreeMap::default(), BTreeMap::default());
         let list = OrderedListWalker::try_new_hydrated(root, &fetcher).unwrap();
@@ -193,7 +193,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_list_walker_online_transactions() {
+    async fn test_online_list_walker_transactions() {
         let (root, preimages, envelopes) = get_live_derivable_transactions_list().await.unwrap();
         let fetcher = TrieNodeProvider::new(preimages, BTreeMap::default(), BTreeMap::default());
         let list = OrderedListWalker::try_new_hydrated(root, &fetcher).unwrap();
