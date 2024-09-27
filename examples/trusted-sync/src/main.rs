@@ -218,28 +218,40 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                 metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
                 warn!(target: "loop", "Could not advance origin: {:?}", e);
             }
-            StepResult::StepFailed(e) => match e {
-                PipelineErrorKind::Temporary(e) => {
-                    if matches!(e, PipelineError::NotEnoughData) {
-                        metrics::PIPELINE_STEPS.with_label_values(&["not_enough_data"]).inc();
-                        debug!(target: "loop", "Not enough data to step derivation pipeline");
-                    }
+            sr => {
+                if let StepResult::OriginAdvanceErr(ref e) = sr {
+                    metrics::PIPELINE_STEPS.with_label_values(&["origin_advance_failure"]).inc();
+                    warn!(target: "loop", "Could not advance origin: {:?}", e);
                 }
-                PipelineErrorKind::Reset(_) => {
-                    metrics::PIPELINE_STEPS.with_label_values(&["reset"]).inc();
-                    warn!(target: "loop", "Resetting pipeline: {:?}", e);
-                    pipeline
-                        .reset(
-                            cursor.block_info,
-                            pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?,
-                        )
-                        .await?;
+
+                match sr {
+                    StepResult::PreparedAttributes | StepResult::AdvancedOrigin => {}
+                    StepResult::OriginAdvanceErr(e) | StepResult::StepFailed(e) => match e {
+                        PipelineErrorKind::Temporary(e) => {
+                            if matches!(e, PipelineError::NotEnoughData) {
+                                metrics::PIPELINE_STEPS
+                                    .with_label_values(&["not_enough_data"])
+                                    .inc();
+                                debug!(target: "loop", "Not enough data to step derivation pipeline");
+                            }
+                        }
+                        PipelineErrorKind::Reset(_) => {
+                            metrics::PIPELINE_STEPS.with_label_values(&["reset"]).inc();
+                            warn!(target: "loop", "Resetting pipeline: {:?}", e);
+                            pipeline
+                                .reset(
+                                    cursor.block_info,
+                                    pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?,
+                                )
+                                .await?;
+                        }
+                        PipelineErrorKind::Critical(_) => {
+                            metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
+                            error!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
+                        }
+                    },
                 }
-                _ => {
-                    metrics::PIPELINE_STEPS.with_label_values(&["failure"]).inc();
-                    error!(target: "loop", "Error stepping derivation pipeline: {:?}", e);
-                }
-            },
+            }
         }
 
         // Peek at the next prepared attributes and validate them.

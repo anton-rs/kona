@@ -108,8 +108,20 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         }
 
         crate::set!(ORIGIN_GAUGE, next_l1_origin.number as i64);
+
+        let prev_block_holocene = self.rollup_config.is_holocene_active(block.timestamp);
+        let next_block_holocene = self.rollup_config.is_holocene_active(next_l1_origin.timestamp);
+
+        // Update the block origin regardless of if a holocene activation is required.
         self.block = Some(next_l1_origin);
         self.done = false;
+
+        // If the prev block is not holocene, but the next is, we need to flag this
+        // so the pipeline driver will reset the pipeline for holocene activation.
+        if !prev_block_holocene && next_block_holocene {
+            return Err(ResetError::HoloceneActivation.reset());
+        }
+
         Ok(())
     }
 }
