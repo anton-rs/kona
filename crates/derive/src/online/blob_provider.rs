@@ -705,7 +705,7 @@ mod tests {
         assert_eq!(result.unwrap_err(), BlobProviderError::Backend("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1".to_string()));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_get_blobs_failed_verification() {
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
