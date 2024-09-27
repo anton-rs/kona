@@ -12,16 +12,16 @@ alias h := hack
 default:
   @just --list
 
-# Run all tests
+# Run all tests (excluding online tests)
 tests: test test-docs
 
-# Runs `cargo hack check` against the workspace
-hack:
-  cargo hack check --feature-powerset --no-dev-deps
+# Test for the native target with all features. By default, excludes online tests.
+test *args="-E '!test(test_online)'":
+  cargo nextest run --workspace --all --all-features {{args}}
 
-# Test for the native target with all features
-test *args='':
-  cargo nextest run --workspace --all --all-features $@
+# Run all online tests
+test-online:
+  just test "-E 'test(test_online)'"
 
 # Run action tests for the client program on the native target
 action-tests test_name='Test_ProgramAction':
@@ -54,6 +54,10 @@ clean-actions:
 
 # Lint the workspace for all available targets
 lint-all: lint-native lint-cannon lint-asterisc lint-docs
+
+# Runs `cargo hack check` against the workspace
+hack:
+  cargo hack check --feature-powerset --no-dev-deps
 
 # Fixes the formatting of the workspace
 fmt-native-fix:
