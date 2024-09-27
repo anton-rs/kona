@@ -9,7 +9,8 @@ use alloc::{boxed::Box, collections::VecDeque};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::SystemConfig;
+use alloc::sync::Arc;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, Frame};
 use tracing::{debug, error, trace};
 
@@ -38,6 +39,8 @@ where
     pub prev: P,
     /// The current frame queue.
     queue: VecDeque<Frame>,
+    /// The rollup config.
+    rollup_config: Arc<RollupConfig>,
 }
 
 impl<P> FrameQueue<P>
@@ -47,9 +50,58 @@ where
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     ///
     /// [L1Retrieval]: crate::stages::L1Retrieval
-    pub fn new(prev: P) -> Self {
+    pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
         crate::set!(STAGE_RESETS, 0, &["frame-queue"]);
-        Self { prev, queue: VecDeque::new() }
+        Self { prev, queue: VecDeque::new(), rollup_config: cfg }
+    }
+
+    /// Prunes frames if Holocene is active.
+    pub fn prune(&mut self) {
+        let Some(origin) = self.prev.origin() else {
+            warn!(target: "frame-queue", "Failed to get origin");
+            return;
+        }
+        if !self.rollup_config.is_holocene_active(origin.timestamp) {
+            return;
+        }
+
+        for frame in self.queue {
+
+        }
+    }
+
+    /// Loads more frames into the [FrameQueue].
+    pub async fn load_frames(&mut self) -> PipelineResult<()> {
+        // Skip loading frames if the queue is not empty.
+        if !self.queue.is_empty() {
+            return Ok(());
+        }
+
+        let data = match self.prev.next_data().await else {
+            Ok(data) => data,
+            Err(e) => {
+                debug!(target: "frame-queue", "Failed to retrieve data: {:?}", e);
+                // SAFETY: Bubble up potential EOF error without wrapping.
+                return Err(e);
+            }
+        };
+
+        // 
+        if let Ok(frames) = Frame::parse_frames(&data.into()) {
+            crate::inc!(DERIVED_FRAMES_COUNT, frames.len() as f64, &["success"]);
+            self.queue.extend(frames);
+        } else {
+            crate::inc!(DERIVED_FRAMES_COUNT, &["failed"]);
+            // There may be more frames in the queue for the
+            // pipeline to advance, so don't return an error here.
+            error!(target: "frame-queue", "Failed to parse frames from data.");
+            return Ok(());
+        }
+
+        // Prune frames if Holocene is active.
+        self.prune();
+
+        Ok(())
     }
 }
 
@@ -69,25 +121,7 @@ where
     P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn next_frame(&mut self) -> PipelineResult<Frame> {
-        if self.queue.is_empty() {
-            match self.prev.next_data().await {
-                Ok(data) => {
-                    if let Ok(frames) = Frame::parse_frames(&data.into()) {
-                        crate::inc!(DERIVED_FRAMES_COUNT, frames.len() as f64, &["success"]);
-                        self.queue.extend(frames);
-                    } else {
-                        crate::inc!(DERIVED_FRAMES_COUNT, &["failed"]);
-                        // There may be more frames in the queue for the
-                        // pipeline to advance, so don't return an error here.
-                        error!(target: "frame-queue", "Failed to parse frames from data.");
-                    }
-                }
-                Err(e) => {
-                    debug!(target: "frame-queue", "Failed to retrieve data: {:?}", e);
-                    return Err(e); // Bubble up potential EOF error without wrapping.
-                }
-            }
-        }
+        self.load_frames().await?;
 
         // If we did not add more frames but still have more data, retry this function.
         if self.queue.is_empty() {
