@@ -28,7 +28,7 @@ jobs:
       - uses: taiki-e/install-action@nextest
       - name: cargo test
         run: |
-          if [[ ${{ contains(matrix.mode, online) }} == true ]]; then
+          if [[ ${{ contains(matrix.mode, 'online') }} == true ]]; then
             just test-online
           else
             just test
