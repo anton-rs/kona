@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.2...kona-executor-v0.0.3) - 2024-09-27
+
+### Added
+
+- *(executor)* Migrate to `thiserror` ([#544](https://github.com/anton-rs/kona/pull/544))
+- *(mpt)* Migrate to `thiserror` ([#541](https://github.com/anton-rs/kona/pull/541))
+- *(primitives)* Remove Attributes ([#529](https://github.com/anton-rs/kona/pull/529))
+- large dependency update ([#528](https://github.com/anton-rs/kona/pull/528))
+
+### Fixed
+
+- *(workspace)* hoist and fix lints ([#577](https://github.com/anton-rs/kona/pull/577))
+
+### Other
+
+- *(workspace)* Allow stdlib in `cfg(test)` ([#548](https://github.com/anton-rs/kona/pull/548))
+- Bumps Dependency Versions ([#520](https://github.com/anton-rs/kona/pull/520))
+- *(primitives)* rm RawTransaction ([#505](https://github.com/anton-rs/kona/pull/505))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.1...kona-executor-v0.0.2) - 2024-09-04
 
 ### Added
