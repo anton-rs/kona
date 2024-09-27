@@ -22,7 +22,7 @@ jobs:
           cache-on-failure: true
       - uses: taiki-e/install-action@nextest
       - name: cargo test
-        run: cargo nextest run --release --workspace --all --all-features --locked
+        run: RUST_MIN_STACK=33554432 cargo nextest run --release --workspace --all --all-features --locked
   cargo-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 20
