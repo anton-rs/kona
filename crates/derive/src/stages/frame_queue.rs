@@ -96,7 +96,7 @@ where
                 // Find the index of the first frame in the queue with the same channel ID
                 // as the previous frame.
                 let first_frame =
-                    self.queue.iter().position(|f| f.id == prev_frame.id).expect("Infalliable");
+                    self.queue.iter().position(|f| f.id == prev_frame.id).expect("infallible");
 
                 // Drain all frames from the previous channel.
                 let drained = self.queue.drain(first_frame..=i);
@@ -480,7 +480,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_holocene_replace_channel() {
         let frames = vec![
-            // - First Channel - VALID & CLOSED --
+            // -- First Channel - VALID & CLOSED --
             Frame { id: [0xDD; 16], number: 0, data: vec![0xDD; 50], is_last: false },
             Frame { id: [0xDD; 16], number: 1, data: vec![0xDD; 50], is_last: true },
             // -- Second Channel - VALID & NOT CLOSED / DROPPED --
