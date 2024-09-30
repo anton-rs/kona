@@ -503,17 +503,17 @@ pub(crate) mod tests {
         let err = frame_queue.next_frame().await.unwrap_err();
         assert_eq!(err, PipelineError::Eof.temp());
     }
-  
+
     #[tokio::test]
-    async fn test_holocene_replace_channel() {
+    async fn test_holocene_interleaved_invalid_channel() {
         let frames = vec![
-            // -- First Channel - VALID & CLOSED --
-            Frame { id: [0xDD; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xDD; 16], number: 1, data: vec![0xDD; 50], is_last: true },
-            // -- Second Channel - VALID & NOT CLOSED / DROPPED --
-            Frame { id: [0xEE; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            // -- Third Channel - VALID & CLOSED / REPLACES CHANNEL #2 --
+            // -- First channel is dropped since it is replaced by the second channel --
+            // -- Second channel is dropped since it isn't closed --
+            Frame { id: [0x01; 16], number: 0, data: vec![0xDD; 50], is_last: false },
+            Frame { id: [0x02; 16], number: 0, data: vec![0xDD; 50], is_last: false },
+            Frame { id: [0x01; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            Frame { id: [0x02; 16], number: 1, data: vec![0xDD; 50], is_last: false },
+            // -- Third Channel - VALID & CLOSED --
             Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
             Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
         ];
