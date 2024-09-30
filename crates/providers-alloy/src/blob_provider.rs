@@ -1,22 +1,14 @@
-//! Contains an online implementation of the [BlobProvider] trait.
+//! Contains an online implementation of the `BlobProvider` trait.
 
-use crate::{
-    ensure,
-    errors::BlobProviderError,
-    online::{BeaconClient, OnlineBeaconClient},
-    traits::BlobProvider,
-};
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec::Vec,
-};
 use alloy_eips::eip4844::Blob;
 use async_trait::async_trait;
 use core::marker::PhantomData;
+use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
 use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
+
+use crate::{BeaconClient, OnlineBeaconClient};
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
@@ -130,7 +122,7 @@ pub struct SimpleSlotDerivation;
 
 impl SlotDerivation for SimpleSlotDerivation {
     fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError> {
-        ensure!(timestamp >= genesis, BlobProviderError::SlotDerivation);
+        crate::ensure!(timestamp >= genesis, BlobProviderError::SlotDerivation);
         Ok((timestamp - genesis) / slot_time)
     }
 }
@@ -481,8 +473,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::online::test_utils::MockBeaconClient;
-    use alloc::vec;
+    use crate::test_utils::MockBeaconClient;
     use alloy_primitives::b256;
     use kona_primitives::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 

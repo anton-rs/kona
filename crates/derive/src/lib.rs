@@ -5,7 +5,16 @@
 
 extern crate alloc;
 
-mod macros;
+/// Re-export commonly used types and traits.
+pub mod prelude {
+    pub use crate::{
+        attributes::StatefulAttributesBuilder,
+        errors::{PipelineError, PipelineErrorKind},
+        pipeline::{DerivationPipeline, PipelineBuilder},
+        sources::EthereumDataSource,
+        traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
+    };
+}
 
 pub mod attributes;
 pub mod batch;
@@ -16,8 +25,7 @@ pub mod sources;
 pub mod stages;
 pub mod traits;
 
-#[cfg(feature = "online")]
-pub mod online;
-
 #[cfg(feature = "metrics")]
 pub mod metrics;
+
+mod macros;

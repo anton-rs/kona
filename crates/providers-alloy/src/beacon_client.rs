@@ -1,19 +1,11 @@
-//! Contains an online implementation of the [BeaconClient] trait.
+//! Contains an online implementation of the `BeaconClient` trait.
 
-use alloc::{
-    boxed::Box,
-    format,
-    string::{String, ToString},
-    vec::Vec,
-};
 use async_trait::async_trait;
-use core::fmt::Display;
-use reqwest::Client;
-
 use kona_primitives::{
     APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
     IndexedBlobHash,
 };
+use reqwest::Client;
 
 /// The config spec engine api method.
 pub(crate) const SPEC_METHOD: &str = "eth/v1/config/spec";
@@ -28,7 +20,7 @@ pub(crate) const SIDECARS_METHOD_PREFIX: &str = "eth/v1/beacon/blob_sidecars";
 #[async_trait]
 pub trait BeaconClient {
     /// The error type for [BeaconClient] implementations.
-    type Error: Display + ToString;
+    type Error: std::fmt::Display + ToString;
 
     /// Returns the config spec.
     async fn config_spec(&self) -> Result<APIConfigResponse, Self::Error>;

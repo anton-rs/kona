@@ -1,19 +1,15 @@
 //! Test Utilities for Online Providers
 
-use alloc::{boxed::Box, string::String, vec::Vec};
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
 use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
-use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_primitives::{
     APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
     IndexedBlobHash,
 };
 use reqwest::Client;
-
-use super::BeaconClient;
 
 /// Spawns an Anvil instance and returns a provider and the instance.
 pub fn spawn_anvil() -> (ReqwestProvider<Ethereum>, AnvilInstance) {
@@ -33,7 +29,7 @@ pub fn http_provider(url: &str) -> ReqwestProvider<Ethereum> {
     ReqwestProvider::new(RpcClient::new(http, true))
 }
 
-/// A mock [BeaconClient] for testing.
+/// A mock [crate::BeaconClient] for testing.
 #[derive(Debug, Default)]
 pub struct MockBeaconClient {
     /// The node version.
@@ -46,23 +42,40 @@ pub struct MockBeaconClient {
     pub blob_sidecars: Option<APIGetBlobSidecarsResponse>,
 }
 
-#[async_trait]
-impl BeaconClient for MockBeaconClient {
-    type Error = anyhow::Error;
+/// A mock beacon client error
+#[derive(Debug, thiserror::Error)]
+pub enum MockBeaconClientError {
+    /// The config spec is not set
+    #[error("config_spec not set")]
+    ConfigSpecNotSet,
+    /// The beacon genesis is not set
+    #[error("beacon_genesis not set")]
+    BeaconGenesisNotSet,
+    /// The blob sidecars are not set
+    #[error("blob_sidecars not set")]
+    BlobSidecarsNotSet,
+}
 
-    async fn config_spec(&self) -> Result<APIConfigResponse> {
-        self.config_spec.clone().ok_or_else(|| anyhow!("config_spec not set"))
+#[async_trait]
+impl crate::BeaconClient for MockBeaconClient {
+    type Error = MockBeaconClientError;
+
+    async fn config_spec(&self) -> Result<APIConfigResponse, Self::Error> {
+        self.config_spec.clone().ok_or_else(|| MockBeaconClientError::ConfigSpecNotSet)
     }
 
-    async fn beacon_genesis(&self) -> Result<APIGenesisResponse> {
-        self.beacon_genesis.clone().ok_or_else(|| anyhow!("beacon_genesis not set"))
+    async fn beacon_genesis(&self) -> Result<APIGenesisResponse, Self::Error> {
+        self.beacon_genesis.clone().ok_or_else(|| MockBeaconClientError::BeaconGenesisNotSet)
     }
 
     async fn beacon_blob_side_cars(
         &self,
         _: u64,
         _: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>> {
-        self.blob_sidecars.clone().ok_or_else(|| anyhow!("blob_sidecars not set")).map(|r| r.data)
+    ) -> Result<Vec<APIBlobSidecar>, Self::Error> {
+        self.blob_sidecars
+            .clone()
+            .ok_or_else(|| MockBeaconClientError::BlobSidecarsNotSet)
+            .map(|r| r.data)
     }
 }

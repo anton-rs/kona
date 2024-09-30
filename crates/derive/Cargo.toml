@@ -38,12 +38,6 @@ kona-primitives.workspace = true
 # `serde` feature dependencies
 serde = { workspace = true, optional = true }
 
-# `online` feature dependencies
-lru = { workspace = true, optional = true }
-alloy-transport = { workspace = true, optional = true }
-alloy-provider = { workspace = true, optional = true }
-reqwest = { workspace = true, optional = true }
-
 # `metrics` feature dependencies
 lazy_static = { workspace = true, optional = true }
 prometheus = { workspace = true, optional = true }
@@ -69,6 +63,10 @@ serde_json.workspace = true
 
 [features]
 default = ["serde"]
+metrics = [
+  "dep:prometheus",
+  "dep:lazy_static",
+]
 serde = [
   "dep:serde",
   "kona-primitives/serde",
@@ -78,20 +76,6 @@ serde = [
   "op-alloy-protocol/serde",
   "op-alloy-genesis/serde",
   "op-alloy-rpc-types-engine/serde",
-]
-metrics = ["dep:prometheus", "dep:lazy_static"]
-online = [
-  "dep:alloy-provider",
-  "dep:alloy-transport",
-  "dep:reqwest",
-  "dep:lru",
-  "alloy-provider/reqwest",
-  "alloy-consensus/serde",
-  "kona-primitives/online",
-  "kona-primitives/serde",
-  "op-alloy-consensus/std",
-  "op-alloy-protocol/std",
-  "op-alloy-genesis/std",
 ]
 test-utils = [
   "dep:spin",
