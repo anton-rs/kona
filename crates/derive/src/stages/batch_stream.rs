@@ -4,7 +4,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::BlockInfo;
+use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::trace;
 
 use crate::{
@@ -13,6 +13,16 @@ use crate::{
     stages::BatchQueueProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
+
+/// Provides [Batch]es for the [BatchStream] stage.
+#[async_trait]
+pub trait BatchStreamProvider {
+    /// Returns the next [Batch] in the [BatchStream] stage.
+    async fn next_batch(&mut self) -> PipelineResult<Batch>;
+
+    /// Drains the recent `Channel` if an invalid span batch is found post-holocene.
+    fn flush(&mut self);
+}
 
 /// [BatchStream] stage in the derivation pipeline.
 ///
@@ -26,7 +36,7 @@ use crate::{
 #[derive(Debug)]
 pub struct BatchStream<P>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// The previous stage in the derivation pipeline.
     prev: P,
@@ -41,7 +51,7 @@ where
 
 impl<P> BatchStream<P>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// Create a new [BatchStream] stage.
     pub const fn new(prev: P, config: Arc<RollupConfig>) -> Self {
@@ -65,7 +75,7 @@ where
 #[async_trait]
 impl<P> BatchQueueProvider for BatchStream<P>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     fn flush(&mut self) {
         if self.is_active().unwrap_or(false) {
@@ -73,7 +83,7 @@ where
         }
     }
 
-    async fn next_batch(&mut self) -> PipelineResult<Batch> {
+    async fn next_batch(&mut self, _: L2BlockInfo, _: &[BlockInfo]) -> PipelineResult<Batch> {
         // If the stage is not active, "pass" the next batch
         // through this stage to the BatchQueue stage.
         if !self.is_active()? {
@@ -107,7 +117,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for BatchStream<P>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -116,7 +126,7 @@ where
 
 impl<P> OriginProvider for BatchStream<P>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -126,7 +136,7 @@ where
 #[async_trait]
 impl<P> ResettableStage for BatchStream<P>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
         self.prev.reset(base, cfg).await?;
@@ -141,7 +151,7 @@ mod test {
     use super::*;
     use crate::{
         batch::SingleBatch,
-        stages::test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
+        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
     };
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -153,14 +163,14 @@ mod test {
 
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(100), ..RollupConfig::default() });
-        let prev = MockBatchQueueProvider::new(data);
+        let prev = MockBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone());
 
         // The stage should not be active.
         assert!(!stream.is_active().unwrap());
 
         // The next batch should be passed through to the [BatchQueue] stage.
-        let batch = stream.next_batch().await.unwrap();
+        let batch = stream.next_batch(Default::default(), &[]).await.unwrap();
         assert_eq!(batch, Batch::Single(SingleBatch::default()));
 
         let logs = trace_store.get_by_level(tracing::Level::TRACE);

@@ -30,7 +30,7 @@ mod channel_reader;
 pub use channel_reader::{ChannelReader, ChannelReaderProvider};
 
 mod batch_stream;
-pub use batch_stream::BatchStream;
+pub use batch_stream::{BatchStream, BatchStreamProvider};
 
 mod batch_queue;
 pub use batch_queue::{BatchQueue, BatchQueueProvider};

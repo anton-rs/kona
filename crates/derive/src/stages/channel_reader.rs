@@ -3,7 +3,7 @@
 use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
-    stages::{decompress_brotli, BatchQueueProvider},
+    stages::{decompress_brotli, BatchStreamProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -95,11 +95,19 @@ where
 }
 
 #[async_trait]
-impl<P> BatchQueueProvider for ChannelReader<P>
+impl<P> BatchStreamProvider for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    fn flush(&mut self) { /* noop */
+    /// This method is called by the BatchStream if an invalid span batch is found.
+    /// In the case of an invalid span batch, the associated channel must be flushed.
+    ///
+    /// See: <https://specs.optimism.io/protocol/holocene/derivation.html#span-batches>
+    ///
+    /// SAFETY: Only called post-holocene activation.
+    fn flush(&mut self) {
+        debug!(target: "channel-reader", "[POST-HOLOCENE] Flushing channel");
+        self.next_channel();
     }
 
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
@@ -289,5 +297,18 @@ mod test {
         let mut reader = BatchReader::from(raw);
         reader.next_batch(&RollupConfig::default()).unwrap();
         assert_eq!(reader.cursor, decompressed_len);
+    }
+
+    #[tokio::test]
+    async fn test_flush_post_holocene() {
+        let raw = new_compressed_batch_data();
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(raw))]);
+        let mut reader = ChannelReader::new(mock, config);
+        let res = reader.next_batch().await.unwrap();
+        matches!(res, Batch::Span(_));
+        assert!(reader.next_batch.is_some());
+        reader.flush();
+        assert!(reader.next_batch.is_none());
     }
 }

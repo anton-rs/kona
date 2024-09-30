@@ -4,6 +4,9 @@
 mod batch_queue;
 pub use batch_queue::MockBatchQueueProvider;
 
+mod batch_stream;
+pub use batch_stream::MockBatchStreamProvider;
+
 mod attributes_queue;
 pub use attributes_queue::{
     new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
