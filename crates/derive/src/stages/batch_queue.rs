@@ -22,7 +22,11 @@ pub trait BatchQueueProvider {
     /// complete and the batch has been consumed, an [PipelineError::Eof] error is returned.
     ///
     /// [ChannelReader]: crate::stages::ChannelReader
-    async fn next_batch(&mut self) -> PipelineResult<Batch>;
+    async fn next_batch(
+        &mut self,
+        parent: L2BlockInfo,
+        origins: &[BlockInfo],
+    ) -> PipelineResult<Batch>;
 
     /// Allows the [BatchQueue] to flush the buffer in the [crate::stages::BatchStream]
     /// if an invalid single batch is found. Pre-holocene hardfork, this will be a no-op.
@@ -336,7 +340,7 @@ where
 
         // Load more data into the batch queue.
         let mut out_of_data = false;
-        match self.prev.next_batch().await {
+        match self.prev.next_batch(parent, &self.l1_blocks).await {
             Ok(b) => {
                 if !origin_behind {
                     self.add_batch(b, parent).await.ok();

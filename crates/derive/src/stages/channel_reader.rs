@@ -3,7 +3,7 @@
 use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
-    stages::{decompress_brotli, BatchQueueProvider},
+    stages::{decompress_brotli, BatchStreamProvider},
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -95,11 +95,19 @@ where
 }
 
 #[async_trait]
-impl<P> BatchQueueProvider for ChannelReader<P>
+impl<P> BatchStreamProvider for ChannelReader<P>
 where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
-    fn flush(&mut self) { /* noop */
+    /// This method is called by the BatchStream if an invalid span batch is found.
+    /// In the case of an invalid span batch, the associated channel must be flushed.
+    ///
+    /// See: <https://specs.optimism.io/protocol/holocene/derivation.html#span-batches>
+    ///
+    /// SAFETY: Only called post-holocene activation.
+    fn flush(&mut self) {
+        debug!(target: "channel-reader", "[POST-HOLOCENE] Flushing channel");
+        self.next_channel();
     }
 
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
