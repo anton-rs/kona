@@ -523,7 +523,7 @@ pub(crate) mod tests {
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames.iter().filter(|f| f.id != [0xEE; 16]) {
+        for frame in frames[4..].iter() {
             let frame_decoded = frame_queue.next_frame().await.unwrap();
             assert_eq!(frame_decoded, *frame);
         }
