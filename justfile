@@ -2,6 +2,7 @@ set positional-arguments
 alias t := tests
 alias la := lint-all
 alias l := lint-native
+alias lint := lint-native
 alias f := fmt-native-fix
 alias b := build
 alias d := docker-build-ts
