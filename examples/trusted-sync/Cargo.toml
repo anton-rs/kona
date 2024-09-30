@@ -12,7 +12,7 @@ homepage.workspace = true
 [dependencies]
 # Workspace
 kona-primitives = { workspace = true, features = ["serde"] }
-kona-alloy-providers = { workspace = true, features = ["metrics"] }
+kona-providers-alloy = { workspace = true, features = ["metrics"] }
 
 # General
 anyhow.workspace = true

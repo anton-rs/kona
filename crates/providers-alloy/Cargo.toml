@@ -1,6 +1,6 @@
 [package]
-name = "kona-alloy-providers"
-description = "Online providers for kona-derive"
+name = "kona-providers-alloy"
+description = "Alloy provider implementations for Kona"
 version = "0.0.1"
 edition.workspace = true
 authors.workspace = true

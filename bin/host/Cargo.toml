@@ -17,7 +17,7 @@ kona-mpt.workspace = true
 kona-client.workspace = true
 kona-common.workspace = true
 kona-preimage.workspace = true
-kona-alloy-providers.workspace = true
+kona-providers-alloy.workspace = true
 kona-primitives = { workspace = true, features = ["online"] }
 
 # Alloy & Revm

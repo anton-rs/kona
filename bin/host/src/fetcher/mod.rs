@@ -11,10 +11,10 @@ use alloy_rpc_types::{
     Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
 };
 use anyhow::{anyhow, Result};
-use kona_alloy_providers::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use kona_client::HintType;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_primitives::IndexedBlobHash;
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;

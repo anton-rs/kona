@@ -1,4 +1,4 @@
-## `kona-alloy-providers`
+## `kona-providers-alloy`
 
 _Notice: Requires an `std` environment._
 
