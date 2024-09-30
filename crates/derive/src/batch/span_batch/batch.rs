@@ -349,7 +349,7 @@ impl SpanBatch {
         &self,
         cfg: &RollupConfig,
         l1_origins: &[BlockInfo],
-        l2_safe_head: L2BlockInfo,
+        l2_safe_head: BlockInfo,
         fetcher: &mut BF,
     ) -> BatchValidity {
         if l1_origins.is_empty() {
@@ -361,29 +361,28 @@ impl SpanBatch {
             return BatchValidity::Undecided;
         }
 
-        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
+        let next_timestamp = l2_safe_head.timestamp + cfg.block_time;
 
         // Find the parent block of the span batch.
         // If the span batch does not overlap the current safe chain, parent block should be the L2
         // safe head.
-        let mut parent_num = l2_safe_head.block_info.number;
+        let mut parent_num = l2_safe_head.number;
         let mut parent_block = l2_safe_head;
         if self.starting_timestamp() < next_timestamp {
-            if self.starting_timestamp() > l2_safe_head.block_info.timestamp {
+            if self.starting_timestamp() > l2_safe_head.timestamp {
                 // Batch timestamp cannot be between safe head and next timestamp.
                 warn!("batch has misaligned timestamp, block time is too short");
                 return BatchValidity::Drop;
             }
-            if (l2_safe_head.block_info.timestamp - self.starting_timestamp()) % cfg.block_time != 0
-            {
+            if (l2_safe_head.timestamp - self.starting_timestamp()) % cfg.block_time != 0 {
                 warn!("batch has misaligned timestamp, not overlapped exactly");
                 return BatchValidity::Drop;
             }
-            parent_num = l2_safe_head.block_info.number -
-                (l2_safe_head.block_info.timestamp - self.starting_timestamp()) / cfg.block_time -
+            parent_num = l2_safe_head.number -
+                (l2_safe_head.timestamp - self.starting_timestamp()) / cfg.block_time -
                 1;
             parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
-                Ok(block) => block,
+                Ok(block) => block.block_info,
                 Err(e) => {
                     warn!("failed to fetch L2 block number {parent_num}: {e}");
                     // Unable to validate the batch for now. Retry later.
@@ -391,11 +390,11 @@ impl SpanBatch {
                 }
             };
         }
-        if !self.check_parent_hash(parent_block.block_info.hash) {
+        if !self.check_parent_hash(parent_block.hash) {
             warn!(
                 "parent block mismatch, expected: {parent_num}, received: {}. parent hash: {}, parent hash check: {}",
-                parent_block.block_info.number,
-                parent_block.block_info.hash,
+                parent_block.number,
+                parent_block.hash,
                 self.parent_check,
             );
             return BatchValidity::Drop;

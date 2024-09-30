@@ -140,7 +140,7 @@ where
                         .check_batch_prefix(
                             self.config.as_ref(),
                             l1_origins,
-                            parent,
+                            parent.block_info,
                             &mut self.fetcher,
                         )
                         .await;
@@ -206,7 +206,8 @@ mod test {
     use super::*;
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
-        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage}, traits::test_utils::TestL2ChainProvider,
+        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
+        traits::test_utils::TestL2ChainProvider,
     };
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -234,21 +235,25 @@ mod test {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_span_buffer() {
         let mock_batch = SpanBatch {
             batches: vec![
-                SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() },
-                SpanBatchElement { epoch_num: 10, timestamp: 12, ..Default::default() },
+                SpanBatchElement { epoch_num: 10, timestamp: 2, ..Default::default() },
+                SpanBatchElement { epoch_num: 10, timestamp: 4, ..Default::default() },
             ],
             ..Default::default()
         };
         let mock_origins = [BlockInfo { number: 10, timestamp: 12, ..Default::default() }];
 
         let data = vec![Ok(Batch::Span(mock_batch.clone()))];
-        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let config = Arc::new(RollupConfig {
+            holocene_time: Some(0),
+            block_time: 2,
+            ..RollupConfig::default()
+        });
         let prev = MockBatchStreamProvider::new(data);
-        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        let provider = TestL2ChainProvider::default();
+        let mut stream = BatchStream::new(prev, config.clone(), provider);
 
         // The stage should be active.
         assert!(stream.is_active().unwrap());
@@ -257,7 +262,7 @@ mod test {
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
             assert_eq!(single.epoch_num, 10);
-            assert_eq!(single.timestamp, 10);
+            assert_eq!(single.timestamp, 2);
         } else {
             panic!("Wrong batch type");
         }
@@ -265,7 +270,7 @@ mod test {
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
             assert_eq!(single.epoch_num, 10);
-            assert_eq!(single.timestamp, 12);
+            assert_eq!(single.timestamp, 4);
         } else {
             panic!("Wrong batch type");
         }
@@ -282,7 +287,7 @@ mod test {
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
             assert_eq!(single.epoch_num, 10);
-            assert_eq!(single.timestamp, 10);
+            assert_eq!(single.timestamp, 2);
         } else {
             panic!("Wrong batch type");
         }
@@ -290,7 +295,7 @@ mod test {
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
             assert_eq!(single.epoch_num, 10);
-            assert_eq!(single.timestamp, 12);
+            assert_eq!(single.timestamp, 4);
         } else {
             panic!("Wrong batch type");
         }
