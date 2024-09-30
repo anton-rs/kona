@@ -2,9 +2,9 @@
 
 use crate::{block::OpBlock, traits::L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc};
+use alloy_primitives::map::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
-use hashbrown::HashMap;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
 

@@ -7,10 +7,9 @@ use crate::{
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use alloy_primitives::{hex, Bytes};
+use alloy_primitives::{hex, map::HashMap, Bytes};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use hashbrown::HashMap;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, Channel, ChannelId, Frame};
 use tracing::{trace, warn};
@@ -128,7 +127,7 @@ where
         {
             // For each channel, get the number of frames and record it in the CHANNEL_FRAME_COUNT
             // histogram metric.
-            for (_, channel) in &self.channels {
+            for channel in self.channels.values() {
                 crate::observe!(CHANNEL_FRAME_COUNT, channel.len() as f64);
             }
         }
