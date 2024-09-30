@@ -50,6 +50,7 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
             ChannelReader<
                 ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<OracleL1ChainProvider<O>>>>>,
             >,
+            OracleL2ChainProvider<O>,
         >,
         OracleL2ChainProvider<O>,
     >,

@@ -40,6 +40,7 @@ pub type OnlineAttributesQueue<DAP> = AttributesQueue<
             ChannelReader<
                 ChannelBank<FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider>>>>,
             >,
+            AlloyL2ChainProvider,
         >,
         AlloyL2ChainProvider,
     >,

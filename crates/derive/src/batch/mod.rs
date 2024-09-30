@@ -75,7 +75,7 @@ impl Batch {
     pub fn timestamp(&self) -> u64 {
         match self {
             Self::Single(sb) => sb.timestamp,
-            Self::Span(sb) => sb.timestamp(),
+            Self::Span(sb) => sb.starting_timestamp(),
         }
     }
 
