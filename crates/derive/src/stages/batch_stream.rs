@@ -107,6 +107,7 @@ where
 {
     fn flush(&mut self) {
         if self.is_active().unwrap_or(false) {
+            self.prev.flush();
             self.span = None;
             self.buffer.clear();
         }
@@ -149,9 +150,6 @@ where
                         BatchValidity::Drop => {
                             // Flush the stage.
                             self.flush();
-
-                            // Send a signal to drop the channel that the batch was derived from.
-                            // TODO
 
                             return Err(PipelineError::Eof.temp());
                         }
@@ -208,8 +206,7 @@ mod test {
     use super::*;
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
-        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
-        traits::test_utils::TestL2ChainProvider,
+        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage}, traits::test_utils::TestL2ChainProvider,
     };
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
