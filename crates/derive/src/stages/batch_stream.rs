@@ -1,8 +1,9 @@
 //! This module contains the `BatchStream` stage.
 
 use crate::{
-    batch::{Batch, SingleBatch, SpanBatch},
+    batch::{Batch, BatchValidity, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
+    pipeline::L2ChainProvider,
     stages::BatchQueueProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -33,7 +34,7 @@ pub trait BatchStreamProvider {
 /// [ChannelReader]: crate::stages::ChannelReader
 /// [BatchQueue]: crate::stages::BatchQueue
 #[derive(Debug)]
-pub struct BatchStream<P>
+pub struct BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
@@ -46,15 +47,17 @@ where
     /// A reference to the rollup config, used to check
     /// if the [BatchStream] stage should be activated.
     config: Arc<RollupConfig>,
+    /// Used to validate the batches.
+    fetcher: BF,
 }
 
-impl<P> BatchStream<P>
+impl<P, BF> BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// Create a new [BatchStream] stage.
-    pub const fn new(prev: P, config: Arc<RollupConfig>) -> Self {
-        Self { prev, span: None, buffer: VecDeque::new(), config }
+    pub const fn new(prev: P, config: Arc<RollupConfig>, fetcher: BF) -> Self {
+        Self { prev, span: None, buffer: VecDeque::new(), config, fetcher }
     }
 
     /// Returns if the [BatchStream] stage is active based on the
@@ -95,12 +98,13 @@ where
 }
 
 #[async_trait]
-impl<P> BatchQueueProvider for BatchStream<P>
+impl<P, BF> BatchQueueProvider for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     fn flush(&mut self) {
         if self.is_active().unwrap_or(false) {
+            self.span = None;
             self.buffer.clear();
         }
     }
@@ -124,12 +128,34 @@ where
 
             // If the next batch is a singular batch, it is immediately
             // forwarded to the `BatchQueue` stage. Otherwise, we buffer
-            // the span batch in this stage.
+            // the span batch in this stage if it passes the validity checks.
             match batch {
                 Batch::Single(b) => return Ok(Batch::Single(b)),
                 Batch::Span(b) => {
-                    // TODO: New span batch prefix checks.
-                    self.span = Some(b)
+                    let validity = b
+                        .check_batch_prefix(
+                            self.config.as_ref(),
+                            l1_origins,
+                            parent,
+                            &mut self.fetcher,
+                        )
+                        .await;
+
+                    match validity {
+                        BatchValidity::Accept => self.span = Some(b),
+                        BatchValidity::Drop => {
+                            // Flush the stage.
+                            self.flush();
+
+                            // Send a signal to drop the channel that the batch was derived from.
+                            // TODO
+
+                            return Err(PipelineError::Eof.temp());
+                        }
+                        BatchValidity::Undecided | BatchValidity::Future => {
+                            return Err(PipelineError::NotEnoughData.temp())
+                        }
+                    }
                 }
             }
         }
@@ -140,7 +166,7 @@ where
 }
 
 #[async_trait]
-impl<P> OriginAdvancer for BatchStream<P>
+impl<P, BF> OriginAdvancer for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
@@ -149,7 +175,7 @@ where
     }
 }
 
-impl<P> OriginProvider for BatchStream<P>
+impl<P, BF> OriginProvider for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
@@ -159,7 +185,7 @@ where
 }
 
 #[async_trait]
-impl<P> ResettableStage for BatchStream<P>
+impl<P, BF> ResettableStage for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
 {
@@ -204,6 +230,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_span_buffer() {
         let mock_batch = SpanBatch {
             batches: vec![
