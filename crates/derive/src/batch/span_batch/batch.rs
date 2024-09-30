@@ -3,6 +3,7 @@
 use alloc::vec::Vec;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::FixedBytes;
+use kona_providers::{to_l2_block_ref, L2ChainProvider};
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
@@ -10,10 +11,7 @@ use tracing::{info, warn};
 
 use super::{SpanBatchBits, SpanBatchElement, SpanBatchError, SpanBatchTransactions};
 
-use crate::{
-    batch::{BatchValidity, SingleBatch},
-    traits::L2ChainProvider,
-};
+use crate::batch::{BatchValidity, SingleBatch};
 
 /// The span batch contains the input to build a span of L2 blocks in derived form.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -288,25 +286,30 @@ impl SpanBatch {
                 let safe_block_txs = &safe_block_payload.body;
                 let batch_txs = &self.batches[i as usize].transactions;
                 // Execution payload has deposit txs but batch does not.
-                let deposit_count: usize =
-                    safe_block_txs.iter().map(|tx| if tx.is_deposit() { 1 } else { 0 }).sum();
-                if safe_block_txs.len() - deposit_count != batch_txs.len() {
+                let deposit_count: usize = safe_block_txs
+                    .transactions
+                    .iter()
+                    .map(|tx| if tx.is_deposit() { 1 } else { 0 })
+                    .sum();
+                if safe_block_txs.transactions.len() - deposit_count != batch_txs.len() {
                     warn!(
                         "overlapped block's tx count does not match, safe_block_txs: {}, batch_txs: {}",
-                        safe_block_txs.len(),
+                        safe_block_txs.transactions.len(),
                         batch_txs.len()
                     );
                     return BatchValidity::Drop;
                 }
-                for j in 0..batch_txs.len() {
+                let batch_txs_len = batch_txs.len();
+                #[allow(clippy::needless_range_loop)]
+                for j in 0..batch_txs_len {
                     let mut buf = Vec::new();
-                    safe_block_txs[j + deposit_count].encode_2718(&mut buf);
+                    safe_block_txs.transactions[j + deposit_count].encode_2718(&mut buf);
                     if buf != batch_txs[j].0 {
                         warn!("overlapped block's transaction does not match");
                         return BatchValidity::Drop;
                     }
                 }
-                let safe_block_ref = match safe_block_payload.to_l2_block_ref(cfg) {
+                let safe_block_ref = match to_l2_block_ref(&safe_block_payload, cfg) {
                     Ok(r) => r,
                     Err(e) => {
                         warn!("failed to extract L2BlockInfo from execution payload, hash: {}, err: {e}", safe_block_payload.header.hash_slow());
@@ -418,7 +421,6 @@ impl SpanBatch {
 mod tests {
     use super::*;
     use crate::{
-        block::OpBlock,
         stages::test_utils::{CollectingLayer, TraceStorage},
         traits::test_utils::TestL2ChainProvider,
     };
@@ -426,7 +428,7 @@ mod tests {
     use alloy_consensus::Header;
     use alloy_eips::BlockNumHash;
     use alloy_primitives::{b256, Bytes};
-    use op_alloy_consensus::OpTxType;
+    use op_alloy_consensus::{OpBlock, OpTxType};
     use op_alloy_genesis::ChainGenesis;
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -1409,8 +1411,15 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let block =
-            OpBlock { header: Header { number: 41, ..Default::default() }, ..Default::default() };
+        let block = OpBlock {
+            header: Header { number: 41, ..Default::default() },
+            body: alloy_consensus::BlockBody {
+                transactions: Vec::new(),
+                ommers: Vec::new(),
+                withdrawals: None,
+                requests: None,
+            },
+        };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             op_blocks: vec![block],
@@ -1477,8 +1486,15 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let block =
-            OpBlock { header: Header { number: 41, ..Default::default() }, ..Default::default() };
+        let block = OpBlock {
+            header: Header { number: 41, ..Default::default() },
+            body: alloy_consensus::BlockBody {
+                transactions: Vec::new(),
+                ommers: Vec::new(),
+                withdrawals: None,
+                requests: None,
+            },
+        };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             op_blocks: vec![block],
@@ -1547,8 +1563,15 @@ mod tests {
             l1_origin: BlockNumHash { number: 9, ..Default::default() },
             ..Default::default()
         };
-        let block =
-            OpBlock { header: Header { number: 41, ..Default::default() }, ..Default::default() };
+        let block = OpBlock {
+            header: Header { number: 41, ..Default::default() },
+            body: alloy_consensus::BlockBody {
+                transactions: Vec::new(),
+                ommers: Vec::new(),
+                withdrawals: None,
+                requests: None,
+            },
+        };
         let mut fetcher = TestL2ChainProvider {
             blocks: vec![l2_block],
             op_blocks: vec![block],

@@ -61,11 +61,11 @@ pub(crate) fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
 /// Extract the gas limit from an [OpTxEnvelope].
 pub(crate) fn extract_tx_gas_limit(tx: &OpTxEnvelope) -> u128 {
     match tx {
-        OpTxEnvelope::Legacy(tx) => tx.tx().gas_limit,
-        OpTxEnvelope::Eip2930(tx) => tx.tx().gas_limit,
-        OpTxEnvelope::Eip1559(tx) => tx.tx().gas_limit,
-        OpTxEnvelope::Eip4844(tx) => tx.tx().gas_limit(),
-        OpTxEnvelope::Deposit(tx) => tx.gas_limit,
+        OpTxEnvelope::Legacy(tx) => tx.tx().gas_limit.into(),
+        OpTxEnvelope::Eip2930(tx) => tx.tx().gas_limit.into(),
+        OpTxEnvelope::Eip1559(tx) => tx.tx().gas_limit.into(),
+        OpTxEnvelope::Eip4844(tx) => tx.tx().gas_limit().into(),
+        OpTxEnvelope::Deposit(tx) => tx.gas_limit.into(),
         _ => unreachable!(),
     }
 }

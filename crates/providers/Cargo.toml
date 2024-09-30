@@ -1,0 +1,30 @@
+[package]
+name = "kona-providers"
+description = "Provider traits for Kona"
+version = "0.0.1"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Alloy
+alloy-consensus.workspace = true
+alloy-primitives.workspace = true
+
+# OP Alloy
+op-alloy-protocol.workspace = true
+op-alloy-genesis.workspace = true
+op-alloy-consensus = { workspace = true, features = ["k256"] }
+
+# Misc
+thiserror.workspace = true
+async-trait.workspace = true
+
+[features]
+default = ["std"]
+std = []

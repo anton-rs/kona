@@ -16,7 +16,15 @@ pub use test_utils::*;
 
 /// Re-export commonly used types and traits.
 pub mod prelude {
-    pub use super::*;
+    pub use super::{
+        alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider},
+        beacon_client::{BeaconClient, OnlineBeaconClient},
+        blob_provider::{
+            BlobSidecarProvider, OnlineBlobProvider, OnlineBlobProviderBuilder,
+            OnlineBlobProviderWithFallback, SimpleSlotDerivation, SlotDerivation,
+        },
+        pipeline::{new_online_pipeline, OnlinePipeline},
+    };
     pub use kona_derive::prelude::*;
 }
 

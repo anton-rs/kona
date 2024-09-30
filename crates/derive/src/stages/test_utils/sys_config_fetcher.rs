@@ -1,10 +1,11 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use crate::{block::OpBlock, traits::L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::map::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
+use kona_providers::L2ChainProvider;
+use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
 

@@ -2,16 +2,16 @@
 
 use crate::{BootInfo, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use alloy_consensus::Header;
+use alloy_consensus::{BlockBody, Header};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_derive::{block::OpBlock, traits::L2ChainProvider};
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use op_alloy_consensus::OpTxEnvelope;
+use kona_providers::{to_l2_block_ref, to_system_config, L2ChainProvider};
+use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
 
@@ -71,11 +71,11 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
     type Error = anyhow::Error;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
-        // Get the payload at the given block number.
-        let payload = self.block_by_number(number).await?;
+        // Get the block at the given number.
+        let block = self.block_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_l2_block_ref(&self.boot_info.rollup_config).map_err(Into::into)
+        to_l2_block_ref(&block, &self.boot_info.rollup_config).map_err(Into::into)
     }
 
     async fn block_by_number(&mut self, number: u64) -> Result<OpBlock> {
@@ -99,9 +99,16 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
 
         let optimism_block = OpBlock {
             header,
-            body: transactions,
-            withdrawals: self.boot_info.rollup_config.is_canyon_active(timestamp).then(Vec::new),
-            ..Default::default()
+            body: BlockBody {
+                transactions,
+                ommers: Vec::new(),
+                withdrawals: self
+                    .boot_info
+                    .rollup_config
+                    .is_canyon_active(timestamp)
+                    .then(Vec::new),
+                requests: None,
+            },
         };
         Ok(optimism_block)
     }
@@ -111,11 +118,11 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
         number: u64,
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig> {
-        // Get the payload at the given block number.
-        let payload = self.block_by_number(number).await?;
+        // Get the block at the given number.
+        let block = self.block_by_number(number).await?;
 
         // Construct the system config from the payload.
-        payload.to_system_config(rollup_config.as_ref()).map_err(Into::into)
+        to_system_config(&block, rollup_config.as_ref()).map_err(Into::into)
     }
 }
 

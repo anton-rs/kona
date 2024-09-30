@@ -1,11 +1,8 @@
 //! Test Utilities for derive traits
 
 use crate::{
-    block::OpBlock,
     errors::{BlobProviderError, PipelineError, PipelineResult},
-    traits::{
-        AsyncIterator, BlobProvider, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
-    },
+    traits::{AsyncIterator, BlobProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
@@ -15,6 +12,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use kona_primitives::IndexedBlobHash;
+use kona_providers::{ChainProvider, L2ChainProvider};
+use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 

@@ -8,9 +8,9 @@ use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_derive::traits::ChainProvider;
 use kona_mpt::{OrderedListWalker, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
 
 /// The oracle-backed L1 chain provider for the client program.

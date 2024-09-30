@@ -33,6 +33,7 @@ tracing.workspace = true
 async-trait.workspace = true
 
 # Workspace
+kona-providers.workspace = true
 kona-primitives.workspace = true
 
 # `serde` feature dependencies

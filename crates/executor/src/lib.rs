@@ -288,7 +288,7 @@ where
                 let excess_blob_gas = if self.config.is_ecotone_active(parent_header.timestamp) {
                     let parent_excess_blob_gas = parent_header.excess_blob_gas.unwrap_or_default();
                     let parent_blob_gas_used = parent_header.blob_gas_used.unwrap_or_default();
-                    calc_excess_blob_gas(parent_excess_blob_gas as u64, parent_blob_gas_used as u64)
+                    calc_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used)
                 } else {
                     // For the first post-fork block, both blob gas fields are evaluated to 0.
                     calc_excess_blob_gas(0, 0)
@@ -311,14 +311,14 @@ where
             logs_bloom,
             difficulty: U256::ZERO,
             number: block_number,
-            gas_limit: gas_limit.into(),
-            gas_used: cumulative_gas_used as u128,
+            gas_limit,
+            gas_used: cumulative_gas_used,
             timestamp: payload.payload_attributes.timestamp,
             mix_hash: payload.payload_attributes.prev_randao,
             nonce: Default::default(),
-            base_fee_per_gas: Some(base_fee),
+            base_fee_per_gas: base_fee.try_into().ok(),
             blob_gas_used,
-            excess_blob_gas,
+            excess_blob_gas: excess_blob_gas.and_then(|x| x.try_into().ok()),
             parent_beacon_block_root: payload.payload_attributes.parent_beacon_block_root,
             // Provide no extra data on OP Stack chains
             extra_data: Bytes::default(),
@@ -501,7 +501,7 @@ where
         let blob_excess_gas_and_price = parent_header
             .next_block_excess_blob_gas()
             .or_else(|| spec_id.is_enabled_in(SpecId::ECOTONE).then_some(0))
-            .map(|x| BlobExcessGasAndPrice::new(x as u64));
+            .map(BlobExcessGasAndPrice::new);
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
         let base_fee_params = if config.is_canyon_active(payload_attrs.payload_attributes.timestamp)
@@ -543,7 +543,7 @@ where
             OpTxEnvelope::Legacy(signed_tx) => {
                 let tx = signed_tx.tx();
                 env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
-                env.gas_limit = tx.gas_limit as u64;
+                env.gas_limit = tx.gas_limit;
                 env.gas_price = U256::from(tx.gas_price);
                 env.gas_priority_fee = None;
                 env.transact_to = match tx.to {
@@ -568,7 +568,7 @@ where
             OpTxEnvelope::Eip2930(signed_tx) => {
                 let tx = signed_tx.tx();
                 env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
-                env.gas_limit = tx.gas_limit as u64;
+                env.gas_limit = tx.gas_limit;
                 env.gas_price = U256::from(tx.gas_price);
                 env.gas_priority_fee = None;
                 env.transact_to = match tx.to {
@@ -593,7 +593,7 @@ where
             OpTxEnvelope::Eip1559(signed_tx) => {
                 let tx = signed_tx.tx();
                 env.caller = signed_tx.recover_signer().map_err(ExecutorError::SignatureError)?;
-                env.gas_limit = tx.gas_limit as u64;
+                env.gas_limit = tx.gas_limit;
                 env.gas_price = U256::from(tx.max_fee_per_gas);
                 env.gas_priority_fee = Some(U256::from(tx.max_priority_fee_per_gas));
                 env.transact_to = match tx.to {
@@ -618,7 +618,7 @@ where
             OpTxEnvelope::Deposit(tx) => {
                 env.caller = tx.from;
                 env.access_list.clear();
-                env.gas_limit = tx.gas_limit as u64;
+                env.gas_limit = tx.gas_limit;
                 env.gas_price = U256::ZERO;
                 env.gas_priority_fee = None;
                 match tx.to {
@@ -650,7 +650,7 @@ mod test {
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
     use kona_mpt::NoopTrieHinter;
-    use op_alloy_genesis::{OP_BASE_FEE_PARAMS, OP_CANYON_BASE_FEE_PARAMS};
+    use op_alloy_genesis::OP_MAINNET_BASE_FEE_PARAMS;
     use serde::Deserialize;
     use std::collections::HashMap;
 
@@ -711,8 +711,8 @@ mod test {
             canyon_time: Some(0),
             delta_time: Some(0),
             ecotone_time: Some(0),
-            base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
+            base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_base_fee_params(),
+            canyon_base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_canyon_base_fee_params(),
             ..Default::default()
         };
 
@@ -769,8 +769,8 @@ mod test {
             canyon_time: Some(0),
             delta_time: Some(0),
             ecotone_time: Some(0),
-            base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
+            base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_base_fee_params(),
+            canyon_base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_canyon_base_fee_params(),
             ..Default::default()
         };
 
@@ -831,8 +831,8 @@ mod test {
             canyon_time: Some(0),
             delta_time: Some(0),
             ecotone_time: Some(0),
-            base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
+            base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_base_fee_params(),
+            canyon_base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_canyon_base_fee_params(),
             ..Default::default()
         };
 
@@ -900,8 +900,8 @@ mod test {
             canyon_time: Some(0),
             delta_time: Some(0),
             ecotone_time: Some(0),
-            base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
+            base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_base_fee_params(),
+            canyon_base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_canyon_base_fee_params(),
             ..Default::default()
         };
 
@@ -963,8 +963,8 @@ mod test {
             canyon_time: Some(0),
             delta_time: Some(0),
             ecotone_time: Some(0),
-            base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
+            base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_base_fee_params(),
+            canyon_base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_canyon_base_fee_params(),
             ..Default::default()
         };
 
@@ -1035,8 +1035,8 @@ mod test {
             canyon_time: Some(0),
             delta_time: Some(0),
             ecotone_time: Some(0),
-            base_fee_params: OP_BASE_FEE_PARAMS,
-            canyon_base_fee_params: OP_CANYON_BASE_FEE_PARAMS,
+            base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_base_fee_params(),
+            canyon_base_fee_params: OP_MAINNET_BASE_FEE_PARAMS.as_canyon_base_fee_params(),
             ..Default::default()
         };
 

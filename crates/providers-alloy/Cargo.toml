@@ -21,6 +21,7 @@ alloy-consensus = { workspace = true, features = ["k256", "serde", "std"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "serde"] }
 
 # OP Alloy
+op-alloy-consensus = { workspace = true, features = ["k256"] }
 op-alloy-protocol = { workspace = true, features = ["serde", "std"] }
 op-alloy-genesis = { workspace = true, features = ["serde", "std"] }
 
@@ -31,6 +32,7 @@ tracing.workspace = true
 async-trait.workspace = true
 
 # Workspace
+kona-providers.workspace = true
 kona-derive = { workspace = true, features = ["serde"] }
 kona-primitives = { workspace = true, features = ["serde", "online"] }
 
