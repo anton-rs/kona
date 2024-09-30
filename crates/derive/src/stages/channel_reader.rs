@@ -298,4 +298,17 @@ mod test {
         reader.next_batch(&RollupConfig::default()).unwrap();
         assert_eq!(reader.cursor, decompressed_len);
     }
+
+    #[tokio::test]
+    async fn test_flush_post_holocene() {
+        let raw = new_compressed_batch_data();
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(raw))]);
+        let mut reader = ChannelReader::new(mock, config);
+        let res = reader.next_batch().await.unwrap();
+        matches!(res, Batch::Span(_));
+        assert!(reader.next_batch.is_some());
+        reader.flush();
+        assert!(reader.next_batch.is_none());
+    }
 }
