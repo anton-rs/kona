@@ -2277,6 +2277,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-alloy-providers"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-node-bindings",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rlp",
+ "alloy-rpc-client",
+ "alloy-transport",
+ "alloy-transport-http",
+ "async-trait",
+ "kona-derive",
+ "kona-primitives",
+ "lazy_static",
+ "lru",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "prometheus",
+ "reqwest",
+ "serde_json",
+ "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "kona-client"
 version = "0.1.0"
 dependencies = [
@@ -2405,12 +2433,12 @@ dependencies = [
  "clap",
  "command-fds",
  "futures",
+ "kona-alloy-providers",
  "kona-client",
  "kona-common",
  "kona-mpt",
  "kona-preimage",
  "kona-primitives",
- "kona-providers",
  "op-alloy-genesis",
  "op-alloy-protocol",
  "os_pipe",
@@ -2478,34 +2506,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
- "tracing",
-]
-
-[[package]]
-name = "kona-providers"
-version = "0.0.1"
-dependencies = [
- "alloy-consensus",
- "alloy-eips",
- "alloy-node-bindings",
- "alloy-primitives",
- "alloy-provider",
- "alloy-rlp",
- "alloy-rpc-client",
- "alloy-transport",
- "alloy-transport-http",
- "async-trait",
- "kona-derive",
- "kona-primitives",
- "lazy_static",
- "lru",
- "op-alloy-genesis",
- "op-alloy-protocol",
- "prometheus",
- "reqwest",
- "serde_json",
- "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
- "tokio",
  "tracing",
 ]
 
@@ -4776,8 +4776,8 @@ dependencies = [
  "alloy-transport",
  "anyhow",
  "clap",
+ "kona-alloy-providers",
  "kona-primitives",
- "kona-providers",
  "lazy_static",
  "op-alloy-genesis",
  "op-alloy-rpc-types-engine",

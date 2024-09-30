@@ -1,5 +1,5 @@
 [package]
-name = "kona-providers"
+name = "kona-alloy-providers"
 description = "Online providers for kona-derive"
 version = "0.0.1"
 edition.workspace = true

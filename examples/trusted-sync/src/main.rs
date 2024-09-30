@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use kona_providers::prelude::*;
+use kona_alloy_providers::prelude::*;
 use std::sync::Arc;
 use superchain::ROLLUP_CONFIGS;
 use tracing::{debug, error, info, trace, warn};
