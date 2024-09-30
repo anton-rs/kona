@@ -25,7 +25,7 @@ pub trait BatchQueueProvider {
     async fn next_batch(
         &mut self,
         parent: L2BlockInfo,
-        origins: &[BlockInfo],
+        l1_origins: &[BlockInfo],
     ) -> PipelineResult<Batch>;
 
     /// Allows the [BatchQueue] to flush the buffer in the [crate::stages::BatchStream]
