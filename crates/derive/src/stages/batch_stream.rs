@@ -11,7 +11,7 @@ use crate::{
     batch::{Batch, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     stages::BatchQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
 };
 
 /// [BatchStream] stage in the derivation pipeline.
@@ -24,9 +24,10 @@ use crate::{
 /// [ChannelReader]: crate::stages::ChannelReader
 /// [BatchQueue]: crate::stages::BatchQueue
 #[derive(Debug)]
-pub struct BatchStream<P>
+pub struct BatchStream<P, F>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    F: L2ChainProvider + Debug,
 {
     /// The previous stage in the derivation pipeline.
     prev: P,
@@ -46,15 +47,26 @@ where
     /// If new L2 Block's L1 origin is not included in this list, fetch and
     /// push it to the list.
     l1_blocks: Vec<BlockInfo>,
+    /// Used to validate the batches.
+    fetcher: F,
 }
 
-impl<P> BatchStream<P>
+impl<P, F> BatchStream<P, F>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    F: L2ChainProvider + Debug,
 {
     /// Create a new [BatchStream] stage.
-    pub const fn new(prev: P, config: Arc<RollupConfig>) -> Self {
-        Self { prev, config, origin: None, span: None, buffer: Vec::new(), l1_blocks: Vec::new() }
+    pub const fn new(prev: P, config: Arc<RollupConfig>, fetcher: F) -> Self {
+        Self {
+            prev,
+            config,
+            fetcher,
+            origin: None,
+            span: None,
+            buffer: Vec::new(),
+            l1_blocks: Vec::new(),
+        }
     }
 
     /// Returns if the [BatchStream] stage is active based on the
@@ -125,9 +137,10 @@ where
 }
 
 #[async_trait]
-impl<P> BatchQueueProvider for BatchStream<P>
+impl<P, F> BatchQueueProvider for BatchStream<P, F>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    F: L2ChainProvider + Send + Debug,
 {
     fn flush(&mut self) {
         if self.is_active().unwrap_or(false) {
@@ -164,7 +177,7 @@ where
         // If it is invalid, drop the batch and flush the channel.
         //
         // See: <https://specs.optimism.io/protocol/holocene/derivation.html#span-batches>
-        if !b.is_batch_holocene_valid(parent, self.config.block_time) {
+        if !b.is_batch_holocene_valid(parent, self.config.block_time, &mut self.fetcher).await {
             self.prev.flush();
             return Err(PipelineError::InvalidSpanBatch.temp());
         }
@@ -187,18 +200,20 @@ where
 }
 
 #[async_trait]
-impl<P> OriginAdvancer for BatchStream<P>
+impl<P, F> OriginAdvancer for BatchStream<P, F>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    F: L2ChainProvider + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
     }
 }
 
-impl<P> OriginProvider for BatchStream<P>
+impl<P, F> OriginProvider for BatchStream<P, F>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    F: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -206,9 +221,10 @@ where
 }
 
 #[async_trait]
-impl<P> ResettableStage for BatchStream<P>
+impl<P, F> ResettableStage for BatchStream<P, F>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    F: L2ChainProvider + Send + Debug,
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
         self.prev.reset(base, cfg).await?;
@@ -230,6 +246,7 @@ mod test {
     use crate::{
         batch::SingleBatch,
         stages::test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
+        traits::test_utils::TestL2ChainProvider,
     };
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -242,7 +259,8 @@ mod test {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(100), ..RollupConfig::default() });
         let prev = MockBatchQueueProvider::new(data);
-        let mut stream = BatchStream::new(prev, config.clone());
+        let fetcher = TestL2ChainProvider::default();
+        let mut stream = BatchStream::new(prev, config.clone(), fetcher);
 
         // The stage should not be active.
         assert!(!stream.is_active().unwrap());

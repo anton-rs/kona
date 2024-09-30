@@ -42,6 +42,11 @@ impl SpanBatch {
         self.batches[0].timestamp
     }
 
+    /// Returns the ending timestamp for the span batch.
+    pub fn end_timestamp(&self) -> u64 {
+        self.batches.last().map_or(0, |b| b.timestamp)
+    }
+
     /// Returns the epoch number for the first batch in the span.
     pub fn starting_epoch_num(&self) -> u64 {
         self.batches[0].epoch_num
@@ -58,8 +63,67 @@ impl SpanBatch {
     }
 
     /// Perform holocene checks on the span batch.
-    pub fn is_batch_holocene_valid(&self, l2_safe_head: L2BlockInfo, block_time: u64) -> bool {
+    pub async fn is_batch_holocene_valid<BF: L2ChainProvider>(
+        &self,
+        l2_safe_head: L2BlockInfo,
+        block_time: u64,
+        fetcher: &mut BF,
+    ) -> bool {
+        let mut parent_num = l2_safe_head.block_info.number;
+        let mut parent_block = l2_safe_head;
         let next_timestamp = l2_safe_head.block_info.timestamp + block_time;
+
+        // If the span batch L1 origin check is not part of
+        // the canonical L1 chain, the span batch is invalid.
+        let starting_epoch_num = self.starting_epoch_num();
+        if starting_epoch_num > parent_block.l1_origin.number + 1 {
+            warn!(
+                "batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid. starting epoch: {} | next epoch: {}",
+                starting_epoch_num,
+                parent_block.l1_origin.number + 1
+            );
+            return false;
+        }
+        // Check if the batch is too old.
+        if starting_epoch_num < parent_block.l1_origin.number {
+            warn!("dropped batch, epoch is too old, minimum: {:?}", parent_block.block_info.id());
+            return false;
+        }
+
+        // A failed parent check invalidates the span batch.
+        if self.timestamp() < next_timestamp {
+            if self.timestamp() > l2_safe_head.block_info.timestamp {
+                // Batch timestamp cannot be between safe head and next timestamp.
+                warn!("batch has misaligned timestamp, block time is too short");
+                return false;
+            }
+            if (l2_safe_head.block_info.timestamp - self.timestamp()) % block_time != 0 {
+                warn!("batch has misaligned timestamp, not overlapped exactly");
+                return false;
+            }
+            parent_num = l2_safe_head.block_info.number -
+                (l2_safe_head.block_info.timestamp - self.timestamp()) / block_time -
+                1;
+            parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
+                Ok(block) => block,
+                Err(e) => {
+                    warn!("failed to fetch L2 block number {parent_num}: {e}");
+                    return false;
+                }
+            };
+        }
+        if !self.check_parent_hash(parent_block.block_info.hash) {
+            warn!(
+                "parent block number mismatch, expected: {parent_num}, received: {}, parent hash: {}, self hash: {}",
+                parent_block.block_info.number,
+                parent_block.block_info.hash,
+                self.parent_check,
+            );
+            return false;
+        }
+
+        // If starting timestamp of the span > next_timestamp, the span batch is invalid,
+        // because we disallow gaps due to the new strict batch ordering rules.
         if self.timestamp() > next_timestamp {
             warn!(
                 "received out-of-order batch for future processing after next batch ({} > {})",
@@ -68,6 +132,16 @@ impl SpanBatch {
             );
             return false;
         }
+
+        // If span_end.timestamp < next_timestamp, the span batch is invalid,
+        // as it doesn't contain any new batches. This would also happen if
+        // applying timestamp checks to each derived singular batch individually.
+        if self.end_timestamp() < next_timestamp {
+            warn!("span batch has no new blocks after safe head");
+            return false;
+        }
+
+        // The span batch is valid post-holocene!
         true
     }
 
