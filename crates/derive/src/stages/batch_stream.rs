@@ -114,13 +114,13 @@ where
         // through this stage to the BatchQueue stage.
         if !self.is_active()? {
             trace!(target: "batch_span", "BatchStream stage is inactive, pass-through.");
-            return self.prev.next_batch(parent, l1_origins).await;
+            return self.prev.next_batch().await;
         }
 
         // If the buffer is empty, attempt to pull a batch from the previous stage.
         if self.buffer.is_empty() {
             // Safety: bubble up any errors from the batch reader.
-            let batch = self.prev.next_batch(parent, l1_origins).await?;
+            let batch = self.prev.next_batch().await?;
 
             // If the next batch is a singular batch, it is immediately
             // forwarded to the `BatchQueue` stage. Otherwise, we buffer
@@ -176,7 +176,7 @@ mod test {
     use super::*;
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
-        stages::test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
+        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
     };
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -216,7 +216,7 @@ mod test {
 
         let data = vec![Ok(Batch::Span(mock_batch.clone()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
-        let prev = MockBatchQueueProvider::new(data);
+        let prev = MockBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone());
 
         // The stage should be active.
@@ -274,7 +274,7 @@ mod test {
     async fn test_single_batch_pass_through() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
-        let prev = MockBatchQueueProvider::new(data);
+        let prev = MockBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone());
 
         // The stage should be active.
