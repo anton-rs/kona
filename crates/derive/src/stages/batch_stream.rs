@@ -117,8 +117,8 @@ where
             return self.prev.next_batch(parent, l1_origins).await;
         }
 
-        // If there's no span batch, attempt to pull one from the previous stage.
-        if self.span.is_none() {
+        // If the buffer is empty, attempt to pull a batch from the previous stage.
+        if self.buffer.is_empty() {
             // Safety: bubble up any errors from the batch reader.
             let batch = self.prev.next_batch(parent, l1_origins).await?;
 
@@ -127,7 +127,10 @@ where
             // the span batch in this stage.
             match batch {
                 Batch::Single(b) => return Ok(Batch::Single(b)),
-                Batch::Span(b) => self.span = Some(b),
+                Batch::Span(b) => {
+                    // TODO: New span batch prefix checks.
+                    self.span = Some(b)
+                }
             }
         }
 
@@ -172,8 +175,8 @@ where
 mod test {
     use super::*;
     use crate::{
-        batch::SingleBatch,
-        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
+        batch::{SingleBatch, SpanBatchElement},
+        stages::test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
     };
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -198,5 +201,89 @@ mod test {
         let logs = trace_store.get_by_level(tracing::Level::TRACE);
         assert_eq!(logs.len(), 1);
         assert!(logs[0].contains("BatchStream stage is inactive, pass-through."));
+    }
+
+    #[tokio::test]
+    async fn test_span_buffer() {
+        let mock_batch = SpanBatch {
+            batches: vec![
+                SpanBatchElement { epoch_num: 10, timestamp: 10, ..Default::default() },
+                SpanBatchElement { epoch_num: 10, timestamp: 12, ..Default::default() },
+            ],
+            ..Default::default()
+        };
+        let mock_origins = [BlockInfo { number: 10, timestamp: 12, ..Default::default() }];
+
+        let data = vec![Ok(Batch::Span(mock_batch.clone()))];
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let prev = MockBatchQueueProvider::new(data);
+        let mut stream = BatchStream::new(prev, config.clone());
+
+        // The stage should be active.
+        assert!(stream.is_active().unwrap());
+
+        // The next batches should be single batches derived from the span batch.
+        let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
+        if let Batch::Single(single) = batch {
+            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.timestamp, 10);
+        } else {
+            panic!("Wrong batch type");
+        }
+
+        let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
+        if let Batch::Single(single) = batch {
+            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.timestamp, 12);
+        } else {
+            panic!("Wrong batch type");
+        }
+
+        let err = stream.next_batch(Default::default(), &mock_origins).await.unwrap_err();
+        assert_eq!(err, PipelineError::Eof.temp());
+        assert_eq!(stream.buffer.len(), 0);
+        assert!(stream.span.is_none());
+
+        // Add more data into the provider, see if the buffer is re-hydrated.
+        stream.prev.batches.push(Ok(Batch::Span(mock_batch)));
+
+        // The next batches should be single batches derived from the span batch.
+        let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
+        if let Batch::Single(single) = batch {
+            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.timestamp, 10);
+        } else {
+            panic!("Wrong batch type");
+        }
+
+        let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
+        if let Batch::Single(single) = batch {
+            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.timestamp, 12);
+        } else {
+            panic!("Wrong batch type");
+        }
+
+        let err = stream.next_batch(Default::default(), &mock_origins).await.unwrap_err();
+        assert_eq!(err, PipelineError::Eof.temp());
+        assert_eq!(stream.buffer.len(), 0);
+        assert!(stream.span.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_single_batch_pass_through() {
+        let data = vec![Ok(Batch::Single(SingleBatch::default()))];
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let prev = MockBatchQueueProvider::new(data);
+        let mut stream = BatchStream::new(prev, config.clone());
+
+        // The stage should be active.
+        assert!(stream.is_active().unwrap());
+
+        // The next batch should be passed through to the [BatchQueue] stage.
+        let batch = stream.next_batch(Default::default(), &[]).await.unwrap();
+        assert!(matches!(batch, Batch::Single(_)));
+        assert_eq!(stream.buffer.len(), 0);
+        assert!(stream.span.is_none());
     }
 }

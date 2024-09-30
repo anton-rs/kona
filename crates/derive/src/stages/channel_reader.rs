@@ -110,11 +110,7 @@ where
         self.next_channel();
     }
 
-    async fn next_batch(
-        &mut self,
-        _: L2BlockInfo,
-        _: &[BlockInfo],
-    ) -> PipelineResult<Batch> {
+    async fn next_batch(&mut self, _: L2BlockInfo, _: &[BlockInfo]) -> PipelineResult<Batch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
             debug!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
@@ -259,7 +255,10 @@ mod test {
     async fn test_next_batch_batch_reader_set_fails() {
         let mock = MockChannelReaderProvider::new(vec![Err(PipelineError::Eof.temp())]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        assert_eq!(reader.next_batch(Default::default(), &[]).await, Err(PipelineError::Eof.temp()));
+        assert_eq!(
+            reader.next_batch(Default::default(), &[]).await,
+            Err(PipelineError::Eof.temp())
+        );
         assert!(reader.next_batch.is_none());
     }
 
@@ -280,7 +279,10 @@ mod test {
         let second = first.split_to(first.len() / 2);
         let mock = MockChannelReaderProvider::new(vec![Ok(Some(first)), Ok(Some(second))]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        assert_eq!(reader.next_batch(Default::default(), &[]).await, Err(PipelineError::NotEnoughData.temp()));
+        assert_eq!(
+            reader.next_batch(Default::default(), &[]).await,
+            Err(PipelineError::NotEnoughData.temp())
+        );
         assert!(reader.next_batch.is_none());
     }
 
