@@ -11,7 +11,6 @@ pub mod attributes;
 pub mod batch;
 pub mod block;
 pub mod errors;
-pub mod params;
 pub mod pipeline;
 pub mod sources;
 pub mod stages;

@@ -2,7 +2,6 @@
 
 use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
-    params::MAX_CHANNEL_BANK_SIZE,
     stages::ChannelReaderProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
@@ -14,6 +13,12 @@ use hashbrown::HashMap;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, Channel, ChannelId, Frame};
 use tracing::{trace, warn};
+
+/// The maximum size of a channel bank.
+pub(crate) const MAX_CHANNEL_BANK_SIZE: usize = 100_000_000;
+
+/// The maximum size of a channel bank after the Fjord Hardfork.
+pub(crate) const FJORD_MAX_CHANNEL_BANK_SIZE: usize = 1_000_000_000;
 
 /// Provides frames for the [ChannelBank] stage.
 #[async_trait]
@@ -65,11 +70,17 @@ where
         self.channels.iter().fold(0, |acc, (_, c)| acc + c.size())
     }
 
-    /// Prunes the Channel bank, until it is below [MAX_CHANNEL_BANK_SIZE].
+    /// Prunes the Channel bank, until it is below the max channel bank size.
     /// Prunes from the high-priority channel since it failed to be read.
     pub fn prune(&mut self) -> PipelineResult<()> {
         let mut total_size = self.size();
-        while total_size > MAX_CHANNEL_BANK_SIZE {
+        let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+        let max_channel_bank_size = if self.cfg.is_fjord_active(origin.timestamp) {
+            FJORD_MAX_CHANNEL_BANK_SIZE
+        } else {
+            MAX_CHANNEL_BANK_SIZE
+        };
+        while total_size > max_channel_bank_size {
             let id =
                 self.channel_queue.pop_front().ok_or(PipelineError::ChannelBankEmpty.crit())?;
             let channel = self.channels.remove(&id).ok_or(PipelineError::ChannelNotFound.crit())?;
@@ -364,6 +375,32 @@ mod tests {
             let next_frame = frames.pop().unwrap();
             channel_bank.ingest_frame(next_frame).unwrap();
             assert!(channel_bank.size() <= MAX_CHANNEL_BANK_SIZE);
+        }
+        // There should be a bunch of frames leftover
+        assert!(!frames.is_empty());
+        // If we ingest one more frame, the channel bank should prune
+        // and the size should be the same
+        let next_frame = frames.pop().unwrap();
+        channel_bank.ingest_frame(next_frame).unwrap();
+        assert_eq!(channel_bank.size(), current_size);
+    }
+
+    #[test]
+    fn test_ingest_and_prune_channel_bank_fjord() {
+        use alloc::vec::Vec;
+        let mut frames: Vec<Frame> = new_test_frames(100000);
+        let mock = MockChannelBankProvider::new(vec![]);
+        let cfg = Arc::new(RollupConfig { fjord_time: Some(0), ..Default::default() });
+        let mut channel_bank = ChannelBank::new(cfg, mock);
+        // Ingest frames until the channel bank is full and it stops increasing in size
+        let mut current_size = 0;
+        let next_frame = frames.pop().unwrap();
+        channel_bank.ingest_frame(next_frame).unwrap();
+        while channel_bank.size() > current_size {
+            current_size = channel_bank.size();
+            let next_frame = frames.pop().unwrap();
+            channel_bank.ingest_frame(next_frame).unwrap();
+            assert!(channel_bank.size() <= FJORD_MAX_CHANNEL_BANK_SIZE);
         }
         // There should be a bunch of frames leftover
         assert!(!frames.is_empty());
