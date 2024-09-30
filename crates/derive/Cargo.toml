@@ -16,7 +16,7 @@ workspace = true
 alloy-eips.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
-alloy-primitives = { workspace = true, features = ["rlp", "k256"] }
+alloy-primitives = { workspace = true, features = ["rlp", "k256", "map"] }
 alloy-rpc-types-engine.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 op-alloy-protocol.workspace = true
@@ -24,7 +24,6 @@ op-alloy-genesis.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 
 # General
-hashbrown.workspace = true
 unsigned-varint.workspace = true
 miniz_oxide.workspace = true
 brotli.workspace = true
