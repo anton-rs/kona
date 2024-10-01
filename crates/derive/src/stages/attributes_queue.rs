@@ -11,20 +11,11 @@ use tracing::info;
 use crate::{
     batch::SingleBatch,
     errors::{PipelineError, PipelineResult, ResetError},
-    traits::{AttributesBuilder, NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{
+        AttributesQueueBuilder, AttributesQueuePrior, NextAttributes, OriginAdvancer,
+        OriginProvider, ResettableStage,
+    },
 };
-
-/// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
-///
-/// [BatchQueue]: crate::stages::BatchQueue
-#[async_trait]
-pub trait AttributesProvider {
-    /// Returns the next valid batch upon the given safe head.
-    async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch>;
-
-    /// Returns whether the current batch is the last in its span.
-    fn is_last_in_span(&self) -> bool;
-}
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [OptimismPayloadAttributes].
@@ -40,11 +31,7 @@ pub trait AttributesProvider {
 ///
 /// [BatchQueue]: crate::stages::BatchQueue
 #[derive(Debug)]
-pub struct AttributesQueue<P, AB>
-where
-    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
-    AB: AttributesBuilder + Debug,
-{
+pub struct AttributesQueue<P: AttributesQueuePrior, B: AttributesQueueBuilder> {
     /// The rollup config.
     cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
@@ -54,21 +41,21 @@ where
     /// The current batch being processed.
     batch: Option<SingleBatch>,
     /// The attributes builder.
-    builder: AB,
+    builder: B,
 }
 
-impl<P, AB> AttributesQueue<P, AB>
+impl<P, B> AttributesQueue<P, B>
 where
-    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
-    AB: AttributesBuilder + Debug,
+    P: AttributesQueuePrior,
+    B: AttributesQueueBuilder,
 {
     /// Create a new [AttributesQueue] stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
+    pub fn new(cfg: Arc<RollupConfig>, prev: P, builder: B) -> Self {
         crate::set!(STAGE_RESETS, 0, &["attributes-queue"]);
         Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 
-    /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
+    /// Loads a [SingleBatch] from the [AttributesQueuePrior] if needed.
     pub async fn load_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
         if self.batch.is_none() {
             let batch = self.prev.next_batch(parent).await?;
@@ -156,8 +143,8 @@ where
 #[async_trait]
 impl<P, AB> OriginAdvancer for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
-    AB: AttributesBuilder + Debug + Send,
+    P: AttributesQueuePrior + Send,
+    AB: AttributesQueueBuilder + Send,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -167,8 +154,8 @@ where
 #[async_trait]
 impl<P, AB> NextAttributes for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
-    AB: AttributesBuilder + Debug + Send,
+    P: AttributesQueuePrior + Send,
+    AB: AttributesQueueBuilder + Send,
 {
     async fn next_attributes(
         &mut self,
@@ -180,8 +167,8 @@ where
 
 impl<P, AB> OriginProvider for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
-    AB: AttributesBuilder + Debug,
+    P: AttributesQueuePrior + Send,
+    AB: AttributesQueueBuilder + Send,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -191,8 +178,8 @@ where
 #[async_trait]
 impl<P, AB> ResettableStage for AttributesQueue<P, AB>
 where
-    P: AttributesProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
-    AB: AttributesBuilder + Send + Debug,
+    P: AttributesQueuePrior + Send,
+    AB: AttributesQueueBuilder + Send,
 {
     async fn reset(
         &mut self,

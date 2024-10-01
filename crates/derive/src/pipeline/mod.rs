@@ -2,8 +2,9 @@
 
 /// Re-export trait arguments.
 pub use crate::traits::{
-    AttributesBuilder, ChainProvider, DataAvailabilityProvider, L2ChainProvider, NextAttributes,
-    OriginAdvancer, OriginProvider, Pipeline, ResetProvider, ResettableStage, StepResult,
+    AttributesQueueBuilder, ChainProvider, DataAvailabilityProvider, L2ChainProvider,
+    NextAttributes, OriginAdvancer, OriginProvider, Pipeline, ResetProvider, ResettableStage,
+    StepResult,
 };
 
 /// Re-export error types.

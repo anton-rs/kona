@@ -3,8 +3,10 @@
 use crate::{
     batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
-    stages::attributes_queue::AttributesProvider,
-    traits::{AttributesBuilder, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{
+        AttributesQueueBuilder, AttributesQueuePrior, OriginAdvancer, OriginProvider,
+        ResettableStage,
+    },
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
@@ -21,7 +23,7 @@ pub struct MockAttributesBuilder {
 }
 
 #[async_trait]
-impl AttributesBuilder for MockAttributesBuilder {
+impl AttributesQueueBuilder for MockAttributesBuilder {
     /// Prepares the [PayloadAttributes] for the next payload.
     async fn prepare_payload_attributes(
         &mut self,
@@ -68,7 +70,7 @@ impl ResettableStage for MockAttributesProvider {
 }
 
 #[async_trait]
-impl AttributesProvider for MockAttributesProvider {
+impl AttributesQueuePrior for MockAttributesProvider {
     async fn next_batch(&mut self, _parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
         self.batches.pop().ok_or(PipelineError::Eof.temp())?
     }

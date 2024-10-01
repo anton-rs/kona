@@ -3,8 +3,9 @@
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
-    stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{
+        AttributesQueuePrior, L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage,
+    },
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
@@ -264,7 +265,7 @@ where
 }
 
 #[async_trait]
-impl<P, BF> AttributesProvider for BatchQueue<P, BF>
+impl<P, BF> AttributesQueuePrior for BatchQueue<P, BF>
 where
     P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
     BF: L2ChainProvider + Send + Debug,

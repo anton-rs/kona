@@ -1,7 +1,8 @@
 //! Contains the `PipelineBuilder` object that is used to build a `DerivationPipeline`.
 
 use super::{
-    AttributesBuilder, ChainProvider, DataAvailabilityProvider, DerivationPipeline, L2ChainProvider,
+    AttributesQueueBuilder, ChainProvider, DataAvailabilityProvider, DerivationPipeline,
+    L2ChainProvider,
 };
 use crate::stages::{
     AttributesQueue, BatchQueue, BatchStream, ChannelBank, ChannelReader, FrameQueue, L1Retrieval,
@@ -25,7 +26,7 @@ type AttributesQueueStage<DAP, P, T, B> = AttributesQueue<BatchQueueStage<DAP, P
 #[derive(Debug)]
 pub struct PipelineBuilder<B, P, T, D>
 where
-    B: AttributesBuilder + Send + Debug,
+    B: AttributesQueueBuilder + Send,
     P: ChainProvider + Send + Sync + Debug,
     T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
@@ -40,7 +41,7 @@ where
 
 impl<B, P, T, D> Default for PipelineBuilder<B, P, T, D>
 where
-    B: AttributesBuilder + Send + Debug,
+    B: AttributesQueueBuilder + Send,
     P: ChainProvider + Send + Sync + Debug,
     T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
@@ -59,7 +60,7 @@ where
 
 impl<B, P, T, D> PipelineBuilder<B, P, T, D>
 where
-    B: AttributesBuilder + Send + Debug,
+    B: AttributesQueueBuilder + Send,
     P: ChainProvider + Send + Sync + Debug,
     T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,
@@ -114,7 +115,7 @@ where
 impl<B, P, T, D> From<PipelineBuilder<B, P, T, D>>
     for DerivationPipeline<AttributesQueueStage<D, P, T, B>, T>
 where
-    B: AttributesBuilder + Send + Debug,
+    B: AttributesQueueBuilder + Send,
     P: ChainProvider + Send + Sync + Debug,
     T: L2ChainProvider + Clone + Send + Sync + Debug,
     D: DataAvailabilityProvider + Send + Sync + Debug,

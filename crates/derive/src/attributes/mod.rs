@@ -1,10 +1,10 @@
-//! The [`AttributesBuilder`] and it's default implementation.
+//! The [`AttributesQueueBuilder`] and it's default implementation.
 
 use crate::{
     errors::{
         BuilderError, PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult,
     },
-    traits::{AttributesBuilder, ChainProvider, L2ChainProvider},
+    traits::{AttributesQueueBuilder, ChainProvider, L2ChainProvider},
 };
 use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Eip658Value, Receipt};
@@ -22,7 +22,7 @@ use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 pub const SEQUENCER_FEE_VAULT_ADDRESS: Address =
     address!("4200000000000000000000000000000000000011");
 
-/// A stateful implementation of the [AttributesBuilder].
+/// A stateful implementation of the [AttributesQueueBuilder].
 #[derive(Debug, Default)]
 pub struct StatefulAttributesBuilder<L1P, L2P>
 where
@@ -49,7 +49,7 @@ where
 }
 
 #[async_trait]
-impl<L1P, L2P> AttributesBuilder for StatefulAttributesBuilder<L1P, L2P>
+impl<L1P, L2P> AttributesQueueBuilder for StatefulAttributesBuilder<L1P, L2P>
 where
     L1P: ChainProvider + Debug + Send,
     L2P: L2ChainProvider + Debug + Send,
