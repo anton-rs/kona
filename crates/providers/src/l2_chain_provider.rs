@@ -1,9 +1,8 @@
 //! L2 Chain Provider
 
-use core::fmt::Display;
-
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use async_trait::async_trait;
+use core::fmt::Display;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;

@@ -24,7 +24,3 @@ op-alloy-consensus = { workspace = true, features = ["k256"] }
 # Misc
 thiserror.workspace = true
 async-trait.workspace = true
-
-[features]
-default = ["std"]
-std = []
