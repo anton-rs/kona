@@ -9,7 +9,7 @@ use tracing::{error, trace};
 
 /// A [HintWriter] is a high-level interface to the hint pipe. It provides a way to write hints to
 /// the host.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct HintWriter {
     pipe_handle: PipeHandle,
 }
@@ -51,7 +51,7 @@ impl HintWriterClient for HintWriter {
 
 /// A [HintReader] is a router for hints sent by the [HintWriter] from the client program. It
 /// provides a way for the host to prepare preimages for reading.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct HintReader {
     pipe_handle: PipeHandle,
 }
@@ -115,7 +115,7 @@ mod test {
     use crate::test_utils::bidirectional_pipe;
     use alloc::{sync::Arc, vec::Vec};
     use kona_common::FileDescriptor;
-    use std::os::unix::io::AsRawFd;
+    use std::os::fd::OwnedFd;
     use tokio::sync::Mutex;
 
     struct TestRouter {
@@ -147,8 +147,8 @@ mod test {
 
         let client = tokio::task::spawn(async move {
             let hint_writer = HintWriter::new(PipeHandle::new(
-                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.client.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.client.write)),
             ));
 
             #[allow(invalid_from_utf8_unchecked)]
@@ -158,8 +158,8 @@ mod test {
             let router = TestRouter { incoming_hints: Default::default() };
 
             let hint_reader = HintReader::new(PipeHandle::new(
-                FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.host.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.host.write)),
             ));
             hint_reader.next_hint(&router).await
         });
@@ -182,16 +182,16 @@ mod test {
 
         let client = tokio::task::spawn(async move {
             let hint_writer = HintWriter::new(PipeHandle::new(
-                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.client.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.client.write)),
             ));
 
             hint_writer.write(MOCK_DATA).await
         });
         let host = tokio::task::spawn(async move {
             let hint_reader = HintReader::new(PipeHandle::new(
-                FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.host.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.host.write)),
             ));
             hint_reader.next_hint(&TestFailRouter).await
         });
@@ -210,8 +210,8 @@ mod test {
 
         let client = tokio::task::spawn(async move {
             let hint_writer = HintWriter::new(PipeHandle::new(
-                FileDescriptor::Wildcard(hint_pipe.client.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(hint_pipe.client.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.client.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.client.write)),
             ));
 
             hint_writer.write(MOCK_DATA).await
@@ -222,8 +222,8 @@ mod test {
                 let router = TestRouter { incoming_hints: incoming_hints_ref };
 
                 let hint_reader = HintReader::new(PipeHandle::new(
-                    FileDescriptor::Wildcard(hint_pipe.host.read.as_raw_fd() as usize),
-                    FileDescriptor::Wildcard(hint_pipe.host.write.as_raw_fd() as usize),
+                    FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.host.read)),
+                    FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.host.write)),
                 ));
                 hint_reader.next_hint(&router).await.unwrap();
             }

@@ -15,3 +15,7 @@ workspace = true
 thiserror.workspace = true
 cfg-if.workspace = true
 linked_list_allocator.workspace = true
+
+[features]
+default = ["std"]
+std = []

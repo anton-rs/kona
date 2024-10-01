@@ -8,10 +8,13 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use kona_common::{errors::IOResult, io, FileDescriptor};
+use kona_common::{
+    errors::{IOError, IOResult},
+    io, FileDescriptor,
+};
 
 /// [PipeHandle] is a handle for one end of a bidirectional pipe.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct PipeHandle {
     /// File descriptor to read from
     read_handle: FileDescriptor,
@@ -27,27 +30,40 @@ impl PipeHandle {
 
     /// Read from the pipe into the given buffer.
     pub fn read(&self, buf: &mut [u8]) -> IOResult<usize> {
-        io::read(self.read_handle, buf)
+        io::read(self.read_handle.try_clone()?, buf)
     }
 
     /// Reads exactly `buf.len()` bytes into `buf`.
     pub fn read_exact<'a>(&self, buf: &'a mut [u8]) -> impl Future<Output = IOResult<usize>> + 'a {
-        ReadFuture { pipe_handle: *self, buf: RefCell::new(buf), read: 0 }
+        ReadFuture {
+            // TODO: Is cloning here efficient?
+            pipe_handle: Self::new(self.read_handle.try_clone(), self.write_handle.try_clone()),
+            buf: RefCell::new(buf),
+            read: 0,
+        }
     }
 
     /// Write the given buffer to the pipe.
     pub fn write<'a>(&self, buf: &'a [u8]) -> impl Future<Output = IOResult<usize>> + 'a {
+        // TODO: Is cloning here efficient?
         WriteFuture { pipe_handle: *self, buf, written: 0 }
     }
 
     /// Returns the read handle for the pipe.
-    pub const fn read_handle(&self) -> FileDescriptor {
-        self.read_handle
+    pub fn read_handle(&self) -> Result<FileDescriptor, IOError> {
+        self.read_handle.try_clone()
     }
 
     /// Returns the write handle for the pipe.
-    pub const fn write_handle(&self) -> FileDescriptor {
-        self.write_handle
+    pub fn write_handle(&self) -> Result<FileDescriptor, IOError> {
+        self.write_handle.try_clone()
+    }
+}
+
+// TODO: Should we implement Clone for PipeHandle?
+impl Clone for PipeHandle {
+    fn clone(&self) -> Self {
+        Self::new(self.read_handle.try_clone()?, self.write_handle.try_clone()?)
     }
 }
 
@@ -99,7 +115,7 @@ impl Future for WriteFuture<'_> {
     type Output = IOResult<usize>;
 
     fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        match io::write(self.pipe_handle.write_handle(), &self.buf[self.written..]) {
+        match io::write(self.pipe_handle.write_handle()?, &self.buf[self.written..]) {
             Ok(0) => Poll::Ready(Ok(self.written)), // Finished writing
             Ok(n) => {
                 self.written += n;

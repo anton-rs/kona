@@ -21,7 +21,7 @@ use kona_preimage::{HintReader, OracleServer, PipeHandle};
 use kv::KeyValueStore;
 use std::{
     io::{stderr, stdin, stdout},
-    os::fd::{AsFd, AsRawFd},
+    os::fd::{AsFd, AsRawFd, OwnedFd},
     panic::AssertUnwindSafe,
     sync::Arc,
 };
@@ -135,12 +135,12 @@ where
     KV: KeyValueStore + Send + Sync + ?Sized + 'static,
 {
     let hint_reader = HintReader::new(PipeHandle::new(
-        FileDescriptor::Wildcard(hint_pipe.read.as_raw_fd() as usize),
-        FileDescriptor::Wildcard(hint_pipe.write.as_raw_fd() as usize),
+        FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.read)),
+        FileDescriptor::Wildcard(OwnedFd::from(hint_pipe.write)),
     ));
     let oracle_server = OracleServer::new(PipeHandle::new(
-        FileDescriptor::Wildcard(preimage_pipe.read.as_raw_fd() as usize),
-        FileDescriptor::Wildcard(preimage_pipe.write.as_raw_fd() as usize),
+        FileDescriptor::Wildcard(OwnedFd::from(preimage_pipe.read)),
+        FileDescriptor::Wildcard(OwnedFd::from(preimage_pipe.write)),
     ));
 
     let server = PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher);

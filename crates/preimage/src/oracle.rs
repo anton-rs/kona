@@ -7,7 +7,7 @@ use alloc::{boxed::Box, vec::Vec};
 use tracing::trace;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct OracleReader {
     pipe_handle: PipeHandle,
 }
@@ -86,7 +86,7 @@ impl PreimageOracleClient for OracleReader {
 }
 
 /// An [OracleServer] is a router for the host to serve data back to the client [OracleReader].
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct OracleServer {
     pipe_handle: PipeHandle,
 }
@@ -135,7 +135,7 @@ mod test {
     use alloc::sync::Arc;
     use alloy_primitives::keccak256;
     use kona_common::FileDescriptor;
-    use std::{collections::HashMap, os::unix::io::AsRawFd};
+    use std::{collections::HashMap, os::fd::OwnedFd};
     use tokio::sync::Mutex;
 
     struct TestFetcher {
@@ -170,8 +170,8 @@ mod test {
 
         let client = tokio::task::spawn(async move {
             let oracle_reader = OracleReader::new(PipeHandle::new(
-                FileDescriptor::Wildcard(preimage_pipe.client.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(preimage_pipe.client.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(preimage_pipe.client.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(preimage_pipe.client.write)),
             ));
             let contents_a = oracle_reader.get(key_a).await.unwrap();
             let contents_b = oracle_reader.get(key_b).await.unwrap();
@@ -180,8 +180,8 @@ mod test {
         });
         tokio::task::spawn(async move {
             let oracle_server = OracleServer::new(PipeHandle::new(
-                FileDescriptor::Wildcard(preimage_pipe.host.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(preimage_pipe.host.write.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(OwnedFd::from(preimage_pipe.host.read)),
+                FileDescriptor::Wildcard(OwnedFd::from(preimage_pipe.host.write)),
             ));
             let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
 
