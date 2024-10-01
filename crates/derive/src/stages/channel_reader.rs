@@ -4,7 +4,7 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchStreamProvider},
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
@@ -81,6 +81,21 @@ where
     /// decoding / decompression state to a fresh start.
     pub fn next_channel(&mut self) {
         self.next_batch = None;
+    }
+}
+
+impl<P> PreviousStage for ChannelReader<P>
+where
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+{
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
     }
 }
 

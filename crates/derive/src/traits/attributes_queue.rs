@@ -10,7 +10,7 @@ use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAtt
 use crate::{
     batch::SingleBatch,
     errors::PipelineResult,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
 };
 
 /// [NextAttributes] defines the interface for pulling attributes from
@@ -28,7 +28,9 @@ pub trait NextAttributes {
 ///
 /// [BatchQueue]: crate::stages::BatchQueue
 #[async_trait]
-pub trait AttributesQueuePrior: OriginAdvancer + OriginProvider + ResettableStage + Debug {
+pub trait AttributesQueuePrior:
+    PreviousStage + ResettableStage + OriginProvider + OriginAdvancer + Debug
+{
     /// Returns the next valid batch upon the given safe head.
     async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch>;
 

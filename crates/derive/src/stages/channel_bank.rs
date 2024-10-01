@@ -3,7 +3,7 @@
 use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
     stages::ChannelReaderProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, map::HashMap, Bytes};
@@ -216,6 +216,21 @@ where
         self.channel_queue.remove(index);
 
         frame_data.ok_or(PipelineError::ChannelBankEmpty.crit())
+    }
+}
+
+impl<P> PreviousStage for ChannelBank<P>
+where
+    P: ChannelBankProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+{
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
     }
 }
 

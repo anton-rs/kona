@@ -4,7 +4,8 @@ use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
     stages::FrameQueueProvider,
     traits::{
-        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
+        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, PreviousStage,
+        ResettableStage,
     },
 };
 use alloc::boxed::Box;
@@ -66,6 +67,22 @@ where
     }
 }
 
+impl<DAP, P> PreviousStage for L1Retrieval<DAP, P>
+where
+    DAP: DataAvailabilityProvider + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
+{
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
+    }
+}
+
 #[async_trait]
 impl<DAP, P> OriginAdvancer for L1Retrieval<DAP, P>
 where
@@ -109,7 +126,7 @@ where
 
 impl<DAP, P> OriginProvider for L1Retrieval<DAP, P>
 where
-    DAP: DataAvailabilityProvider,
+    DAP: DataAvailabilityProvider + Send,
     P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
 {
     fn origin(&self) -> Option<BlockInfo> {

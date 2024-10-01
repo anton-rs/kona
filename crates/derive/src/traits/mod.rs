@@ -17,7 +17,7 @@ mod providers;
 pub use providers::{ChainProvider, L2ChainProvider};
 
 mod stages;
-pub use stages::{OriginAdvancer, OriginProvider, ResettableStage};
+pub use stages::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage};
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

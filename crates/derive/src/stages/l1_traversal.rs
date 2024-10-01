@@ -3,7 +3,7 @@
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
     stages::L1RetrievalProvider,
-    traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{ChainProvider, OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::Address;
@@ -68,6 +68,21 @@ impl<F: ChainProvider> L1Traversal<F> {
     }
 }
 
+impl<F> PreviousStage for L1Traversal<F>
+where
+    F: ChainProvider + Send,
+{
+    type Previous = ();
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        None
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        None
+    }
+}
+
 #[async_trait]
 impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
     /// Advances the internal state of the [L1Traversal] stage to the next L1 block.
@@ -126,7 +141,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
     }
 }
 
-impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
+impl<F: ChainProvider + Send> OriginProvider for L1Traversal<F> {
     fn origin(&self) -> Option<BlockInfo> {
         self.block
     }

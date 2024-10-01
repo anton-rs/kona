@@ -5,7 +5,7 @@ use crate::{
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
     stages::BatchQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
@@ -166,6 +166,22 @@ where
     }
 }
 
+impl<P, B> PreviousStage for BatchStream<P, B>
+where
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    B: L2ChainProvider + Send + Debug,
+{
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
+    }
+}
+
 #[async_trait]
 impl<P, BF> OriginAdvancer for BatchStream<P, BF>
 where
@@ -180,7 +196,7 @@ where
 impl<P, BF> OriginProvider for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
-    BF: L2ChainProvider + Debug,
+    BF: L2ChainProvider + Debug + Send,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()

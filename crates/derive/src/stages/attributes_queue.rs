@@ -13,7 +13,7 @@ use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
     traits::{
         AttributesQueueBuilder, AttributesQueuePrior, NextAttributes, OriginAdvancer,
-        OriginProvider, ResettableStage,
+        OriginProvider, PreviousStage, ResettableStage,
     },
 };
 
@@ -140,15 +140,35 @@ where
     }
 }
 
-#[async_trait]
-impl<P, AB> OriginAdvancer for AttributesQueue<P, AB>
+impl<P, B> PreviousStage for AttributesQueue<P, B>
 where
     P: AttributesQueuePrior + Send,
-    AB: AttributesQueueBuilder + Send,
+    B: AttributesQueueBuilder + Send,
 {
-    async fn advance_origin(&mut self) -> PipelineResult<()> {
-        self.prev.advance_origin().await
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
     }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
+    }
+}
+
+impl<P, B> OriginProvider for AttributesQueue<P, B>
+where
+    P: AttributesQueuePrior + Send,
+    B: AttributesQueueBuilder + Send,
+{
+}
+
+#[async_trait]
+impl<P, B> OriginAdvancer for AttributesQueue<P, B>
+where
+    P: AttributesQueuePrior + Send,
+    B: AttributesQueueBuilder + Send,
+{
 }
 
 #[async_trait]
@@ -162,16 +182,6 @@ where
         parent: L2BlockInfo,
     ) -> PipelineResult<OptimismAttributesWithParent> {
         self.next_attributes(parent).await
-    }
-}
-
-impl<P, AB> OriginProvider for AttributesQueue<P, AB>
-where
-    P: AttributesQueuePrior + Send,
-    AB: AttributesQueueBuilder + Send,
-{
-    fn origin(&self) -> Option<BlockInfo> {
-        self.prev.origin()
     }
 }
 

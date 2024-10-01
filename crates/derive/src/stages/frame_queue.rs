@@ -3,7 +3,7 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::ChannelBankProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, PreviousStage, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::Bytes;
@@ -142,6 +142,21 @@ where
         crate::inc!(DERIVED_FRAMES_COUNT, self.queue.len() as f64, &["success"]);
 
         Ok(())
+    }
+}
+
+impl<P> PreviousStage for FrameQueue<P>
+where
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+{
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
     }
 }
 

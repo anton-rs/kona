@@ -4,7 +4,8 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     traits::{
-        AttributesQueuePrior, L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage,
+        AttributesQueuePrior, L2ChainProvider, OriginAdvancer, OriginProvider, PreviousStage,
+        ResettableStage,
     },
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -250,6 +251,22 @@ where
         }
         self.batches.push(data);
         Ok(())
+    }
+}
+
+impl<P, B> PreviousStage for BatchQueue<P, B>
+where
+    P: BatchQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    B: L2ChainProvider + Send + Debug,
+{
+    type Previous = P;
+
+    fn prev(&self) -> Option<&Self::Previous> {
+        Some(&self.prev)
+    }
+
+    fn prev_mut(&mut self) -> Option<&mut Self::Previous> {
+        Some(&mut self.prev)
     }
 }
 
