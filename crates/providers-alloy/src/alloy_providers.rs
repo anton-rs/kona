@@ -6,7 +6,7 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
 use alloy_transport::{RpcError, TransportErrorKind, TransportResult};
 use async_trait::async_trait;
-use kona_providers::{to_l2_block_ref, to_system_config, ChainProvider, L2ChainProvider};
+use kona_providers::{to_system_config, ChainProvider, L2ChainProvider};
 use lru::LruCache;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -329,17 +329,18 @@ impl L2ChainProvider for AlloyL2ChainProvider {
                 return Err(e);
             }
         };
-        let l2_block_info = match to_l2_block_ref(&block, self.rollup_config.as_ref()) {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["l2_chain_provider", "l2_block_info_by_number", "to_l2_block_ref"]
-                );
-                return Err(RpcError::LocalUsageError(Box::new(e)));
-            }
-        };
+        let l2_block_info =
+            match L2BlockInfo::from_block_and_genesis(&block, &self.rollup_config.genesis) {
+                Ok(b) => b,
+                Err(e) => {
+                    crate::timer!(DISCARD, timer);
+                    crate::inc!(
+                        PROVIDER_ERRORS,
+                        &["l2_chain_provider", "l2_block_info_by_number", "from_block_and_genesis"]
+                    );
+                    return Err(RpcError::LocalUsageError(Box::new(e)));
+                }
+            };
         self.l2_block_info_by_number_cache.put(number, l2_block_info);
         Ok(l2_block_info)
     }

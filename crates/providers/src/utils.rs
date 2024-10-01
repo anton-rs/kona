@@ -4,8 +4,8 @@ use alloy_primitives::B256;
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{
-    block_info::DecodeError, BlockInfo, L1BlockInfoBedrock, L1BlockInfoEcotone,
-    L1BlockInfoHolocene, L1BlockInfoTx, L2BlockInfo,
+    block_info::DecodeError, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoHolocene,
+    L1BlockInfoTx,
 };
 use thiserror::Error;
 
@@ -27,47 +27,6 @@ pub enum OpBlockConversionError {
     /// Empty transactions.
     #[error("Empty transactions in payload. Block hash: {0}")]
     EmptyTransactions(B256),
-}
-
-/// Converts the [OpBlock] to an [L2BlockInfo], by checking against the L1
-/// information transaction or the genesis block.
-pub fn to_l2_block_ref(
-    block: &OpBlock,
-    rollup_config: &RollupConfig,
-) -> Result<L2BlockInfo, OpBlockConversionError> {
-    let (l1_origin, sequence_number) = if block.header.number == rollup_config.genesis.l2.number {
-        if block.header.hash_slow() != rollup_config.genesis.l2.hash {
-            return Err(OpBlockConversionError::InvalidGenesisHash(
-                rollup_config.genesis.l2.hash,
-                block.header.hash_slow(),
-            ));
-        }
-        (rollup_config.genesis.l1, 0)
-    } else {
-        if block.body.transactions.is_empty() {
-            return Err(OpBlockConversionError::EmptyTransactions(block.header.hash_slow()));
-        }
-
-        let OpTxEnvelope::Deposit(ref tx) = block.body.transactions[0] else {
-            return Err(OpBlockConversionError::InvalidTxType(
-                block.body.transactions[0].tx_type() as u8
-            ));
-        };
-
-        let l1_info = L1BlockInfoTx::decode_calldata(tx.input.as_ref())?;
-        (l1_info.id(), l1_info.sequence_number())
-    };
-
-    Ok(L2BlockInfo {
-        block_info: BlockInfo {
-            hash: block.header.hash_slow(),
-            number: block.header.number,
-            parent_hash: block.header.parent_hash,
-            timestamp: block.header.timestamp,
-        },
-        l1_origin,
-        seq_num: sequence_number,
-    })
 }
 
 /// Converts the [OpBlock] to a partial [SystemConfig].

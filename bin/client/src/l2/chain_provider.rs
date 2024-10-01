@@ -10,7 +10,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use kona_providers::{to_l2_block_ref, to_system_config, L2ChainProvider};
+use kona_providers::{to_system_config, L2ChainProvider};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
@@ -75,7 +75,8 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
         let block = self.block_by_number(number).await?;
 
         // Construct the system config from the payload.
-        to_l2_block_ref(&block, &self.boot_info.rollup_config).map_err(Into::into)
+        L2BlockInfo::from_block_and_genesis(&block, &self.boot_info.rollup_config.genesis)
+            .map_err(Into::into)
     }
 
     async fn block_by_number(&mut self, number: u64) -> Result<OpBlock> {

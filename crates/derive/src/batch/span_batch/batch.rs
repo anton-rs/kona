@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::FixedBytes;
-use kona_providers::{to_l2_block_ref, L2ChainProvider};
+use kona_providers::L2ChainProvider;
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
@@ -309,7 +309,10 @@ impl SpanBatch {
                         return BatchValidity::Drop;
                     }
                 }
-                let safe_block_ref = match to_l2_block_ref(&safe_block_payload, cfg) {
+                let safe_block_ref = match L2BlockInfo::from_block_and_genesis(
+                    &safe_block_payload,
+                    &cfg.genesis,
+                ) {
                     Ok(r) => r,
                     Err(e) => {
                         warn!("failed to extract L2BlockInfo from execution payload, hash: {}, err: {e}", safe_block_payload.header.hash_slow());

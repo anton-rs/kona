@@ -11,7 +11,7 @@ pub mod prelude {
 }
 
 mod utils;
-pub use utils::{to_l2_block_ref, to_system_config, OpBlockConversionError};
+pub use utils::{to_system_config, OpBlockConversionError};
 
 mod l1_chain_provider;
 pub use l1_chain_provider::ChainProvider;
