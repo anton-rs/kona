@@ -22,4 +22,9 @@ impl BatchValidity {
     pub const fn is_drop(&self) -> bool {
         matches!(self, Self::Drop)
     }
+
+    /// Returns if the batch is future.
+    pub const fn is_future(&self) -> bool {
+        matches!(self, Self::Future)
+    }
 }
