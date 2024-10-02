@@ -14,12 +14,10 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - uses: dtolnay/rust-toolchain@stable
       - name: Clone monorepo
         run: just monorepo
-      - name: Install just
-        uses: taiki-e/install-action@just
-      - name: Install Rust stable toolchain
-        uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
