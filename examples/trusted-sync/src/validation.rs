@@ -21,12 +21,18 @@ pub struct OnlineValidator {
     provider: ReqwestProvider,
     /// The canyon activation timestamp.
     canyon_activation: u64,
+    /// The holocene activation timestamp.
+    holocene_activation: u64,
 }
 
 impl OnlineValidator {
     /// Creates a new `OnlineValidator`.
     pub fn new(provider: ReqwestProvider, cfg: &RollupConfig) -> Self {
-        Self { provider, canyon_activation: cfg.canyon_time.unwrap_or_default() }
+        Self {
+            provider,
+            canyon_activation: cfg.canyon_time.unwrap_or_default(),
+            holocene_activation: cfg.holocene_time.unwrap_or_default(),
+        }
     }
 
     /// Creates a new [OnlineValidator] from the provided [reqwest::Url].
@@ -80,6 +86,11 @@ impl OnlineValidator {
             transactions: Some(transactions),
             no_tx_pool: Some(true),
             gas_limit: Some(header.gas_limit),
+            eip_1559_params: if header.timestamp >= self.holocene_activation {
+                header.nonce
+            } else {
+                None
+            },
         })
     }
 

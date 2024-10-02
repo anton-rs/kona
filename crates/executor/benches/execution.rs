@@ -126,6 +126,7 @@ fn execution(c: &mut Criterion) {
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
             no_tx_pool: Some(false),
+            eip_1559_params: None,
         };
 
         op_mainnet_exec_bench("block_121065789_exec", parent_header, payload_attrs, b)
@@ -167,6 +168,7 @@ fn execution(c: &mut Criterion) {
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
             no_tx_pool: Some(false),
+            eip_1559_params: None,
         };
 
         op_mainnet_exec_bench("block_121135704_exec", parent_header, payload_attrs, b)

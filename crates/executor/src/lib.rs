@@ -747,6 +747,7 @@ mod test {
             gas_limit: Some(0x1c9c380),
             transactions: Some(alloc::vec![raw_tx.into()]),
             no_tx_pool: None,
+            eip_1559_params: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -809,6 +810,7 @@ mod test {
             gas_limit: Some(30000000),
             transactions: Some(raw_txs),
             no_tx_pool: Some(false),
+            eip_1559_params: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -878,6 +880,7 @@ mod test {
             gas_limit: Some(0x1c9c380),
             transactions: Some(raw_txs),
             no_tx_pool: Some(false),
+            eip_1559_params: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -941,6 +944,7 @@ mod test {
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
             no_tx_pool: None,
+            eip_1559_params: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -1013,6 +1017,7 @@ mod test {
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
             no_tx_pool: Some(false),
+            eip_1559_params: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
@@ -1090,6 +1095,7 @@ mod test {
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
             no_tx_pool: None,
+            eip_1559_params: None,
         };
         let produced_header = l2_block_executor.execute_payload(payload_attrs).unwrap().clone();
 
