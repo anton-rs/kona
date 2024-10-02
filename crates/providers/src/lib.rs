@@ -10,9 +10,6 @@ pub mod prelude {
     pub use super::*;
 }
 
-mod utils;
-pub use utils::{to_system_config, OpBlockConversionError};
-
 mod l1_chain_provider;
 pub use l1_chain_provider::ChainProvider;
 

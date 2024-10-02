@@ -232,6 +232,7 @@ mod tests {
             no_tx_pool: Some(false),
             transactions: None,
             gas_limit: None,
+            eip_1559_params: None,
         }
     }
 

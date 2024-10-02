@@ -22,5 +22,4 @@ op-alloy-genesis.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 
 # Misc
-thiserror.workspace = true
 async-trait.workspace = true

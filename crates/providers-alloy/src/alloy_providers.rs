@@ -6,11 +6,11 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
 use alloy_transport::{RpcError, TransportErrorKind, TransportResult};
 use async_trait::async_trait;
-use kona_providers::{to_system_config, ChainProvider, L2ChainProvider};
+use kona_providers::{ChainProvider, L2ChainProvider};
 use lru::LruCache;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{to_system_config, BlockInfo, L2BlockInfo};
 use std::{boxed::Box, num::NonZeroUsize, sync::Arc, vec::Vec};
 
 const CACHE_SIZE: usize = 16;

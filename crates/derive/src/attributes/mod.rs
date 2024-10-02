@@ -9,13 +9,13 @@ use crate::{
 use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Eip658Value, Receipt};
 use alloy_eips::{eip2718::Encodable2718, BlockNumHash};
-use alloy_primitives::{address, Address, Bytes, B256};
+use alloy_primitives::{address, Address, Bytes, B256, B64};
 use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
 use kona_providers::{ChainProvider, L2ChainProvider};
 use op_alloy_consensus::Hardforks;
-use op_alloy_genesis::RollupConfig;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
@@ -196,7 +196,23 @@ where
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(sys_config.gas_limit).to_be_bytes(),
             )),
+            eip_1559_params: eip_1559_params_from_system_config(&sys_config),
         })
+    }
+}
+
+/// Returns the eip1559 parameters from a [SystemConfig] encoded as a [B64].
+fn eip_1559_params_from_system_config(sys_config: &SystemConfig) -> Option<B64> {
+    if sys_config.eip1559_denominator.is_none() && sys_config.eip1559_elasticity.is_none() {
+        None
+    } else {
+        Some(B64::from_slice(
+            &[
+                sys_config.eip1559_denominator.unwrap_or_default().to_be_bytes(),
+                sys_config.eip1559_elasticity.unwrap_or_default().to_be_bytes(),
+            ]
+            .concat(),
+        ))
     }
 }
 
@@ -293,6 +309,34 @@ mod tests {
             logs: vec![generate_valid_log(), bad_dest_log, invalid_topic_log],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn test_eip_1559_params_from_system_config_none() {
+        let sys_config = SystemConfig::default();
+        assert_eq!(eip_1559_params_from_system_config(&sys_config), None);
+    }
+
+    #[test]
+    fn test_eip_1559_params_from_system_config_some() {
+        let sys_config = SystemConfig {
+            eip1559_denominator: Some(1),
+            eip1559_elasticity: None,
+            ..Default::default()
+        };
+        let expected = Some(B64::from_slice(&[1u32.to_be_bytes(), 0u32.to_be_bytes()].concat()));
+        assert_eq!(eip_1559_params_from_system_config(&sys_config), expected);
+    }
+
+    #[test]
+    fn test_eip_1559_params_from_system_config() {
+        let sys_config = SystemConfig {
+            eip1559_denominator: Some(1),
+            eip1559_elasticity: Some(2),
+            ..Default::default()
+        };
+        let expected = Some(B64::from_slice(&[1u32.to_be_bytes(), 2u32.to_be_bytes()].concat()));
+        assert_eq!(eip_1559_params_from_system_config(&sys_config), expected);
     }
 
     #[tokio::test]
@@ -463,6 +507,7 @@ mod tests {
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
+            eip_1559_params: None,
         };
         assert_eq!(payload, expected);
         assert_eq!(payload.transactions.unwrap().len(), 1);
@@ -508,6 +553,7 @@ mod tests {
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
+            eip_1559_params: None,
         };
         assert_eq!(payload, expected);
         assert_eq!(payload.transactions.unwrap().len(), 1);
@@ -555,6 +601,7 @@ mod tests {
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
+            eip_1559_params: None,
         };
         assert_eq!(payload, expected);
         assert_eq!(payload.transactions.unwrap().len(), 7);
@@ -601,6 +648,7 @@ mod tests {
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(SystemConfig::default().gas_limit).to_be_bytes(),
             )),
+            eip_1559_params: None,
         };
         assert_eq!(payload, expected);
         assert_eq!(payload.transactions.unwrap().len(), 4);
