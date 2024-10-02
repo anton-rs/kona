@@ -283,18 +283,18 @@ impl SpanBatch {
                         return BatchValidity::Undecided;
                     }
                 };
-                let safe_block_txs = &safe_block_payload.body;
+                let safe_block = &safe_block_payload.body;
                 let batch_txs = &self.batches[i as usize].transactions;
                 // Execution payload has deposit txs but batch does not.
-                let deposit_count: usize = safe_block_txs
+                let deposit_count: usize = safe_block
                     .transactions
                     .iter()
                     .map(|tx| if tx.is_deposit() { 1 } else { 0 })
                     .sum();
-                if safe_block_txs.transactions.len() - deposit_count != batch_txs.len() {
+                if safe_block.transactions.len() - deposit_count != batch_txs.len() {
                     warn!(
                         "overlapped block's tx count does not match, safe_block_txs: {}, batch_txs: {}",
-                        safe_block_txs.transactions.len(),
+                        safe_block.transactions.len(),
                         batch_txs.len()
                     );
                     return BatchValidity::Drop;
@@ -303,7 +303,7 @@ impl SpanBatch {
                 #[allow(clippy::needless_range_loop)]
                 for j in 0..batch_txs_len {
                     let mut buf = Vec::new();
-                    safe_block_txs.transactions[j + deposit_count].encode_2718(&mut buf);
+                    safe_block.transactions[j + deposit_count].encode_2718(&mut buf);
                     if buf != batch_txs[j].0 {
                         warn!("overlapped block's transaction does not match");
                         return BatchValidity::Drop;
