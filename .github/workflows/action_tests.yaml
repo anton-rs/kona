@@ -17,6 +17,8 @@ jobs:
       - name: Clone monorepo
         run: |
           git clone https://github.com/ethereum-optimism/monorepo
+          # September 30, 2024
+          cd monorepo && git checkout d05fb505809717282d5cee7264a09d26002a4ddd
       - name: Install just
         uses: taiki-e/install-action@just
       - name: Install Rust stable toolchain
