@@ -2,9 +2,12 @@
 
 /// Re-export trait arguments.
 pub use crate::traits::{
-    AttributesBuilder, ChainProvider, DataAvailabilityProvider, L2ChainProvider, NextAttributes,
-    OriginAdvancer, OriginProvider, Pipeline, ResetProvider, ResettableStage, StepResult,
+    AttributesBuilder, DataAvailabilityProvider, NextAttributes, OriginAdvancer, OriginProvider,
+    Pipeline, ResetProvider, ResettableStage, StepResult,
 };
+
+/// Re-export kona provider traits.
+pub use kona_providers::{ChainProvider, L2ChainProvider};
 
 /// Re-export error types.
 pub use crate::errors::{PipelineError, PipelineResult};

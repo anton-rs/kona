@@ -396,9 +396,7 @@ impl SpanBatchTransactions {
             self.y_parity_bits.set_bit((i + offset) as usize, y_parity_bit);
             self.tx_nonces.push(nonce);
             self.tx_datas.push(tx_data_buf);
-            self.tx_gases.push(gas.try_into().map_err(|_| {
-                SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData)
-            })?);
+            self.tx_gases.push(gas);
             self.tx_types.push(tx_type);
         }
         self.total_block_tx_count += total_block_tx_count;

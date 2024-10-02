@@ -1,13 +1,14 @@
 //! Contains the core derivation pipeline.
 
 use super::{
-    L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError,
-    PipelineResult, ResettableStage, StepResult,
+    NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError, PipelineResult,
+    ResettableStage, StepResult,
 };
 use crate::errors::PipelineErrorKind;
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_providers::L2ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;

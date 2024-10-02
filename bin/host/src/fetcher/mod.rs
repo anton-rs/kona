@@ -555,7 +555,7 @@ where
             buf.put_slice(node.as_ref());
         });
         hb.root();
-        let intermediates = hb.take_proofs();
+        let intermediates = hb.take_proof_nodes().into_inner();
 
         for (_, value) in intermediates.into_iter() {
             let value_hash = keccak256(value.as_ref());

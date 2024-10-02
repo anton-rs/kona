@@ -4,11 +4,12 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     stages::attributes_queue::AttributesProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use kona_providers::L2ChainProvider;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
@@ -456,7 +457,6 @@ where
 mod tests {
     use super::*;
     use crate::{
-        block::OpBlock,
         stages::{
             channel_reader::BatchReader,
             test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
@@ -468,7 +468,7 @@ mod tests {
     use alloy_eips::{eip2718::Decodable2718, BlockNumHash};
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use op_alloy_consensus::{OpTxEnvelope, OpTxType, TxDeposit};
+    use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
     use op_alloy_genesis::ChainGenesis;
     use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
@@ -626,22 +626,22 @@ mod tests {
             .map(|tx| OpTxEnvelope::decode_2718(&mut &tx[..]).unwrap())
             .collect();
         let block = OpBlock {
-            header: Header {
-                number: 8,
-                // TODO: fix hash
-                ..Default::default()
+            header: Header { number: 8, ..Default::default() },
+            body: alloy_consensus::BlockBody {
+                transactions: batch_txs,
+                ommers: Vec::new(),
+                withdrawals: None,
+                requests: None,
             },
-            body: batch_txs,
-            ..Default::default()
         };
         let second = OpBlock {
-            header: Header {
-                number: 9,
-                // TODO: fix hash
-                ..Default::default()
+            header: Header { number: 9, ..Default::default() },
+            body: alloy_consensus::BlockBody {
+                transactions: second_batch_txs,
+                ommers: Vec::new(),
+                withdrawals: None,
+                requests: None,
             },
-            body: second_batch_txs,
-            ..Default::default()
         };
         let fetcher = TestL2ChainProvider {
             blocks: vec![block_nine, block_seven],

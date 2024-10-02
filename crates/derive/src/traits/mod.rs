@@ -13,9 +13,6 @@ pub use data_sources::{AsyncIterator, BlobProvider, DataAvailabilityProvider};
 mod reset;
 pub use reset::ResetProvider;
 
-mod providers;
-pub use providers::{ChainProvider, L2ChainProvider};
-
 mod stages;
 pub use stages::{OriginAdvancer, OriginProvider, ResettableStage};
 

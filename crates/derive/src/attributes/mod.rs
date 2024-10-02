@@ -4,7 +4,7 @@ use crate::{
     errors::{
         BuilderError, PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult,
     },
-    traits::{AttributesBuilder, ChainProvider, L2ChainProvider},
+    traits::AttributesBuilder,
 };
 use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Eip658Value, Receipt};
@@ -13,6 +13,7 @@ use alloy_primitives::{address, Address, Bytes, B256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
+use kona_providers::{ChainProvider, L2ChainProvider};
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
@@ -97,7 +98,11 @@ where
                     .await
                     .map_err(|e| PipelineError::BadEncoding(e).crit())?;
             sys_config
-                .update_with_receipts(&receipts, &self.rollup_cfg, header.timestamp)
+                .update_with_receipts(
+                    &receipts,
+                    self.rollup_cfg.l1_system_config_address,
+                    self.rollup_cfg.is_ecotone_active(header.timestamp),
+                )
                 .map_err(|e| PipelineError::SystemConfigUpdate(e).crit())?;
             l1_header = header;
             deposit_transactions = deposits;

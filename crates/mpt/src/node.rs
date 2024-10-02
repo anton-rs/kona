@@ -790,11 +790,13 @@ mod test {
         });
         let root = trie.root();
 
-        let preimages =
-            trie.take_proofs().into_iter().fold(BTreeMap::default(), |mut acc, (_, value)| {
+        let preimages = trie.take_proof_nodes().into_inner().into_iter().fold(
+            BTreeMap::default(),
+            |mut acc, (_, value)| {
                 acc.insert(keccak256(value.as_ref()), value);
                 acc
-            });
+            },
+        );
         let fetcher = TrieNodeProvider::new(preimages, Default::default(), Default::default());
 
         let mut root_node =

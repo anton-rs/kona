@@ -2,13 +2,14 @@
 
 use crate::{
     errors::{BlobProviderError, PipelineError, PipelineResult},
-    traits::{AsyncIterator, BlobProvider, ChainProvider},
+    traits::{AsyncIterator, BlobProvider},
 };
 use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
 use kona_primitives::{BlobData, IndexedBlobHash};
+use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 

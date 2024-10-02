@@ -213,11 +213,13 @@ mod test {
         let mut trie = ordered_trie_with_encoder(&VALUES, |v, buf| v.encode(buf));
         let root = trie.root();
 
-        let preimages =
-            trie.take_proofs().into_iter().fold(BTreeMap::default(), |mut acc, (_, value)| {
+        let preimages = trie.take_proof_nodes().into_inner().into_iter().fold(
+            BTreeMap::default(),
+            |mut acc, (_, value)| {
                 acc.insert(keccak256(value.as_ref()), value);
                 acc
-            });
+            },
+        );
 
         let fetcher = TrieNodeProvider::new(preimages, BTreeMap::default(), BTreeMap::default());
         let list = OrderedListWalker::try_new_hydrated(root, &fetcher).unwrap();

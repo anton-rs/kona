@@ -2,12 +2,13 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult},
-    traits::{AsyncIterator, ChainProvider},
+    traits::AsyncIterator,
 };
 use alloc::{boxed::Box, collections::VecDeque, format};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
+use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
 
 /// A data iterator that reads from calldata.

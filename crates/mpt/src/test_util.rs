@@ -66,11 +66,13 @@ pub(crate) async fn get_live_derivable_receipts_list(
     assert_eq!(block.header.receipts_root, root);
 
     // Construct the mapping of hashed intermediates -> raw intermediates
-    let preimages =
-        list.take_proofs().into_iter().fold(BTreeMap::default(), |mut acc, (_, value)| {
+    let preimages = list.take_proof_nodes().into_inner().into_iter().fold(
+        BTreeMap::default(),
+        |mut acc, (_, value)| {
             acc.insert(keccak256(value.as_ref()), value);
             acc
-        });
+        },
+    );
 
     Ok((root, preimages, consensus_receipts))
 }
@@ -105,11 +107,13 @@ pub(crate) async fn get_live_derivable_transactions_list(
     assert_eq!(block.header.transactions_root, root);
 
     // Construct the mapping of hashed intermediates -> raw intermediates
-    let preimages =
-        list.take_proofs().into_iter().fold(BTreeMap::default(), |mut acc, (_, value)| {
+    let preimages = list.take_proof_nodes().into_inner().into_iter().fold(
+        BTreeMap::default(),
+        |mut acc, (_, value)| {
             acc.insert(keccak256(value.as_ref()), value);
             acc
-        });
+        },
+    );
 
     Ok((root, preimages, consensus_txs))
 }

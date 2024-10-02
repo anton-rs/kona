@@ -12,13 +12,14 @@ pub mod prelude {
         errors::{PipelineError, PipelineErrorKind},
         pipeline::{DerivationPipeline, PipelineBuilder},
         sources::EthereumDataSource,
-        traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
+        traits::{OriginProvider, Pipeline, StepResult},
     };
+
+    pub use kona_providers::prelude::*;
 }
 
 pub mod attributes;
 pub mod batch;
-pub mod block;
 pub mod errors;
 pub mod pipeline;
 pub mod sources;

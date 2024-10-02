@@ -4,11 +4,12 @@
 use crate::{
     errors::PipelineResult,
     sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},
-    traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
+    traits::{BlobProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
+use kona_providers::ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
 

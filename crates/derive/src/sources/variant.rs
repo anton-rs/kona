@@ -3,11 +3,12 @@
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use kona_providers::ChainProvider;
 
 use crate::{
     errors::PipelineResult,
     sources::{BlobSource, CalldataSource},
-    traits::{AsyncIterator, BlobProvider, ChainProvider},
+    traits::{AsyncIterator, BlobProvider},
 };
 
 /// An enum over the various data sources.

@@ -3,11 +3,12 @@
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
     stages::L1RetrievalProvider,
-    traits::{ChainProvider, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
+use kona_providers::ChainProvider;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
@@ -101,8 +102,8 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
 
         if let Err(e) = self.system_config.update_with_receipts(
             receipts.as_slice(),
-            &self.rollup_config,
-            next_l1_origin.timestamp,
+            self.rollup_config.l1_system_config_address,
+            self.rollup_config.is_ecotone_active(next_l1_origin.timestamp),
         ) {
             return Err(PipelineError::SystemConfigUpdate(e).crit());
         }
