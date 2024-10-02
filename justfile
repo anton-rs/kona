@@ -164,3 +164,12 @@ build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-a
     --build-arg ASTERISC_TAG={{asterisc_tag}} \
     --platform linux/amd64 \
     .
+# Clones and checks out the monorepo at the commit present in `.monorepo`
+monorepo:
+  [ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo
+  cd monorepo && git checkout $(cat ../.monorepo)
+
+# Updates the pinned version of the monorepo
+update-monorepo:
+  [ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo
+  cd monorepo && git rev-parse HEAD > ../.monorepo
