@@ -201,8 +201,6 @@ where
         // there is still room to receive batches for the current epoch.
         // No need to force-create empty batch(es) towards the next epoch yet.
         if !force_empty_batches {
-            #[cfg(test)]
-            println!("forcing empty batches");
             return Err(PipelineError::Eof.temp());
         }
 
@@ -214,8 +212,6 @@ where
 
         // The next L1 block is needed to proceed towards the next epoch.
         if self.l1_blocks.len() < 2 {
-            #[cfg(test)]
-            println!("l1 blocks less than 2 len");
             return Err(PipelineError::Eof.temp());
         }
 
@@ -256,8 +252,6 @@ where
         let data = BatchWithInclusionBlock { inclusion_block: origin, batch };
         // If we drop the batch, validation logs the drop reason with WARN level.
         if data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await.is_drop() {
-            #[cfg(test)]
-            println!("Dropping batch");
             self.prev.flush();
             return Ok(());
         }
