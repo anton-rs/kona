@@ -4,7 +4,7 @@ use super::{
     NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError, PipelineResult,
     ResettableStage, StepResult,
 };
-use crate::errors::PipelineErrorKind;
+use crate::{errors::PipelineErrorKind, traits::Signal};
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -95,26 +95,30 @@ where
     ///
     /// The `l1_block_info` is the new L1 origin set in the [crate::stages::L1Traversal]
     /// stage.
-    async fn reset(
-        &mut self,
-        l2_block_info: BlockInfo,
-        l1_block_info: BlockInfo,
-    ) -> PipelineResult<()> {
-        let system_config = self
-            .l2_chain_provider
-            .system_config_by_number(l2_block_info.number, Arc::clone(&self.rollup_config))
-            .await
-            .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
-        match self.attributes.reset(l1_block_info, &system_config).await {
-            Ok(()) => trace!(target: "pipeline", "Stages reset"),
-            Err(err) => {
-                if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
-                    trace!(target: "pipeline", "Stages reset with EOF");
-                } else {
-                    error!(target: "pipeline", "Stage reset errored: {:?}", err);
-                    return Err(err);
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        match signal {
+            Signal::Reset { l2_safe_head, l1_origin } => {
+                let system_config = self
+                    .l2_chain_provider
+                    .system_config_by_number(
+                        l2_safe_head.block_info.number,
+                        Arc::clone(&self.rollup_config),
+                    )
+                    .await
+                    .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
+                match self.attributes.reset(l1_origin, &system_config).await {
+                    Ok(()) => trace!(target: "pipeline", "Stages reset"),
+                    Err(err) => {
+                        if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
+                            trace!(target: "pipeline", "Stages reset with EOF");
+                        } else {
+                            error!(target: "pipeline", "Stage reset errored: {:?}", err);
+                            return Err(err);
+                        }
+                    }
                 }
             }
+            _ => unimplemented!("Signal not implemented"),
         }
         Ok(())
     }

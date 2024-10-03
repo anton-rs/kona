@@ -19,7 +19,7 @@ use kona_derive::{
         AttributesQueue, BatchQueue, BatchStream, ChannelBank, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
-    traits::{BlobProvider, OriginProvider},
+    traits::{BlobProvider, OriginProvider, Signal},
 };
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
 use kona_mpt::{TrieHinter, TrieProvider};
@@ -229,12 +229,13 @@ where
                             // Reset the pipeline to the initial L2 safe head and L1 origin,
                             // and try again.
                             self.pipeline
-                                .reset(
-                                    self.l2_safe_head.block_info,
-                                    self.pipeline
+                                .signal(Signal::Reset {
+                                    l2_safe_head: self.l2_safe_head,
+                                    l1_origin: self
+                                        .pipeline
                                         .origin()
                                         .ok_or_else(|| anyhow!("Missing L1 origin"))?,
-                                )
+                                })
                                 .await?;
                         }
                         PipelineErrorKind::Critical(_) => return Err(e.into()),

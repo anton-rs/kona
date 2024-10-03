@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use kona_derive::traits::Signal;
 use kona_providers_alloy::prelude::*;
 use std::sync::Arc;
 use superchain::ROLLUP_CONFIGS;
@@ -142,7 +143,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 continue;
                             };
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
-                            if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
+                            if let Err(e) = pipeline
+                                .signal(Signal::Reset { l2_safe_head: c, l1_origin: l1_block_info })
+                                .await
+                            {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                                 continue;
                             }
@@ -169,7 +173,10 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                                 continue;
                             };
                             info!(target: LOG_TARGET, "Resetting pipeline with l1 block info: {:?}", l1_block_info);
-                            if let Err(e) = pipeline.reset(c.block_info, l1_block_info).await {
+                            if let Err(e) = pipeline
+                                .signal(Signal::Reset { l2_safe_head: c, l1_origin: l1_block_info })
+                                .await
+                            {
                                 error!(target: LOG_TARGET, "Failed to reset pipeline: {:?}", e);
                                 continue;
                             }
@@ -232,10 +239,12 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                             metrics::PIPELINE_STEPS.with_label_values(&["reset"]).inc();
                             warn!(target: "loop", "Resetting pipeline: {:?}", e);
                             pipeline
-                                .reset(
-                                    cursor.block_info,
-                                    pipeline.origin().ok_or(anyhow::anyhow!("Missing origin"))?,
-                                )
+                                .signal(Signal::Reset {
+                                    l2_safe_head: cursor,
+                                    l1_origin: pipeline
+                                        .origin()
+                                        .ok_or(anyhow::anyhow!("Missing origin"))?,
+                                })
                                 .await?;
                         }
                         PipelineErrorKind::Critical(_) => {

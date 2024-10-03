@@ -11,6 +11,7 @@ homepage.workspace = true
 
 [dependencies]
 # Workspace
+kona-derive.workspace = true
 kona-primitives = { workspace = true, features = ["serde"] }
 kona-providers-alloy = { workspace = true, features = ["metrics"] }
 
