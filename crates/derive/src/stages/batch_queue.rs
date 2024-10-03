@@ -4,7 +4,7 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     stages::attributes_queue::AttributesProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
@@ -464,6 +464,26 @@ where
         self.next_spans.clear();
         crate::inc!(STAGE_RESETS, &["batch-queue"]);
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<P, BF> FlushableStage for BatchQueue<P, BF>
+where
+    P: BatchQueueProvider
+        + OriginAdvancer
+        + OriginProvider
+        + ResettableStage
+        + FlushableStage
+        + Send
+        + Debug,
+    BF: L2ChainProvider + Send + Debug,
+{
+    async fn flush_channel(&mut self) -> PipelineResult<()> {
+        self.batches.clear();
+        self.l1_blocks.clear();
+        self.next_spans.clear();
+        self.prev.flush_channel().await
     }
 }
 

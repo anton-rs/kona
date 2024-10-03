@@ -14,7 +14,7 @@ mod reset;
 pub use reset::ResetProvider;
 
 mod stages;
-pub use stages::{OriginAdvancer, OriginProvider, ResettableStage};
+pub use stages::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage};
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

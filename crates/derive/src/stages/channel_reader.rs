@@ -4,7 +4,7 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchStreamProvider},
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
@@ -153,6 +153,19 @@ where
         self.prev.reset(base, cfg).await?;
         self.next_channel();
         crate::inc!(STAGE_RESETS, &["channel-reader"]);
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl<P> FlushableStage for ChannelReader<P>
+where
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
+{
+    async fn flush_channel(&mut self) -> PipelineResult<()> {
+        // Drop the current in-progress channel.
+        warn!(target: "channel-reader", "Flushed channel");
+        self.next_batch = None;
         Ok(())
     }
 }

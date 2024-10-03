@@ -14,6 +14,13 @@ pub trait ResettableStage {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()>;
 }
 
+/// Describes the functionality of a stage that can receive a channel flush signal.
+#[async_trait]
+pub trait FlushableStage {
+    /// Flushes the current channel.
+    async fn flush_channel(&mut self) -> PipelineResult<()>;
+}
+
 /// Provides a method for accessing the pipeline's current L1 origin.
 pub trait OriginProvider {
     /// Returns the optional L1 [BlockInfo] origin.

@@ -5,7 +5,7 @@ use crate::{
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
     stages::BatchQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
@@ -195,9 +195,29 @@ where
 {
     async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
         self.prev.reset(base, cfg).await?;
+        self.buffer.clear();
         self.span.take();
         crate::inc!(STAGE_RESETS, &["batch-span"]);
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<P, BF> FlushableStage for BatchStream<P, BF>
+where
+    P: BatchStreamProvider
+        + OriginAdvancer
+        + OriginProvider
+        + ResettableStage
+        + FlushableStage
+        + Debug
+        + Send,
+    BF: L2ChainProvider + Debug + Send,
+{
+    async fn flush_channel(&mut self) -> PipelineResult<()> {
+        self.span.take();
+        self.buffer.clear();
+        self.prev.flush_channel().await
     }
 }
 
