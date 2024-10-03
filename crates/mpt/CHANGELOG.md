@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.3...kona-mpt-v0.0.4) - 2024-10-03
+
+### Added
+
+- kona-providers ([#596](https://github.com/anton-rs/kona/pull/596))
+- *(ci)* Split online/offline tests ([#582](https://github.com/anton-rs/kona/pull/582))
+- *(mpt)* Migrate to `thiserror` ([#541](https://github.com/anton-rs/kona/pull/541))
+
+### Fixed
+
+- *(workspace)* hoist and fix lints ([#577](https://github.com/anton-rs/kona/pull/577))
+- *(mpt)* Empty list walker ([#493](https://github.com/anton-rs/kona/pull/493))
+
+### Other
+
+- doc logos ([#609](https://github.com/anton-rs/kona/pull/609))
+- *(workspace)* Allow stdlib in `cfg(test)` ([#548](https://github.com/anton-rs/kona/pull/548))
+
 ## [0.0.3](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.2...kona-mpt-v0.0.3) - 2024-09-04
 
 ### Added

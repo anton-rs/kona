@@ -2320,7 +2320,7 @@ dependencies = [
 
 [[package]]
 name = "kona-common"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "cfg-if",
  "linked_list_allocator",
@@ -2329,7 +2329,7 @@ dependencies = [
 
 [[package]]
 name = "kona-common-proc"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -2341,7 +2341,7 @@ dependencies = [
 
 [[package]]
 name = "kona-derive"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2377,7 +2377,7 @@ dependencies = [
 
 [[package]]
 name = "kona-executor"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2438,7 +2438,7 @@ dependencies = [
 
 [[package]]
 name = "kona-mpt"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -2463,7 +2463,7 @@ dependencies = [
 
 [[package]]
 name = "kona-preimage"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "alloy-primitives",
  "async-trait",
@@ -2478,7 +2478,7 @@ dependencies = [
 
 [[package]]
 name = "kona-primitives"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -2494,7 +2494,7 @@ dependencies = [
 
 [[package]]
 name = "kona-providers"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
