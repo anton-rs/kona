@@ -18,12 +18,14 @@ pub struct MockBatchQueueProvider {
     pub origin: Option<BlockInfo>,
     /// A list of batches to return.
     pub batches: Vec<PipelineResult<Batch>>,
+    /// Tracks if the provider has been flushed.
+    pub flushed: bool,
 }
 
 impl MockBatchQueueProvider {
     /// Creates a new [MockBatchQueueProvider] with the given origin and batches.
     pub fn new(batches: Vec<PipelineResult<Batch>>) -> Self {
-        Self { origin: Some(BlockInfo::default()), batches }
+        Self { origin: Some(BlockInfo::default()), batches, flushed: false }
     }
 }
 
@@ -35,7 +37,8 @@ impl OriginProvider for MockBatchQueueProvider {
 
 #[async_trait]
 impl BatchQueueProvider for MockBatchQueueProvider {
-    fn flush(&mut self) { /* noop */
+    fn flush(&mut self) {
+        self.flushed = true;
     }
 
     async fn next_batch(&mut self, _: L2BlockInfo, _: &[BlockInfo]) -> PipelineResult<Batch> {
