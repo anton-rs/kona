@@ -1,7 +1,8 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use kona_derive::traits::Signal;
 use kona_providers_alloy::prelude::*;
+use op_alloy_consensus::OpTxType;
 use std::sync::Arc;
 use superchain::ROLLUP_CONFIGS;
 use tracing::{debug, error, info, trace, warn};
@@ -278,7 +279,37 @@ async fn sync(cli: cli::Cli) -> Result<()> {
                     warn!(target: LOG_TARGET, "Failed to validate payload attributes after {} retries", retries);
                     retries = 0;
                     metrics::FAILED_PAYLOAD_DERIVATION.inc();
-                    let _ = pipeline.next(); // Take the attributes and continue
+
+                    let mut attrs = pipeline.next().ok_or(anyhow!("Missing payload"))?;
+
+                    // If holocene is active, attempt to re-validate the payload with only deposits.
+                    if pipeline
+                        .rollup_config
+                        .is_holocene_active(attrs.attributes.payload_attributes.timestamp)
+                    {
+                        pipeline.signal(Signal::FlushChannel).await?;
+
+                        attrs.attributes.transactions = attrs.attributes.transactions.map(|txs| {
+                            txs.into_iter()
+                                .filter(|tx| !tx.is_empty() && tx[0] == OpTxType::Deposit as u8)
+                                .collect::<Vec<_>>()
+                        });
+
+                        match validator.validate(&attrs).await {
+                            Ok((true, _)) => {
+                                trace!(target: LOG_TARGET, "Validated payload attributes after retrying with only deposits")
+                            }
+                            Ok((false, expected)) => {
+                                error!(target: LOG_TARGET, "Failed to validate payload attributes after retrying with only deposits. Derived payload attributes: {:?}, Expected: {:?}", attrs, expected);
+                                continue;
+                            }
+                            Err(e) => {
+                                error!(target: LOG_TARGET, "Failed to validate payload attributes after retrying with only deposits: {:?}", e);
+                                continue;
+                            }
+                        }
+                    }
+
                     warn!(target: LOG_TARGET, "Consumed payload attributes and continuing");
                     continue;
                 }
