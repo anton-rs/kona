@@ -153,6 +153,8 @@ where
 
                             return Err(PipelineError::Eof.temp());
                         }
+                        // Safety: BatchValidity::Future should never be thrown by check_batch_prefix.
+                        // TODO: validate this with a test
                         BatchValidity::Undecided | BatchValidity::Future => {
                             return Err(PipelineError::NotEnoughData.temp())
                         }
