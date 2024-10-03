@@ -330,6 +330,21 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
+    async fn test_holocene_single_invalid_frame() {
+        let frames = vec![Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: true }];
+        let encoded = encode_frames(frames.clone());
+        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
+        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        mock.set_origin(BlockInfo::default());
+        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
+        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
+        let decoded = frame_queue.next_frame().await.unwrap();
+        assert_eq!(decoded, frames[0]);
+        let err = frame_queue.next_frame().await.unwrap_err();
+        assert_eq!(err, PipelineError::Eof.temp());
+    }
+
+    #[tokio::test]
     async fn test_holocene_unordered_frames() {
         let frames = vec![
             // -- First Channel --
