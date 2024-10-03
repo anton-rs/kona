@@ -159,6 +159,7 @@ where
                     if !self.cfg.is_holocene_active(origin.timestamp) {
                         remaining.push(batch.clone());
                     } else {
+                        self.prev.flush();
                         warn!(target: "batch-queue", "[HOLOCENE] Dropping future batch with parent: {}", parent.block_info.number);
                     }
                 }
@@ -253,13 +254,11 @@ where
         // If we drop the batch, validation logs the drop reason with WARN level.
         let validity =
             data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await;
-        if validity.is_drop() {
-            self.prev.flush();
-            return Ok(());
-        }
         // Post-Holocene, future batches are dropped due to prevent gaps.
-        if self.cfg.is_holocene_active(origin.timestamp) && validity.is_future() {
-            warn!(target: "batch-queue", "[HOLOCENE] Dropping future batch with parent: {}", parent.block_info.number);
+        let drop = validity.is_drop() ||
+            self.cfg.is_holocene_active(origin.timestamp) && validity.is_future();
+        if drop {
+            self.prev.flush();
             return Ok(());
         }
         self.batches.push(data);
