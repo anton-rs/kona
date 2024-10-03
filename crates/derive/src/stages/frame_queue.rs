@@ -10,7 +10,7 @@ use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{BlockInfo, Frame};
+use op_alloy_protocol::{BlockInfo, Frame, FrameIter, FrameParseError};
 use tracing::{debug, error, trace};
 
 /// Provides data frames for the [FrameQueue] stage.
@@ -59,53 +59,70 @@ where
         self.rollup_config.is_holocene_active(origin.timestamp)
     }
 
-    /// Prunes frames if Holocene is active.
-    pub fn prune(&mut self, origin: BlockInfo) {
-        if !self.is_holocene_active(origin) {
-            return;
+    /// Pre-holocene function to add frames to the queue.
+    pub fn add_frames_pre_holocene(&mut self, frames: FrameIter<'_>) {
+        let frames = frames.collect::<Result<alloc::vec::Vec<Frame>, FrameParseError>>();
+        match frames {
+            Ok(frames) => self.queue.extend(frames),
+            Err(e) => {
+                crate::inc!(DERIVED_FRAMES_COUNT, &["failed"]);
+                error!(target: "frame-queue", "Failed to parse frames: {:?}", e);
+            }
         }
+    }
 
-        let mut i = 0;
-        while i < self.queue.len() - 1 {
-            let prev_frame = &self.queue[i];
-            let next_frame = &self.queue[i + 1];
-            let extends_channel = prev_frame.id == next_frame.id;
+    /// Adds frames to the queue post-Holocene.
+    pub fn add_frames_holocene(&mut self, frames: FrameIter<'_>) {
+        frames.for_each(move |frame| {
+            if let Ok(frame) = frame {
+                if self.queue.is_empty() {
+                    if frame.number == 0 {
+                        self.queue.push_back(frame);
+                    }
+                    return;
+                }
 
-            // If the frames are in the same channel, and the frame numbers are not sequential,
-            // drop the next frame.
-            if extends_channel && prev_frame.number + 1 != next_frame.number {
-                self.queue.remove(i + 1);
-                continue;
+                // If not empty add the frame.
+                self.queue.push_back(frame);
+                let i = self.queue.len().saturating_sub(1);
+                let next_frame = &self.queue[i];
+                let prev_frame = &self.queue[i + 1];
+                let extends_channel = prev_frame.id == next_frame.id;
+
+                // If the frames are in the same channel, and the frame numbers are not sequential,
+                // drop the next frame.
+                if extends_channel && prev_frame.number + 1 != next_frame.number {
+                    self.queue.pop_back();
+                    return;
+                }
+
+                // If the frames are in the same channel, and the previous is last, drop the next
+                // frame.
+                if extends_channel && prev_frame.is_last {
+                    self.queue.pop_back();
+                    return;
+                }
+
+                // If the frames are in different channels, the next frame must be first.
+                if !extends_channel && next_frame.number != 0 {
+                    self.queue.pop_back();
+                    return;
+                }
+
+                // If the frames are in different channels, and the current channel is not last,
+                // walk back the channel and drop all prev frames.
+                if !extends_channel && !prev_frame.is_last && next_frame.number == 0 {
+                    // Find the index of the first frame in the queue with the same channel ID
+                    // as the previous frame.
+                    let first_frame =
+                        self.queue.iter().position(|f| f.id == prev_frame.id).expect("infallible");
+
+                    // Drain all frames from the previous channel.
+                    self.queue.drain(first_frame..=i);
+                    return;
+                }
             }
-
-            // If the frames are in the same channel, and the previous is last, drop the next frame.
-            if extends_channel && prev_frame.is_last {
-                self.queue.remove(i + 1);
-                continue;
-            }
-
-            // If the frames are in different channels, the next frame must be first.
-            if !extends_channel && next_frame.number != 0 {
-                self.queue.remove(i + 1);
-                continue;
-            }
-
-            // If the frames are in different channels, and the current channel is not last, walk
-            // back the channel and drop all prev frames.
-            if !extends_channel && !prev_frame.is_last && next_frame.number == 0 {
-                // Find the index of the first frame in the queue with the same channel ID
-                // as the previous frame.
-                let first_frame =
-                    self.queue.iter().position(|f| f.id == prev_frame.id).expect("infallible");
-
-                // Drain all frames from the previous channel.
-                let drained = self.queue.drain(first_frame..=i);
-                i = i.saturating_sub(drained.len());
-                continue;
-            }
-
-            i += 1;
-        }
+        });
     }
 
     /// Loads more frames into the [FrameQueue].
@@ -115,6 +132,7 @@ where
             return Ok(());
         }
 
+        // Get the raw frame data.
         let data = match self.prev.next_data().await {
             Ok(data) => data,
             Err(e) => {
@@ -124,20 +142,17 @@ where
             }
         };
 
-        let Ok(frames) = Frame::parse_frames(&data.into()) else {
-            crate::inc!(DERIVED_FRAMES_COUNT, &["failed"]);
-            // There may be more frames in the queue for the
-            // pipeline to advance, so don't return an error here.
-            error!(target: "frame-queue", "Failed to parse frames from data.");
-            return Ok(());
-        };
+        // Construct an iterator over the frame data.
+        let frame_bytes = data.into();
+        let iter = FrameIter::from(&frame_bytes[..]);
 
-        // Optimistically extend the queue with the new frames.
-        self.queue.extend(frames);
-
-        // Prune frames if Holocene is active.
+        // If holocene is active, filter the frames.
         let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
-        self.prune(origin);
+        if self.is_holocene_active(origin) {
+            self.add_frames_holocene(iter);
+        } else {
+            self.add_frames_pre_holocene(iter);
+        }
 
         crate::inc!(DERIVED_FRAMES_COUNT, self.queue.len() as f64, &["success"]);
 
