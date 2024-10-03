@@ -4,7 +4,10 @@ use super::{
     NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError, PipelineResult,
     ResettableStage, StepResult,
 };
-use crate::{errors::PipelineErrorKind, traits::Signal};
+use crate::{
+    errors::PipelineErrorKind,
+    traits::{FlushableStage, Signal},
+};
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -18,7 +21,13 @@ use tracing::{error, trace, warn};
 #[derive(Debug)]
 pub struct DerivationPipeline<S, P>
 where
-    S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send,
+    S: NextAttributes
+        + ResettableStage
+        + FlushableStage
+        + OriginProvider
+        + OriginAdvancer
+        + Debug
+        + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     /// A handle to the next attributes.
@@ -35,7 +44,13 @@ where
 
 impl<S, P> DerivationPipeline<S, P>
 where
-    S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send,
+    S: NextAttributes
+        + ResettableStage
+        + FlushableStage
+        + OriginProvider
+        + OriginAdvancer
+        + Debug
+        + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     /// Creates a new instance of the [DerivationPipeline].
@@ -50,7 +65,13 @@ where
 
 impl<S, P> OriginProvider for DerivationPipeline<S, P>
 where
-    S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send,
+    S: NextAttributes
+        + ResettableStage
+        + FlushableStage
+        + OriginProvider
+        + OriginAdvancer
+        + Debug
+        + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
@@ -60,7 +81,14 @@ where
 
 impl<S, P> Iterator for DerivationPipeline<S, P>
 where
-    S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
+    S: NextAttributes
+        + ResettableStage
+        + FlushableStage
+        + OriginProvider
+        + OriginAdvancer
+        + Debug
+        + Send
+        + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     type Item = OptimismAttributesWithParent;
@@ -73,7 +101,14 @@ where
 #[async_trait]
 impl<S, P> Pipeline for DerivationPipeline<S, P>
 where
-    S: NextAttributes + ResettableStage + OriginProvider + OriginAdvancer + Debug + Send + Sync,
+    S: NextAttributes
+        + ResettableStage
+        + FlushableStage
+        + OriginProvider
+        + OriginAdvancer
+        + Debug
+        + Send
+        + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     /// Peeks at the next prepared [OptimismAttributesWithParent] from the pipeline.
@@ -118,7 +153,9 @@ where
                     }
                 }
             }
-            _ => unimplemented!("Signal not implemented"),
+            Signal::FlushChannel => {
+                self.attributes.flush_channel().await?;
+            }
         }
         Ok(())
     }

@@ -1,5 +1,13 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
+use crate::{
+    batch::SingleBatch,
+    errors::{PipelineError, PipelineResult, ResetError},
+    traits::{
+        AttributesBuilder, FlushableStage, NextAttributes, OriginAdvancer, OriginProvider,
+        ResettableStage,
+    },
+};
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -7,12 +15,6 @@ use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAttributes};
 use tracing::info;
-
-use crate::{
-    batch::SingleBatch,
-    errors::{PipelineError, PipelineResult, ResetError},
-    traits::{AttributesBuilder, NextAttributes, OriginAdvancer, OriginProvider, ResettableStage},
-};
 
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
 ///
@@ -204,6 +206,24 @@ where
         self.is_last_in_span = false;
         crate::inc!(STAGE_RESETS, &["attributes-queue"]);
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<P, AB> FlushableStage for AttributesQueue<P, AB>
+where
+    P: AttributesProvider
+        + OriginAdvancer
+        + OriginProvider
+        + ResettableStage
+        + FlushableStage
+        + Debug
+        + Send,
+    AB: AttributesBuilder + Debug + Send,
+{
+    async fn flush_channel(&mut self) -> PipelineResult<()> {
+        self.batch = None;
+        self.prev.flush_channel().await
     }
 }
 
