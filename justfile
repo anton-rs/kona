@@ -28,14 +28,11 @@ test-online:
 action-tests test_name='Test_ProgramAction':
   #!/bin/bash
 
-  if [ ! -d "monorepo" ]; then
-    echo "Monorepo not found. Cloning..."
-    git clone https://github.com/ethereum-optimism/monorepo
-  fi
+  just monorepo
 
   if [ ! -d "monorepo/.devnet" ]; then
     echo "Building devnet allocs for the monorepo"
-    (cd monorepo && make devnet-allocs)
+    (cd monorepo && make devnet-allocs-tests)
   fi
 
   echo "Building client and host programs for the native target"
