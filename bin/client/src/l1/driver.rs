@@ -5,7 +5,7 @@
 
 use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
@@ -25,10 +25,11 @@ use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
 use kona_mpt::{TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_providers::{ChainProvider, L2ChainProvider};
+use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 /// An oracle-backed derivation pipeline.
 pub type OraclePipeline<O, B> = DerivationPipeline<
@@ -182,19 +183,48 @@ where
         H: TrieHinter + Send + Sync + Clone,
     {
         loop {
-            let OptimismAttributesWithParent { attributes, .. } = self.produce_payload().await?;
+            let OptimismAttributesWithParent { mut attributes, .. } =
+                self.produce_payload().await?;
 
-            let mut executor =
-                StatelessL2BlockExecutor::builder(cfg, provider.clone(), hinter.clone())
-                    .with_parent_header(self.l2_safe_head_header().clone())
-                    .with_handle_register(handle_register)
-                    .build();
-
-            let number = match executor.execute_payload(attributes) {
+            let mut executor = self.new_executor(cfg, provider, hinter, handle_register);
+            let number = match executor.execute_payload(attributes.clone()) {
                 Ok(Header { number, .. }) => *number,
                 Err(e) => {
-                    tracing::error!(target: "client", "Failed to execute L2 block: {}", e);
-                    continue;
+                    error!(target: "client", "Failed to execute L2 block: {}", e);
+
+                    if cfg.is_holocene_active(attributes.payload_attributes.timestamp) {
+                        // Retry with a deposit-only block.
+                        warn!(target: "client", "Flushing current channel and retrying deposit only block");
+
+                        // Flush the current batch and channel - if a block was replaced with a
+                        // deposit-only block due to execution failure, the
+                        // batch and channel it is contained in is forwards
+                        // invalidated.
+                        self.pipeline.signal(Signal::FlushChannel).await?;
+
+                        // Strip out all transactions that are not deposits.
+                        attributes.transactions = attributes.transactions.map(|txs| {
+                            txs.into_iter()
+                                .filter(|tx| (!tx.is_empty() && tx[0] == OpTxType::Deposit as u8))
+                                .collect::<Vec<_>>()
+                        });
+
+                        // Retry the execution.
+                        let mut executor =
+                            self.new_executor(cfg, provider, hinter, handle_register);
+                        match executor.execute_payload(attributes) {
+                            Ok(Header { number, .. }) => *number,
+                            Err(e) => {
+                                error!(
+                                    target: "client",
+                                    "Critical - Failed to execute deposit-only block: {e}",
+                                );
+                                return Err(e.into());
+                            }
+                        }
+                    } else {
+                        continue;
+                    }
                 }
             };
             let output_root = executor.compute_output_root()?;
@@ -286,5 +316,29 @@ where
             chain_provider.block_info_by_number(safe_head_info.l1_origin.number).await?;
 
         Ok((l1_origin, safe_head_info, Sealed::new_unchecked(safe_header, safe_hash)))
+    }
+
+    /// Returns a new [StatelessL2BlockExecutor] instance.
+    ///
+    /// ## Takes
+    /// - `cfg`: The rollup configuration.
+    /// - `provider`: The trie provider.
+    /// - `hinter`: The trie hinter.
+    /// - `handle_register`: The handle register for the EVM.
+    fn new_executor<'a, P, H>(
+        &mut self,
+        cfg: &'a RollupConfig,
+        provider: &P,
+        hinter: &H,
+        handle_register: KonaHandleRegister<P, H>,
+    ) -> StatelessL2BlockExecutor<'a, P, H>
+    where
+        P: TrieProvider + Send + Sync + Clone,
+        H: TrieHinter + Send + Sync + Clone,
+    {
+        StatelessL2BlockExecutor::builder(cfg, provider.clone(), hinter.clone())
+            .with_parent_header(self.l2_safe_head_header().clone())
+            .with_handle_register(handle_register)
+            .build()
     }
 }
