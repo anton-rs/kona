@@ -2,7 +2,7 @@
 //! pipeline.
 
 mod pipeline;
-pub use pipeline::{Pipeline, StepResult};
+pub use pipeline::{Pipeline, Signal, StepResult};
 
 mod attributes;
 pub use attributes::{AttributesBuilder, NextAttributes};

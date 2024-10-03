@@ -4797,6 +4797,7 @@ dependencies = [
  "alloy-transport",
  "anyhow",
  "clap",
+ "kona-derive",
  "kona-primitives",
  "kona-providers-alloy",
  "lazy_static",
