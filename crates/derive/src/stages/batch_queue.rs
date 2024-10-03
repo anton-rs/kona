@@ -256,7 +256,7 @@ where
             data.check_batch(&self.cfg, &self.l1_blocks, parent, &mut self.fetcher).await;
         // Post-Holocene, future batches are dropped due to prevent gaps.
         let drop = validity.is_drop() ||
-            self.cfg.is_holocene_active(origin.timestamp) && validity.is_future();
+            (self.cfg.is_holocene_active(origin.timestamp) && validity.is_future());
         if drop {
             self.prev.flush();
             return Ok(());
