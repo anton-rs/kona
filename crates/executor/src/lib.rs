@@ -11,8 +11,11 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
-use alloy_eips::eip2718::{Decodable2718, Encodable2718};
-use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
+use alloy_eips::{
+    eip1559::BaseFeeParams,
+    eip2718::{Decodable2718, Encodable2718},
+};
+use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, B64, U256};
 use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBError, TrieHinter, TrieProvider};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
@@ -319,7 +322,12 @@ where
             gas_used: cumulative_gas_used,
             timestamp: payload.payload_attributes.timestamp,
             mix_hash: payload.payload_attributes.prev_randao,
-            nonce: Default::default(),
+            nonce: self
+                .config
+                .is_holocene_active(payload.payload_attributes.timestamp)
+                .then_some(payload.eip_1559_params)
+                .flatten()
+                .unwrap_or_default(),
             base_fee_per_gas: base_fee.try_into().ok(),
             blob_gas_used,
             excess_blob_gas: excess_blob_gas.and_then(|x| x.try_into().ok()),
@@ -508,8 +516,21 @@ where
             .map(BlobExcessGasAndPrice::new);
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
-        let base_fee_params = if config.is_canyon_active(payload_attrs.payload_attributes.timestamp)
+        let base_fee_params = if config
+            .is_holocene_active(payload_attrs.payload_attributes.timestamp)
         {
+            // If the parent header nonce is zero, use the default base fee params.
+            if parent_header.nonce == B64::ZERO {
+                config.canyon_base_fee_params
+            } else {
+                let denominator = u32::from_be_bytes(parent_header.nonce[0..4].try_into().unwrap());
+                let elasticity = u32::from_be_bytes(parent_header.nonce[4..8].try_into().unwrap());
+                BaseFeeParams {
+                    max_change_denominator: denominator as u128,
+                    elasticity_multiplier: elasticity as u128,
+                }
+            }
+        } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
             config.canyon_base_fee_params
         } else {
             config.base_fee_params
