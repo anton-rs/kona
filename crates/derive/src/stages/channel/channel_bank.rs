@@ -276,7 +276,6 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::frame_queue::tests::new_test_frames,
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
         traits::ResetSignal,
     };
@@ -287,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_channel_bank_into_prev() {
-        let frames = new_test_frames(1);
+        let frames = [crate::frame!(0xFF, 0, vec![0xDD; 50], true)];
         let mock = TestNextFrameProvider::new(frames.into_iter().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
         let channel_bank = ChannelBank::new(cfg, mock);
@@ -485,8 +484,7 @@ mod tests {
 
     #[test]
     fn test_ingest_and_prune_channel_bank() {
-        use alloc::vec::Vec;
-        let mut frames: Vec<Frame> = new_test_frames(100000);
+        let mut frames = crate::frames!(0xFF, 0, vec![0xDD; 50], 100000);
         let mock = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
@@ -511,8 +509,7 @@ mod tests {
 
     #[test]
     fn test_ingest_and_prune_channel_bank_fjord() {
-        use alloc::vec::Vec;
-        let mut frames: Vec<Frame> = new_test_frames(100000);
+        let mut frames = crate::frames!(0xFF, 0, vec![0xDD; 50], 100000);
         let mock = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { fjord_time: Some(0), ..Default::default() });
         let mut channel_bank = ChannelBank::new(cfg, mock);
@@ -537,7 +534,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_empty_channel_bank() {
-        let frames = new_test_frames(1);
+        let frames = [crate::frame!(0xFF, 0, vec![0xDD; 50], true)];
         let mock = TestNextFrameProvider::new(vec![Ok(frames[0].clone())]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
@@ -556,7 +553,10 @@ mod tests {
         const ROLLUP_CONFIGS: [RollupConfig; 2] = [OP_MAINNET_CONFIG, BASE_MAINNET_CONFIG];
 
         for cfg in ROLLUP_CONFIGS {
-            let frames = new_test_frames(2);
+            let frames = [
+                crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+                crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+            ];
             let mock = TestNextFrameProvider::new(frames.into_iter().map(Ok).collect::<Vec<_>>());
             let cfg = Arc::new(cfg);
             let mut channel_bank = ChannelBank::new(cfg.clone(), mock);

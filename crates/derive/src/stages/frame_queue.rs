@@ -199,33 +199,7 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::{test_utils::TestFrameQueueProvider, traits::ResetSignal};
-    use alloc::{vec, vec::Vec};
-    use op_alloy_protocol::DERIVATION_VERSION_0;
-
-    pub(crate) fn new_test_frames(count: usize) -> Vec<Frame> {
-        (0..count)
-            .map(|i| Frame {
-                id: [0xFF; 16],
-                number: i as u16,
-                data: vec![0xDD; 50],
-                is_last: i == count - 1,
-            })
-            .collect()
-    }
-
-    pub(crate) fn encode_frames(frames: Vec<Frame>) -> Bytes {
-        let mut bytes = Vec::new();
-        bytes.extend_from_slice(&[DERIVATION_VERSION_0]);
-        for frame in frames.iter() {
-            bytes.extend_from_slice(&frame.encode());
-        }
-        Bytes::from(bytes)
-    }
-
-    pub(crate) fn new_encoded_test_frames(count: usize) -> Bytes {
-        let frames = new_test_frames(count);
-        encode_frames(frames)
-    }
+    use alloc::vec;
 
     #[tokio::test]
     async fn test_frame_queue_reset() {
@@ -261,321 +235,271 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_wrong_derivation_version() {
-        let data = vec![Ok(Bytes::from(vec![0x01]))];
-        let mut mock = TestFrameQueueProvider::new(data);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
-        assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::NotEnoughData.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_origin(BlockInfo::default())
+            .with_raw_frames(Bytes::from(vec![0x01]))
+            .with_expected_err(PipelineError::NotEnoughData.temp())
+            .build();
+        assert.holocene_active(false);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_frame_queue_frame_too_short() {
-        let data = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
-        let mut mock = TestFrameQueueProvider::new(data);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
-        assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::NotEnoughData.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_origin(BlockInfo::default())
+            .with_raw_frames(Bytes::from(vec![0x00, 0x01]))
+            .with_expected_err(PipelineError::NotEnoughData.temp())
+            .build();
+        assert.holocene_active(false);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_frame_queue_single_frame() {
-        let data = new_encoded_test_frames(1);
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(data)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
-        assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
-        let frame_decoded = frame_queue.next_frame().await.unwrap();
-        let frame = new_test_frames(1);
-        assert_eq!(frame[0], frame_decoded);
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let frames = [crate::frame!(0xFF, 0, vec![0xDD; 50], true)];
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_expected_frames(&frames)
+            .with_origin(BlockInfo::default())
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(false);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_frame_queue_multiple_frames() {
-        let data = new_encoded_test_frames(3);
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(data)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
-        assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
-        for i in 0..3 {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded.number, i);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 2, vec![0xDD; 50], true),
+        ];
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_expected_frames(&frames)
+            .with_origin(BlockInfo::default())
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(false);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_frame_queue_missing_origin() {
-        let data = new_encoded_test_frames(1);
-        let mock = TestFrameQueueProvider::new(vec![Ok(data)]);
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::MissingOrigin.crit());
+        let frames = [crate::frame!(0xFF, 0, vec![0xDD; 50], true)];
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_expected_frames(&frames)
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(false);
+        assert.missing_origin().await;
     }
 
     #[tokio::test]
     async fn test_holocene_valid_frames() {
-        let channel = new_encoded_test_frames(3);
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(channel)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for i in 0..3 {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded.number, i);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 2, vec![0xDD; 50], true),
+        ];
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&frames)
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
-    async fn test_holocene_single_invalid_frame() {
-        let frames = vec![Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: true }];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        let decoded = frame_queue.next_frame().await.unwrap();
-        assert_eq!(decoded, frames[0]);
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+    async fn test_holocene_single_frame() {
+        let frames = [crate::frame!(0xFF, 1, vec![0xDD; 50], true)];
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&frames)
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_unordered_frames() {
-        let frames = vec![
+        let frames = [
             // -- First Channel --
-            Frame { id: [0xEE; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 2, data: vec![0xDD; 50], is_last: true },
-            // Frame with the same channel id, but after is_last should be dropped.
-            Frame { id: [0xEE; 16], number: 3, data: vec![0xDD; 50], is_last: false },
+            crate::frame!(0xEE, 0, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 1, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 2, vec![0xDD; 50], true),
+            crate::frame!(0xEE, 3, vec![0xDD; 50], false), // Dropped
             // -- Next Channel --
-            Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames.iter().take(3) {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, *frame);
-        }
-        for i in 0..2 {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, frames[i + 4]);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&[&frames[0..3], &frames[4..]].concat())
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_non_sequential_frames() {
-        let frames = vec![
+        let frames = [
             // -- First Channel --
-            Frame { id: [0xEE; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            // Both this and the next frames should be dropped since neither will be
-            // interpreted as having the next sequential frame number after 1.
-            Frame { id: [0xEE; 16], number: 3, data: vec![0xDD; 50], is_last: true },
-            Frame { id: [0xEE; 16], number: 4, data: vec![0xDD; 50], is_last: false },
+            crate::frame!(0xEE, 0, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 1, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 3, vec![0xDD; 50], true), // Dropped
+            crate::frame!(0xEE, 4, vec![0xDD; 50], false), // Dropped
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames.iter().take(2) {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, *frame);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&frames[0..2])
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_unclosed_channel() {
-        let frames = vec![
+        let frames = [
             // -- First Channel --
-            // Since this channel isn't closed by a last frame it is entirely dropped
-            Frame { id: [0xEE; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 2, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 3, data: vec![0xDD; 50], is_last: false },
+            crate::frame!(0xEE, 0, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 1, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 2, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 3, vec![0xDD; 50], false),
             // -- Next Channel --
-            Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for i in 0..2 {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, frames[i + 4]);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&frames[4..])
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_unstarted_channel() {
-        let frames = vec![
+        let frames = [
             // -- First Channel --
-            Frame { id: [0xDD; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xDD; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xDD; 16], number: 2, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xDD; 16], number: 3, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xDD, 0, vec![0xDD; 50], false),
+            crate::frame!(0xDD, 1, vec![0xDD; 50], false),
+            crate::frame!(0xDD, 2, vec![0xDD; 50], false),
+            crate::frame!(0xDD, 3, vec![0xDD; 50], true),
             // -- Second Channel --
-            // Since this channel doesn't have a starting frame where number == 0,
-            // it is entirely dropped.
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 2, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xEE, 1, vec![0xDD; 50], false), // Dropped
+            crate::frame!(0xEE, 2, vec![0xDD; 50], true),  // Dropped
             // -- Third Channel --
-            Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames.iter().take(4) {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, *frame);
-        }
-        for i in 0..2 {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, frames[i + 6]);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&[&frames[0..4], &frames[6..]].concat())
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
-    // Notice: The first channel is **not** dropped here because there can still be
-    // frames that come in to successfully close the channel.
     #[tokio::test]
     async fn test_holocene_unclosed_channel_with_invalid_start() {
-        let frames = vec![
+        let frames = [
             // -- First Channel --
-            Frame { id: [0xEE; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 2, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 3, data: vec![0xDD; 50], is_last: false },
+            crate::frame!(0xEE, 0, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 1, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 2, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 3, vec![0xDD; 50], false),
             // -- Next Channel --
-            // This is also an invalid channel because it is never started
-            // since there isn't a first frame with number == 0
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 2, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 1, vec![0xDD; 50], false), // Dropped
+            crate::frame!(0xFF, 2, vec![0xDD; 50], true),  // Dropped
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames.iter().take(4) {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, *frame);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&frames[0..4])
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_replace_channel() {
-        let frames = vec![
+        let frames = [
             // -- First Channel - VALID & CLOSED --
-            Frame { id: [0xDD; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xDD; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xDD, 0, vec![0xDD; 50], false),
+            crate::frame!(0xDD, 1, vec![0xDD; 50], true),
             // -- Second Channel - VALID & NOT CLOSED / DROPPED --
-            Frame { id: [0xEE; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: false },
+            crate::frame!(0xEE, 0, vec![0xDD; 50], false),
+            crate::frame!(0xEE, 1, vec![0xDD; 50], false),
             // -- Third Channel - VALID & CLOSED / REPLACES CHANNEL #2 --
-            Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames.iter().filter(|f| f.id != [0xEE; 16]) {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, *frame);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&[&frames[0..2], &frames[4..]].concat())
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_interleaved_invalid_channel() {
-        let frames = vec![
+        let frames = [
             // -- First channel is dropped since it is replaced by the second channel --
             // -- Second channel is dropped since it isn't closed --
-            Frame { id: [0x01; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0x02; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0x01; 16], number: 1, data: vec![0xDD; 50], is_last: true },
-            Frame { id: [0x02; 16], number: 1, data: vec![0xDD; 50], is_last: false },
+            crate::frame!(0x01, 0, vec![0xDD; 50], false),
+            crate::frame!(0x02, 0, vec![0xDD; 50], false),
+            crate::frame!(0x01, 1, vec![0xDD; 50], true),
+            crate::frame!(0x02, 1, vec![0xDD; 50], false),
             // -- Third Channel - VALID & CLOSED --
-            Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in frames[4..].iter() {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, *frame);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&frames[4..])
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 
     #[tokio::test]
     async fn test_holocene_interleaved_valid_channel() {
-        let frames = vec![
+        let frames = [
             // -- First channel is dropped since it is replaced by the second channel --
             // -- Second channel is successfully closed so it's valid --
-            Frame { id: [0x01; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0x02; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0x01; 16], number: 1, data: vec![0xDD; 50], is_last: true },
-            Frame { id: [0x02; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0x01, 0, vec![0xDD; 50], false),
+            crate::frame!(0x02, 0, vec![0xDD; 50], false),
+            crate::frame!(0x01, 1, vec![0xDD; 50], true),
+            crate::frame!(0x02, 1, vec![0xDD; 50], true),
             // -- Third Channel - VALID & CLOSED --
-            Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
-            Frame { id: [0xFF; 16], number: 1, data: vec![0xDD; 50], is_last: true },
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
         ];
-        let encoded = encode_frames(frames.clone());
-        let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
-        mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
-        assert!(frame_queue.is_holocene_active(BlockInfo::default()));
-        for frame in [&frames[1], &frames[3], &frames[4], &frames[5]].iter() {
-            let frame_decoded = frame_queue.next_frame().await.unwrap();
-            assert_eq!(frame_decoded, **frame);
-        }
-        let err = frame_queue.next_frame().await.unwrap_err();
-        assert_eq!(err, PipelineError::Eof.temp());
+        let assert = crate::test_utils::FrameQueueBuilder::new()
+            .with_rollup_config(&RollupConfig { holocene_time: Some(0), ..Default::default() })
+            .with_origin(BlockInfo::default())
+            .with_expected_frames(&[&frames[1..2], &frames[3..]].concat())
+            .with_frames(&frames)
+            .build();
+        assert.holocene_active(true);
+        assert.next_frames().await;
     }
 }
