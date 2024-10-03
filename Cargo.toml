@@ -11,7 +11,7 @@ categories = ["cryptography", "cryptography::cryptocurrencies"]
 exclude = ["**/target"]
 
 [workspace]
-members = ["crates/*", "examples/*", "bin/*"]
+members = ["crates/*", "bin/*"]
 default-members = ["bin/host", "bin/client"]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021

@@ -5,8 +5,6 @@ alias l := lint-native
 alias lint := lint-native
 alias f := fmt-native-fix
 alias b := build
-alias d := docker-build-ts
-alias r := docker-run-ts
 alias h := hack
 
 # default recipe to display help information
@@ -109,7 +107,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync --exclude kona-providers-alloy
+    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude kona-providers-alloy
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -118,34 +116,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude trusted-sync --exclude kona-providers-alloy
-
-# Build the `trusted-sync` docker image
-docker-build-ts *args='':
-  docker build -t trusted-sync -f examples/trusted-sync/Dockerfile . $@
-
-# Run the `trusted-sync` docker container
-docker-run-ts:
-  docker run -it \
-    -e L1_RPC_URL=$L1_RPC_URL \
-    -e L2_RPC_URL=$L2_RPC_URL \
-    -e BEACON_URL=$BEACON_URL \
-    -e METRICS_URL=$METRICS_URL \
-    -e START_L2_BLOCK=$START_L2_BLOCK \
-    -e START_BLOCKS_FROM_TIP=$START_BLOCKS_FROM_TIP \
-    trusted-sync
-
-# Run the `trusted-sync` docker container with Loki logging
-docker-run-ts-with-loki:
-  docker run -it \
-    -e L1_RPC_URL=$L1_RPC_URL \
-    -e L2_RPC_URL=$L2_RPC_URL \
-    -e BEACON_URL=$BEACON_URL \
-    -e LOKI_URL=$LOKI_URL \
-    -e METRICS_URL=$METRICS_URL \
-    -e START_L2_BLOCK=$START_L2_BLOCK \
-    -e START_BLOCKS_FROM_TIP=$START_BLOCKS_FROM_TIP \
-    trusted-sync
+    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude kona-providers-alloy
 
 # Build the `kona-client` prestate artifacts for the latest release.
 build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
