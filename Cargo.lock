@@ -4801,6 +4801,7 @@ dependencies = [
  "kona-primitives",
  "kona-providers-alloy",
  "lazy_static",
+ "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-rpc-types-engine",
  "prometheus",
