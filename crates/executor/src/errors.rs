@@ -12,6 +12,9 @@ pub enum ExecutorError {
     /// Missing gas limit in the payload attributes.
     #[error("Gas limit not provided in payload attributes")]
     MissingGasLimit,
+    /// Missing EIP-1559 parameters in execution payload post-Holocene.
+    #[error("Missing EIP-1559 parameters in execution payload post-Holocene")]
+    MissingEIP1559Params,
     /// Missing parent beacon block root in the payload attributes.
     #[error("Parent beacon block root not provided in payload attributes")]
     MissingParentBeaconBlockRoot,
@@ -33,9 +36,6 @@ pub enum ExecutorError {
     /// RLP error.
     #[error("RLP error: {0}")]
     RLPError(alloy_eips::eip2718::Eip2718Error),
-    /// Missing EIP-1559 parameters in execution payload post-Holocene.
-    #[error("Missing EIP-1559 parameters in execution payload post-Holocene")]
-    MissingEIP1559Params,
 }
 
 /// A [Result] type for the [ExecutorError] enum.

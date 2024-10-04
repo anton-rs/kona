@@ -196,15 +196,25 @@ where
             gas_limit: Some(u64::from_be_bytes(
                 alloy_primitives::U64::from(sys_config.gas_limit).to_be_bytes(),
             )),
-            eip_1559_params: eip_1559_params_from_system_config(&sys_config),
+            eip_1559_params: eip_1559_params_from_system_config(
+                &self.rollup_cfg,
+                next_l2_time,
+                &sys_config,
+            ),
         })
     }
 }
 
 /// Returns the eip1559 parameters from a [SystemConfig] encoded as a [B64].
-fn eip_1559_params_from_system_config(sys_config: &SystemConfig) -> Option<B64> {
+fn eip_1559_params_from_system_config(
+    rollup_config: &RollupConfig,
+    next_timestamp: u64,
+    sys_config: &SystemConfig,
+) -> Option<B64> {
     if sys_config.eip1559_denominator.is_none() && sys_config.eip1559_elasticity.is_none() {
-        None
+        // Instruct the execution layer to use the canyon base fee parameters,
+        // if the system config does not specify any.
+        rollup_config.is_holocene_active(next_timestamp).then_some(B64::ZERO)
     } else {
         Some(B64::from_slice(
             &[

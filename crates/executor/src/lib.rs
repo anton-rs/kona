@@ -96,11 +96,7 @@ where
         payload: OptimismPayloadAttributes,
     ) -> ExecutorResult<&Header> {
         // Prepare the `revm` environment.
-        let base_fee_params = Self::active_base_fee_params(
-            self.config,
-            &payload,
-            self.trie_db.parent_block_header(),
-        )?;
+        let base_fee_params = Self::active_base_fee_params(self.config, &payload)?;
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.payload_attributes.timestamp),
             self.trie_db.parent_block_header(),
@@ -180,8 +176,8 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
-            if extract_tx_gas_limit(&transaction) > block_available_gas
-                && (is_regolith || !is_system_transaction(&transaction))
+            if extract_tx_gas_limit(&transaction) > block_available_gas &&
+                (is_regolith || !is_system_transaction(&transaction))
             {
                 return Err(ExecutorError::BlockGasLimitExceeded);
             }
@@ -551,11 +547,9 @@ where
     /// ## Takes
     /// - `config`: The rollup config to use for the computation.
     /// - `payload_attrs`: The payload attributes to use for the computation.
-    /// - `parent_header`: The parent header of the block to be executed.
     fn active_base_fee_params(
         config: &RollupConfig,
         payload_attrs: &OptimismPayloadAttributes,
-        parent_header: &Header,
     ) -> ExecutorResult<BaseFeeParams> {
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
@@ -564,9 +558,9 @@ where
                 let params =
                     payload_attrs.eip_1559_params.ok_or(ExecutorError::MissingEIP1559Params)?;
 
-                // If the parent header nonce is zero, use the canyon base fee params. This should
-                // only ever occur in the first block post-Holocene.
-                if parent_header.nonce == B64::ZERO {
+                // If the parameters sent are equal to `0`, use the canyon base fee params.
+                // Otherwise, use the EIP-1559 parameters sent through the payload.
+                if params == B64::ZERO {
                     config.canyon_base_fee_params
                 } else {
                     let denominator = u32::from_be_bytes(params[0..4].try_into().unwrap());
