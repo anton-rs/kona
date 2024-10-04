@@ -96,11 +96,12 @@ where
         payload: OptimismPayloadAttributes,
     ) -> ExecutorResult<&Header> {
         // Prepare the `revm` environment.
+        let base_fee_params = Self::active_base_fee_params(self.config, &payload)?;
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.payload_attributes.timestamp),
-            self.config,
             self.trie_db.parent_block_header(),
             &payload,
+            &base_fee_params,
         );
         let initialized_cfg = self.evm_cfg_env(payload.payload_attributes.timestamp);
         let block_number = initialized_block_env.number.to::<u64>();
@@ -305,6 +306,21 @@ where
             })
             .unwrap_or_default();
 
+        let encoded_base_fee_params = self
+            .config
+            .is_holocene_active(payload.payload_attributes.timestamp)
+            .then(|| {
+                let mut encoded_params = B64::ZERO;
+                encoded_params[0..4].copy_from_slice(
+                    (base_fee_params.max_change_denominator as u32).to_be_bytes().as_ref(),
+                );
+                encoded_params[4..8].copy_from_slice(
+                    (base_fee_params.elasticity_multiplier as u32).to_be_bytes().as_ref(),
+                );
+                encoded_params
+            })
+            .unwrap_or_default();
+
         // Construct the new header.
         let header = Header {
             parent_hash: state.database.parent_block_header().seal(),
@@ -322,12 +338,7 @@ where
             gas_used: cumulative_gas_used,
             timestamp: payload.payload_attributes.timestamp,
             mix_hash: payload.payload_attributes.prev_randao,
-            nonce: self
-                .config
-                .is_holocene_active(payload.payload_attributes.timestamp)
-                .then_some(payload.eip_1559_params)
-                .flatten()
-                .unwrap_or_default(),
+            nonce: encoded_base_fee_params,
             base_fee_per_gas: base_fee.try_into().ok(),
             blob_gas_used,
             excess_blob_gas: excess_blob_gas.and_then(|x| x.try_into().ok()),
@@ -502,41 +513,22 @@ where
     /// Prepares a [BlockEnv] with the given [OptimismPayloadAttributes].
     ///
     /// ## Takes
-    /// - `payload`: The payload to prepare the environment for.
-    /// - `env`: The block environment to prepare.
+    /// - `spec_id`: The [SpecId] to prepare the environment for.
+    /// - `parent_header`: The parent header of the block to be executed.
+    /// - `payload_attrs`: The payload to prepare the environment for.
+    /// - `base_fee_params`: The active base fee parameters for the block.
     fn prepare_block_env(
         spec_id: SpecId,
-        config: &RollupConfig,
         parent_header: &Header,
         payload_attrs: &OptimismPayloadAttributes,
+        base_fee_params: &BaseFeeParams,
     ) -> BlockEnv {
         let blob_excess_gas_and_price = parent_header
             .next_block_excess_blob_gas()
             .or_else(|| spec_id.is_enabled_in(SpecId::ECOTONE).then_some(0))
             .map(BlobExcessGasAndPrice::new);
-        // If the payload attribute timestamp is past canyon activation,
-        // use the canyon base fee params from the rollup config.
-        let base_fee_params = if config
-            .is_holocene_active(payload_attrs.payload_attributes.timestamp)
-        {
-            // If the parent header nonce is zero, use the default base fee params.
-            if parent_header.nonce == B64::ZERO {
-                config.canyon_base_fee_params
-            } else {
-                let denominator = u32::from_be_bytes(parent_header.nonce[0..4].try_into().unwrap());
-                let elasticity = u32::from_be_bytes(parent_header.nonce[4..8].try_into().unwrap());
-                BaseFeeParams {
-                    max_change_denominator: denominator as u128,
-                    elasticity_multiplier: elasticity as u128,
-                }
-            }
-        } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
-            config.canyon_base_fee_params
-        } else {
-            config.base_fee_params
-        };
         let next_block_base_fee =
-            parent_header.next_block_base_fee(base_fee_params).unwrap_or_default();
+            parent_header.next_block_base_fee(*base_fee_params).unwrap_or_default();
 
         BlockEnv {
             number: U256::from(parent_header.number + 1),
@@ -548,6 +540,43 @@ where
             prevrandao: Some(payload_attrs.payload_attributes.prev_randao),
             blob_excess_gas_and_price,
         }
+    }
+
+    /// Returns the active base fee parameters for the given payload attributes.
+    ///
+    /// ## Takes
+    /// - `config`: The rollup config to use for the computation.
+    /// - `payload_attrs`: The payload attributes to use for the computation.
+    fn active_base_fee_params(
+        config: &RollupConfig,
+        payload_attrs: &OptimismPayloadAttributes,
+    ) -> ExecutorResult<BaseFeeParams> {
+        // If the payload attribute timestamp is past canyon activation,
+        // use the canyon base fee params from the rollup config.
+        let base_fee_params =
+            if config.is_holocene_active(payload_attrs.payload_attributes.timestamp) {
+                let params =
+                    payload_attrs.eip_1559_params.ok_or(ExecutorError::MissingEIP1559Params)?;
+
+                // If the parameters sent are equal to `0`, use the canyon base fee params.
+                // Otherwise, use the EIP-1559 parameters sent through the payload.
+                if params == B64::ZERO {
+                    config.canyon_base_fee_params
+                } else {
+                    let denominator = u32::from_be_bytes(params[0..4].try_into().unwrap());
+                    let elasticity = u32::from_be_bytes(params[4..8].try_into().unwrap());
+                    BaseFeeParams {
+                        max_change_denominator: denominator as u128,
+                        elasticity_multiplier: elasticity as u128,
+                    }
+                }
+            } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
+                config.canyon_base_fee_params
+            } else {
+                config.base_fee_params
+            };
+
+        Ok(base_fee_params)
     }
 
     /// Prepares a [TxEnv] with the given [OpTxEnvelope].
