@@ -266,13 +266,11 @@ async fn derive_deposits(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher,
-        traits::test_utils::TestChainProvider,
-    };
+    use crate::{errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher};
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_primitives::{Log, LogData, B256, U256, U64};
+    use kona_providers::test_utils::TestChainProvider;
     use op_alloy_genesis::SystemConfig;
     use op_alloy_protocol::{BlockInfo, DepositError};
 

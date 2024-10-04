@@ -227,8 +227,8 @@ mod test {
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
         stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
-        traits::test_utils::TestL2ChainProvider,
     };
+    use kona_providers::test_utils::TestL2ChainProvider;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]

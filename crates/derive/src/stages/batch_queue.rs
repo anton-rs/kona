@@ -490,18 +490,16 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        stages::{
-            channel_reader::BatchReader,
-            test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
-        },
-        traits::test_utils::TestL2ChainProvider,
+    use crate::stages::{
+        channel_reader::BatchReader,
+        test_utils::{CollectingLayer, MockBatchQueueProvider, TraceStorage},
     };
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_eips::{eip2718::Decodable2718, BlockNumHash};
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
+    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
     use op_alloy_genesis::ChainGenesis;
     use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};

@@ -19,3 +19,6 @@ pub use l1_chain_provider::ChainProvider;
 
 mod l2_chain_provider;
 pub use l2_chain_provider::L2ChainProvider;
+
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;

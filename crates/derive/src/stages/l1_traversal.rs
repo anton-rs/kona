@@ -147,10 +147,11 @@ impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::{errors::PipelineErrorKind, traits::test_utils::TestChainProvider};
+    use crate::errors::PipelineErrorKind;
     use alloc::vec;
     use alloy_consensus::Receipt;
     use alloy_primitives::{address, b256, hex, Bytes, Log, LogData, B256};
+    use kona_providers::test_utils::TestChainProvider;
     use op_alloy_genesis::system::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
 
     const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");
