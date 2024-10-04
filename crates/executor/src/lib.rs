@@ -96,8 +96,11 @@ where
         payload: OptimismPayloadAttributes,
     ) -> ExecutorResult<&Header> {
         // Prepare the `revm` environment.
-        let base_fee_params =
-            Self::active_base_fee_params(self.config, &payload, self.trie_db.parent_block_header());
+        let base_fee_params = Self::active_base_fee_params(
+            self.config,
+            &payload,
+            self.trie_db.parent_block_header(),
+        )?;
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.payload_attributes.timestamp),
             self.trie_db.parent_block_header(),
@@ -177,8 +180,8 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
-            if extract_tx_gas_limit(&transaction) > block_available_gas &&
-                (is_regolith || !is_system_transaction(&transaction))
+            if extract_tx_gas_limit(&transaction) > block_available_gas
+                && (is_regolith || !is_system_transaction(&transaction))
             {
                 return Err(ExecutorError::BlockGasLimitExceeded);
             }
@@ -553,26 +556,33 @@ where
         config: &RollupConfig,
         payload_attrs: &OptimismPayloadAttributes,
         parent_header: &Header,
-    ) -> BaseFeeParams {
+    ) -> ExecutorResult<BaseFeeParams> {
         // If the payload attribute timestamp is past canyon activation,
         // use the canyon base fee params from the rollup config.
-        if config.is_holocene_active(payload_attrs.payload_attributes.timestamp) {
-            // If the parent header nonce is zero, use the default base fee params.
-            if parent_header.nonce == B64::ZERO {
+        let base_fee_params =
+            if config.is_holocene_active(payload_attrs.payload_attributes.timestamp) {
+                let params =
+                    payload_attrs.eip_1559_params.ok_or(ExecutorError::MissingEIP1559Params)?;
+
+                // If the parent header nonce is zero, use the canyon base fee params. This should
+                // only ever occur in the first block post-Holocene.
+                if parent_header.nonce == B64::ZERO {
+                    config.canyon_base_fee_params
+                } else {
+                    let denominator = u32::from_be_bytes(params[0..4].try_into().unwrap());
+                    let elasticity = u32::from_be_bytes(params[4..8].try_into().unwrap());
+                    BaseFeeParams {
+                        max_change_denominator: denominator as u128,
+                        elasticity_multiplier: elasticity as u128,
+                    }
+                }
+            } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
                 config.canyon_base_fee_params
             } else {
-                let denominator = u32::from_be_bytes(parent_header.nonce[0..4].try_into().unwrap());
-                let elasticity = u32::from_be_bytes(parent_header.nonce[4..8].try_into().unwrap());
-                BaseFeeParams {
-                    max_change_denominator: denominator as u128,
-                    elasticity_multiplier: elasticity as u128,
-                }
-            }
-        } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
-            config.canyon_base_fee_params
-        } else {
-            config.base_fee_params
-        }
+                config.base_fee_params
+            };
+
+        Ok(base_fee_params)
     }
 
     /// Prepares a [TxEnv] with the given [OpTxEnvelope].
