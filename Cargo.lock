@@ -2195,6 +2195,7 @@ version = "0.0.1"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
+ "anyhow",
  "async-trait",
  "op-alloy-consensus",
  "op-alloy-genesis",

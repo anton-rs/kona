@@ -90,15 +90,13 @@ mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::address;
+    use kona_providers::test_utils::TestChainProvider;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
     use op_alloy_protocol::BlockInfo;
 
     use crate::{
         sources::{EthereumDataSource, EthereumDataSourceVariant},
-        traits::{
-            test_utils::{TestBlobProvider, TestChainProvider},
-            AsyncIterator, DataAvailabilityProvider,
-        },
+        traits::{test_utils::TestBlobProvider, AsyncIterator, DataAvailabilityProvider},
     };
 
     #[tokio::test]

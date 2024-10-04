@@ -53,6 +53,8 @@ serde_json.workspace = true
 alloy-rpc-client.workspace = true
 alloy-node-bindings.workspace = true
 alloy-transport-http.workspace = true
+kona-providers = { workspace = true, features = ["test-utils"] }
+kona-derive = { workspace = true, features = ["serde", "test-utils"] }
 
 [features]
 default = []
@@ -62,4 +64,6 @@ test-utils = [
   "dep:alloy-rpc-client",
   "dep:alloy-node-bindings",
   "dep:alloy-transport-http",
+  "kona-derive/test-utils",
+  "kona-providers/test-utils",
 ]

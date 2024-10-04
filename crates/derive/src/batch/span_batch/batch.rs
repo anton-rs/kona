@@ -539,14 +539,12 @@ impl SpanBatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        stages::test_utils::{CollectingLayer, TraceStorage},
-        traits::test_utils::TestL2ChainProvider,
-    };
+    use crate::stages::test_utils::{CollectingLayer, TraceStorage};
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_eips::BlockNumHash;
     use alloy_primitives::{b256, Bytes};
+    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::{OpBlock, OpTxType};
     use op_alloy_genesis::ChainGenesis;
     use tracing::Level;
