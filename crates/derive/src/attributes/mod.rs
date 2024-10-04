@@ -214,25 +214,20 @@ fn eip_1559_params_from_system_config(
     sys_config: &SystemConfig,
 ) -> Option<B64> {
     let is_holocene = rollup_config.is_holocene_active(next_timestamp);
-    if sys_config.eip1559_denominator.is_none() && sys_config.eip1559_elasticity.is_none() {
-        // Instruct the execution layer to use the canyon base fee parameters,
-        // if the system config does not specify any.
-        is_holocene.then_some(B64::ZERO)
+
+    // For the first holocene block, a zero'd out B64 is returned to signal the
+    // execution layer to use the canyon base fee parameters. Else, the system
+    // config's eip1559 parameters are encoded as a B64.
+    if is_holocene && !rollup_config.is_holocene_active(parent_timestamp) {
+        Some(B64::ZERO)
     } else {
-        // For the first holocene block, a zero'd out B64 is returned to signal the
-        // execution layer to use the canyon base fee parameters. Else, the system
-        // config's eip1559 parameters are encoded as a B64.
-        if is_holocene && !rollup_config.is_holocene_active(parent_timestamp) {
-            Some(B64::ZERO)
-        } else {
-            is_holocene.then_some(B64::from_slice(
-                &[
-                    sys_config.eip1559_denominator.unwrap_or_default().to_be_bytes(),
-                    sys_config.eip1559_elasticity.unwrap_or_default().to_be_bytes(),
-                ]
-                .concat(),
-            ))
-        }
+        is_holocene.then_some(B64::from_slice(
+            &[
+                sys_config.eip1559_denominator.unwrap_or_default().to_be_bytes(),
+                sys_config.eip1559_elasticity.unwrap_or_default().to_be_bytes(),
+            ]
+            .concat(),
+        ))
     }
 }
 
