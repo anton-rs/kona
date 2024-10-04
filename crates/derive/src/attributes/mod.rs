@@ -198,6 +198,7 @@ where
             )),
             eip_1559_params: eip_1559_params_from_system_config(
                 &self.rollup_cfg,
+                l2_parent.block_info.timestamp,
                 next_l2_time,
                 &sys_config,
             ),
@@ -208,6 +209,7 @@ where
 /// Returns the eip1559 parameters from a [SystemConfig] encoded as a [B64].
 fn eip_1559_params_from_system_config(
     rollup_config: &RollupConfig,
+    parent_timestamp: u64,
     next_timestamp: u64,
     sys_config: &SystemConfig,
 ) -> Option<B64> {
@@ -217,13 +219,20 @@ fn eip_1559_params_from_system_config(
         // if the system config does not specify any.
         is_holocene.then_some(B64::ZERO)
     } else {
-        is_holocene.then_some(B64::from_slice(
-            &[
-                sys_config.eip1559_denominator.unwrap_or_default().to_be_bytes(),
-                sys_config.eip1559_elasticity.unwrap_or_default().to_be_bytes(),
-            ]
-            .concat(),
-        ))
+        // For the first holocene block, a zero'd out B64 is returned to signal the
+        // execution layer to use the canyon base fee parameters. Else, the system
+        // config's eip1559 parameters are encoded as a B64.
+        if is_holocene && !rollup_config.is_holocene_active(parent_timestamp) {
+            Some(B64::ZERO)
+        } else {
+            is_holocene.then_some(B64::from_slice(
+                &[
+                    sys_config.eip1559_denominator.unwrap_or_default().to_be_bytes(),
+                    sys_config.eip1559_elasticity.unwrap_or_default().to_be_bytes(),
+                ]
+                .concat(),
+            ))
+        }
     }
 }
 
@@ -326,7 +335,7 @@ mod tests {
     fn test_eip_1559_params_from_system_config_none() {
         let rollup_config = RollupConfig::default();
         let sys_config = SystemConfig::default();
-        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, &sys_config), None);
+        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, 0, &sys_config), None);
     }
 
     #[test]
@@ -338,7 +347,7 @@ mod tests {
             ..Default::default()
         };
         let expected = Some(B64::from_slice(&[1u32.to_be_bytes(), 0u32.to_be_bytes()].concat()));
-        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, &sys_config), expected);
+        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, 0, &sys_config), expected);
     }
 
     #[test]
@@ -350,7 +359,7 @@ mod tests {
             ..Default::default()
         };
         let expected = Some(B64::from_slice(&[1u32.to_be_bytes(), 2u32.to_be_bytes()].concat()));
-        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, &sys_config), expected);
+        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, 0, &sys_config), expected);
     }
 
     #[test]
@@ -362,7 +371,7 @@ mod tests {
             ..Default::default()
         };
         let expected = Some(B64::ZERO);
-        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, &sys_config), expected);
+        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, 0, &sys_config), expected);
     }
 
     #[test]
@@ -373,7 +382,21 @@ mod tests {
             eip1559_elasticity: Some(2),
             ..Default::default()
         };
-        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, &sys_config), None);
+        assert_eq!(eip_1559_params_from_system_config(&rollup_config, 0, 0, &sys_config), None);
+    }
+
+    #[test]
+    fn test_default_eip_1559_params_first_block_holocene() {
+        let rollup_config = RollupConfig { holocene_time: Some(2), ..Default::default() };
+        let sys_config = SystemConfig {
+            eip1559_denominator: Some(1),
+            eip1559_elasticity: Some(2),
+            ..Default::default()
+        };
+        assert_eq!(
+            eip_1559_params_from_system_config(&rollup_config, 0, 2, &sys_config),
+            Some(B64::ZERO)
+        );
     }
 
     #[tokio::test]
