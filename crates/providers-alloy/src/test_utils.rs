@@ -86,7 +86,7 @@ mod tests {
     use alloy_provider::Provider;
 
     #[tokio::test]
-    async fn test_spawn_anvil() {
+    async fn test_online_spawn_anvil() {
         let (provider, _anvil) = spawn_anvil();
         let id = provider.get_chain_id().await.expect("could not get chain id");
         assert_eq!(id, 31337);
