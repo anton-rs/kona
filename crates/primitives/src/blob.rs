@@ -2,7 +2,7 @@
 
 use alloc::vec;
 use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
-use alloy_primitives::{Bytes, B256};
+use alloy_primitives::Bytes;
 use thiserror::Error;
 
 /// The blob encoding version
@@ -13,22 +13,6 @@ pub(crate) const BLOB_MAX_DATA_SIZE: usize = (4 * 31 + 3) * 1024 - 4; // 130044
 
 /// Blob Encoding/Decoding Rounds
 pub(crate) const BLOB_ENCODING_ROUNDS: usize = 1024;
-
-/// A Blob hash
-#[derive(Default, Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct IndexedBlobHash {
-    /// The index of the blob
-    pub index: usize,
-    /// The hash of the blob
-    pub hash: B256,
-}
-
-impl PartialEq for IndexedBlobHash {
-    fn eq(&self, other: &Self) -> bool {
-        self.index == other.index && self.hash == other.hash
-    }
-}
 
 /// Blob Decuding Error
 #[derive(Error, Debug, PartialEq, Eq)]

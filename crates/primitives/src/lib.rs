@@ -9,8 +9,11 @@
 
 extern crate alloc;
 
+pub mod blob_hash;
+pub use blob_hash::IndexedBlobHash;
+
 pub mod blob;
-pub use blob::{BlobData, BlobDecodingError, IndexedBlobHash};
+pub use blob::{BlobData, BlobDecodingError};
 
 pub mod sidecar;
 pub use sidecar::{
