@@ -424,3 +424,46 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         Ok(sys_config)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_provider() -> ReqwestProvider {
+        ReqwestProvider::new_http("https://docs-demo.quiknode.pro/".try_into().unwrap())
+    }
+
+    #[tokio::test]
+    async fn test_alloy_chain_provider_latest_block_number() {
+        let mut provider = AlloyChainProvider::new(default_provider());
+        let number = provider.latest_block_number().await.unwrap();
+        assert!(number > 0);
+    }
+
+    #[tokio::test]
+    async fn test_alloy_chain_provider_chain_id() {
+        let mut provider = AlloyChainProvider::new(default_provider());
+        let chain_id = provider.chain_id().await.unwrap();
+        assert_eq!(chain_id, 1);
+    }
+
+    #[tokio::test]
+    async fn test_alloy_l2_chain_provider_latest_block_number() {
+        let mut provider = AlloyL2ChainProvider::new_http(
+            "https://docs-demo.quiknode.pro/".try_into().unwrap(),
+            Arc::new(RollupConfig::default()),
+        );
+        let number = provider.latest_block_number().await.unwrap();
+        assert!(number > 0);
+    }
+
+    #[tokio::test]
+    async fn test_alloy_l2_chain_provider_chain_id() {
+        let mut provider = AlloyL2ChainProvider::new_http(
+            "https://docs-demo.quiknode.pro/".try_into().unwrap(),
+            Arc::new(RollupConfig::default()),
+        );
+        let chain_id = provider.chain_id().await.unwrap();
+        assert_eq!(chain_id, 1);
+    }
+}
