@@ -15,3 +15,18 @@ pub(crate) const fn from_ret(value: usize) -> IOResult<usize> {
         Ok(value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_ret_io_error() {
+        assert_eq!(from_ret(-4095isize as usize), Err(IOError(4095)));
+    }
+
+    #[test]
+    fn test_from_ret_ok() {
+        assert_eq!(from_ret(1), Ok(1));
+    }
+}

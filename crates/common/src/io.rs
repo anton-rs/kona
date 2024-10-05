@@ -102,3 +102,36 @@ pub(crate) mod native_io {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::io::FileDescriptor;
+
+    #[test]
+    fn test_print() {
+        print("Hello, World!");
+    }
+
+    #[test]
+    fn test_print_err() {
+        print_err("Hello, World!");
+    }
+
+    #[test]
+    fn test_write() {
+        let buf = b"Hello, World!";
+        write(FileDescriptor::StdOut, buf).unwrap();
+    }
+
+    #[test]
+    fn test_read() {
+        let mut buf = [0u8; 1024];
+        read(FileDescriptor::StdIn, &mut buf).unwrap();
+    }
+
+    #[test]
+    fn test_exit() {
+        exit(0);
+    }
+}
