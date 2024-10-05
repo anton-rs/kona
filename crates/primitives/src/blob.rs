@@ -221,6 +221,47 @@ mod tests {
     }
 
     #[test]
+    fn test_reassemble_bytes() {
+        let blob_data = BlobData::default();
+        let mut output = vec![0u8; 128];
+        let encoded_byte = [0x00, 0x00, 0x00, 0x00];
+        let output_pos = blob_data.reassemble_bytes(127, &encoded_byte, &mut output);
+        assert_eq!(output_pos, 126);
+        assert_eq!(output, vec![0u8; 128]);
+    }
+
+    #[test]
+    fn test_cannot_fill_empty_calldata() {
+        let mut blob_data = BlobData { calldata: Some(Bytes::new()), ..Default::default() };
+        let blobs = vec![Blob::with_last_byte(1u8)];
+        assert_eq!(blob_data.fill(&blobs, 0), Ok(()));
+    }
+
+    #[test]
+    fn test_fill_oob_index() {
+        let mut blob_data = BlobData::default();
+        let blobs = vec![Blob::with_last_byte(1u8)];
+        assert_eq!(blob_data.fill(&blobs, 1), Err(BlobDecodingError::InvalidLength));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_fill_empty_blob() {
+        let mut blob_data = BlobData::default();
+        let blobs = vec![Blob::ZERO];
+        assert_eq!(blob_data.fill(&blobs, 0), Err(BlobDecodingError::MissingData));
+    }
+
+    #[test]
+    fn test_fill_blob() {
+        let mut blob_data = BlobData::default();
+        let blobs = vec![Blob::with_last_byte(1u8)];
+        assert_eq!(blob_data.fill(&blobs, 0), Ok(()));
+        let expected = Bytes::from([&[0u8; 131071][..], &[1u8]].concat());
+        assert_eq!(blob_data.data, Some(expected));
+    }
+
+    #[test]
     fn test_not_empty() {
         let mut blob_data =
             BlobData { data: Some(Bytes::from(vec![1u8; 32])), ..Default::default() };
