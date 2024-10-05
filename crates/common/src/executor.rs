@@ -32,3 +32,21 @@ pub fn block_on<T>(f: impl Future<Output = T>) -> T {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::future::ready;
+
+    #[test]
+    fn test_block_on() {
+        let f = async { 42 };
+        assert_eq!(block_on(f), 42);
+    }
+
+    #[test]
+    fn test_block_on_ready() {
+        let f = ready(42);
+        assert_eq!(block_on(f), 42);
+    }
+}
