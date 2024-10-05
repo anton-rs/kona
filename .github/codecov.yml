@@ -18,10 +18,8 @@ coverage:
         only_pulls: true
 
 ignore:
-  - "tests"
-  - "test_util.rs"
-  - "test_utils.rs"
-  - "crates/derive/src/stages/test_utils"
+  - "**/test_util*"
+  - "**/tests*"
   - "bin/"
 
 # Make comments less noisy
