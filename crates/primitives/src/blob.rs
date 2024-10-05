@@ -209,3 +209,58 @@ impl BlobData {
         Err(anyhow::anyhow!("No data found"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_empty() {
+        let blob_data = BlobData::default();
+        assert!(blob_data.is_empty());
+    }
+
+    #[test]
+    fn test_not_empty() {
+        let mut blob_data =
+            BlobData { data: Some(Bytes::from(vec![1u8; 32])), ..Default::default() };
+        assert!(!blob_data.is_empty());
+        blob_data.data = None;
+        blob_data.calldata = Some(Bytes::from(vec![1u8; 32]));
+        assert!(!blob_data.is_empty());
+    }
+
+    #[test]
+    fn test_inner() {
+        let blob_data = BlobData { data: Some(Bytes::from(vec![1u8; 32])), ..Default::default() };
+        assert_eq!(blob_data.inner().unwrap(), Bytes::from(vec![1u8; 32]));
+        let blob_data =
+            BlobData { calldata: Some(Bytes::from(vec![1u8; 32])), ..Default::default() };
+        assert_eq!(blob_data.inner().unwrap(), Bytes::from(vec![1u8; 32]));
+        let blob_data = BlobData::default();
+        assert!(blob_data.inner().is_err());
+    }
+
+    #[test]
+    fn test_blob_data_decode_missing_data() {
+        let blob_data = BlobData::default();
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::MissingData));
+    }
+
+    #[test]
+    fn test_blob_data_decode_invalid_encoding_version() {
+        let blob_data = BlobData { data: Some(Bytes::from(vec![1u8; 32])), ..Default::default() };
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::InvalidEncodingVersion));
+    }
+
+    #[test]
+    fn test_blob_data_decode_invalid_length() {
+        let mut data = vec![0u8; 32];
+        data[VERSIONED_HASH_VERSION_KZG as usize] = BLOB_ENCODING_VERSION;
+        data[2] = 0xFF;
+        data[3] = 0xFF;
+        data[4] = 0xFF;
+        let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::InvalidLength));
+    }
+}
