@@ -23,6 +23,8 @@ ignore:
   - "**/test_util*"
   - "**/tests*"
   - "bin/"
+  - "crates/kona-providers-alloy/src/alloy_providers.rs"  # Flaky testing with online providers
+  - "crates/kona-providers-alloy/src/beacon_client.rs"  # Flaky testing with online providers
 
 # Make comments less noisy
 comment:
