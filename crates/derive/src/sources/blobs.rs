@@ -211,3 +211,72 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::{errors::PipelineErrorKind, traits::test_utils::TestBlobProvider};
+    use kona_providers::test_utils::TestChainProvider;
+
+    #[tokio::test]
+    async fn test_open_empty_data_eof() {
+        let chain_provider = TestChainProvider::default();
+        let blob_fetcher = TestBlobProvider::default();
+        let batcher_address = Address::default();
+        let block_ref = BlockInfo::default();
+        let signer = Address::default();
+        let mut source =
+            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        source.open = true;
+
+        let err = source.next().await.unwrap_err();
+        assert!(matches!(err, PipelineErrorKind::Temporary(PipelineError::Eof)));
+    }
+
+    #[tokio::test]
+    async fn test_open_calldata() {
+        let chain_provider = TestChainProvider::default();
+        let blob_fetcher = TestBlobProvider::default();
+        let batcher_address = Address::default();
+        let block_ref = BlockInfo::default();
+        let signer = Address::default();
+        let mut source =
+            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        source.open = true;
+        source.data.push(BlobData { data: None, calldata: Some(Bytes::default()) });
+
+        let data = source.next().await.unwrap();
+        assert_eq!(data, Bytes::default());
+    }
+
+    #[tokio::test]
+    async fn test_open_blob_data_decode_missing_data() {
+        let chain_provider = TestChainProvider::default();
+        let blob_fetcher = TestBlobProvider::default();
+        let batcher_address = Address::default();
+        let block_ref = BlockInfo::default();
+        let signer = Address::default();
+        let mut source =
+            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        source.open = true;
+        source.data.push(BlobData { data: Some(Bytes::from(&[1; 32])), calldata: None });
+
+        let err = source.next().await.unwrap_err();
+        assert!(matches!(err, PipelineErrorKind::Temporary(PipelineError::Eof)));
+    }
+
+    #[tokio::test]
+    async fn test_blob_source_pipeline_error() {
+        let chain_provider = TestChainProvider::default();
+        let blob_fetcher = TestBlobProvider::default();
+        let batcher_address = Address::default();
+        let block_ref = BlockInfo::default();
+        let signer = Address::default();
+        let mut source =
+            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+
+        let err = source.next().await.unwrap_err();
+        assert!(matches!(err, PipelineErrorKind::Temporary(PipelineError::Provider(_))));
+    }
+}
