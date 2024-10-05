@@ -61,6 +61,8 @@ impl DataAvailabilityProvider for TestDAP {
 pub struct TestBlobProvider {
     /// Maps block hashes to blob data.
     pub blobs: HashMap<B256, Blob>,
+    /// whether the blob provider should return an error.
+    pub should_error: bool,
 }
 
 impl TestBlobProvider {
@@ -84,6 +86,9 @@ impl BlobProvider for TestBlobProvider {
         _block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Blob>, Self::Error> {
+        if self.should_error {
+            return Err(BlobProviderError::SlotDerivation);
+        }
         let mut blobs = Vec::new();
         for blob_hash in blob_hashes {
             if let Some(data) = self.blobs.get(&blob_hash.hash) {
