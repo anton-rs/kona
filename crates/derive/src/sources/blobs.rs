@@ -213,21 +213,47 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
-
     use crate::{errors::PipelineErrorKind, traits::test_utils::TestBlobProvider};
     use kona_providers::test_utils::TestChainProvider;
 
-    #[tokio::test]
-    async fn test_open_empty_data_eof() {
+    pub(crate) fn default_test_blob_source() -> BlobSource<TestChainProvider, TestBlobProvider> {
         let chain_provider = TestChainProvider::default();
         let blob_fetcher = TestBlobProvider::default();
         let batcher_address = Address::default();
         let block_ref = BlockInfo::default();
         let signer = Address::default();
-        let mut source =
-            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer)
+    }
+
+    #[tokio::test]
+    async fn test_load_blobs_open() {
+        let mut source = default_test_blob_source();
+        source.open = true;
+        assert!(source.load_blobs().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_load_blobs_chain_provider_err() {
+        let mut source = default_test_blob_source();
+        assert!(matches!(source.load_blobs().await, Err(BlobProviderError::Backend(_))));
+    }
+
+    #[tokio::test]
+    async fn test_load_blobs_chain_provider_empty_txs() {
+        let mut source = default_test_blob_source();
+        let block_info = BlockInfo::default();
+        source.chain_provider.insert_block_with_transactions(1, block_info, Vec::new());
+        assert!(!source.open); // Source is not open by default.
+        assert!(source.load_blobs().await.is_ok());
+        assert!(source.data.is_empty());
+        assert!(source.open);
+    }
+
+    #[tokio::test]
+    async fn test_open_empty_data_eof() {
+        let mut source = default_test_blob_source();
         source.open = true;
 
         let err = source.next().await.unwrap_err();
@@ -236,13 +262,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_calldata() {
-        let chain_provider = TestChainProvider::default();
-        let blob_fetcher = TestBlobProvider::default();
-        let batcher_address = Address::default();
-        let block_ref = BlockInfo::default();
-        let signer = Address::default();
-        let mut source =
-            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        let mut source = default_test_blob_source();
         source.open = true;
         source.data.push(BlobData { data: None, calldata: Some(Bytes::default()) });
 
@@ -252,13 +272,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_blob_data_decode_missing_data() {
-        let chain_provider = TestChainProvider::default();
-        let blob_fetcher = TestBlobProvider::default();
-        let batcher_address = Address::default();
-        let block_ref = BlockInfo::default();
-        let signer = Address::default();
-        let mut source =
-            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        let mut source = default_test_blob_source();
         source.open = true;
         source.data.push(BlobData { data: Some(Bytes::from(&[1; 32])), calldata: None });
 
@@ -268,13 +282,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_blob_source_pipeline_error() {
-        let chain_provider = TestChainProvider::default();
-        let blob_fetcher = TestBlobProvider::default();
-        let batcher_address = Address::default();
-        let block_ref = BlockInfo::default();
-        let signer = Address::default();
-        let mut source =
-            BlobSource::new(chain_provider, blob_fetcher, batcher_address, block_ref, signer);
+        let mut source = default_test_blob_source();
 
         let err = source.next().await.unwrap_err();
         assert!(matches!(err, PipelineErrorKind::Temporary(PipelineError::Provider(_))));
