@@ -134,6 +134,53 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_preimage_key_from_u8() {
+        assert_eq!(PreimageKeyType::try_from(1).unwrap(), PreimageKeyType::Local);
+        assert_eq!(PreimageKeyType::try_from(2).unwrap(), PreimageKeyType::Keccak256);
+        assert_eq!(PreimageKeyType::try_from(3).unwrap(), PreimageKeyType::GlobalGeneric);
+        assert_eq!(PreimageKeyType::try_from(4).unwrap(), PreimageKeyType::Sha256);
+        assert_eq!(PreimageKeyType::try_from(5).unwrap(), PreimageKeyType::Blob);
+        assert_eq!(PreimageKeyType::try_from(6).unwrap(), PreimageKeyType::Precompile);
+        assert!(PreimageKeyType::try_from(0).is_err());
+        assert!(PreimageKeyType::try_from(7).is_err());
+    }
+
+    #[test]
+    fn test_preimage_key_new_local() {
+        let key = PreimageKey::new_local(0xFFu64);
+        assert_eq!(key.key_type(), PreimageKeyType::Local);
+        assert_eq!(key.key_value(), U256::from(0xFFu64));
+    }
+
+    #[test]
+    fn test_preimage_key_value() {
+        let key = PreimageKey::new([0xFFu8; 32], PreimageKeyType::Local);
+        assert_eq!(
+            key.key_value(),
+            alloy_primitives::uint!(
+                452312848583266388373324160190187140051835877600158453279131187530910662655_U256
+            )
+        );
+    }
+
+    #[test]
+    fn test_preimage_key_roundtrip_b256() {
+        let key = PreimageKey::new([0xFFu8; 32], PreimageKeyType::Local);
+        let b256: B256 = key.into();
+        let key2 = PreimageKey::try_from(<[u8; 32]>::from(b256)).unwrap();
+        assert_eq!(key, key2);
+    }
+
+    #[test]
+    fn test_preimage_key_display() {
+        let key = PreimageKey::new([0xFFu8; 32], PreimageKeyType::Local);
+        assert_eq!(
+            key.to_string(),
+            "0x01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        );
+    }
+
+    #[test]
     fn test_preimage_keys() {
         let types = [
             PreimageKeyType::Local,
