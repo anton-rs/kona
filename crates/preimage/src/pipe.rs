@@ -116,3 +116,17 @@ impl Future for WriteFuture<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_read_handle() {
+        let read_handle = FileDescriptor::StdIn;
+        let write_handle = FileDescriptor::StdOut;
+        let pipe_handle = PipeHandle::new(read_handle, write_handle);
+        let ref_read_handle = pipe_handle.read_handle();
+        assert_eq!(read_handle, ref_read_handle);
+    }
+}

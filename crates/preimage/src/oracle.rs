@@ -151,6 +151,58 @@ mod test {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_oracle_reader_get_exact() {
+        const MOCK_DATA_A: &[u8] = b"1234567890";
+        const MOCK_DATA_B: &[u8] = b"FACADE";
+        let key_a: PreimageKey =
+            PreimageKey::new(*keccak256(MOCK_DATA_A), PreimageKeyType::Keccak256);
+        let key_b: PreimageKey =
+            PreimageKey::new(*keccak256(MOCK_DATA_B), PreimageKeyType::Keccak256);
+
+        let preimages = {
+            let mut preimages = HashMap::new();
+            preimages.insert(key_a, MOCK_DATA_A.to_vec());
+            preimages.insert(key_b, MOCK_DATA_B.to_vec());
+            Arc::new(Mutex::new(preimages))
+        };
+
+        let preimage_pipe = bidirectional_pipe().unwrap();
+
+        let client = tokio::task::spawn(async move {
+            let oracle_reader = OracleReader::new(PipeHandle::new(
+                FileDescriptor::Wildcard(preimage_pipe.client.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(preimage_pipe.client.write.as_raw_fd() as usize),
+            ));
+            let mut contents_a = [0u8; 10];
+            let mut contents_b = [0u8; 6];
+            oracle_reader.get_exact(key_a, &mut contents_a).await.unwrap();
+            oracle_reader.get_exact(key_b, &mut contents_b).await.unwrap();
+
+            (contents_a, contents_b)
+        });
+        tokio::task::spawn(async move {
+            let oracle_server = OracleServer::new(PipeHandle::new(
+                FileDescriptor::Wildcard(preimage_pipe.host.read.as_raw_fd() as usize),
+                FileDescriptor::Wildcard(preimage_pipe.host.write.as_raw_fd() as usize),
+            ));
+            let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
+
+            loop {
+                match oracle_server.next_preimage_request(&test_fetcher).await {
+                    Err(PreimageOracleError::IOError(_)) => break,
+                    Err(e) => panic!("Unexpected error: {:?}", e),
+                    Ok(_) => {}
+                }
+            }
+        });
+
+        let (c,) = tokio::join!(client);
+        let (contents_a, contents_b) = c.unwrap();
+        assert_eq!(contents_a, MOCK_DATA_A);
+        assert_eq!(contents_b, MOCK_DATA_B);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_oracle_client_and_host() {
         const MOCK_DATA_A: &[u8] = b"1234567890";
         const MOCK_DATA_B: &[u8] = b"FACADE";

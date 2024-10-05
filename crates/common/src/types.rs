@@ -1,7 +1,7 @@
 //! This module contains the local types for the `kona-common` crate.
 
 /// File descriptors available to the `client` within the FPVM kernel.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileDescriptor {
     /// Read-only standard input stream.
     StdIn,
