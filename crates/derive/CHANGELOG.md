@@ -6,6 +6,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.3...kona-derive-v0.0.4) - 2024-10-05
+
+### Added
+
+- frame queue tests ([#613](https://github.com/anton-rs/kona/pull/613))
+- *(derive)* Holocene flush signal ([#612](https://github.com/anton-rs/kona/pull/612))
+- *(derive)* Add `Signal` API ([#611](https://github.com/anton-rs/kona/pull/611))
+- *(derive)* BatchQueue Update [Holocene] ([#601](https://github.com/anton-rs/kona/pull/601))
+- *(derive)* bump op-alloy dep ([#605](https://github.com/anton-rs/kona/pull/605))
+- kona-providers ([#596](https://github.com/anton-rs/kona/pull/596))
+- *(derive)* Span batch prefix checks ([#592](https://github.com/anton-rs/kona/pull/592))
+- *(derive)* `BatchStream` buffering ([#590](https://github.com/anton-rs/kona/pull/590))
+- *(derive)* BatchStreamProvider ([#591](https://github.com/anton-rs/kona/pull/591))
+- *(derive)* Refactor out Online Providers ([#569](https://github.com/anton-rs/kona/pull/569))
+- *(derive)* interleaved channel tests ([#585](https://github.com/anton-rs/kona/pull/585))
+- *(derive)* Holocene Buffer Flushing ([#575](https://github.com/anton-rs/kona/pull/575))
+- *(derive)* Holocene Channel Bank Checks ([#572](https://github.com/anton-rs/kona/pull/572))
+- *(derive)* Holocene Frame Queue ([#579](https://github.com/anton-rs/kona/pull/579))
+- *(derive)* Holocene Activation ([#574](https://github.com/anton-rs/kona/pull/574))
+- *(derive)* wire up the batch span stage ([#567](https://github.com/anton-rs/kona/pull/567))
+- *(derive)* New BatchStream Stage for Holocene ([#566](https://github.com/anton-rs/kona/pull/566))
+- *(derive)* Hoist AttributesBuilder ([#571](https://github.com/anton-rs/kona/pull/571))
+- *(derive)* Touchup Docs ([#555](https://github.com/anton-rs/kona/pull/555))
+- *(derive)* Latest BN ([#521](https://github.com/anton-rs/kona/pull/521))
+- Remove L2 Execution Payload ([#542](https://github.com/anton-rs/kona/pull/542))
+- *(derive)* Typed error handling ([#540](https://github.com/anton-rs/kona/pull/540))
+- *(primitives)* Remove Attributes ([#529](https://github.com/anton-rs/kona/pull/529))
+- large dependency update ([#528](https://github.com/anton-rs/kona/pull/528))
+- *(primitives)* reuse op-alloy-protocol channel and block types ([#499](https://github.com/anton-rs/kona/pull/499))
+
+### Fixed
+
+- *(executor)* Holocene EIP-1559 params in Header ([#622](https://github.com/anton-rs/kona/pull/622))
+- derive pipeline params ([#587](https://github.com/anton-rs/kona/pull/587))
+- *(workspace)* hoist and fix lints ([#577](https://github.com/anton-rs/kona/pull/577))
+- *(derive)* move attributes builder trait ([#570](https://github.com/anton-rs/kona/pull/570))
+- *(client)* Channel reader error handling ([#539](https://github.com/anton-rs/kona/pull/539))
+- *(derive)* Sequence window expiry ([#532](https://github.com/anton-rs/kona/pull/532))
+- *(primitives)* use consensus hardforks ([#497](https://github.com/anton-rs/kona/pull/497))
+- *(primitives)* re-use op-alloy frame type ([#492](https://github.com/anton-rs/kona/pull/492))
+
+### Other
+
+- refactor test providers ([#623](https://github.com/anton-rs/kona/pull/623))
+- doc logos ([#609](https://github.com/anton-rs/kona/pull/609))
+- use alloy primitives map ([#586](https://github.com/anton-rs/kona/pull/586))
+- *(derive)* [Holocene] Drain previous channel in one iteration ([#583](https://github.com/anton-rs/kona/pull/583))
+- channel reader docs ([#568](https://github.com/anton-rs/kona/pull/568))
+- Bumps Dependency Versions ([#520](https://github.com/anton-rs/kona/pull/520))
+- *(primitives)* rm RawTransaction ([#505](https://github.com/anton-rs/kona/pull/505))
+
 ## [0.0.3](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.2...kona-derive-v0.0.3) - 2024-09-04
 
 ### Added

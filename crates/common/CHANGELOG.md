@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/anton-rs/kona/compare/kona-common-v0.0.3...kona-common-v0.0.4) - 2024-10-05
+
+### Added
+
+- *(preimage/common)* Migrate to `thiserror` ([#543](https://github.com/anton-rs/kona/pull/543))
+
+### Fixed
+
+- *(workspace)* hoist and fix lints ([#577](https://github.com/anton-rs/kona/pull/577))
+
+### Other
+
+- doc logos ([#609](https://github.com/anton-rs/kona/pull/609))
+- *(workspace)* Allow stdlib in `cfg(test)` ([#548](https://github.com/anton-rs/kona/pull/548))
+
 ## [0.0.3](https://github.com/anton-rs/kona/compare/kona-common-v0.0.2...kona-common-v0.0.3) - 2024-09-04
 
 ### Added
