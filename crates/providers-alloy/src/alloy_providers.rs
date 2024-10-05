@@ -448,49 +448,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
-    async fn test_alloy_chain_provider_header_by_hash() {
-        let mut provider = AlloyChainProvider::new(default_provider());
-        let hash = alloy_primitives::b256!(
-            "5224e37a8db899839e23c9fa957971cacea09295d6824a434372c5d34a850337"
-        );
-        let header = provider.header_by_hash(hash).await.unwrap();
-        assert_eq!(header.hash_slow(), hash);
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_alloy_chain_provider_block_info_by_number() {
-        let mut provider = AlloyChainProvider::new(default_provider());
-        let number = provider.latest_block_number().await.unwrap();
-        let block_info = provider.block_info_by_number(number).await.unwrap();
-        assert_eq!(block_info.number, number);
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_alloy_chain_provider_receipts_by_hash() {
-        let mut provider = AlloyChainProvider::new(default_provider());
-        let hash = alloy_primitives::b256!(
-            "5224e37a8db899839e23c9fa957971cacea09295d6824a434372c5d34a850337"
-        );
-        let receipts = provider.receipts_by_hash(hash).await.unwrap();
-        assert!(!receipts.is_empty());
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_alloy_chain_provider_block_info_and_transactions_by_hash() {
-        let mut provider = AlloyChainProvider::new(default_provider());
-        let hash = alloy_primitives::b256!(
-            "5224e37a8db899839e23c9fa957971cacea09295d6824a434372c5d34a850337"
-        );
-        let (block_info, txs) = provider.block_info_and_transactions_by_hash(hash).await.unwrap();
-        assert_eq!(block_info.hash, hash);
-        assert!(!txs.is_empty());
-    }
-
-    #[tokio::test]
     async fn test_alloy_l2_chain_provider_latest_block_number() {
         let mut provider = AlloyL2ChainProvider::new_http(
             "https://docs-demo.quiknode.pro/".try_into().unwrap(),
