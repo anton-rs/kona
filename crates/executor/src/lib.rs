@@ -331,7 +331,7 @@ where
             state_root,
             transactions_root,
             receipts_root,
-            requests_root: None,
+            requests_hash: None,
             withdrawals_root,
             logs_bloom,
             difficulty: U256::ZERO,

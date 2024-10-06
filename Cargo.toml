@@ -56,16 +56,36 @@ lto = "fat"
 
 [workspace.dependencies]
 # Workspace
-kona-client = { path = "bin/client", version = "0.1.0" }
-kona-mpt = { path = "crates/mpt", version = "0.0.3" }
-kona-common = { path = "crates/common", version = "0.0.3" }
-kona-preimage = { path = "crates/preimage", version = "0.0.3" }
-kona-executor = { path = "crates/executor", version = "0.0.2" }
-kona-common-proc = { path = "crates/common-proc", version = "0.0.3" }
+kona-mpt = { path = "crates/mpt", version = "0.0.3", default-features = false }
+kona-client = { path = "bin/client", version = "0.1.0", default-features = false }
+kona-common = { path = "crates/common", version = "0.0.3", default-features = false }
 kona-derive = { path = "crates/derive", version = "0.0.3", default-features = false }
-kona-primitives = { path = "crates/primitives", version = "0.0.2", default-features = false }
-kona-providers = { path = "crates/providers", version = "0.0.1" }
+kona-preimage = { path = "crates/preimage", version = "0.0.3", default-features = false }
+kona-executor = { path = "crates/executor", version = "0.0.2", default-features = false }
+kona-providers = { path = "crates/providers", version = "0.0.1", default-features = false }
+kona-common-proc = { path = "crates/common-proc", version = "0.0.3", default-features = false }
 kona-providers-alloy = { path = "crates/providers-alloy", version = "0.0.1", default-features = false }
+
+# OP Alloy
+op-alloy-genesis = { version = "0.5.0", default-features = false }
+op-alloy-protocol = { version = "0.5.0", default-features = false }
+op-alloy-consensus = { version = "0.5.0", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.5.0", default-features = false }
+
+# Alloy
+alloy-rlp = { version = "0.3.8", default-features = false }
+alloy-trie = { version = "0.7.2", default-features = false }
+alloy-eips = { version = "0.5.0", default-features = false }
+alloy-serde = { version = "0.5.0", default-features = false }
+alloy-provider = { version = "0.5.0", default-features = false }
+alloy-primitives = { version = "0.8", default-features = false }
+alloy-consensus = { version = "0.5.0", default-features = false }
+alloy-transport = { version = "0.5.0", default-features = false }
+alloy-rpc-types = { version = "0.5.0", default-features = false }
+alloy-rpc-client = { version = "0.5.0", default-features = false }
+alloy-node-bindings = { version = "0.5.0", default-features = false }
+alloy-transport-http = { version = "0.5.0", default-features = false }
+alloy-rpc-types-engine = { version = "0.5.0", default-features = false }
 
 # General
 anyhow = { version = "1.0.89", default-features = false }
@@ -111,30 +131,10 @@ serde_json = { version = "1.0.128", default-features = false }
 
 # Ethereum
 unsigned-varint = "0.8.0"
-revm = { version = "14.0.3", default-features = false }
+revm = { version = "16.0.0", default-features = false }
 
 # Optimism
 superchain = { version = "0.7", default-features = false }
 
 # K/V database
 rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
-
-# Alloy
-alloy-rlp = { version = "0.3.8", default-features = false }
-alloy-trie = { version = "0.7.2", default-features = false }
-alloy-eips = { version = "0.4.2", default-features = false }
-alloy-provider = { version = "0.4.2", default-features = false }
-alloy-primitives = { version = "0.8", default-features = false }
-alloy-consensus = { version = "0.4.2", default-features = false }
-alloy-transport = { version = "0.4.2", default-features = false }
-alloy-rpc-types = { version = "0.4.2", default-features = false }
-alloy-rpc-client = { version = "0.4.2", default-features = false }
-alloy-rpc-types-engine = { version = "0.4.2", default-features = false }
-alloy-node-bindings = { version = "0.4.2", default-features = false }
-alloy-transport-http = { version = "0.4.2", default-features = false }
-
-# OP Alloy
-op-alloy-consensus = { version = "0.4.0", default-features = false }
-op-alloy-protocol = { version = "0.4.0", default-features = false }
-op-alloy-genesis = { version = "0.4.0", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.4.0", default-features = false }

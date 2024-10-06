@@ -6,7 +6,7 @@ use crate::{
 };
 use alloc::{boxed::Box, collections::VecDeque, format};
 use alloy_consensus::{Transaction, TxEnvelope};
-use alloy_primitives::{Address, Bytes, TxKind};
+use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
@@ -67,7 +67,7 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
                     TxEnvelope::Eip1559(tx) => (tx.tx().to(), tx.tx().input()),
                     _ => return None,
                 };
-                let TxKind::Call(to) = tx_kind else { return None };
+                let to = tx_kind?;
 
                 if to != self.batch_inbox_address {
                     return None;
@@ -106,7 +106,7 @@ mod tests {
     use super::*;
     use crate::errors::PipelineErrorKind;
     use alloy_consensus::{Signed, TxEip2930, TxEip4844, TxEip4844Variant, TxLegacy};
-    use alloy_primitives::{address, Address, Signature};
+    use alloy_primitives::{address, Address, Signature, TxKind};
     use kona_providers::test_utils::TestChainProvider;
 
     pub(crate) fn test_legacy_tx(to: Address) -> TxEnvelope {

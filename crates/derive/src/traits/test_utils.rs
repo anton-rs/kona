@@ -5,12 +5,11 @@ use crate::{
     traits::{AsyncIterator, BlobProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, vec, vec::Vec};
-use alloy_eips::eip4844::Blob;
+use alloy_eips::{eip1898::NumHash, eip4844::Blob};
 use alloy_primitives::{map::HashMap, Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_primitives::IndexedBlobHash;
 use op_alloy_protocol::BlockInfo;
 
 /// Mock data iterator
@@ -84,15 +83,15 @@ impl BlobProvider for TestBlobProvider {
     async fn get_blobs(
         &mut self,
         _block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, Self::Error> {
+        blob_hashes: &[NumHash],
+    ) -> Result<Vec<Box<Blob>>, Self::Error> {
         if self.should_error {
             return Err(BlobProviderError::SlotDerivation);
         }
         let mut blobs = Vec::new();
         for blob_hash in blob_hashes {
             if let Some(data) = self.blobs.get(&blob_hash.hash) {
-                blobs.push(*data);
+                blobs.push(Box::new(*data));
             }
         }
         Ok(blobs)

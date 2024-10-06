@@ -647,7 +647,7 @@ mod tests {
                 prev_randao,
                 suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
                 parent_beacon_block_root,
-                withdrawals: None,
+                withdrawals: Some(vec![]),
             },
             transactions: payload.transactions.clone(),
             no_tx_pool: Some(true),
@@ -693,8 +693,8 @@ mod tests {
                 timestamp: next_l2_time,
                 prev_randao,
                 suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
-                parent_beacon_block_root: None,
-                withdrawals: None,
+                parent_beacon_block_root: Some(B256::ZERO),
+                withdrawals: Some(vec![]),
             },
             transactions: payload.transactions.clone(),
             no_tx_pool: Some(true),
@@ -703,7 +703,7 @@ mod tests {
             )),
             eip_1559_params: None,
         };
+        assert_eq!(payload.transactions.as_ref().unwrap().len(), 10);
         assert_eq!(payload, expected);
-        assert_eq!(payload.transactions.unwrap().len(), 4);
     }
 }

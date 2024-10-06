@@ -8,7 +8,7 @@ use super::{
 use alloc::vec::Vec;
 use alloy_consensus::{Transaction, TxEnvelope, TxType};
 use alloy_eips::eip2718::Encodable2718;
-use alloy_primitives::{Address, Bytes, TxKind, U256};
+use alloy_primitives::{Address, Bytes, U256};
 use alloy_rlp::{Buf, Decodable, Encodable};
 
 /// This struct contains the decoded information for transactions in a span batch.
@@ -348,11 +348,11 @@ impl SpanBatchTransactions {
             let signature_v = signature.v().to_u64();
             let y_parity_bit = convert_v_to_y_parity(signature_v, tx_type)?;
             let contract_creation_bit = match to {
-                TxKind::Call(address) => {
+                Some(address) => {
                     self.tx_tos.push(address);
                     0
                 }
-                TxKind::Create => 1,
+                None => 1,
             };
             let mut tx_data_buf = Vec::new();
             span_batch_tx.encode(&mut tx_data_buf);
@@ -374,7 +374,7 @@ impl SpanBatchTransactions {
 mod tests {
     use super::*;
     use alloy_consensus::{Signed, TxEip1559, TxEip2930, TxLegacy};
-    use alloy_primitives::{address, Signature};
+    use alloy_primitives::{address, Signature, TxKind};
 
     #[test]
     fn test_span_batch_transactions_add_empty_txs() {

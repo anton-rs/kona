@@ -17,7 +17,6 @@ kona-mpt.workspace = true
 kona-derive.workspace = true
 kona-executor.workspace = true
 kona-providers.workspace = true
-kona-primitives = { workspace = true, features = ["serde"] }
 op-alloy-genesis = { workspace = true, features = ["serde"] }
 op-alloy-protocol.workspace = true
 op-alloy-rpc-types-engine.workspace = true

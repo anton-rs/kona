@@ -34,7 +34,6 @@ async-trait.workspace = true
 
 # Workspace
 kona-providers.workspace = true
-kona-primitives.workspace = true
 
 # `serde` feature dependencies
 serde = { workspace = true, optional = true }
@@ -72,7 +71,6 @@ metrics = [
 ]
 serde = [
   "dep:serde",
-  "kona-primitives/serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
   "op-alloy-consensus/serde",
