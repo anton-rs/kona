@@ -137,3 +137,14 @@ op-alloy-consensus = { version = "0.3.3", default-features = false }
 op-alloy-protocol = { version = "0.3.3", default-features = false }
 op-alloy-genesis = { version = "0.3.3", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.3.3", default-features = false }
+
+[patch.crates-io]
+alloy-eips = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-provider = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-consensus = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-transport = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-rpc-types = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-rpc-client = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-rpc-types-engine = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-node-bindings = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }
+alloy-transport-http = { git = "https://github.com/refcell/alloy", branch = "rf/feat/serde-blob-sidecar" }

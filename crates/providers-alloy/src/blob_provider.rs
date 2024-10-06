@@ -106,7 +106,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         let blob_hash_indicies = blob_hashes.iter().map(|b| b.number).collect::<Vec<u64>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as u64)))
+            .filter(|s| blob_hash_indicies.contains(&(s.inner.index)))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -285,7 +285,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
         let blob_hash_indicies = blob_hashes.iter().map(|b| b.number).collect::<Vec<_>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as u64)))
+            .filter(|s| blob_hash_indicies.contains(&(s.inner.index)))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.

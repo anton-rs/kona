@@ -258,7 +258,7 @@ impl BeaconClient for OnlineBeaconClient {
         // Filter the sidecars by the hashes, in-order.
         hashes.iter().for_each(|hash| {
             if let Some(sidecar) =
-                raw_response.data.iter().find(|sidecar| sidecar.inner.index as u64 == hash.number)
+                raw_response.data.iter().find(|sidecar| sidecar.inner.index == hash.number)
             {
                 sidecars.push(sidecar.clone());
             }
