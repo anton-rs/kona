@@ -4,10 +4,26 @@ use crate::batch::SpanBatchError;
 use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
-use kona_primitives::BlobDecodingError;
 use op_alloy_genesis::system::SystemConfigUpdateError;
 use op_alloy_protocol::DepositError;
 use thiserror::Error;
+
+/// Blob Decuding Error
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum BlobDecodingError {
+    /// Invalid field element
+    #[error("Invalid field element")]
+    InvalidFieldElement,
+    /// Invalid encoding version
+    #[error("Invalid encoding version")]
+    InvalidEncodingVersion,
+    /// Invalid length
+    #[error("Invalid length")]
+    InvalidLength,
+    /// Missing Data
+    #[error("Missing data")]
+    MissingData,
+}
 
 /// A result type for the derivation pipeline stages.
 pub type PipelineResult<T> = Result<T, PipelineErrorKind>;

@@ -3,11 +3,10 @@
 
 use crate::errors::PipelineResult;
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
-use alloy_eips::eip4844::Blob;
+use alloy_eips::{eip1898::NumHash, eip4844::Blob};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Display;
-use kona_primitives::IndexedBlobHash;
 use op_alloy_protocol::BlockInfo;
 
 /// The BlobProvider trait specifies the functionality of a data source that can provide blobs.
@@ -20,8 +19,8 @@ pub trait BlobProvider {
     async fn get_blobs(
         &mut self,
         block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, Self::Error>;
+        blob_hashes: &[NumHash],
+    ) -> Result<Vec<Box<Blob>>, Self::Error>;
 }
 
 /// Describes the functionality of a data source that can provide data availability information.

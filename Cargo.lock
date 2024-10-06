@@ -2000,7 +2000,6 @@ dependencies = [
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
- "kona-primitives",
  "kona-providers",
  "lru",
  "op-alloy-consensus",
@@ -2052,7 +2051,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "brotli",
- "kona-primitives",
  "kona-providers",
  "lazy_static",
  "miniz_oxide",
@@ -2117,7 +2115,6 @@ dependencies = [
  "kona-common",
  "kona-mpt",
  "kona-preimage",
- "kona-primitives",
  "kona-providers-alloy",
  "op-alloy-genesis",
  "op-alloy-protocol",
@@ -2174,22 +2171,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kona-primitives"
-version = "0.0.2"
-dependencies = [
- "alloy-eips",
- "alloy-primitives",
- "anyhow",
- "c-kzg",
- "revm",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
- "tracing",
-]
-
-[[package]]
 name = "kona-providers"
 version = "0.0.1"
 dependencies = [
@@ -2213,11 +2194,11 @@ dependencies = [
  "alloy-provider",
  "alloy-rlp",
  "alloy-rpc-client",
+ "alloy-serde",
  "alloy-transport",
  "alloy-transport-http",
  "async-trait",
  "kona-derive",
- "kona-primitives",
  "kona-providers",
  "lazy_static",
  "lru",
@@ -2226,6 +2207,7 @@ dependencies = [
  "op-alloy-protocol",
  "prometheus",
  "reqwest",
+ "serde",
  "serde_json",
  "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
  "tokio",

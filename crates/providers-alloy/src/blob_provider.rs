@@ -1,14 +1,16 @@
 //! Contains an online implementation of the `BlobProvider` trait.
 
-use alloy_eips::eip4844::Blob;
+use alloy_eips::{
+    eip1898::NumHash,
+    eip4844::{Blob, BlobTransactionSidecarItem},
+};
 use async_trait::async_trait;
 use core::marker::PhantomData;
 use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
-use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
-use crate::{BeaconClient, OnlineBeaconClient};
+use crate::{APIBlobSidecar, BeaconClient, OnlineBeaconClient};
 
 /// Specifies the derivation of a slot from a timestamp.
 pub trait SlotDerivation {
@@ -72,7 +74,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
     pub async fn fetch_sidecars(
         &self,
         slot: u64,
-        hashes: &[IndexedBlobHash],
+        hashes: &[NumHash],
     ) -> Result<Vec<APIBlobSidecar>, BlobProviderError> {
         self.beacon_client
             .beacon_blob_side_cars(slot, hashes)
@@ -84,8 +86,8 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
     pub async fn fetch_filtered_sidecars(
         &self,
         block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<BlobSidecar>, BlobProviderError> {
+        blob_hashes: &[NumHash],
+    ) -> Result<Vec<BlobTransactionSidecarItem>, BlobProviderError> {
         if blob_hashes.is_empty() {
             return Ok(Vec::new());
         }
@@ -101,10 +103,10 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.number).collect::<Vec<u64>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as usize)))
+            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as u64)))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -112,7 +114,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
             return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
+        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobTransactionSidecarItem>>())
     }
 }
 
@@ -137,12 +139,12 @@ where
 
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. The blobs are validated for their index and hashes using the specified
-    /// [IndexedBlobHash].
+    /// [NumHash].
     async fn get_blobs(
         &mut self,
         block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, Self::Error> {
+        blob_hashes: &[NumHash],
+    ) -> Result<Vec<Box<Blob>>, Self::Error> {
         crate::inc!(PROVIDER_CALLS, &["blob_provider", "get_blobs"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
@@ -166,7 +168,7 @@ where
             }
         };
 
-        // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
+        // Validate the blob sidecars straight away with the num hashes.
         let blobs = match sidecars
             .into_iter()
             .enumerate()
@@ -179,7 +181,7 @@ where
                     Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                 }
             })
-            .collect::<Result<Vec<Blob>, BlobProviderError>>()
+            .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
         {
             Ok(blobs) => blobs,
             Err(e) => {
@@ -204,7 +206,7 @@ pub trait BlobSidecarProvider {
     async fn beacon_blob_side_cars(
         &self,
         slot: u64,
-        hashes: &[IndexedBlobHash],
+        hashes: &[NumHash],
     ) -> Result<Vec<APIBlobSidecar>, BlobProviderError>;
 }
 
@@ -215,7 +217,7 @@ impl<B: BeaconClient + Send + Sync> BlobSidecarProvider for B {
     async fn beacon_blob_side_cars(
         &self,
         slot: u64,
-        hashes: &[IndexedBlobHash],
+        hashes: &[NumHash],
     ) -> Result<Vec<APIBlobSidecar>, BlobProviderError> {
         self.beacon_blob_side_cars(slot, hashes)
             .await
@@ -257,8 +259,8 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
     async fn fallback_fetch_filtered_sidecars(
         &self,
         block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<BlobSidecar>, BlobProviderError> {
+        blob_hashes: &[NumHash],
+    ) -> Result<Vec<BlobTransactionSidecarItem>, BlobProviderError> {
         let Some(fallback) = self.fallback.as_ref() else {
             return Err(BlobProviderError::Backend(
                 "cannot fetch blobs: the primary blob provider failed, and no fallback is configured".to_string()
@@ -280,10 +282,10 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
         let sidecars = fallback.beacon_blob_side_cars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.number).collect::<Vec<_>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as usize)))
+            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as u64)))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -291,7 +293,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
             return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
+        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobTransactionSidecarItem>>())
     }
 }
 
@@ -306,12 +308,12 @@ where
 
     /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
     /// hashes. The blobs are validated for their index and hashes using the specified
-    /// [IndexedBlobHash].
+    /// [NumHash].
     async fn get_blobs(
         &mut self,
         block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, BlobProviderError> {
+        blob_hashes: &[NumHash],
+    ) -> Result<Vec<Box<Blob>>, BlobProviderError> {
         match self.primary.get_blobs(block_ref, blob_hashes).await {
             Ok(blobs) => Ok(blobs),
             Err(primary_err) => {
@@ -332,7 +334,7 @@ where
                         }
                     };
 
-                // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
+                // Validate the blob sidecars straight away with the num hashes.
                 let blobs = match sidecars
                     .into_iter()
                     .enumerate()
@@ -345,7 +347,7 @@ where
                             Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                         }
                     })
-                    .collect::<Result<Vec<Blob>, BlobProviderError>>()
+                    .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
                 {
                     Ok(blobs) => blobs,
                     Err(e) => {
@@ -473,9 +475,11 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::MockBeaconClient;
+    use crate::{
+        test_utils::MockBeaconClient, APIConfigResponse, APIGenesisResponse,
+        APIGetBlobSidecarsResponse,
+    };
     use alloy_primitives::b256;
-    use kona_primitives::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 
     #[tokio::test]
     async fn test_load_config_succeeds() {
@@ -499,24 +503,24 @@ mod tests {
         let json_bytes = include_bytes!("testdata/eth_v1_beacon_sidecars_goerli.json");
         let sidecars: APIGetBlobSidecarsResponse = serde_json::from_slice(json_bytes).unwrap();
         let blob_hashes = vec![
-            IndexedBlobHash {
-                index: 0,
+            NumHash {
+                number: 0,
                 hash: b256!("011075cbb20f3235b3179a5dff22689c410cd091692180f4b6a12be77ea0f586"),
             },
-            IndexedBlobHash {
-                index: 1,
+            NumHash {
+                number: 1,
                 hash: b256!("010a9e10aab79bab62e10a5b83c164a91451b6ef56d31ac95a9514ffe6d6b4e6"),
             },
-            IndexedBlobHash {
-                index: 2,
+            NumHash {
+                number: 2,
                 hash: b256!("016122c8e41c69917b688240707d107aa6d2a480343e4e323e564241769a6b4a"),
             },
-            IndexedBlobHash {
-                index: 3,
+            NumHash {
+                number: 3,
                 hash: b256!("01df1f9ae707f5847513c9c430b683182079edf2b1f94ee12e4daae7f3c8c309"),
             },
-            IndexedBlobHash {
-                index: 4,
+            NumHash {
+                number: 4,
                 hash: b256!("01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"),
             },
         ];
@@ -554,7 +558,7 @@ mod tests {
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo::default();
-        let blob_hashes = vec![IndexedBlobHash::default()];
+        let blob_hashes = vec![NumHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
@@ -571,7 +575,7 @@ mod tests {
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo::default();
-        let blob_hashes = vec![IndexedBlobHash::default()];
+        let blob_hashes = vec![NumHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
@@ -589,7 +593,7 @@ mod tests {
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 5, ..Default::default() };
-        let blob_hashes = vec![IndexedBlobHash::default()];
+        let blob_hashes = vec![NumHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(result.unwrap_err(), BlobProviderError::SlotDerivation);
     }
@@ -604,7 +608,7 @@ mod tests {
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
-        let blob_hashes = vec![IndexedBlobHash::default()];
+        let blob_hashes = vec![NumHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result.unwrap_err(),
@@ -625,7 +629,7 @@ mod tests {
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
-        let blob_hashes = vec![IndexedBlobHash { index: 1, ..Default::default() }];
+        let blob_hashes = vec![NumHash { number: 1, ..Default::default() }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(result.unwrap_err(), BlobProviderError::SidecarLengthMismatch(1, 0));
     }
@@ -641,24 +645,24 @@ mod tests {
             ..Default::default()
         };
         let blob_hashes = vec![
-            IndexedBlobHash {
-                index: 4,
+            NumHash {
+                number: 4,
                 hash: b256!("01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"),
             },
-            IndexedBlobHash {
-                index: 0,
+            NumHash {
+                number: 0,
                 hash: b256!("011075cbb20f3235b3179a5dff22689c410cd091692180f4b6a12be77ea0f586"),
             },
-            IndexedBlobHash {
-                index: 1,
+            NumHash {
+                number: 1,
                 hash: b256!("010a9e10aab79bab62e10a5b83c164a91451b6ef56d31ac95a9514ffe6d6b4e6"),
             },
-            IndexedBlobHash {
-                index: 2,
+            NumHash {
+                number: 2,
                 hash: b256!("016122c8e41c69917b688240707d107aa6d2a480343e4e323e564241769a6b4a"),
             },
-            IndexedBlobHash {
-                index: 3,
+            NumHash {
+                number: 3,
                 hash: b256!("01df1f9ae707f5847513c9c430b683182079edf2b1f94ee12e4daae7f3c8c309"),
             },
         ];
@@ -681,14 +685,17 @@ mod tests {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
             blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar { inner: BlobSidecar::default(), ..Default::default() }],
+                data: vec![APIBlobSidecar {
+                    inner: BlobTransactionSidecarItem::default(),
+                    ..Default::default()
+                }],
             }),
             ..Default::default()
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
-        let blob_hashes = vec![IndexedBlobHash {
+        let blob_hashes = vec![NumHash {
             hash: alloy_primitives::FixedBytes::from([1; 32]),
             ..Default::default()
         }];
@@ -702,14 +709,17 @@ mod tests {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
             blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar { inner: BlobSidecar::default(), ..Default::default() }],
+                data: vec![APIBlobSidecar {
+                    inner: BlobTransactionSidecarItem::default(),
+                    ..Default::default()
+                }],
             }),
             ..Default::default()
         };
         let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
             OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
-        let blob_hashes = vec![IndexedBlobHash {
+        let blob_hashes = vec![NumHash {
             hash: b256!("01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"),
             ..Default::default()
         }];
@@ -741,24 +751,24 @@ mod tests {
             );
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![
-            IndexedBlobHash {
-                index: 0,
+            NumHash {
+                number: 0,
                 hash: b256!("011075cbb20f3235b3179a5dff22689c410cd091692180f4b6a12be77ea0f586"),
             },
-            IndexedBlobHash {
-                index: 1,
+            NumHash {
+                number: 1,
                 hash: b256!("010a9e10aab79bab62e10a5b83c164a91451b6ef56d31ac95a9514ffe6d6b4e6"),
             },
-            IndexedBlobHash {
-                index: 2,
+            NumHash {
+                number: 2,
                 hash: b256!("016122c8e41c69917b688240707d107aa6d2a480343e4e323e564241769a6b4a"),
             },
-            IndexedBlobHash {
-                index: 3,
+            NumHash {
+                number: 3,
                 hash: b256!("01df1f9ae707f5847513c9c430b683182079edf2b1f94ee12e4daae7f3c8c309"),
             },
-            IndexedBlobHash {
-                index: 4,
+            NumHash {
+                number: 4,
                 hash: b256!("01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"),
             },
         ];
@@ -791,24 +801,24 @@ mod tests {
             );
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![
-            IndexedBlobHash {
-                index: 0,
+            NumHash {
+                number: 0,
                 hash: b256!("011075cbb20f3235b3179a5dff22689c410cd091692180f4b6a12be77ea0f586"),
             },
-            IndexedBlobHash {
-                index: 1,
+            NumHash {
+                number: 1,
                 hash: b256!("010a9e10aab79bab62e10a5b83c164a91451b6ef56d31ac95a9514ffe6d6b4e6"),
             },
-            IndexedBlobHash {
-                index: 2,
+            NumHash {
+                number: 2,
                 hash: b256!("016122c8e41c69917b688240707d107aa6d2a480343e4e323e564241769a6b4a"),
             },
-            IndexedBlobHash {
-                index: 3,
+            NumHash {
+                number: 3,
                 hash: b256!("01df1f9ae707f5847513c9c430b683182079edf2b1f94ee12e4daae7f3c8c309"),
             },
-            IndexedBlobHash {
-                index: 4,
+            NumHash {
+                number: 4,
                 hash: b256!("01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"),
             },
         ];
