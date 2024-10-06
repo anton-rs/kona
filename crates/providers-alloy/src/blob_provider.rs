@@ -2,7 +2,6 @@
 
 use alloy_eips::eip4844::Blob;
 use async_trait::async_trait;
-use core::marker::PhantomData;
 use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
 use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
 use op_alloy_protocol::BlockInfo;
@@ -10,26 +9,18 @@ use tracing::warn;
 
 use crate::{BeaconClient, OnlineBeaconClient};
 
-/// Specifies the derivation of a slot from a timestamp.
-pub trait SlotDerivation {
-    /// Converts a timestamp to a slot number.
-    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError>;
-}
-
 /// An online implementation of the [BlobProvider] trait.
 #[derive(Debug, Clone)]
-pub struct OnlineBlobProvider<B: BeaconClient, S: SlotDerivation> {
+pub struct OnlineBlobProvider<B: BeaconClient> {
     /// The Beacon API client.
     beacon_client: B,
     /// Beacon Genesis time used for the time to slot conversion.
     pub genesis_time: Option<u64>,
     /// Slot interval used for the time to slot conversion.
     pub slot_interval: Option<u64>,
-    /// Phantom data for slot derivation.
-    _slot_derivation: PhantomData<S>,
 }
 
-impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
+impl<B: BeaconClient> OnlineBlobProvider<B> {
     /// Creates a new instance of the [OnlineBlobProvider].
     ///
     /// The `genesis_time` and `slot_interval` arguments are _optional_ and the
@@ -40,7 +31,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         genesis_time: Option<u64>,
         slot_interval: Option<u64>,
     ) -> Self {
-        Self { beacon_client, genesis_time, slot_interval, _slot_derivation: PhantomData }
+        Self { beacon_client, genesis_time, slot_interval }
     }
 
     /// Loads the beacon genesis and config spec
@@ -80,6 +71,12 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
             .map_err(|e| BlobProviderError::Backend(e.to_string()))
     }
 
+    /// Computes the slot for the given timestamp.
+    pub fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError> {
+        crate::ensure!(timestamp >= genesis, BlobProviderError::SlotDerivation);
+        Ok((timestamp - genesis) / slot_time)
+    }
+
     /// Fetches blob sidecars for the given block reference and blob hashes.
     pub async fn fetch_filtered_sidecars(
         &self,
@@ -95,7 +92,7 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
         let interval = self.slot_interval.expect("Config Spec Loaded");
 
         // Calculate the slot for the given timestamp.
-        let slot = S::slot(genesis, interval, block_ref.timestamp)?;
+        let slot = Self::slot(genesis, interval, block_ref.timestamp)?;
 
         // Fetch blob sidecars for the slot using the given blob hashes.
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
@@ -116,22 +113,10 @@ impl<B: BeaconClient, S: SlotDerivation> OnlineBlobProvider<B, S> {
     }
 }
 
-/// Minimal slot derivation implementation.
-#[derive(Debug, Default, Clone)]
-pub struct SimpleSlotDerivation;
-
-impl SlotDerivation for SimpleSlotDerivation {
-    fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError> {
-        crate::ensure!(timestamp >= genesis, BlobProviderError::SlotDerivation);
-        Ok((timestamp - genesis) / slot_time)
-    }
-}
-
 #[async_trait]
-impl<B, S> BlobProvider for OnlineBlobProvider<B, S>
+impl<B> BlobProvider for OnlineBlobProvider<B>
 where
     B: BeaconClient + Send + Sync,
-    S: SlotDerivation + Send + Sync,
 {
     type Error = BlobProviderError;
 
@@ -233,23 +218,16 @@ impl<B: BeaconClient + Send + Sync> BlobSidecarProvider for B {
 /// Blob storage APIs are expected to implement the [BlobSidecarProvider] trait.
 /// One example can be found at <https://github.com/base-org/blob-archiver>
 #[derive(Debug, Clone)]
-pub struct OnlineBlobProviderWithFallback<
-    B: BeaconClient,
-    F: BlobSidecarProvider,
-    S: SlotDerivation,
-> {
-    primary: OnlineBlobProvider<B, S>,
+pub struct OnlineBlobProviderWithFallback<B: BeaconClient, F: BlobSidecarProvider> {
+    primary: OnlineBlobProvider<B>,
     fallback: Option<F>,
-    _slot_derivation: PhantomData<S>,
 }
 
-impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
-    OnlineBlobProviderWithFallback<B, F, S>
-{
+impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, F> {
     /// Creates a new instance of the [OnlineBlobProviderWithFallback] with the
     /// specified primary and fallback providers.
-    pub const fn new(primary: OnlineBlobProvider<B, S>, fallback: Option<F>) -> Self {
-        Self { primary, fallback, _slot_derivation: PhantomData }
+    pub const fn new(primary: OnlineBlobProvider<B>, fallback: Option<F>) -> Self {
+        Self { primary, fallback }
     }
 
     /// Attempts to fetch blob sidecars from the fallback provider, if configured.
@@ -270,7 +248,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
         }
 
         // Extract the genesis timestamp and slot interval from the primary provider.
-        let slot = S::slot(
+        let slot = OnlineBlobProvider::<B>::slot(
             self.primary.genesis_time.expect("Genesis Config Loaded"),
             self.primary.slot_interval.expect("Config Spec Loaded"),
             block_ref.timestamp,
@@ -296,11 +274,10 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
 }
 
 #[async_trait]
-impl<B, F, S> BlobProvider for OnlineBlobProviderWithFallback<B, F, S>
+impl<B, F> BlobProvider for OnlineBlobProviderWithFallback<B, F>
 where
     B: BeaconClient + Send + Sync,
     F: BlobSidecarProvider + Send + Sync,
-    S: SlotDerivation + Send + Sync,
 {
     type Error = BlobProviderError;
 
@@ -375,31 +352,20 @@ where
 /// - [Self::with_primary] for the primary beacon client.
 /// - [Self::with_fallback] for the fallback beacon client.
 #[derive(Debug, Clone)]
-pub struct OnlineBlobProviderBuilder<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation> {
+pub struct OnlineBlobProviderBuilder<B: BeaconClient, F: BlobSidecarProvider> {
     beacon_client: Option<B>,
     fallback: Option<F>,
     genesis_time: Option<u64>,
     slot_interval: Option<u64>,
-    _slot_derivation: PhantomData<S>,
 }
 
-impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation> Default
-    for OnlineBlobProviderBuilder<B, F, S>
-{
+impl<B: BeaconClient, F: BlobSidecarProvider> Default for OnlineBlobProviderBuilder<B, F> {
     fn default() -> Self {
-        Self {
-            beacon_client: None,
-            fallback: None,
-            genesis_time: None,
-            slot_interval: None,
-            _slot_derivation: PhantomData,
-        }
+        Self { beacon_client: None, fallback: None, genesis_time: None, slot_interval: None }
     }
 }
 
-impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
-    OnlineBlobProviderBuilder<B, F, S>
-{
+impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderBuilder<B, F> {
     /// Creates a new [OnlineBlobProviderBuilder].
     pub fn new() -> Self {
         Self::default()
@@ -430,14 +396,12 @@ impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
     }
 
     /// Builds the [OnlineBlobProviderWithFallback] instance.
-    pub fn build(self) -> OnlineBlobProviderWithFallback<B, F, S> {
+    pub fn build(self) -> OnlineBlobProviderWithFallback<B, F> {
         self.into()
     }
 }
 
-impl<F: BlobSidecarProvider, S: SlotDerivation + Sync>
-    OnlineBlobProviderBuilder<OnlineBeaconClient, F, S>
-{
+impl<F: BlobSidecarProvider> OnlineBlobProviderBuilder<OnlineBeaconClient, F> {
     /// Adds a primary [OnlineBeaconClient] to the builder using the specified HTTP URL.
     pub fn with_primary(mut self, url: String) -> Self {
         self.beacon_client = Some(OnlineBeaconClient::new_http(url));
@@ -445,9 +409,7 @@ impl<F: BlobSidecarProvider, S: SlotDerivation + Sync>
     }
 }
 
-impl<B: BeaconClient + Send + Sync, S: SlotDerivation + Sync>
-    OnlineBlobProviderBuilder<B, OnlineBeaconClient, S>
-{
+impl<B: BeaconClient + Send + Sync> OnlineBlobProviderBuilder<B, OnlineBeaconClient> {
     /// Adds a fallback [OnlineBeaconClient] to the builder using the specified HTTP URL.
     pub fn with_fallback(mut self, maybe_url: Option<String>) -> Self {
         self.fallback = maybe_url.map(OnlineBeaconClient::new_http);
@@ -455,10 +417,10 @@ impl<B: BeaconClient + Send + Sync, S: SlotDerivation + Sync>
     }
 }
 
-impl<B: BeaconClient, F: BlobSidecarProvider, S: SlotDerivation>
-    From<OnlineBlobProviderBuilder<B, F, S>> for OnlineBlobProviderWithFallback<B, F, S>
+impl<B: BeaconClient, F: BlobSidecarProvider> From<OnlineBlobProviderBuilder<B, F>>
+    for OnlineBlobProviderWithFallback<B, F>
 {
-    fn from(builder: OnlineBlobProviderBuilder<B, F, S>) -> Self {
+    fn from(builder: OnlineBlobProviderBuilder<B, F>) -> Self {
         Self::new(
             OnlineBlobProvider::new(
                 builder.beacon_client.expect("Primary beacon client must be set"),
@@ -486,8 +448,7 @@ mod tests {
             config_spec: Some(APIConfigResponse::new(seconds_per_slot)),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let result = blob_provider.load_configs().await;
         assert!(result.is_ok());
         assert_eq!(blob_provider.genesis_time, Some(genesis_time));
@@ -526,8 +487,7 @@ mod tests {
             blob_sidecars: Some(sidecars),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blobs = blob_provider.get_blobs(&block_ref, &blob_hashes).await.unwrap();
         assert_eq!(blobs.len(), 5);
@@ -540,8 +500,7 @@ mod tests {
             config_spec: Some(APIConfigResponse::new(12)),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo::default();
         let blob_hashes = Vec::new();
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
@@ -551,8 +510,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_blobs_beacon_genesis_fetch_fails() {
         let beacon_client = MockBeaconClient::default();
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo::default();
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
@@ -568,8 +526,7 @@ mod tests {
             beacon_genesis: Some(APIGenesisResponse::default()),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo::default();
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
@@ -586,8 +543,7 @@ mod tests {
             config_spec: Some(APIConfigResponse::new(12)),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 5, ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
@@ -601,8 +557,7 @@ mod tests {
             config_spec: Some(APIConfigResponse::new(12)),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash::default()];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
@@ -622,8 +577,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash { index: 1, ..Default::default() }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
@@ -662,8 +616,7 @@ mod tests {
                 hash: b256!("01df1f9ae707f5847513c9c430b683182079edf2b1f94ee12e4daae7f3c8c309"),
             },
         ];
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
@@ -685,8 +638,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash {
             hash: alloy_primitives::FixedBytes::from([1; 32]),
@@ -706,8 +658,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let mut blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![IndexedBlobHash {
             hash: b256!("01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"),
@@ -734,11 +685,10 @@ mod tests {
         };
         let fallback_client =
             MockBeaconClient { blob_sidecars: Some(sidecars), ..Default::default() };
-        let mut blob_provider: OnlineBlobProviderWithFallback<_, _, SimpleSlotDerivation> =
-            OnlineBlobProviderWithFallback::new(
-                OnlineBlobProvider::new(beacon_client, None, None),
-                Some(fallback_client),
-            );
+        let mut blob_provider = OnlineBlobProviderWithFallback::new(
+            OnlineBlobProvider::new(beacon_client, None, None),
+            Some(fallback_client),
+        );
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![
             IndexedBlobHash {
@@ -784,11 +734,10 @@ mod tests {
         };
         let fallback_client =
             MockBeaconClient { blob_sidecars: Some(all_sidecars), ..Default::default() };
-        let mut blob_provider: OnlineBlobProviderWithFallback<_, _, SimpleSlotDerivation> =
-            OnlineBlobProviderWithFallback::new(
-                OnlineBlobProvider::new(beacon_client, None, None),
-                Some(fallback_client),
-            );
+        let mut blob_provider = OnlineBlobProviderWithFallback::new(
+            OnlineBlobProvider::new(beacon_client, None, None),
+            Some(fallback_client),
+        );
         let block_ref = BlockInfo { timestamp: 15, ..Default::default() };
         let blob_hashes = vec![
             IndexedBlobHash {
