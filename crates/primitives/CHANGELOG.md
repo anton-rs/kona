@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-primitives-v0.0.2...kona-primitives-v0.0.3) - 2024-10-07
+
+### Added
+
+- *(primitives)* Blob Test Coverage ([#627](https://github.com/anton-rs/kona/pull/627))
+- Remove L2 Execution Payload ([#542](https://github.com/anton-rs/kona/pull/542))
+- *(derive)* Typed error handling ([#540](https://github.com/anton-rs/kona/pull/540))
+- *(primitives)* Remove Attributes ([#529](https://github.com/anton-rs/kona/pull/529))
+- large dependency update ([#528](https://github.com/anton-rs/kona/pull/528))
+- *(primitives)* reuse op-alloy-protocol channel and block types ([#499](https://github.com/anton-rs/kona/pull/499))
+
+### Fixed
+
+- *(workspace)* hoist and fix lints ([#577](https://github.com/anton-rs/kona/pull/577))
+- *(primitives)* use consensus hardforks ([#497](https://github.com/anton-rs/kona/pull/497))
+- *(primitives)* re-use op-alloy frame type ([#492](https://github.com/anton-rs/kona/pull/492))
+
+### Other
+
+- Add Test Coverage ([#625](https://github.com/anton-rs/kona/pull/625))
+- doc logos ([#609](https://github.com/anton-rs/kona/pull/609))
+- rm depo and import op::depo ([#518](https://github.com/anton-rs/kona/pull/518))
+- *(primitives)* rm RawTransaction ([#505](https://github.com/anton-rs/kona/pull/505))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-primitives-v0.0.1...kona-primitives-v0.0.2) - 2024-09-04
 
 ### Added
