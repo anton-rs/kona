@@ -1,10 +1,10 @@
 //! Trait implementations for `kona-mpt` traits that are effectively a no-op.
 //! Providers trait implementations for downstream users who do not require hinting.
 
+use crate::{TrieHinter, TrieProvider};
 use alloc::string::String;
 use alloy_consensus::Header;
 use alloy_primitives::{Address, Bytes, B256, U256};
-use crate::{TrieHinter, TrieProvider};
 
 /// The default, no-op implementation of the [TrieProvider] trait, used for testing.
 #[derive(Debug, Clone, Copy)]
