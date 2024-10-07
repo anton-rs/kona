@@ -38,3 +38,45 @@ impl From<(AccountInfo, B256)> for TrieAccount {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::uint;
+
+    #[test]
+    fn test_trie_account_from_account() {
+        let account = Account {
+            info: AccountInfo {
+                nonce: 1,
+                balance: uint!(2_U256),
+                code_hash: B256::default(),
+                code: Default::default(),
+            },
+            status: Default::default(),
+            storage: Default::default(),
+        };
+        let storage_root = B256::default();
+        let trie_account = TrieAccount::from((account, storage_root));
+        assert_eq!(trie_account.nonce, 1);
+        assert_eq!(trie_account.balance, uint!(2_U256));
+        assert_eq!(trie_account.storage_root, B256::default());
+        assert_eq!(trie_account.code_hash, B256::default());
+    }
+
+    #[test]
+    fn test_trie_account_from_account_info() {
+        let account_info = AccountInfo {
+            nonce: 1,
+            balance: uint!(2_U256),
+            code_hash: B256::default(),
+            code: Default::default(),
+        };
+        let storage_root = B256::default();
+        let trie_account = TrieAccount::from((account_info, storage_root));
+        assert_eq!(trie_account.nonce, 1);
+        assert_eq!(trie_account.balance, uint!(2_U256));
+        assert_eq!(trie_account.storage_root, B256::default());
+        assert_eq!(trie_account.code_hash, B256::default());
+    }
+}
