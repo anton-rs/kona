@@ -195,3 +195,121 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::*;
+    use alloy_rpc_types_engine::PayloadAttributes;
+    use op_alloy_genesis::SystemConfig;
+    use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
+
+    fn default_test_payload_attributes() -> OptimismAttributesWithParent {
+        OptimismAttributesWithParent {
+            attributes: OptimismPayloadAttributes {
+                payload_attributes: PayloadAttributes {
+                    timestamp: 0,
+                    prev_randao: Default::default(),
+                    suggested_fee_recipient: Default::default(),
+                    withdrawals: None,
+                    parent_beacon_block_root: None,
+                },
+                transactions: None,
+                no_tx_pool: None,
+                gas_limit: None,
+                eip_1559_params: None,
+            },
+            parent: Default::default(),
+            is_last_in_span: false,
+        }
+    }
+
+    #[test]
+    fn test_pipeline_next_attributes_empty() {
+        let mut pipeline = new_test_pipeline();
+        let result = pipeline.next();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_pipeline_next_attributes_with_peek() {
+        let mut pipeline = new_test_pipeline();
+        let expected = default_test_payload_attributes();
+        pipeline.prepared.push_back(expected.clone());
+
+        let result = pipeline.peek();
+        assert_eq!(result, Some(&expected));
+
+        let result = pipeline.next();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[tokio::test]
+    async fn test_derivation_pipeline_missing_block() {
+        let mut pipeline = new_test_pipeline();
+        let cursor = L2BlockInfo::default();
+        let result = pipeline.step(cursor).await;
+        assert_eq!(
+            result,
+            StepResult::OriginAdvanceErr(
+                PipelineError::Provider("Block not found".to_string()).temp()
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn test_derivation_pipeline_prepared_attributes() {
+        let rollup_config = Arc::new(RollupConfig::default());
+        let l2_chain_provider = TestL2ChainProvider::default();
+        let expected = default_test_payload_attributes();
+        let attributes = TestNextAttributes { next_attributes: Some(expected) };
+        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+
+        // Step on the pipeline and expect the result.
+        let cursor = L2BlockInfo::default();
+        let result = pipeline.step(cursor).await;
+        assert_eq!(result, StepResult::PreparedAttributes);
+    }
+
+    #[tokio::test]
+    async fn test_derivation_pipeline_advance_origin() {
+        let rollup_config = Arc::new(RollupConfig::default());
+        let l2_chain_provider = TestL2ChainProvider::default();
+        let attributes = TestNextAttributes::default();
+        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+
+        // Step on the pipeline and expect the result.
+        let cursor = L2BlockInfo::default();
+        let result = pipeline.step(cursor).await;
+        assert_eq!(result, StepResult::AdvancedOrigin);
+    }
+
+    #[tokio::test]
+    async fn test_derivation_pipeline_signal_reset_missing_sys_config() {
+        let rollup_config = Arc::new(RollupConfig::default());
+        let l2_chain_provider = TestL2ChainProvider::default();
+        let attributes = TestNextAttributes::default();
+        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+
+        // Signal the pipeline to reset.
+        let l2_safe_head = L2BlockInfo::default();
+        let l1_origin = BlockInfo::default();
+        let result = pipeline.signal(Signal::Reset { l2_safe_head, l1_origin }).await.unwrap_err();
+        assert_eq!(result, PipelineError::Provider("System config not found".to_string()).temp());
+    }
+
+    #[tokio::test]
+    async fn test_derivation_pipeline_signal_reset_ok() {
+        let rollup_config = Arc::new(RollupConfig::default());
+        let mut l2_chain_provider = TestL2ChainProvider::default();
+        l2_chain_provider.system_configs.insert(0, SystemConfig::default());
+        let attributes = TestNextAttributes::default();
+        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+
+        // Signal the pipeline to reset.
+        let l2_safe_head = L2BlockInfo::default();
+        let l1_origin = BlockInfo::default();
+        let result = pipeline.signal(Signal::Reset { l2_safe_head, l1_origin }).await;
+        assert!(result.is_ok());
+    }
+}

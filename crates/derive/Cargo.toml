@@ -61,6 +61,7 @@ proptest.workspace = true
 tracing-subscriber.workspace = true
 alloy-node-bindings.workspace = true
 serde_json.workspace = true
+kona-providers = { workspace = true, features = ["test-utils"] }
 
 [features]
 default = ["serde"]
@@ -85,5 +86,6 @@ test-utils = [
   "dep:alloy-node-bindings",
   "dep:tracing-subscriber",
   "dep:alloy-rpc-client",
+  "kona-providers/test-utils",
   "alloy-transport-http/reqwest"
 ]
