@@ -170,10 +170,144 @@ impl SingleBatch {
 
 #[cfg(test)]
 mod tests {
-    use super::SingleBatch;
+    use super::*;
     use alloc::vec;
     use alloy_primitives::{hex, Bytes, B256};
     use alloy_rlp::{BytesMut, Decodable, Encodable};
+
+    #[test]
+    fn test_check_batch_empty() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0xEE,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = Default::default();
+        let l1_blocks = vec![];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo::default();
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Undecided);
+    }
+
+    #[test]
+    fn test_drop_bad_parent_hash() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::from([1u8; 32]),
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = Default::default();
+        let l1_blocks = vec![BlockInfo::default()];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo::default();
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_prior_to_inclusion_block() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        // epoch_num (255) + seq_window_size (44) = 299 < 300
+        let cfg = RollupConfig { seq_window_size: 44, ..Default::default() };
+        let l1_blocks = vec![BlockInfo::default()];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 300, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_prior_epoch_num() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = RollupConfig { seq_window_size: 100, ..Default::default() };
+        let l1_blocks = vec![BlockInfo { number: 300, ..Default::default() }];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 300, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_later_epoch_number() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = RollupConfig { seq_window_size: 200, ..Default::default() };
+        let l1_blocks = vec![BlockInfo { number: 200, ..Default::default() }];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 300, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_invalid_epoch_hash() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::from([1u8; 32]),
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = RollupConfig { seq_window_size: 200, ..Default::default() };
+        let l1_blocks = vec![BlockInfo { number: 0xFF, ..Default::default() }];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 300, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_early_epoch_timestamp() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = RollupConfig { seq_window_size: 200, ..Default::default() };
+        let l1_blocks = vec![BlockInfo { number: 0xFF, timestamp: 1, ..Default::default() }];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 300, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
 
     #[test]
     fn test_single_batch_rlp_roundtrip() {
