@@ -31,4 +31,4 @@ mod util;
 pub use util::ordered_trie_with_encoder;
 
 #[cfg(any(test, feature = "test-utils"))]
-pub mod test_util;
+pub mod test_utils;

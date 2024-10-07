@@ -12,8 +12,7 @@ use reqwest::Url;
 const RPC_URL: &str = "https://docs-demo.quiknode.pro/";
 
 /// Grabs a live merkleized receipts list within a block header.
-pub async fn get_live_derivable_receipts_list(
-) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<ReceiptEnvelope>)> {
+pub async fn get_live_derivable_receipts_list() -> Result<(B256, BTreeMap<B256, Bytes>, Vec<ReceiptEnvelope>)> {
     // Initialize the provider.
     let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
 

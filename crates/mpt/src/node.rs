@@ -685,7 +685,7 @@ mod test {
     use super::*;
     use crate::{
         ordered_trie_with_encoder,
-        test_util::{NoopTrieHinter, NoopTrieProvider, TrieNodeProvider},
+        test_utils::{NoopTrieHinter, NoopTrieProvider, TrieNodeProvider},
         TrieNode,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};

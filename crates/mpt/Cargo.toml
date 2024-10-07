@@ -20,10 +20,10 @@ tracing.workspace = true
 thiserror.workspace = true
 
 # `test-utils`
-reqwest = { workspace = true, optional = true }
 anyhow = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+alloy-provider = { workspace = true, features = ["reqwest"], optional = true }
 alloy-rpc-types = { workspace = true, features = ["eth"], optional = true }
-alloy-provider = { workspace = true, optional = true }
 
 # Revm + Alloy
 revm.workspace = true

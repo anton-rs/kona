@@ -166,7 +166,7 @@ mod test {
     use super::*;
     use crate::{
         ordered_trie_with_encoder,
-        test_util::{
+        test_utils::{
             get_live_derivable_receipts_list, get_live_derivable_transactions_list,
             NoopTrieProvider, TrieNodeProvider,
         },
