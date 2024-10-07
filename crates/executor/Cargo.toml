@@ -11,6 +11,9 @@ homepage.workspace = true
 [lints]
 workspace = true
 
+[profile.bench]
+default = ["kona-mpt/test-utils"]
+
 [dependencies]
 # General
 thiserror.workspace = true

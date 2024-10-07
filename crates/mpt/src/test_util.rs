@@ -1,9 +1,9 @@
 //! Testing utilities for `kona-mpt`
 
-use crate::{ordered_trie_with_encoder, TrieProvider};
-use alloc::{collections::BTreeMap, vec::Vec};
-use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
-use alloy_primitives::{keccak256, Bytes, Log, B256};
+use crate::{ordered_trie_with_encoder, TrieHinter, TrieProvider};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloy_consensus::{Header, Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
+use alloy_primitives::{keccak256, Address, Bytes, Log, B256, U256};
 use alloy_provider::{network::eip2718::Encodable2718, Provider, ProviderBuilder};
 use alloy_rpc_types::{BlockTransactions, BlockTransactionsKind};
 use anyhow::{anyhow, Result};
@@ -12,7 +12,7 @@ use reqwest::Url;
 const RPC_URL: &str = "https://docs-demo.quiknode.pro/";
 
 /// Grabs a live merkleized receipts list within a block header.
-pub(crate) async fn get_live_derivable_receipts_list(
+pub async fn get_live_derivable_receipts_list(
 ) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<ReceiptEnvelope>)> {
     // Initialize the provider.
     let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
@@ -78,7 +78,7 @@ pub(crate) async fn get_live_derivable_receipts_list(
 }
 
 /// Grabs a live merkleized transactions list within a block header.
-pub(crate) async fn get_live_derivable_transactions_list(
+pub async fn get_live_derivable_transactions_list(
 ) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<TxEnvelope>)> {
     // Initialize the provider.
     let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
@@ -118,15 +118,62 @@ pub(crate) async fn get_live_derivable_transactions_list(
     Ok((root, preimages, consensus_txs))
 }
 
+/// The default, no-op implementation of the [TrieProvider] trait, used for testing.
+#[derive(Debug, Clone, Copy)]
+pub struct NoopTrieProvider;
+
+impl TrieProvider for NoopTrieProvider {
+    type Error = String;
+
+    fn trie_node_preimage(&self, _key: B256) -> Result<Bytes, Self::Error> {
+        Ok(Bytes::new())
+    }
+
+    fn bytecode_by_hash(&self, _code_hash: B256) -> Result<Bytes, Self::Error> {
+        Ok(Bytes::new())
+    }
+
+    fn header_by_hash(&self, _hash: B256) -> Result<Header, Self::Error> {
+        Ok(Header::default())
+    }
+}
+
+/// The default, no-op implementation of the [TrieHinter] trait, used for testing.
+#[derive(Debug, Clone, Copy)]
+pub struct NoopTrieHinter;
+
+impl TrieHinter for NoopTrieHinter {
+    type Error = String;
+
+    fn hint_trie_node(&self, _hash: B256) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn hint_account_proof(&self, _address: Address, _block_number: u64) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn hint_storage_proof(
+        &self,
+        _address: Address,
+        _slot: U256,
+        _block_number: u64,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 /// A mock [TrieProvider] for testing that serves in-memory preimages.
-pub(crate) struct TrieNodeProvider {
+#[derive(Debug, Clone)]
+pub struct TrieNodeProvider {
     preimages: BTreeMap<B256, Bytes>,
     bytecode: BTreeMap<B256, Bytes>,
     headers: BTreeMap<B256, alloy_consensus::Header>,
 }
 
 impl TrieNodeProvider {
-    pub(crate) const fn new(
+    /// Constructs a new [TrieNodeProvider].
+    pub const fn new(
         preimages: BTreeMap<B256, Bytes>,
         bytecode: BTreeMap<B256, Bytes>,
         headers: BTreeMap<B256, alloy_consensus::Header>,

@@ -19,7 +19,7 @@ pub use errors::{
 };
 
 mod fetcher;
-pub use fetcher::{NoopTrieHinter, NoopTrieProvider, TrieHinter, TrieProvider};
+pub use fetcher::{TrieHinter, TrieProvider};
 
 mod node;
 pub use node::TrieNode;
@@ -30,5 +30,5 @@ pub use list_walker::OrderedListWalker;
 mod util;
 pub use util::ordered_trie_with_encoder;
 
-#[cfg(test)]
-mod test_util;
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_util;

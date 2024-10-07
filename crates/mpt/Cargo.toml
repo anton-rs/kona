@@ -11,10 +11,19 @@ homepage.workspace = true
 [lints]
 workspace = true
 
+[profile.bench]
+default = ["test-utils"]
+
 [dependencies]
 # General
 tracing.workspace = true
 thiserror.workspace = true
+
+# `test-utils`
+reqwest = { workspace = true, optional = true }
+anyhow = { workspace = true, optional = true }
+alloy-rpc-types = { workspace = true, features = ["eth"], optional = true }
+alloy-provider = { workspace = true, optional = true }
 
 # Revm + Alloy
 revm.workspace = true
@@ -25,7 +34,6 @@ alloy-trie.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
-anyhow.workspace = true
 reqwest.workspace = true
 futures.workspace = true
 tracing-subscriber.workspace = true
@@ -39,6 +47,15 @@ rand.workspace = true
 proptest.workspace = true
 criterion.workspace = true
 pprof.workspace = true
+
+[features]
+default = []
+test-utils = [
+  "dep:anyhow",
+  "dep:reqwest",
+  "dep:alloy-provider",
+  "dep:alloy-rpc-types",
+]
 
 [[bench]]
 name = "trie_node"

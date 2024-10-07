@@ -168,9 +168,8 @@ mod test {
         ordered_trie_with_encoder,
         test_util::{
             get_live_derivable_receipts_list, get_live_derivable_transactions_list,
-            TrieNodeProvider,
+            NoopTrieProvider, TrieNodeProvider,
         },
-        NoopTrieProvider,
     };
     use alloc::{collections::BTreeMap, string::String, vec::Vec};
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};

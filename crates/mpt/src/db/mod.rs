@@ -46,34 +46,37 @@ pub use account::TrieAccount;
 ///   [BLOCK_HASH_HISTORY] blocks back relative to the current parent block hash.
 ///
 /// **Example Construction**:
-/// ```rust
-/// use alloy_consensus::{Header, Sealable};
-/// use alloy_primitives::{Bytes, B256};
-/// use anyhow::Result;
-/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieDB};
-/// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
-///
-/// let mock_starting_root = B256::default();
-/// let mock_parent_block_header = Header::default();
-///
-/// let trie_db = TrieDB::new(
-///     mock_starting_root,
-///     mock_parent_block_header.seal_slow(),
-///     NoopTrieProvider,
-///     NoopTrieHinter,
-/// );
-/// let mut state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
-/// let evm = EvmBuilder::default().with_db(&mut state).build();
-///
-/// // Execute your block's transactions...
-///
-/// // Drop the EVM prior to merging the state transitions.
-/// drop(evm);
-///
-/// state.merge_transitions(BundleRetention::Reverts);
-/// let bundle = state.take_bundle();
-/// let state_root = state.database.state_root(&bundle).expect("Failed to compute state root");
-/// ```
+#[cfg_attr(
+    feature = "test-utils",
+    doc = "
+use alloy_consensus::{Header, Sealable};
+use alloy_primitives::{Bytes, B256};
+use anyhow::Result;
+use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieDB};
+use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
+
+let mock_starting_root = B256::default();
+let mock_parent_block_header = Header::default();
+
+let trie_db = TrieDB::new(
+    mock_starting_root,
+    mock_parent_block_header.seal_slow(),
+    NoopTrieProvider,
+    NoopTrieHinter,
+);
+let mut state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
+let evm = EvmBuilder::default().with_db(&mut state).build();
+
+// Execute your block's transactions...
+
+// Drop the EVM prior to merging the state transitions.
+drop(evm);
+
+state.merge_transitions(BundleRetention::Reverts);
+let bundle = state.take_bundle();
+let state_root = state.database.state_root(&bundle).expect(\"Failed to compute state root\");
+"
+)]
 ///
 /// [State]: revm::State
 #[derive(Debug, Clone)]

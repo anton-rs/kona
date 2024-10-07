@@ -3,7 +3,10 @@
 
 use alloy_trie::Nibbles;
 use criterion::{criterion_group, criterion_main, Criterion};
-use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieNode};
+use kona_mpt::{
+    test_util::{NoopTrieHinter, NoopTrieProvider},
+    TrieNode,
+};
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 

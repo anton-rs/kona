@@ -703,7 +703,7 @@ mod test {
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
-    use kona_mpt::NoopTrieHinter;
+    use kona_mpt::test_util::NoopTrieHinter;
     use op_alloy_genesis::OP_MAINNET_BASE_FEE_PARAMS;
     use serde::Deserialize;
     use std::collections::HashMap;
