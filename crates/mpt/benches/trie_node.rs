@@ -4,7 +4,7 @@
 use alloy_trie::Nibbles;
 use criterion::{criterion_group, criterion_main, Criterion};
 use kona_mpt::{
-    test_util::{NoopTrieHinter, NoopTrieProvider},
+    test_utils::{NoopTrieHinter, NoopTrieProvider},
     TrieNode,
 };
 use pprof::criterion::{Output, PProfProfiler};

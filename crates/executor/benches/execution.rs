@@ -8,7 +8,7 @@ use alloy_rpc_types_engine::PayloadAttributes;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use kona_executor::StatelessL2BlockExecutor;
-use kona_mpt::{test_util::NoopTrieHinter, TrieProvider};
+use kona_mpt::{test_utils::NoopTrieHinter, TrieProvider};
 use op_alloy_genesis::{RollupConfig, OP_MAINNET_BASE_FEE_PARAMS};
 use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 use pprof::criterion::{Output, PProfProfiler};
