@@ -439,6 +439,29 @@ mod tests {
     use alloy_primitives::b256;
     use kona_primitives::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 
+    #[test]
+    fn test_build_online_provider_with_fallback() {
+        let builder = OnlineBlobProviderBuilder::new()
+            .with_genesis_time(10)
+            .with_slot_interval(12)
+            .with_beacon_client(OnlineBeaconClient::new_http("http://localhost:5052".into()))
+            .with_fallback_provider(OnlineBeaconClient::new_http("http://localhost:5053".into()))
+            .build();
+        assert!(builder.fallback.is_some());
+    }
+
+    #[test]
+    fn test_into_online_provider_with_fallback() {
+        let builder = OnlineBlobProviderBuilder::default()
+            .with_genesis_time(10)
+            .with_slot_interval(12)
+            .with_primary("http://localhost:5052".into())
+            .with_fallback(Some("http://localhost:5053".into()));
+        let provider: OnlineBlobProviderWithFallback<OnlineBeaconClient, OnlineBeaconClient> =
+            builder.into();
+        assert!(provider.fallback.is_some());
+    }
+
     #[tokio::test]
     async fn test_load_config_succeeds() {
         let genesis_time = 10;
