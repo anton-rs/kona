@@ -673,7 +673,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err(),
             BlobProviderError::Backend(
-                "invalid sidecar ordering, blob hash index 4 does not match sidecar index 0"
+                "wrong versioned hash: have 0x001611aa000000000457ff00ff0001feed85761635b18d5c3dad729a4fac0460, expected 0x01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"
                     .to_string()
             )
         );
@@ -700,7 +700,7 @@ mod tests {
             ..Default::default()
         }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
-        assert_eq!(result.unwrap_err(), BlobProviderError::Backend("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1".to_string()));
+        assert_eq!(result.unwrap_err(), BlobProviderError::Backend("wrong versioned hash: have 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1, expected 0x0101010101010101010101010101010101010101010101010101010101010101".to_string()));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -726,7 +726,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result,
-            Err(BlobProviderError::Backend("blob at index 0 failed verification".to_string()))
+            Err(BlobProviderError::Backend("KZG error: CError(C_KZG_BADARGS)".to_string()))
         );
     }
 
