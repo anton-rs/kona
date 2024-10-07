@@ -19,13 +19,16 @@ pub use errors::{
 };
 
 mod fetcher;
-pub use fetcher::{NoopTrieHinter, NoopTrieProvider, TrieHinter, TrieProvider};
+pub use fetcher::{TrieHinter, TrieProvider};
 
 mod node;
 pub use node::TrieNode;
 
 mod list_walker;
 pub use list_walker::OrderedListWalker;
+
+mod noop;
+pub use noop::{NoopTrieHinter, NoopTrieProvider};
 
 mod util;
 pub use util::ordered_trie_with_encoder;

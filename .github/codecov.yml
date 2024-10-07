@@ -25,6 +25,7 @@ ignore:
   - "bin/"
   - "crates/providers-alloy/src/alloy_providers.rs"  # Flaky testing with online providers
   - "crates/providers-alloy/src/beacon_client.rs"  # Flaky testing with online providers
+  - "crates/mpt/src/noop.rs" # Uncovered noop implementations used downstream and by tests
 
 # Make comments less noisy
 comment:
