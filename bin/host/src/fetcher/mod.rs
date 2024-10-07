@@ -14,7 +14,7 @@ use anyhow::{anyhow, Result};
 use kona_client::HintType;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_primitives::IndexedBlobHash;
-use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -33,7 +33,7 @@ where
     /// L1 chain provider.
     l1_provider: ReqwestProvider,
     /// The blob provider
-    blob_provider: OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
+    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// L2 chain provider.
     /// TODO: OP provider, N = Optimism
     l2_provider: ReqwestProvider,
@@ -51,7 +51,7 @@ where
     pub const fn new(
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
-        blob_provider: OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
+        blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
         l2_provider: ReqwestProvider,
         l2_head: B256,
     ) -> Self {

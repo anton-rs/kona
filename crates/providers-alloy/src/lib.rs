@@ -25,7 +25,7 @@ pub mod prelude {
         beacon_client::{BeaconClient, OnlineBeaconClient},
         blob_provider::{
             BlobSidecarProvider, OnlineBlobProvider, OnlineBlobProviderBuilder,
-            OnlineBlobProviderWithFallback, SimpleSlotDerivation, SlotDerivation,
+            OnlineBlobProviderWithFallback,
         },
         pipeline::{new_online_pipeline, OnlinePipeline},
     };
@@ -44,5 +44,5 @@ pub use beacon_client::{BeaconClient, OnlineBeaconClient};
 pub mod blob_provider;
 pub use blob_provider::{
     BlobSidecarProvider, OnlineBlobProvider, OnlineBlobProviderBuilder,
-    OnlineBlobProviderWithFallback, SimpleSlotDerivation, SlotDerivation,
+    OnlineBlobProviderWithFallback,
 };

@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 use crate::{
     AlloyChainProvider, AlloyL2ChainProvider, OnlineBeaconClient, OnlineBlobProviderWithFallback,
-    SimpleSlotDerivation,
 };
 
 /// An online derivation pipeline.
@@ -25,7 +24,7 @@ pub type OnlinePipeline =
 /// An `online` Ethereum data source.
 pub type OnlineDataProvider = EthereumDataSource<
     AlloyChainProvider,
-    OnlineBlobProviderWithFallback<OnlineBeaconClient, OnlineBeaconClient, SimpleSlotDerivation>,
+    OnlineBlobProviderWithFallback<OnlineBeaconClient, OnlineBeaconClient>,
 >;
 
 /// An `online` payload attributes builder for the `AttributesQueue` stage of the derivation
@@ -83,8 +82,7 @@ mod tests {
             rollup_config.clone(),
         );
         let beacon_client = OnlineBeaconClient::new_http("http://127.0.0.1:5555".into());
-        let blob_provider: OnlineBlobProvider<_, SimpleSlotDerivation> =
-            OnlineBlobProvider::new(beacon_client, None, None);
+        let blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
         let blob_provider = OnlineBlobProviderWithFallback::new(blob_provider, None);
         let dap_source =
             EthereumDataSource::new(chain_provider.clone(), blob_provider, &rollup_config);

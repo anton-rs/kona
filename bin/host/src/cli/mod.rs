@@ -14,7 +14,7 @@ use clap::{
     builder::styling::{AnsiColor, Color, Style},
     ArgAction, Parser,
 };
-use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider, SimpleSlotDerivation};
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
@@ -130,11 +130,7 @@ impl HostCli {
     /// - A [ReqwestProvider] for the L2 node.
     pub async fn create_providers(
         &self,
-    ) -> Result<(
-        ReqwestProvider,
-        OnlineBlobProvider<OnlineBeaconClient, SimpleSlotDerivation>,
-        ReqwestProvider,
-    )> {
+    ) -> Result<(ReqwestProvider, OnlineBlobProvider<OnlineBeaconClient>, ReqwestProvider)> {
         let beacon_client = OnlineBeaconClient::new_http(
             self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
         );
