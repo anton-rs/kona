@@ -86,5 +86,6 @@ test-utils = [
   "dep:alloy-node-bindings",
   "dep:tracing-subscriber",
   "dep:alloy-rpc-client",
+  "kona-providers/test-utils",
   "alloy-transport-http/reqwest"
 ]
