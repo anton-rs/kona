@@ -9,7 +9,7 @@ use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
 
 /// A pipeline error.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum StepResult {
     /// Attributes were successfully prepared.
     PreparedAttributes,
