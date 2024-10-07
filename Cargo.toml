@@ -73,7 +73,7 @@ thiserror = { git = "https://github.com/quartiq/thiserror", branch = "no-std", d
 cfg-if = "1.0.0"
 spin = { version = "0.9.8", features = ["mutex"] }
 lru = "0.12.4"
-async-trait = "0.1.82"
+async-trait = "0.1.83"
 lazy_static = "1.5.0"
 reqwest = "0.12"
 os_pipe = "1.2.1"
@@ -82,9 +82,9 @@ rand = "0.8.5"
 futures = { version = "0.3.30", default-features = false }
 prometheus = { version = "0.13.4", features = ["process"] }
 tokio = { version = "1.40", features = ["full"] }
-clap = { version = "4.5.18", features = ["derive", "env"] }
+clap = { version = "4.5.19", features = ["derive", "env"] }
 sha2 = { version = "0.10.8", default-features = false }
-c-kzg = { version = "1.0.2", default-features = false }
+c-kzg = { version = "1.0.3", default-features = false }
 alloc-no-stdlib = "2.0.4"
 linked_list_allocator = "0.10.5"
 command-fds = { version = "0.3", features = ["tokio"] }
@@ -96,7 +96,7 @@ tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
 
 # Encoding
 miniz_oxide = "0.8.0"
-brotli = { version = "6.0.0", default-features = false }
+brotli = { version = "7.0.0", default-features = false }
 
 # Testing
 proptest = "1.5"
@@ -110,7 +110,7 @@ serde_json = { version = "1.0.128", default-features = false }
 
 # Ethereum
 unsigned-varint = "0.8.0"
-revm = { version = "14.0.2", default-features = false }
+revm = { version = "14.0.3", default-features = false }
 
 # Optimism
 superchain = { version = "0.7", default-features = false }
@@ -121,16 +121,16 @@ rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
 # Alloy
 alloy-rlp = { version = "0.3.8", default-features = false }
 alloy-trie = { version = "0.6.0", default-features = false }
-alloy-eips = { version = "0.4.0", default-features = false }
-alloy-provider = { version = "0.4.0", default-features = false }
+alloy-eips = { version = "0.4.2", default-features = false }
+alloy-provider = { version = "0.4.2", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
-alloy-consensus = { version = "0.4.0", default-features = false }
-alloy-transport = { version = "0.4.0", default-features = false }
-alloy-rpc-types = { version = "0.4.0", default-features = false }
-alloy-rpc-client = { version = "0.4.0", default-features = false }
-alloy-rpc-types-engine = { version = "0.4.0", default-features = false }
-alloy-node-bindings = { version = "0.4.0", default-features = false }
-alloy-transport-http = { version = "0.4.0", default-features = false }
+alloy-consensus = { version = "0.4.2", default-features = false }
+alloy-transport = { version = "0.4.2", default-features = false }
+alloy-rpc-types = { version = "0.4.2", default-features = false }
+alloy-rpc-client = { version = "0.4.2", default-features = false }
+alloy-rpc-types-engine = { version = "0.4.2", default-features = false }
+alloy-node-bindings = { version = "0.4.2", default-features = false }
+alloy-transport-http = { version = "0.4.2", default-features = false }
 
 # OP Alloy
 op-alloy-consensus = { version = "0.3.3", default-features = false }
