@@ -77,3 +77,60 @@ pub(crate) const fn is_system_transaction(tx: &OpTxEnvelope) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use op_alloy_consensus::TxDeposit;
+    use alloy_consensus::{Signed, TxEip1559, TxEip2930, TxLegacy};
+
+    #[test]
+    fn test_is_system_transaction() {
+        let mut inner = TxDeposit::default();
+        let tx = OpTxEnvelope::Deposit(inner.clone());
+        assert!(!is_system_transaction(&tx));
+        inner.is_system_transaction = true;
+        let tx = OpTxEnvelope::Deposit(inner);
+        assert!(is_system_transaction(&tx));
+    }
+
+    #[test]
+    fn test_extract_tx_gas_limit_legacy() {
+        let mut inner = TxLegacy::default();
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Legacy(Signed::new_unchecked(inner.clone(), Default::default(), Default::default()))), 0);
+        inner.gas_limit = 100;
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Legacy(inner)), 100);
+    }
+
+    #[test]
+    fn test_extract_tx_gas_limit_eip2930() {
+        let mut inner = TxEip2930::default();
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Eip2930(inner.clone())), 0);
+        inner.gas_limit = 100;
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Eip2930(inner)), 100);
+    }
+
+    #[test]
+    fn test_extract_tx_gas_limit_eip1559() {
+        let mut inner = TxEip1559::default();
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Eip1559(inner.clone())), 0);
+        inner.gas_limit = 100;
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Eip1559(inner)), 100);
+    }
+
+    #[test]
+    fn test_extract_tx_gas_limit_eip4844() {
+        let mut inner = TxEip1559::default();
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Eip4844(inner.clone())), 0);
+        inner.gas_limit = 100;
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Eip4844(inner)), 100);
+    }
+
+    #[test]
+    fn test_extract_tx_gas_limit_deposit() {
+        let mut inner = TxDeposit::default();
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Deposit(inner.clone())), 0);
+        inner.gas_limit = 100;
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Deposit(inner)), 100);
+    }
+}
