@@ -96,7 +96,11 @@ where
         payload: OptimismPayloadAttributes,
     ) -> ExecutorResult<&Header> {
         // Prepare the `revm` environment.
-        let base_fee_params = Self::active_base_fee_params(self.config, &payload)?;
+        let base_fee_params = Self::active_base_fee_params(
+            self.config,
+            self.trie_db.parent_block_header(),
+            &payload,
+        )?;
         let initialized_block_env = Self::prepare_block_env(
             self.revm_spec_id(payload.payload_attributes.timestamp),
             self.trie_db.parent_block_header(),
@@ -306,19 +310,25 @@ where
             })
             .unwrap_or_default();
 
+        // At holocene activation, the base fee parameters from the payload are placed
+        // into the Header's `nonce` field. Prior to Holocene, the `nonce` field should
+        // be set to 0.
+        //
+        // If the payload's `eip_1559_params` are equal to `0`, then the header's `nonce`
+        // field is set to the encoded canyon base fee parameters.
         let encoded_base_fee_params = self
             .config
             .is_holocene_active(payload.payload_attributes.timestamp)
             .then(|| {
-                let mut encoded_params = B64::ZERO;
-                encoded_params[0..4].copy_from_slice(
-                    (base_fee_params.max_change_denominator as u32).to_be_bytes().as_ref(),
-                );
-                encoded_params[4..8].copy_from_slice(
-                    (base_fee_params.elasticity_multiplier as u32).to_be_bytes().as_ref(),
-                );
-                encoded_params
+                let payload_params =
+                    payload.eip_1559_params.ok_or(ExecutorError::MissingEIP1559Params)?;
+
+                let params = (payload_params == B64::ZERO)
+                    .then(|| encode_canyon_base_fee_params(self.config))
+                    .unwrap_or(payload_params);
+                Ok::<_, ExecutorError>(params)
             })
+            .transpose()?
             .unwrap_or_default();
 
         // Construct the new header.
@@ -546,33 +556,40 @@ where
     ///
     /// ## Takes
     /// - `config`: The rollup config to use for the computation.
+    /// - `parent_header`: The parent header of the block to be executed.
     /// - `payload_attrs`: The payload attributes to use for the computation.
     fn active_base_fee_params(
         config: &RollupConfig,
+        parent_header: &Header,
         payload_attrs: &OptimismPayloadAttributes,
     ) -> ExecutorResult<BaseFeeParams> {
-        // If the payload attribute timestamp is past canyon activation,
-        // use the canyon base fee params from the rollup config.
         let base_fee_params =
             if config.is_holocene_active(payload_attrs.payload_attributes.timestamp) {
-                let params =
-                    payload_attrs.eip_1559_params.ok_or(ExecutorError::MissingEIP1559Params)?;
-
-                // If the parameters sent are equal to `0`, use the canyon base fee params.
-                // Otherwise, use the EIP-1559 parameters sent through the payload.
-                if params == B64::ZERO {
-                    config.canyon_base_fee_params
-                } else {
-                    let denominator = u32::from_be_bytes(params[0..4].try_into().unwrap());
-                    let elasticity = u32::from_be_bytes(params[4..8].try_into().unwrap());
-                    BaseFeeParams {
-                        max_change_denominator: denominator as u128,
-                        elasticity_multiplier: elasticity as u128,
-                    }
-                }
+                // After Holocene activation, the base fee parameters are stored in the
+                // `nonce` field of the parent header. If the `nonce` field is not zero,
+                // then the base fee parameters are extracted from the `nonce` field.
+                // Otherwise, the canyon base fee parameters are used for the current block.
+                (parent_header.nonce != B64::ZERO)
+                    .then(|| {
+                        // SAFETY: The `nonce` field is always 8 bytes, and the 4-byte segments are
+                        // guaranteed to be valid `u32` values.
+                        let denominator: u32 =
+                            u32::from_be_bytes(parent_header.nonce[0..4].try_into().unwrap());
+                        let elasticity: u32 =
+                            u32::from_be_bytes(parent_header.nonce[4..8].try_into().unwrap());
+                        BaseFeeParams {
+                            max_change_denominator: denominator as u128,
+                            elasticity_multiplier: elasticity as u128,
+                        }
+                    })
+                    .unwrap_or(config.canyon_base_fee_params)
             } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
+                // If the payload attribute timestamp is past canyon activation,
+                // use the canyon base fee params from the rollup config.
                 config.canyon_base_fee_params
             } else {
+                // If the payload attribute timestamp is prior to canyon activation,
+                // use the default base fee params from the rollup config.
                 config.base_fee_params
             };
 
@@ -696,10 +713,22 @@ where
     }
 }
 
+/// Encodes the canyon base fee parameters, per Holocene spec.
+///
+/// <https://specs.optimism.io/protocol/holocene/exec-engine.html#eip1559params-encoding>
+fn encode_canyon_base_fee_params(config: &RollupConfig) -> B64 {
+    let params = config.canyon_base_fee_params;
+
+    let mut buf = B64::ZERO;
+    buf[0..4].copy_from_slice(&(params.max_change_denominator as u32).to_be_bytes());
+    buf[4..8].copy_from_slice(&(params.elasticity_multiplier as u32).to_be_bytes());
+    buf
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use alloy_primitives::{address, b256, hex};
+    use alloy_primitives::{address, b256, b64, hex};
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
@@ -751,6 +780,18 @@ mod test {
                 .ok_or_else(|| anyhow!("Header not found for hash: {}", hash))?;
             Header::decode(&mut encoded_header.as_ref()).map_err(|e| anyhow!(e))
         }
+    }
+
+    #[test]
+    fn test_encode_canyon_1559_params() {
+        let cfg = RollupConfig {
+            canyon_base_fee_params: BaseFeeParams {
+                max_change_denominator: 32,
+                elasticity_multiplier: 64,
+            },
+            ..Default::default()
+        };
+        assert_eq!(encode_canyon_base_fee_params(&cfg), b64!("0000002000000040"));
     }
 
     #[test]
