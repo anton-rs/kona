@@ -784,17 +784,14 @@ mod test {
 
     #[test]
     fn test_encode_canyon_1559_params() {
-        let cfg = RollupConfig { 
+        let cfg = RollupConfig {
             canyon_base_fee_params: BaseFeeParams {
                 max_change_denominator: 32,
                 elasticity_multiplier: 64,
             },
             ..Default::default()
         };
-        assert_eq!(
-            encode_canyon_base_fee_params(&cfg),
-            b64!("0000002000000040")
-        );
+        assert_eq!(encode_canyon_base_fee_params(&cfg), b64!("0000002000000040"));
     }
 
     #[test]
