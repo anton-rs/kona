@@ -405,3 +405,94 @@ where
         Ok(header.hash_slow())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{NoopTrieHinter, NoopTrieProvider};
+    use alloy_consensus::Sealable;
+    use alloy_primitives::b256;
+
+    fn new_test_db() -> TrieDB<NoopTrieProvider, NoopTrieHinter> {
+        TrieDB::new(
+            B256::default(),
+            Header::default().seal_slow(),
+            NoopTrieProvider,
+            NoopTrieHinter,
+        )
+    }
+
+    #[test]
+    fn test_trie_db_take_root_node() {
+        let db = new_test_db();
+        let root_node = db.take_root_node();
+        assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
+    }
+
+    #[test]
+    fn test_trie_db_root_node_ref() {
+        let db = new_test_db();
+        let root_node = db.root_node_ref();
+        assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
+    }
+
+    #[test]
+    fn test_trie_db_root_node_mut() {
+        let mut db = new_test_db();
+        unsafe {
+            let root_node = db.root_node_mut();
+            root_node.blind()
+        }
+        let root_node = db.root_node_ref();
+        assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
+    }
+
+    #[test]
+    fn test_trie_db_storage_roots() {
+        let db = new_test_db();
+        let storage_roots = db.storage_roots();
+        assert!(storage_roots.is_empty());
+    }
+
+    #[test]
+    fn test_trie_db_storage_roots_mut() {
+        let mut db = new_test_db();
+        unsafe {
+            let storage_roots = db.storage_roots_mut();
+            storage_roots.insert(Address::default(), TrieNode::new_blinded(B256::default()));
+        }
+        let storage_roots = db.storage_roots();
+        assert_eq!(storage_roots.len(), 1);
+    }
+
+    #[test]
+    fn test_block_hash_above_range() {
+        let mut db = new_test_db();
+        db.parent_block_header = Header { number: 10, ..Default::default() }.seal_slow();
+        let block_number = 11;
+        let block_hash = db.block_hash(block_number).unwrap();
+        assert_eq!(block_hash, B256::default());
+    }
+
+    #[test]
+    fn test_block_hash_below_range() {
+        let mut db = new_test_db();
+        db.parent_block_header =
+            Header { number: BLOCK_HASH_HISTORY + 10, ..Default::default() }.seal_slow();
+        let block_number = 0;
+        let block_hash = db.block_hash(block_number).unwrap();
+        assert_eq!(block_hash, B256::default());
+    }
+
+    #[test]
+    fn test_block_hash_provider_missing_hash() {
+        let mut db = new_test_db();
+        db.parent_block_header = Header { number: 10, ..Default::default() }.seal_slow();
+        let block_number = 5;
+        let block_hash = db.block_hash(block_number).unwrap();
+        assert_eq!(
+            block_hash,
+            b256!("78dec18c6d7da925bbe773c315653cdc70f6444ed6c1de9ac30bdb36cff74c3b")
+        );
+    }
+}
