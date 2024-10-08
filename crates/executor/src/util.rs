@@ -77,3 +77,27 @@ pub(crate) const fn is_system_transaction(tx: &OpTxEnvelope) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use op_alloy_consensus::TxDeposit;
+
+    #[test]
+    fn test_is_system_transaction() {
+        let mut inner = TxDeposit::default();
+        let tx = OpTxEnvelope::Deposit(inner.clone());
+        assert!(!is_system_transaction(&tx));
+        inner.is_system_transaction = true;
+        let tx = OpTxEnvelope::Deposit(inner);
+        assert!(is_system_transaction(&tx));
+    }
+
+    #[test]
+    fn test_extract_tx_gas_limit_deposit() {
+        let mut inner = TxDeposit::default();
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Deposit(inner.clone())), 0);
+        inner.gas_limit = 100;
+        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Deposit(inner)), 100);
+    }
+}
