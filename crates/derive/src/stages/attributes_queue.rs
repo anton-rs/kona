@@ -232,9 +232,7 @@ mod tests {
     use super::*;
     use crate::{
         errors::{BuilderError, PipelineErrorKind},
-        stages::test_utils::{
-            new_attributes_provider, MockAttributesBuilder, MockAttributesProvider,
-        },
+        test_utils::{new_test_attributes_provider, TestAttributesBuilder, TestAttributesProvider},
     };
     use alloc::{sync::Arc, vec, vec::Vec};
     use alloy_primitives::{b256, Address, Bytes, B256};
@@ -260,10 +258,10 @@ mod tests {
         cfg: Option<RollupConfig>,
         origin: Option<BlockInfo>,
         batches: Vec<PipelineResult<SingleBatch>>,
-    ) -> AttributesQueue<MockAttributesProvider, MockAttributesBuilder> {
+    ) -> AttributesQueue<TestAttributesProvider, TestAttributesBuilder> {
         let cfg = cfg.unwrap_or_default();
-        let mock_batch_queue = new_attributes_provider(origin, batches);
-        let mock_attributes_builder = MockAttributesBuilder::default();
+        let mock_batch_queue = new_test_attributes_provider(origin, batches);
+        let mock_attributes_builder = TestAttributesBuilder::default();
         AttributesQueue::new(Arc::new(cfg), mock_batch_queue, mock_attributes_builder)
     }
 
@@ -349,10 +347,10 @@ mod tests {
     #[tokio::test]
     async fn test_create_next_attributes_success() {
         let cfg = RollupConfig::default();
-        let mock = new_attributes_provider(None, vec![]);
+        let mock = new_test_attributes_provider(None, vec![]);
         let mut payload_attributes = default_optimism_payload_attributes();
         let mock_builder =
-            MockAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
+            TestAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
         let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         let parent = L2BlockInfo::default();
         let txs = vec![Bytes::default(), Bytes::default()];
@@ -378,9 +376,9 @@ mod tests {
     #[tokio::test]
     async fn test_next_attributes_load_batch_last_in_span() {
         let cfg = RollupConfig::default();
-        let mock = new_attributes_provider(None, vec![Ok(Default::default())]);
+        let mock = new_test_attributes_provider(None, vec![Ok(Default::default())]);
         let mut pa = default_optimism_payload_attributes();
-        let mock_builder = MockAttributesBuilder { attributes: vec![Ok(pa.clone())] };
+        let mock_builder = TestAttributesBuilder { attributes: vec![Ok(pa.clone())] };
         let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
