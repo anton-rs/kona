@@ -311,6 +311,22 @@ mod tests {
         assert_eq!(err, PipelineError::MissingOrigin.crit());
     }
 
+    #[tokio::test]
+    async fn test_reset() {
+        let mock = MockChannelBankProvider::new(vec![]);
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock);
+        channel_bank.channels.insert([0xFF; 16], Channel::default());
+        channel_bank.channel_queue.push_back([0xFF; 16]);
+        let block_info = BlockInfo::default();
+        let system_config = SystemConfig::default();
+        assert!(!channel_bank.prev.reset);
+        channel_bank.reset(block_info, &system_config).await.unwrap();
+        assert_eq!(channel_bank.channels.len(), 0);
+        assert_eq!(channel_bank.channel_queue.len(), 0);
+        assert!(channel_bank.prev.reset);
+    }
+
     #[test]
     fn test_ingest_invalid_frame() {
         let trace_store: TraceStorage = Default::default();
