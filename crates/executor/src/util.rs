@@ -1,7 +1,7 @@
 //! Contains utilities for the L2 executor.
 
 use alloc::vec::Vec;
-use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, Transaction};
+use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom};
 use alloy_primitives::{Bloom, Log};
 use op_alloy_consensus::{
     OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxEnvelope, OpTxType,
@@ -28,9 +28,6 @@ pub(crate) fn receipt_envelope_from_parts<'a>(
         }
         OpTxType::Eip1559 => {
             OpReceiptEnvelope::Eip1559(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
-        }
-        OpTxType::Eip4844 => {
-            OpReceiptEnvelope::Eip4844(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
         }
         OpTxType::Deposit => {
             let inner = OpDepositReceiptWithBloom {
@@ -64,40 +61,7 @@ pub(crate) fn extract_tx_gas_limit(tx: &OpTxEnvelope) -> u128 {
         OpTxEnvelope::Legacy(tx) => tx.tx().gas_limit.into(),
         OpTxEnvelope::Eip2930(tx) => tx.tx().gas_limit.into(),
         OpTxEnvelope::Eip1559(tx) => tx.tx().gas_limit.into(),
-        OpTxEnvelope::Eip4844(tx) => tx.tx().gas_limit().into(),
         OpTxEnvelope::Deposit(tx) => tx.gas_limit.into(),
         _ => unreachable!(),
-    }
-}
-
-/// Returns whether or not an [OpTxEnvelope] is a system transaction.
-pub(crate) const fn is_system_transaction(tx: &OpTxEnvelope) -> bool {
-    match tx {
-        OpTxEnvelope::Deposit(tx) => tx.is_system_transaction,
-        _ => false,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use op_alloy_consensus::TxDeposit;
-
-    #[test]
-    fn test_is_system_transaction() {
-        let mut inner = TxDeposit::default();
-        let tx = OpTxEnvelope::Deposit(inner.clone());
-        assert!(!is_system_transaction(&tx));
-        inner.is_system_transaction = true;
-        let tx = OpTxEnvelope::Deposit(inner);
-        assert!(is_system_transaction(&tx));
-    }
-
-    #[test]
-    fn test_extract_tx_gas_limit_deposit() {
-        let mut inner = TxDeposit::default();
-        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Deposit(inner.clone())), 0);
-        inner.gas_limit = 100;
-        assert_eq!(extract_tx_gas_limit(&OpTxEnvelope::Deposit(inner)), 100);
     }
 }

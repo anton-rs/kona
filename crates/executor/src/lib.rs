@@ -43,7 +43,7 @@ mod canyon;
 use canyon::ensure_create2_deployer_canyon;
 
 mod util;
-use util::{extract_tx_gas_limit, is_system_transaction, logs_bloom, receipt_envelope_from_parts};
+use util::{extract_tx_gas_limit, logs_bloom, receipt_envelope_from_parts};
 
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
@@ -181,14 +181,9 @@ where
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
             if extract_tx_gas_limit(&transaction) > block_available_gas &&
-                (is_regolith || !is_system_transaction(&transaction))
+                (is_regolith || !transaction.is_system_transaction())
             {
                 return Err(ExecutorError::BlockGasLimitExceeded);
-            }
-
-            // Reject any EIP-4844 transactions.
-            if matches!(transaction, OpTxEnvelope::Eip4844(_)) {
-                return Err(ExecutorError::UnsupportedTransactionType(transaction.tx_type() as u8));
             }
 
             // Modify the transaction environment with the current transaction.
