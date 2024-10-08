@@ -684,8 +684,8 @@ impl Decodable for TrieNode {
 mod test {
     use super::*;
     use crate::{
-        fetcher::NoopTrieProvider, ordered_trie_with_encoder, test_util::TrieNodeProvider,
-        NoopTrieHinter, TrieNode,
+        ordered_trie_with_encoder, test_util::TrieNodeProvider, NoopTrieHinter, NoopTrieProvider,
+        TrieNode,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
     use alloy_primitives::{b256, bytes, hex, keccak256};
