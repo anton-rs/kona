@@ -17,12 +17,14 @@ pub struct MockChannelBankProvider {
     pub data: Vec<PipelineResult<Frame>>,
     /// The block info
     pub block_info: Option<BlockInfo>,
+    /// Tracks if the channel bank provider has been reset.
+    pub reset: bool,
 }
 
 impl MockChannelBankProvider {
     /// Creates a new [MockChannelBankProvider] with the given data.
     pub fn new(data: Vec<PipelineResult<Frame>>) -> Self {
-        Self { data, block_info: Some(BlockInfo::default()) }
+        Self { data, block_info: Some(BlockInfo::default()), reset: false }
     }
 }
 
@@ -53,6 +55,7 @@ impl ChannelBankProvider for MockChannelBankProvider {
 #[async_trait]
 impl ResettableStage for MockChannelBankProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+        self.reset = true;
         Ok(())
     }
 }
