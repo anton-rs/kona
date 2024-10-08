@@ -39,3 +39,41 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use kona_primitives::BlobData;
+    use kona_providers::test_utils::TestChainProvider;
+    use op_alloy_protocol::BlockInfo;
+
+    use crate::{sources::EthereumDataSourceVariant, traits::test_utils::TestBlobProvider};
+
+    #[tokio::test]
+    async fn test_variant_next_calldata() {
+        let chain = TestChainProvider::default();
+        let block_ref = BlockInfo::default();
+        let mut source =
+            CalldataSource::new(chain, Default::default(), block_ref, Default::default());
+        source.open = true;
+        source.calldata.push_back(Default::default());
+        let mut variant: EthereumDataSourceVariant<TestChainProvider, TestBlobProvider> =
+            EthereumDataSourceVariant::Calldata(source);
+        assert!(variant.next().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_variant_next_blob() {
+        let chain = TestChainProvider::default();
+        let blob = TestBlobProvider::default();
+        let block_ref = BlockInfo::default();
+        let mut source =
+            BlobSource::new(chain, blob, Default::default(), block_ref, Default::default());
+        source.open = true;
+        source.data.push(BlobData { calldata: Some(Default::default()), ..Default::default() });
+        let mut variant: EthereumDataSourceVariant<TestChainProvider, TestBlobProvider> =
+            EthereumDataSourceVariant::Blob(source);
+        assert!(variant.next().await.is_ok());
+    }
+}
