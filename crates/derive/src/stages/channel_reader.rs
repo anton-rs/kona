@@ -265,6 +265,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_flush_channel_reader() {
+        let mock = MockChannelReaderProvider::new(vec![Ok(Some(new_compressed_batch_data()))]);
+        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        reader.next_batch = Some(BatchReader::from(new_compressed_batch_data()));
+        reader.flush_channel().await.unwrap();
+        assert!(reader.next_batch.is_none());
+    }
+
+    #[tokio::test]
     async fn test_reset_channel_reader() {
         let mock = MockChannelReaderProvider::new(vec![Ok(None)]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
