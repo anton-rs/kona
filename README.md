@@ -11,6 +11,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license&labelColor=2a2f35" alt="License">
   <a href="https://anton-rs.github.io/kona"><img src="https://img.shields.io/badge/Contributor%20Book-854a15?logo=mdBook&labelColor=2a2f35" alt="Book"></a>
   <a href="https://github.com/ethereum-optimism/monorepo"><img src="https://img.shields.io/badge/OP%20Stack-monorepo-red?labelColor=2a2f35" alt="OP Stack"></a>
+  <a href="https://img.shields.io/codecov/c/github/anton-rs/kona"><img src="https://img.shields.io/codecov/c/github/anton-rs/kona" alt="Codecov"></a>
 </p>
 
 <p align="center">
