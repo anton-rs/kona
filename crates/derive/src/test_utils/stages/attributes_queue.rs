@@ -3,7 +3,7 @@
 use crate::{
     batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
-    stages::attributes_queue::AttributesProvider,
+    stages::AttributesProvider,
     traits::{AttributesBuilder, OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
@@ -15,14 +15,14 @@ use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
 
 /// A mock implementation of the [`AttributesBuilder`] for testing.
 #[derive(Debug, Default)]
-pub struct MockAttributesBuilder {
+pub struct TestAttributesBuilder {
     /// The attributes to return.
     pub attributes: Vec<anyhow::Result<OptimismPayloadAttributes>>,
 }
 
 #[async_trait]
-impl AttributesBuilder for MockAttributesBuilder {
-    /// Prepares the [PayloadAttributes] for the next payload.
+impl AttributesBuilder for TestAttributesBuilder {
+    /// Prepares the [OptimismPayloadAttributes] for the next payload.
     async fn prepare_payload_attributes(
         &mut self,
         _l2_parent: L2BlockInfo,
@@ -40,35 +40,35 @@ impl AttributesBuilder for MockAttributesBuilder {
 
 /// A mock implementation of the [`BatchQueue`] stage for testing.
 #[derive(Debug, Default)]
-pub struct MockAttributesProvider {
+pub struct TestAttributesProvider {
     /// The origin of the L1 block.
     origin: Option<BlockInfo>,
     /// A list of batches to return.
     batches: Vec<PipelineResult<SingleBatch>>,
 }
 
-impl OriginProvider for MockAttributesProvider {
+impl OriginProvider for TestAttributesProvider {
     fn origin(&self) -> Option<BlockInfo> {
         self.origin
     }
 }
 
 #[async_trait]
-impl OriginAdvancer for MockAttributesProvider {
+impl OriginAdvancer for TestAttributesProvider {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         Ok(())
     }
 }
 
 #[async_trait]
-impl ResettableStage for MockAttributesProvider {
+impl ResettableStage for TestAttributesProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
         Ok(())
     }
 }
 
 #[async_trait]
-impl AttributesProvider for MockAttributesProvider {
+impl AttributesProvider for TestAttributesProvider {
     async fn next_batch(&mut self, _parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
         self.batches.pop().ok_or(PipelineError::Eof.temp())?
     }
@@ -78,10 +78,10 @@ impl AttributesProvider for MockAttributesProvider {
     }
 }
 
-/// Creates a new [`MockAttributesProvider`] with the given origin and batches.
-pub const fn new_attributes_provider(
+/// Creates a new [`TestAttributesProvider`] with the given origin and batches.
+pub const fn new_test_attributes_provider(
     origin: Option<BlockInfo>,
     batches: Vec<PipelineResult<SingleBatch>>,
-) -> MockAttributesProvider {
-    MockAttributesProvider { origin, batches }
+) -> TestAttributesProvider {
+    TestAttributesProvider { origin, batches }
 }

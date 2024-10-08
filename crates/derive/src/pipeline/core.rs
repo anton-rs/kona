@@ -198,11 +198,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_utils::*;
+    use crate::{
+        pipeline::{DerivationPipeline, PipelineError, StepResult},
+        test_utils::*,
+        traits::{Pipeline, Signal},
+    };
+    use alloc::sync::Arc;
     use alloy_rpc_types_engine::PayloadAttributes;
-    use op_alloy_genesis::SystemConfig;
-    use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
+    use kona_providers::test_utils::TestL2ChainProvider;
+    use op_alloy_genesis::{RollupConfig, SystemConfig};
+    use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+    use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAttributes};
 
     fn default_test_payload_attributes() -> OptimismAttributesWithParent {
         OptimismAttributesWithParent {
