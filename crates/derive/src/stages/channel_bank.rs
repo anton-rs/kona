@@ -301,6 +301,75 @@ mod tests {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[test]
+    fn test_try_read_channel_at_index_missing_channel() {
+        let mock = MockChannelBankProvider::new(vec![]);
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock);
+        channel_bank.channel_queue.push_back([0xFF; 16]);
+        let err = channel_bank.try_read_channel_at_index(0).unwrap_err();
+        assert_eq!(err, PipelineError::ChannelBankEmpty.crit());
+    }
+
+    #[test]
+    fn test_try_read_channel_at_index_missing_origin() {
+        let mut mock = MockChannelBankProvider::new(vec![]);
+        mock.block_info = None;
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock);
+        channel_bank.channel_queue.push_back([0xFF; 16]);
+        channel_bank.channels.insert([0xFF; 16], Channel::new([0xFF; 16], BlockInfo::default()));
+        let err = channel_bank.try_read_channel_at_index(0).unwrap_err();
+        assert_eq!(err, PipelineError::MissingOrigin.crit());
+    }
+
+    #[test]
+    fn test_try_read_channel_at_index_timed_out() {
+        let mut mock = MockChannelBankProvider::new(vec![]);
+        mock.block_info = Some(BlockInfo { number: 10, ..Default::default() });
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock);
+        channel_bank.channel_queue.push_back([0xFF; 16]);
+        channel_bank.channels.insert([0xFF; 16], Channel::new([0xFF; 16], BlockInfo::default()));
+        let err = channel_bank.try_read_channel_at_index(0).unwrap_err();
+        assert_eq!(err, PipelineError::Eof.temp());
+    }
+
+    #[test]
+    fn test_try_read_channel_at_index() {
+        let mock = MockChannelBankProvider::new(vec![]);
+        let cfg = Arc::new(RollupConfig::default());
+        let mut channel_bank = ChannelBank::new(cfg, mock);
+        let id: ChannelId = [0xFF; 16];
+        channel_bank.channel_queue.push_back(id);
+        let mut channel = Channel::new(id, BlockInfo::default());
+        channel
+            .add_frame(
+                Frame { id, number: 0, data: b"seven__".to_vec(), is_last: false },
+                BlockInfo::default(),
+            )
+            .unwrap();
+        channel
+            .add_frame(
+                Frame { id, number: 1, data: b"seven__".to_vec(), is_last: false },
+                BlockInfo::default(),
+            )
+            .unwrap();
+        channel
+            .add_frame(
+                Frame { id, number: 2, data: b"seven__".to_vec(), is_last: true },
+                BlockInfo::default(),
+            )
+            .unwrap();
+        assert!(channel.is_ready());
+        channel_bank.channels.insert([0xFF; 16], channel);
+        let frame_data = channel_bank.try_read_channel_at_index(0).unwrap();
+        assert_eq!(
+            frame_data,
+            alloy_primitives::bytes!("736576656e5f5f736576656e5f5f736576656e5f5f")
+        );
+    }
+
+    #[test]
     fn test_ingest_empty_origin() {
         let mut mock = MockChannelBankProvider::new(vec![]);
         mock.block_info = None;
