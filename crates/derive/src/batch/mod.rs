@@ -113,15 +113,9 @@ mod tests {
 
     #[test]
     fn test_timestamp() {
-        let single_batch = SingleBatch {
-            timestamp: 123,
-            ..Default::default()
-        };
+        let single_batch = SingleBatch { timestamp: 123, ..Default::default() };
         let span_batch = SpanBatch {
-            batches: vec![SpanBatchElement {
-                timestamp: 456,
-                ..Default::default()
-            }],
+            batches: vec![SpanBatchElement { timestamp: 456, ..Default::default() }],
             ..Default::default()
         };
 
