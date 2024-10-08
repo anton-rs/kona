@@ -1,6 +1,6 @@
 # ref: https://docs.codecov.com/docs/codecovyml-reference
 coverage:
-  range: 80..100
+  range: 85..100
   round: down
   precision: 1
   status:
@@ -23,6 +23,7 @@ ignore:
   - "**/test_util*"
   - "**/tests*"
   - "bin/"
+  - "crates/derive/src/test_utils" # Ignore all files in test util directories
   - "crates/providers-alloy/src/alloy_providers.rs"  # Flaky testing with online providers
   - "crates/providers-alloy/src/beacon_client.rs"  # Flaky testing with online providers
   - "crates/mpt/src/noop.rs" # Uncovered noop implementations used downstream and by tests
