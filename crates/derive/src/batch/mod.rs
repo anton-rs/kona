@@ -106,3 +106,26 @@ impl Batch {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_timestamp() {
+        let single_batch = SingleBatch {
+            timestamp: 123,
+            ..Default::default()
+        };
+        let span_batch = SpanBatch {
+            batches: vec![SpanBatchElement {
+                timestamp: 456,
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        assert_eq!(Batch::Single(single_batch).timestamp(), 123);
+        assert_eq!(Batch::Span(span_batch).timestamp(), 456);
+    }
+}
