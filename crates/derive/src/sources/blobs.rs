@@ -21,19 +21,19 @@ where
     B: BlobProvider + Send,
 {
     /// Chain provider.
-    chain_provider: F,
+    pub chain_provider: F,
     /// Fetches blobs.
-    blob_fetcher: B,
+    pub blob_fetcher: B,
     /// The address of the batcher contract.
-    batcher_address: Address,
+    pub batcher_address: Address,
     /// Block Ref
-    block_ref: BlockInfo,
+    pub block_ref: BlockInfo,
     /// The L1 Signer.
-    signer: Address,
+    pub signer: Address,
     /// Data.
-    data: Vec<BlobData>,
+    pub data: Vec<BlobData>,
     /// Whether the source is open.
-    open: bool,
+    pub open: bool,
 }
 
 impl<F, B> BlobSource<F, B>
