@@ -9,25 +9,22 @@ use core::cmp::Ordering;
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SpanBatchBits(pub Vec<u8>);
 
-impl AsRef<Vec<u8>> for SpanBatchBits {
-    fn as_ref(&self) -> &Vec<u8> {
-        &self.0
-    }
-}
-
 impl AsRef<[u8]> for SpanBatchBits {
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl From<SpanBatchBits> for Vec<u8> {
-    fn from(bits: SpanBatchBits) -> Self {
-        bits.0
-    }
-}
-
 impl SpanBatchBits {
+    /// Returns the max amount of bytes that can be stored in the bitlist.
+    pub const fn max_bytes(is_fjord_active: bool) -> usize {
+        if is_fjord_active {
+            FJORD_MAX_SPAN_BATCH_BYTES as usize
+        } else {
+            MAX_SPAN_BATCH_BYTES as usize
+        }
+    }
+
     /// Decodes a standard span-batch bitlist from a reader.
     /// The bitlist is encoded as big-endian integer, left-padded with zeroes to a multiple of 8
     /// bits. The encoded bitlist cannot be longer than [MAX_SPAN_BATCH_BYTES].
@@ -37,11 +34,7 @@ impl SpanBatchBits {
         is_fjord_active: bool,
     ) -> Result<Self, SpanBatchError> {
         let buffer_len = bit_length / 8 + if bit_length % 8 != 0 { 1 } else { 0 };
-        let max_bytes = if is_fjord_active {
-            FJORD_MAX_SPAN_BATCH_BYTES as usize
-        } else {
-            MAX_SPAN_BATCH_BYTES as usize
-        };
+        let max_bytes = Self::max_bytes(is_fjord_active);
         if buffer_len > max_bytes {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
@@ -82,11 +75,7 @@ impl SpanBatchBits {
         // Round up, ensure enough bytes when number of bits is not a multiple of 8.
         // Alternative of (L+7)/8 is not overflow-safe.
         let buf_len = bit_length / 8 + if bit_length % 8 != 0 { 1 } else { 0 };
-        let max_bytes = if is_fjord_active {
-            FJORD_MAX_SPAN_BATCH_BYTES as usize
-        } else {
-            MAX_SPAN_BATCH_BYTES as usize
-        };
+        let max_bytes = Self::max_bytes(is_fjord_active);
         if buf_len > max_bytes {
             return Err(SpanBatchError::TooBigSpanBatchSize);
         }
@@ -184,6 +173,12 @@ impl SpanBatchBits {
 mod test {
     use super::*;
     use proptest::{collection::vec, prelude::any, proptest};
+
+    #[test]
+    fn test_bitlist_max_bytes() {
+        assert_eq!(SpanBatchBits::max_bytes(false), MAX_SPAN_BATCH_BYTES as usize);
+        assert_eq!(SpanBatchBits::max_bytes(true), FJORD_MAX_SPAN_BATCH_BYTES as usize);
+    }
 
     proptest! {
         #[test]

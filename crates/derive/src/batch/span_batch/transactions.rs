@@ -403,3 +403,94 @@ impl SpanBatchTransactions {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_consensus::{Signed, TxEip1559, TxEip2930, TxLegacy};
+    use alloy_primitives::{address, Signature};
+
+    #[test]
+    fn test_span_batch_transactions_add_empty_txs() {
+        let mut span_batch_txs = SpanBatchTransactions::default();
+        let txs = vec![];
+        let chain_id = 1;
+        let result = span_batch_txs.add_txs(txs, chain_id);
+        assert!(result.is_ok());
+        assert_eq!(span_batch_txs.total_block_tx_count, 0);
+    }
+
+    #[test]
+    fn test_span_batch_transactions_add_invalid_legacy_parity_decoding() {
+        let sig = Signature::test_signature();
+        let to = address!("0123456789012345678901234567890123456789");
+        let tx = TxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy { to: TxKind::Call(to), ..Default::default() },
+            sig,
+            Default::default(),
+        ));
+        let mut span_batch_txs = SpanBatchTransactions::default();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        let txs = vec![Bytes::from(buf)];
+        let chain_id = 1;
+        let err = span_batch_txs.add_txs(txs, chain_id).unwrap_err();
+        assert_eq!(err, SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData));
+    }
+
+    #[test]
+    fn test_span_batch_transactions_add_eip2930_tx_wrong_chain_id() {
+        let sig = Signature::test_signature();
+        let to = address!("0123456789012345678901234567890123456789");
+        let tx = TxEnvelope::Eip2930(Signed::new_unchecked(
+            TxEip2930 { to: TxKind::Call(to), ..Default::default() },
+            sig,
+            Default::default(),
+        ));
+        let mut span_batch_txs = SpanBatchTransactions::default();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        let txs = vec![Bytes::from(buf)];
+        let chain_id = 1;
+        let err = span_batch_txs.add_txs(txs, chain_id).unwrap_err();
+        assert_eq!(err, SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionData));
+    }
+
+    #[test]
+    fn test_span_batch_transactions_add_eip2930_tx() {
+        let sig = Signature::test_signature();
+        let to = address!("0123456789012345678901234567890123456789");
+        let tx = TxEnvelope::Eip2930(Signed::new_unchecked(
+            TxEip2930 { to: TxKind::Call(to), chain_id: 1, ..Default::default() },
+            sig,
+            Default::default(),
+        ));
+        let mut span_batch_txs = SpanBatchTransactions::default();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        let txs = vec![Bytes::from(buf)];
+        let chain_id = 1;
+        let result = span_batch_txs.add_txs(txs, chain_id);
+        assert_eq!(result, Ok(()));
+        assert_eq!(span_batch_txs.total_block_tx_count, 1);
+    }
+
+    #[test]
+    fn test_span_batch_transactions_add_eip1559_tx() {
+        let sig = Signature::test_signature();
+        let to = address!("0123456789012345678901234567890123456789");
+        let tx = TxEnvelope::Eip1559(Signed::new_unchecked(
+            TxEip1559 { to: TxKind::Call(to), chain_id: 1, ..Default::default() },
+            sig,
+            Default::default(),
+        ));
+        let mut span_batch_txs = SpanBatchTransactions::default();
+        let mut buf = vec![];
+        tx.encode(&mut buf);
+        let txs = vec![Bytes::from(buf)];
+        let chain_id = 1;
+        let result = span_batch_txs.add_txs(txs, chain_id);
+        assert_eq!(result, Ok(()));
+        assert_eq!(span_batch_txs.total_block_tx_count, 1);
+    }
+}
