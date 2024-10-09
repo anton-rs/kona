@@ -65,10 +65,7 @@ impl OriginAdvancer for TestNextAttributes {
 #[async_trait::async_trait]
 impl NextAttributes for TestNextAttributes {
     /// Returns the next valid [OpAttributesWithParent].
-    async fn next_attributes(
-        &mut self,
-        _: L2BlockInfo,
-    ) -> PipelineResult<OpAttributesWithParent> {
+    async fn next_attributes(&mut self, _: L2BlockInfo) -> PipelineResult<OpAttributesWithParent> {
         self.next_attributes.take().ok_or(PipelineError::Eof.temp())
     }
 }
