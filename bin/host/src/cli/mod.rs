@@ -42,26 +42,27 @@ pub struct HostCli {
     #[arg(long, short, action = ArgAction::Count)]
     pub v: u8,
     /// Hash of the L1 head block. Derivation stops after this block is processed.
-    #[clap(long, value_parser = parse_b256)]
+    #[clap(long, value_parser = parse_b256, env)]
     pub l1_head: B256,
     /// Hash of the agreed upon safe L2 block committed to by `--agreed-l2-output-root`.
-    #[clap(long, visible_alias = "l2-head", value_parser = parse_b256)]
+    #[clap(long, visible_alias = "l2-head", value_parser = parse_b256, env)]
     pub agreed_l2_head_hash: B256,
     /// Agreed safe L2 Output Root to start derivation from.
-    #[clap(long, visible_alias = "l2-output-root", value_parser = parse_b256)]
+    #[clap(long, visible_alias = "l2-output-root", value_parser = parse_b256, env)]
     pub agreed_l2_output_root: B256,
     /// Claimed L2 output root at block # `--claimed-l2-block-number` to validate.
-    #[clap(long, visible_alias = "l2-claim", value_parser = parse_b256)]
+    #[clap(long, visible_alias = "l2-claim", value_parser = parse_b256, env)]
     pub claimed_l2_output_root: B256,
     /// Number of the L2 block that the claimed output root commits to.
-    #[clap(long, visible_alias = "l2-block-number")]
+    #[clap(long, visible_alias = "l2-block-number", env)]
     pub claimed_l2_block_number: u64,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
     #[clap(
         long,
         visible_alias = "l2",
         requires = "l1_node_address",
-        requires = "l1_beacon_address"
+        requires = "l1_beacon_address",
+        env
     )]
     pub l2_node_address: Option<String>,
     /// Address of L1 JSON-RPC endpoint to use (eth and debug namespace required)
@@ -69,7 +70,8 @@ pub struct HostCli {
         long,
         visible_alias = "l1",
         requires = "l2_node_address",
-        requires = "l1_beacon_address"
+        requires = "l1_beacon_address",
+        env
     )]
     pub l1_node_address: Option<String>,
     /// Address of the L1 Beacon API endpoint to use.
@@ -77,7 +79,8 @@ pub struct HostCli {
         long,
         visible_alias = "beacon",
         requires = "l1_node_address",
-        requires = "l2_node_address"
+        requires = "l2_node_address",
+        env
     )]
     pub l1_beacon_address: Option<String>,
     /// The Data Directory for preimage data storage. Optional if running in online mode,
@@ -85,7 +88,8 @@ pub struct HostCli {
     #[clap(
         long,
         visible_alias = "db",
-        required_unless_present_all = ["l2_node_address", "l1_node_address", "l1_beacon_address"]
+        required_unless_present_all = ["l2_node_address", "l1_node_address", "l1_beacon_address"],
+        env
     )]
     pub data_dir: Option<PathBuf>,
     /// Run the specified client program natively as a separate process detached from the host.
@@ -100,7 +104,8 @@ pub struct HostCli {
     #[clap(
         long,
         conflicts_with = "rollup_config_path",
-        required_unless_present = "rollup_config_path"
+        required_unless_present = "rollup_config_path",
+        env
     )]
     pub l2_chain_id: Option<u64>,
     /// Path to rollup config. If provided, the host will use this config instead of attempting to
@@ -109,7 +114,8 @@ pub struct HostCli {
         long,
         alias = "rollup-cfg",
         conflicts_with = "l2_chain_id",
-        required_unless_present = "l2_chain_id"
+        required_unless_present = "l2_chain_id",
+        env
     )]
     pub rollup_config_path: Option<PathBuf>,
 }
