@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
 use alloy_primitives::{hex, keccak256, Bytes, B256};
 use alloy_rlp::{length_of_length, Buf, Decodable, Encodable, Header, EMPTY_STRING_CODE};
 use alloy_trie::{Nibbles, EMPTY_ROOT_HASH};
-use core::fmt::Display;
+use derive_more::Display;
 
 /// The length of the branch list when RLP encoded
 const BRANCH_LIST_LENGTH: usize = 17;
@@ -61,16 +61,18 @@ const NIBBLE_WIDTH: usize = 4;
 /// As this implementation only supports uniform key sizes, the [TrieNode] data structure will fail
 /// to behave correctly if confronted with keys of varying lengths. Namely, this is because it does
 /// not support the `value` field in branch nodes, just like the Ethereum Merkle Patricia Trie.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Display)]
 pub enum TrieNode {
     /// An empty [TrieNode] is represented as an [EMPTY_STRING_CODE] (0x80).
     Empty,
     /// A blinded node is a node that has been blinded by a [keccak256] commitment.
+    #[display("Blinded({commitment})")]
     Blinded {
         /// The commitment that blinds the node.
         commitment: B256,
     },
     /// A leaf node is a 2-item node with the encoding `rlp([encoded_path, value])`
+    #[display("Leaf({}, {})", hex::encode(prefix.as_ref()), hex::encode(value.as_ref()))]
     Leaf {
         /// The key of the leaf node
         prefix: Nibbles,
@@ -78,6 +80,7 @@ pub enum TrieNode {
         value: Bytes,
     },
     /// An extension node is a 2-item pointer node with the encoding `rlp([encoded_path, key])`
+    #[display("Extension({}, {})", hex::encode(prefix.as_ref()), node)]
     Extension {
         /// The path prefix of the extension
         prefix: Nibbles,
@@ -86,26 +89,11 @@ pub enum TrieNode {
     },
     /// A branch node refers to up to 16 child nodes with the encoding
     /// `rlp([ v0, ..., v15, value ])`
+    #[display("Branch")]
     Branch {
         /// The 16 child nodes and value of the branch.
         stack: Vec<TrieNode>,
     },
-}
-
-impl Display for TrieNode {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Empty => write!(f, "Empty"),
-            Self::Blinded { commitment } => write!(f, "Blinded({})", commitment),
-            Self::Leaf { prefix, value } => {
-                write!(f, "Leaf({}, {})", hex::encode(prefix.as_ref()), hex::encode(value.as_ref()))
-            }
-            Self::Extension { prefix, node } => {
-                write!(f, "Extension({}, {})", hex::encode(prefix.as_ref()), node)
-            }
-            Self::Branch { .. } => write!(f, "Branch"),
-        }
-    }
 }
 
 impl TrieNode {

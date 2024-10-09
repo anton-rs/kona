@@ -15,6 +15,7 @@ workspace = true
 # General
 tracing.workspace = true
 thiserror.workspace = true
+derive_more.workspace = true
 
 # Revm + Alloy
 revm.workspace = true
