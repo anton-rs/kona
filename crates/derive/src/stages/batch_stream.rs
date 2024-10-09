@@ -232,6 +232,48 @@ mod test {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]
+    async fn test_batch_stream_flush() {
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let prev = MockBatchStreamProvider::new(vec![]);
+        let mut stream = BatchStream::new(prev, config, TestL2ChainProvider::default());
+        stream.buffer.push_back(SingleBatch::default());
+        stream.span = Some(SpanBatch::default());
+        assert!(!stream.buffer.is_empty());
+        assert!(stream.span.is_some());
+        stream.flush();
+        assert!(stream.buffer.is_empty());
+        assert!(stream.span.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_batch_stream_reset() {
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let prev = MockBatchStreamProvider::new(vec![]);
+        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        stream.buffer.push_back(SingleBatch::default());
+        stream.span = Some(SpanBatch::default());
+        assert!(!stream.prev.reset);
+        stream.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        assert!(stream.prev.reset);
+        assert!(stream.buffer.is_empty());
+        assert!(stream.span.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_batch_stream_flush_channel() {
+        let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
+        let prev = MockBatchStreamProvider::new(vec![]);
+        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        stream.buffer.push_back(SingleBatch::default());
+        stream.span = Some(SpanBatch::default());
+        assert!(!stream.prev.flushed);
+        stream.flush_channel().await.unwrap();
+        assert!(stream.prev.flushed);
+        assert!(stream.buffer.is_empty());
+        assert!(stream.span.is_none());
+    }
+
+    #[tokio::test]
     async fn test_batch_stream_inactive() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());

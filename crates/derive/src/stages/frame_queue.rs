@@ -232,6 +232,16 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
+    async fn test_frame_queue_reset() {
+        let mock = MockFrameQueueProvider::new(vec![]);
+        let mut frame_queue = FrameQueue::new(mock, Default::default());
+        assert!(!frame_queue.prev.reset);
+        frame_queue.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        assert_eq!(frame_queue.queue.len(), 0);
+        assert!(frame_queue.prev.reset);
+    }
+
+    #[tokio::test]
     async fn test_frame_queue_empty_bytes() {
         let data = vec![Ok(Bytes::from(vec![0x00]))];
         let mut mock = MockFrameQueueProvider::new(data);
