@@ -1192,10 +1192,4 @@ mod test {
             expected_header.hash_slow()
         );
     }
-
-    // TODO: Add a test that uses a block where the output root was confirmed on chain
-    // to test the `compute_output_root()` function.
-    // Example (verify at index 8833 on 0xdfe97868233d1aa22e815a266982f2cf17685a27):
-    // - Block: 121184863
-    // - Output Root: 0x3ea8b0e09b39e9daa1b1520fe59faef02de3656d230d876544952cbc44d6d71f
 }
