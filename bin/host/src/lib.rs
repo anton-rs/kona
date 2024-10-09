@@ -48,7 +48,7 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
             l1_provider,
             blob_provider,
             l2_provider,
-            cfg.l2_head,
+            cfg.agreed_l2_head_hash,
         ))))
     } else {
         None
@@ -86,7 +86,7 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
             l1_provider,
             blob_provider,
             l2_provider,
-            cfg.l2_head,
+            cfg.agreed_l2_head_hash,
         ))))
     } else {
         None
