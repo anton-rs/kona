@@ -6,7 +6,7 @@ use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
 use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
-use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
+use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{
     db::State,
     primitives::{
@@ -22,7 +22,7 @@ pub(crate) fn pre_block_beacon_root_contract_call<F, H>(
     block_number: u64,
     initialized_cfg: &CfgEnvWithHandlerCfg,
     initialized_block_env: &BlockEnv,
-    payload: &OptimismPayloadAttributes,
+    payload: &OpPayloadAttributes,
 ) -> ExecutorResult<()>
 where
     F: TrieProvider,

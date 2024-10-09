@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAttributes};
+use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
 use tracing::info;
 
 /// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
@@ -29,7 +29,7 @@ pub trait AttributesProvider {
 }
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
-/// and transforms them into [OptimismPayloadAttributes].
+/// and transforms them into [OpPayloadAttributes].
 ///
 /// The outputted payload attributes cannot be buffered because each batch->attributes
 /// transformation pulls in data about the current L2 safe head.
@@ -80,11 +80,11 @@ where
         self.batch.as_ref().cloned().ok_or(PipelineError::Eof.temp())
     }
 
-    /// Returns the next [OptimismAttributesWithParent] from the current batch.
+    /// Returns the next [OpAttributesWithParent] from the current batch.
     pub async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,
-    ) -> PipelineResult<OptimismAttributesWithParent> {
+    ) -> PipelineResult<OpAttributesWithParent> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["attributes_queue"], timer);
         let batch = match self.load_batch(parent).await {
             Ok(batch) => batch,
@@ -102,11 +102,8 @@ where
                 return Err(e);
             }
         };
-        let populated_attributes = OptimismAttributesWithParent {
-            attributes,
-            parent,
-            is_last_in_span: self.is_last_in_span,
-        };
+        let populated_attributes =
+            OpAttributesWithParent { attributes, parent, is_last_in_span: self.is_last_in_span };
 
         // Clear out the local state once payload attributes are prepared.
         self.batch = None;
@@ -114,13 +111,13 @@ where
         Ok(populated_attributes)
     }
 
-    /// Creates the next attributes, transforming a [SingleBatch] into [OptimismPayloadAttributes].
+    /// Creates the next attributes, transforming a [SingleBatch] into [OpPayloadAttributes].
     /// This sets `no_tx_pool` and appends the batched txs to the attributes tx list.
     pub async fn create_next_attributes(
         &mut self,
         batch: SingleBatch,
         parent: L2BlockInfo,
-    ) -> PipelineResult<OptimismPayloadAttributes> {
+    ) -> PipelineResult<OpPayloadAttributes> {
         // Sanity check parent hash
         if batch.parent_hash != parent.block_info.hash {
             return Err(ResetError::BadParentHash(batch.parent_hash, parent.block_info.hash).into());
@@ -175,7 +172,7 @@ where
     async fn next_attributes(
         &mut self,
         parent: L2BlockInfo,
-    ) -> PipelineResult<OptimismAttributesWithParent> {
+    ) -> PipelineResult<OpAttributesWithParent> {
         self.next_attributes(parent).await
     }
 }
@@ -238,8 +235,8 @@ mod tests {
     use alloy_primitives::{b256, Address, Bytes, B256};
     use alloy_rpc_types_engine::PayloadAttributes;
 
-    fn default_optimism_payload_attributes() -> OptimismPayloadAttributes {
-        OptimismPayloadAttributes {
+    fn default_optimism_payload_attributes() -> OpPayloadAttributes {
+        OpPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: 0,
                 suggested_fee_recipient: Address::default(),
@@ -414,7 +411,7 @@ mod tests {
         // It should also reset the last in span flag and clear the batch.
         let attributes = aq.next_attributes(L2BlockInfo::default()).await.unwrap();
         pa.no_tx_pool = Some(true);
-        let populated_attributes = OptimismAttributesWithParent {
+        let populated_attributes = OpAttributesWithParent {
             attributes: pa,
             parent: L2BlockInfo::default(),
             is_last_in_span: true,

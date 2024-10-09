@@ -1,7 +1,7 @@
-//! Contains the [DerivationDriver] struct, which handles the [OptimismPayloadAttributes] derivation
+//! Contains the [DerivationDriver] struct, which handles the [OpPayloadAttributes] derivation
 //! process.
 //!
-//! [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
+//! [OpPayloadAttributes]: op_alloy_rpc_types_engine::OpPayloadAttributes
 
 use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
@@ -28,7 +28,7 @@ use kona_providers::{ChainProvider, L2ChainProvider};
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
+use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use tracing::{error, info, warn};
 
 /// An oracle-backed derivation pipeline.
@@ -59,13 +59,13 @@ pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
     OracleAttributesBuilder<O>,
 >;
 
-/// The [DerivationDriver] struct is responsible for handling the [OptimismPayloadAttributes]
+/// The [DerivationDriver] struct is responsible for handling the [OpPayloadAttributes]
 /// derivation process.
 ///
 /// It contains an inner [OraclePipeline] that is used to derive the attributes, backed by
 /// oracle-based data sources.
 ///
-/// [OptimismPayloadAttributes]: op_alloy_rpc_types_engine::OptimismPayloadAttributes
+/// [OpPayloadAttributes]: op_alloy_rpc_types_engine::OpPayloadAttributes
 #[derive(Debug)]
 pub struct DerivationDriver<O, B>
 where
@@ -183,8 +183,7 @@ where
         H: TrieHinter + Send + Sync + Clone,
     {
         loop {
-            let OptimismAttributesWithParent { mut attributes, .. } =
-                self.produce_payload().await?;
+            let OpAttributesWithParent { mut attributes, .. } = self.produce_payload().await?;
 
             let mut executor = self.new_executor(cfg, provider, hinter, handle_register);
             let number = match executor.execute_payload(attributes.clone()) {
@@ -233,9 +232,9 @@ where
         }
     }
 
-    /// Produces the disputed [OptimismAttributesWithParent] payload, directly after the starting L2
+    /// Produces the disputed [OpAttributesWithParent] payload, directly after the starting L2
     /// output root passed through the [BootInfo].
-    async fn produce_payload(&mut self) -> Result<OptimismAttributesWithParent> {
+    async fn produce_payload(&mut self) -> Result<OpAttributesWithParent> {
         // As we start the safe head at the disputed block's parent, we step the pipeline until the
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.

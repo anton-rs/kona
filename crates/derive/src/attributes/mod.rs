@@ -17,7 +17,7 @@ use kona_providers::{ChainProvider, L2ChainProvider};
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
-use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
+use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// The sequencer fee vault address.
 pub const SEQUENCER_FEE_VAULT_ADDRESS: Address =
@@ -59,7 +59,7 @@ where
         &mut self,
         l2_parent: L2BlockInfo,
         epoch: BlockNumHash,
-    ) -> PipelineResult<OptimismPayloadAttributes> {
+    ) -> PipelineResult<OpPayloadAttributes> {
         let l1_header;
         let deposit_transactions: Vec<Bytes>;
 
@@ -183,7 +183,7 @@ where
             parent_beacon_root = Some(l1_header.parent_beacon_block_root.unwrap_or_default());
         }
 
-        Ok(OptimismPayloadAttributes {
+        Ok(OpPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: next_l2_time,
                 prev_randao: l1_header.mix_hash,
@@ -547,7 +547,7 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = OptimismPayloadAttributes {
+        let expected = OpPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: next_l2_time,
                 prev_randao,
@@ -593,7 +593,7 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = OptimismPayloadAttributes {
+        let expected = OpPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: next_l2_time,
                 prev_randao,
@@ -641,7 +641,7 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = OptimismPayloadAttributes {
+        let expected = OpPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: next_l2_time,
                 prev_randao,
@@ -688,7 +688,7 @@ mod tests {
         };
         let next_l2_time = l2_parent.block_info.timestamp + block_time;
         let payload = builder.prepare_payload_attributes(l2_parent, epoch).await.unwrap();
-        let expected = OptimismPayloadAttributes {
+        let expected = OpPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: next_l2_time,
                 prev_randao,

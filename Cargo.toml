@@ -133,7 +133,7 @@ alloy-node-bindings = { version = "0.4.2", default-features = false }
 alloy-transport-http = { version = "0.4.2", default-features = false }
 
 # OP Alloy
-op-alloy-consensus = { version = "0.3.3", default-features = false }
-op-alloy-protocol = { version = "0.3.3", default-features = false }
-op-alloy-genesis = { version = "0.3.3", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.3.3", default-features = false }
+op-alloy-consensus = { version = "0.4.0", default-features = false }
+op-alloy-protocol = { version = "0.4.0", default-features = false }
+op-alloy-genesis = { version = "0.4.0", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.4.0", default-features = false }
