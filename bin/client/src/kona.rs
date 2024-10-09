@@ -67,7 +67,7 @@ fn main() -> Result<()> {
         //                          EPILOGUE                          //
         ////////////////////////////////////////////////////////////////
 
-        if number != boot.l2_claim_block || output_root != boot.l2_claim {
+        if number != boot.claimed_l2_block_number || output_root != boot.claimed_l2_output_root {
             tracing::error!(
                 target: "client",
                 "Failed to validate L2 block #{number} with output root {output_root}",

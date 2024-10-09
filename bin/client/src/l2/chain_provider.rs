@@ -38,12 +38,16 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
         // Fetch the starting L2 output preimage.
         self.oracle
             .write(
-                &HintType::StartingL2Output.encode_with(&[self.boot_info.l2_output_root.as_ref()]),
+                &HintType::StartingL2Output
+                    .encode_with(&[self.boot_info.agreed_l2_output_root.as_ref()]),
             )
             .await?;
         let output_preimage = self
             .oracle
-            .get(PreimageKey::new(*self.boot_info.l2_output_root, PreimageKeyType::Keccak256))
+            .get(PreimageKey::new(
+                *self.boot_info.agreed_l2_output_root,
+                PreimageKeyType::Keccak256,
+            ))
             .await?;
 
         // Fetch the starting block header.
