@@ -29,9 +29,7 @@ pub(crate) fn receipt_envelope_from_parts<'a>(
         OpTxType::Eip1559 => {
             OpReceiptEnvelope::Eip1559(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
         }
-        OpTxType::Eip7702 => {
-            OpReceiptEnvelope::Eip7702(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
-        }
+        OpTxType::Eip7702 => panic!("EIP-7702 is not supported"),
         OpTxType::Deposit => {
             let inner = OpDepositReceiptWithBloom {
                 receipt: OpDepositReceipt {
