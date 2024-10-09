@@ -4,7 +4,7 @@ use crate::{
     batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     stages::AttributesProvider,
-    traits::{AttributesBuilder, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{AttributesBuilder, FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
@@ -45,6 +45,10 @@ pub struct TestAttributesProvider {
     origin: Option<BlockInfo>,
     /// A list of batches to return.
     batches: Vec<PipelineResult<SingleBatch>>,
+    /// Tracks if the provider has been reset.
+    pub reset: bool,
+    /// Tracks if the provider has been flushed.
+    pub flushed: bool,
 }
 
 impl OriginProvider for TestAttributesProvider {
@@ -61,8 +65,17 @@ impl OriginAdvancer for TestAttributesProvider {
 }
 
 #[async_trait]
+impl FlushableStage for TestAttributesProvider {
+    async fn flush_channel(&mut self) -> PipelineResult<()> {
+        self.flushed = true;
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl ResettableStage for TestAttributesProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+        self.reset = true;
         Ok(())
     }
 }
@@ -83,5 +96,5 @@ pub const fn new_test_attributes_provider(
     origin: Option<BlockInfo>,
     batches: Vec<PipelineResult<SingleBatch>>,
 ) -> TestAttributesProvider {
-    TestAttributesProvider { origin, batches }
+    TestAttributesProvider { origin, batches, reset: false, flushed: false }
 }

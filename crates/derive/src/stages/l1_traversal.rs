@@ -62,11 +62,6 @@ impl<F: ChainProvider> L1Traversal<F> {
             rollup_config: cfg,
         }
     }
-
-    /// Retrieves a reference to the inner data source of the [L1Traversal] stage.
-    pub const fn data_source(&self) -> &F {
-        &self.data_source
-    }
 }
 
 #[async_trait]
@@ -206,6 +201,28 @@ pub(crate) mod tests {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         new_test_traversal(blocks, receipts)
+    }
+
+    #[test]
+    fn test_l1_traversal_batcher_address() {
+        let mut traversal = new_populated_test_traversal();
+        traversal.system_config.batcher_address = L1_SYS_CONFIG_ADDR;
+        assert_eq!(traversal.batcher_addr(), L1_SYS_CONFIG_ADDR);
+    }
+
+    #[tokio::test]
+    async fn test_l1_traversal_reset() {
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
+        assert!(traversal.advance_origin().await.is_ok());
+        let base = BlockInfo::default();
+        let cfg = SystemConfig::default();
+        traversal.done = true;
+        assert!(traversal.reset(base, &cfg).await.is_ok());
+        assert_eq!(traversal.origin(), Some(base));
+        assert_eq!(traversal.system_config, cfg);
+        assert!(!traversal.done);
     }
 
     #[tokio::test]

@@ -4,7 +4,7 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::batch_queue::BatchQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
@@ -20,12 +20,14 @@ pub struct MockBatchQueueProvider {
     pub batches: Vec<PipelineResult<Batch>>,
     /// Tracks if the provider has been flushed.
     pub flushed: bool,
+    /// Tracks if the reset method was called.
+    pub reset: bool,
 }
 
 impl MockBatchQueueProvider {
     /// Creates a new [MockBatchQueueProvider] with the given origin and batches.
     pub fn new(batches: Vec<PipelineResult<Batch>>) -> Self {
-        Self { origin: Some(BlockInfo::default()), batches, flushed: false }
+        Self { origin: Some(BlockInfo::default()), batches, flushed: false, reset: false }
     }
 }
 
@@ -54,8 +56,17 @@ impl OriginAdvancer for MockBatchQueueProvider {
 }
 
 #[async_trait]
+impl FlushableStage for MockBatchQueueProvider {
+    async fn flush_channel(&mut self) -> PipelineResult<()> {
+        self.flushed = true;
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl ResettableStage for MockBatchQueueProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+        self.reset = true;
         Ok(())
     }
 }

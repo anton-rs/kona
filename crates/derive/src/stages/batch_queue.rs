@@ -516,6 +516,48 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_batch_queue_reset() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mock = MockBatchQueueProvider::new(vec![]);
+        let fetcher = TestL2ChainProvider::default();
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        bq.l1_blocks.push(BlockInfo::default());
+        bq.next_spans.push(SingleBatch::default());
+        bq.batches.push(BatchWithInclusionBlock {
+            inclusion_block: BlockInfo::default(),
+            batch: Batch::Single(SingleBatch::default()),
+        });
+        assert!(!bq.prev.reset);
+        let base = BlockInfo::default();
+        let system_config = SystemConfig::default();
+        bq.reset(base, &system_config).await.unwrap();
+        assert!(bq.prev.reset);
+        assert_eq!(bq.origin, Some(base));
+        assert!(bq.batches.is_empty());
+        assert_eq!(bq.l1_blocks, vec![base]);
+        assert!(bq.next_spans.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_batch_queue_flush() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mock = MockBatchQueueProvider::new(vec![]);
+        let fetcher = TestL2ChainProvider::default();
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        bq.l1_blocks.push(BlockInfo::default());
+        bq.next_spans.push(SingleBatch::default());
+        bq.batches.push(BatchWithInclusionBlock {
+            inclusion_block: BlockInfo::default(),
+            batch: Batch::Single(SingleBatch::default()),
+        });
+        bq.flush_channel().await.unwrap();
+        assert!(bq.prev.flushed);
+        assert!(bq.batches.is_empty());
+        assert!(bq.l1_blocks.is_empty());
+        assert!(bq.next_spans.is_empty());
+    }
+
+    #[tokio::test]
     async fn test_holocene_add_batch_valid() {
         // Construct a future single batch.
         let cfg = Arc::new(RollupConfig {

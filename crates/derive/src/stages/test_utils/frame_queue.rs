@@ -18,12 +18,14 @@ pub struct MockFrameQueueProvider {
     pub data: Vec<PipelineResult<Bytes>>,
     /// The origin to return.
     pub origin: Option<BlockInfo>,
+    /// Wether the reset method was called.
+    pub reset: bool,
 }
 
 impl MockFrameQueueProvider {
     /// Creates a new [MockFrameQueueProvider] with the given data.
     pub const fn new(data: Vec<PipelineResult<Bytes>>) -> Self {
-        Self { data, origin: None }
+        Self { data, origin: None, reset: false }
     }
 
     /// Sets the origin for the [MockFrameQueueProvider].
@@ -57,6 +59,7 @@ impl FrameQueueProvider for MockFrameQueueProvider {
 #[async_trait]
 impl ResettableStage for MockFrameQueueProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+        self.reset = true;
         Ok(())
     }
 }
