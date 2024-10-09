@@ -515,6 +515,20 @@ mod tests {
         BatchReader::from(bytes)
     }
 
+    #[test]
+    fn test_pop_next_batch() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mock = MockBatchQueueProvider::new(vec![]);
+        let fetcher = TestL2ChainProvider::default();
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let parent = L2BlockInfo::default();
+        let sb = SingleBatch::default();
+        bq.next_spans.push(sb.clone());
+        let next = bq.pop_next_batch(parent).unwrap();
+        assert_eq!(next, sb);
+        assert!(bq.next_spans.is_empty());
+    }
+
     #[tokio::test]
     async fn test_batch_queue_reset() {
         let cfg = Arc::new(RollupConfig::default());
@@ -852,6 +866,44 @@ mod tests {
         assert_eq!(logs.len(), 1);
         let warn_str = "[HOLOCENE] Dropping future batch with parent: 0";
         assert!(logs[0].contains(warn_str));
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_cached_single_batch() {
+        let mut reader = new_batch_reader();
+        let cfg = Arc::new(RollupConfig::default());
+        let mut batch_vec: Vec<PipelineResult<Batch>> = vec![];
+        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+            batch_vec.push(Ok(batch));
+        }
+        let mut mock = MockBatchQueueProvider::new(batch_vec);
+        mock.origin = Some(BlockInfo::default());
+        let fetcher = TestL2ChainProvider::default();
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let sb = SingleBatch::default();
+        bq.next_spans.push(sb.clone());
+        let next = bq.next_batch(L2BlockInfo::default()).await.unwrap();
+        assert_eq!(next, sb);
+        assert!(bq.next_spans.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_next_batch_clear_next_spans() {
+        let mut reader = new_batch_reader();
+        let cfg = Arc::new(RollupConfig { block_time: 100, ..Default::default() });
+        let mut batch_vec: Vec<PipelineResult<Batch>> = vec![];
+        while let Some(batch) = reader.next_batch(cfg.as_ref()) {
+            batch_vec.push(Ok(batch));
+        }
+        let mut mock = MockBatchQueueProvider::new(batch_vec);
+        mock.origin = Some(BlockInfo::default());
+        let fetcher = TestL2ChainProvider::default();
+        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let sb = SingleBatch::default();
+        bq.next_spans.push(sb.clone());
+        let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
+        assert_eq!(res, PipelineError::NotEnoughData.temp());
+        assert!(bq.is_last_in_span());
     }
 
     #[tokio::test]
