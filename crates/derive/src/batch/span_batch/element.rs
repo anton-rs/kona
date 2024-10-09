@@ -26,3 +26,27 @@ impl From<SingleBatch> for SpanBatchElement {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::{collection::vec, prelude::any, proptest};
+
+    proptest! {
+        #[test]
+        fn test_span_batch_element_from_single_batch(epoch_num in 0u64..u64::MAX, timestamp in 0u64..u64::MAX, transactions in vec(any::<Bytes>(), 0..100)) {
+            let single_batch = SingleBatch {
+                epoch_num,
+                timestamp,
+                transactions: transactions.clone(),
+                ..Default::default()
+            };
+
+            let span_batch_element: SpanBatchElement = single_batch.into();
+
+            assert_eq!(span_batch_element.epoch_num, epoch_num);
+            assert_eq!(span_batch_element.timestamp, timestamp);
+            assert_eq!(span_batch_element.transactions, transactions);
+        }
+    }
+}
