@@ -226,7 +226,7 @@ mod test {
     use super::*;
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
-        stages::test_utils::{CollectingLayer, MockBatchStreamProvider, TraceStorage},
+        test_utils::{CollectingLayer, TestBatchStreamProvider, TraceStorage},
     };
     use kona_providers::test_utils::TestL2ChainProvider;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -234,7 +234,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_stream_flush() {
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
-        let prev = MockBatchStreamProvider::new(vec![]);
+        let prev = TestBatchStreamProvider::new(vec![]);
         let mut stream = BatchStream::new(prev, config, TestL2ChainProvider::default());
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
@@ -248,7 +248,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_stream_reset() {
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
-        let prev = MockBatchStreamProvider::new(vec![]);
+        let prev = TestBatchStreamProvider::new(vec![]);
         let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
@@ -262,7 +262,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_stream_flush_channel() {
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
-        let prev = MockBatchStreamProvider::new(vec![]);
+        let prev = TestBatchStreamProvider::new(vec![]);
         let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
@@ -281,7 +281,7 @@ mod test {
 
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(100), ..RollupConfig::default() });
-        let prev = MockBatchStreamProvider::new(data);
+        let prev = TestBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
 
         // The stage should not be active.
@@ -313,7 +313,7 @@ mod test {
             block_time: 2,
             ..RollupConfig::default()
         });
-        let prev = MockBatchStreamProvider::new(data);
+        let prev = TestBatchStreamProvider::new(data);
         let provider = TestL2ChainProvider::default();
         let mut stream = BatchStream::new(prev, config.clone(), provider);
 
@@ -372,7 +372,7 @@ mod test {
     async fn test_single_batch_pass_through() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
-        let prev = MockBatchStreamProvider::new(data);
+        let prev = TestBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
 
         // The stage should be active.

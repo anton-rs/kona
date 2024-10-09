@@ -202,7 +202,7 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::stages::test_utils::MockFrameQueueProvider;
+    use crate::test_utils::TestFrameQueueProvider;
     use alloc::{vec, vec::Vec};
     use op_alloy_protocol::DERIVATION_VERSION_0;
 
@@ -233,7 +233,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn test_frame_queue_reset() {
-        let mock = MockFrameQueueProvider::new(vec![]);
+        let mock = TestFrameQueueProvider::new(vec![]);
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.prev.reset);
         frame_queue.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
@@ -244,7 +244,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_empty_bytes() {
         let data = vec![Ok(Bytes::from(vec![0x00]))];
-        let mut mock = MockFrameQueueProvider::new(data);
+        let mut mock = TestFrameQueueProvider::new(data);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
@@ -255,7 +255,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_no_frames_decoded() {
         let data = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
-        let mut mock = MockFrameQueueProvider::new(data);
+        let mut mock = TestFrameQueueProvider::new(data);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
@@ -266,7 +266,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_wrong_derivation_version() {
         let data = vec![Ok(Bytes::from(vec![0x01]))];
-        let mut mock = MockFrameQueueProvider::new(data);
+        let mut mock = TestFrameQueueProvider::new(data);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
@@ -277,7 +277,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_frame_too_short() {
         let data = vec![Ok(Bytes::from(vec![0x00, 0x01]))];
-        let mut mock = MockFrameQueueProvider::new(data);
+        let mut mock = TestFrameQueueProvider::new(data);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
@@ -288,7 +288,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_single_frame() {
         let data = new_encoded_test_frames(1);
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(data)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(data)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
@@ -302,7 +302,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_multiple_frames() {
         let data = new_encoded_test_frames(3);
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(data)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(data)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
@@ -317,7 +317,7 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_frame_queue_missing_origin() {
         let data = new_encoded_test_frames(1);
-        let mock = MockFrameQueueProvider::new(vec![Ok(data)]);
+        let mock = TestFrameQueueProvider::new(vec![Ok(data)]);
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         let err = frame_queue.next_frame().await.unwrap_err();
         assert_eq!(err, PipelineError::MissingOrigin.crit());
@@ -327,7 +327,7 @@ pub(crate) mod tests {
     async fn test_holocene_valid_frames() {
         let channel = new_encoded_test_frames(3);
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(channel)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(channel)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -344,7 +344,7 @@ pub(crate) mod tests {
         let frames = vec![Frame { id: [0xEE; 16], number: 1, data: vec![0xDD; 50], is_last: true }];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -369,7 +369,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -398,7 +398,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -425,7 +425,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -456,7 +456,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -490,7 +490,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -517,7 +517,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -544,7 +544,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
@@ -571,7 +571,7 @@ pub(crate) mod tests {
         ];
         let encoded = encode_frames(frames.clone());
         let config = RollupConfig { holocene_time: Some(0), ..Default::default() };
-        let mut mock = MockFrameQueueProvider::new(vec![Ok(encoded)]);
+        let mut mock = TestFrameQueueProvider::new(vec![Ok(encoded)]);
         mock.set_origin(BlockInfo::default());
         let mut frame_queue = FrameQueue::new(mock, Arc::new(config));
         assert!(frame_queue.is_holocene_active(BlockInfo::default()));
