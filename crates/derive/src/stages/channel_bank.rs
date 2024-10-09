@@ -291,9 +291,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stages::{
-        frame_queue::tests::new_test_frames,
-        test_utils::{CollectingLayer, MockChannelBankProvider, TraceStorage},
+    use crate::{
+        stages::frame_queue::tests::new_test_frames,
+        test_utils::{CollectingLayer, TestChannelBankProvider, TraceStorage},
     };
     use alloc::vec;
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_try_read_channel_at_index_missing_channel() {
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         channel_bank.channel_queue.push_back([0xFF; 16]);
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_try_read_channel_at_index_missing_origin() {
-        let mut mock = MockChannelBankProvider::new(vec![]);
+        let mut mock = TestChannelBankProvider::new(vec![]);
         mock.block_info = None;
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_try_read_channel_at_index_timed_out() {
-        let mut mock = MockChannelBankProvider::new(vec![]);
+        let mut mock = TestChannelBankProvider::new(vec![]);
         mock.block_info = Some(BlockInfo { number: 10, ..Default::default() });
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_try_read_channel_at_index() {
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         let id: ChannelId = [0xFF; 16];
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_read_channel_canyon_not_active() {
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         let id: ChannelId = [0xFF; 16];
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_read_channel_active() {
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { canyon_time: Some(0), ..Default::default() });
         let mut channel_bank = ChannelBank::new(cfg, mock);
         let id: ChannelId = [0xFF; 16];
@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_ingest_empty_origin() {
-        let mut mock = MockChannelBankProvider::new(vec![]);
+        let mut mock = TestChannelBankProvider::new(vec![]);
         mock.block_info = None;
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
@@ -452,7 +452,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reset() {
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         channel_bank.channels.insert([0xFF; 16], Channel::default());
@@ -472,7 +472,7 @@ mod tests {
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
 
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let mut channel_bank = ChannelBank::new(Arc::new(RollupConfig::default()), mock);
         let frame = Frame { id: [0xFF; 16], ..Default::default() };
         assert_eq!(channel_bank.size(), 0);
@@ -498,7 +498,7 @@ mod tests {
             // -- Second Channel --
             Frame { id: [0xFF; 16], number: 0, data: vec![0xDD; 50], is_last: false },
         ];
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let rollup_config = RollupConfig { holocene_time: Some(0), ..Default::default() };
         let mut channel_bank = ChannelBank::new(Arc::new(rollup_config), mock);
         for frame in frames.iter().take(3) {
@@ -517,7 +517,7 @@ mod tests {
     fn test_ingest_and_prune_channel_bank() {
         use alloc::vec::Vec;
         let mut frames: Vec<Frame> = new_test_frames(100000);
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         // Ingest frames until the channel bank is full and it stops increasing in size
@@ -543,7 +543,7 @@ mod tests {
     fn test_ingest_and_prune_channel_bank_fjord() {
         use alloc::vec::Vec;
         let mut frames: Vec<Frame> = new_test_frames(100000);
-        let mock = MockChannelBankProvider::new(vec![]);
+        let mock = TestChannelBankProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { fjord_time: Some(0), ..Default::default() });
         let mut channel_bank = ChannelBank::new(cfg, mock);
         // Ingest frames until the channel bank is full and it stops increasing in size
@@ -568,7 +568,7 @@ mod tests {
     #[tokio::test]
     async fn test_read_empty_channel_bank() {
         let frames = new_test_frames(1);
-        let mock = MockChannelBankProvider::new(vec![Ok(frames[0].clone())]);
+        let mock = TestChannelBankProvider::new(vec![Ok(frames[0].clone())]);
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_bank = ChannelBank::new(cfg, mock);
         let err = channel_bank.read().unwrap_err();
@@ -587,7 +587,7 @@ mod tests {
 
         for cfg in ROLLUP_CONFIGS {
             let frames = new_test_frames(2);
-            let mock = MockChannelBankProvider::new(frames.into_iter().map(Ok).collect::<Vec<_>>());
+            let mock = TestChannelBankProvider::new(frames.into_iter().map(Ok).collect::<Vec<_>>());
             let cfg = Arc::new(cfg);
             let mut channel_bank = ChannelBank::new(cfg.clone(), mock);
 

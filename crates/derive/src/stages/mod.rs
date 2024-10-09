@@ -10,9 +10,10 @@
 //! 3. Frame Queue
 //! 4. Channel Bank
 //! 5. Channel Reader (Batch Decoding)
-//! 6. Batch Queue
-//! 7. Payload Attributes Derivation
-//! 8. (Omitted) Engine Queue
+//! 6. Batch Stream (Introduced in the Holocene Hardfork)
+//! 7. Batch Queue
+//! 8. Payload Attributes Derivation
+//! 9. (Omitted) Engine Queue
 
 mod l1_traversal;
 pub use l1_traversal::L1Traversal;
@@ -40,6 +41,3 @@ pub use attributes_queue::{AttributesProvider, AttributesQueue};
 
 mod utils;
 pub use utils::decompress_brotli;
-
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_utils;

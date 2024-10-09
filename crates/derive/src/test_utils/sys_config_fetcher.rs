@@ -9,14 +9,14 @@ use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
 
-/// A mock implementation of the [`SystemConfigL2Fetcher`] for testing.
+/// A mock implementation of the `SystemConfigL2Fetcher` for testing.
 #[derive(Debug, Default)]
-pub struct MockSystemConfigL2Fetcher {
+pub struct TestSystemConfigL2Fetcher {
     /// A map from [u64] block number to a [SystemConfig].
     pub system_configs: HashMap<u64, SystemConfig>,
 }
 
-impl MockSystemConfigL2Fetcher {
+impl TestSystemConfigL2Fetcher {
     /// Inserts a new system config into the mock fetcher with the given block number.
     pub fn insert(&mut self, number: u64, config: SystemConfig) {
         self.system_configs.insert(number, config);
@@ -29,7 +29,7 @@ impl MockSystemConfigL2Fetcher {
 }
 
 #[async_trait]
-impl L2ChainProvider for MockSystemConfigL2Fetcher {
+impl L2ChainProvider for TestSystemConfigL2Fetcher {
     type Error = anyhow::Error;
 
     async fn system_config_by_number(

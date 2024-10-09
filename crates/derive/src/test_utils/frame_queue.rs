@@ -12,8 +12,10 @@ use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
 /// A mock [FrameQueueProvider] for testing the [FrameQueue] stage.
+///
+/// [FrameQueue]: crate::stages::FrameQueue
 #[derive(Debug, Default)]
-pub struct MockFrameQueueProvider {
+pub struct TestFrameQueueProvider {
     /// The data to return.
     pub data: Vec<PipelineResult<Bytes>>,
     /// The origin to return.
@@ -22,7 +24,7 @@ pub struct MockFrameQueueProvider {
     pub reset: bool,
 }
 
-impl MockFrameQueueProvider {
+impl TestFrameQueueProvider {
     /// Creates a new [MockFrameQueueProvider] with the given data.
     pub const fn new(data: Vec<PipelineResult<Bytes>>) -> Self {
         Self { data, origin: None, reset: false }
@@ -34,21 +36,21 @@ impl MockFrameQueueProvider {
     }
 }
 
-impl OriginProvider for MockFrameQueueProvider {
+impl OriginProvider for TestFrameQueueProvider {
     fn origin(&self) -> Option<BlockInfo> {
         self.origin
     }
 }
 
 #[async_trait]
-impl OriginAdvancer for MockFrameQueueProvider {
+impl OriginAdvancer for TestFrameQueueProvider {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         Ok(())
     }
 }
 
 #[async_trait]
-impl FrameQueueProvider for MockFrameQueueProvider {
+impl FrameQueueProvider for TestFrameQueueProvider {
     type Item = Bytes;
 
     async fn next_data(&mut self) -> PipelineResult<Self::Item> {
@@ -57,7 +59,7 @@ impl FrameQueueProvider for MockFrameQueueProvider {
 }
 
 #[async_trait]
-impl ResettableStage for MockFrameQueueProvider {
+impl ResettableStage for TestFrameQueueProvider {
     async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
         self.reset = true;
         Ok(())

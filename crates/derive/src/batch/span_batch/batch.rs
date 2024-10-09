@@ -539,7 +539,7 @@ impl SpanBatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stages::test_utils::{CollectingLayer, TraceStorage};
+    use crate::test_utils::{CollectingLayer, TraceStorage};
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_eips::BlockNumHash;

@@ -266,7 +266,7 @@ async fn derive_deposits(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{errors::ResetError, stages::test_utils::MockSystemConfigL2Fetcher};
+    use crate::{errors::ResetError, test_utils::TestSystemConfigL2Fetcher};
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_primitives::{Log, LogData, B256, U256, U64};
@@ -444,7 +444,7 @@ mod tests {
     async fn test_prepare_payload_block_mismatch_epoch_reset() {
         let cfg = Arc::new(RollupConfig::default());
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header::default();
@@ -469,7 +469,7 @@ mod tests {
     async fn test_prepare_payload_block_mismatch() {
         let cfg = Arc::new(RollupConfig::default());
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header::default();
@@ -495,7 +495,7 @@ mod tests {
         let timestamp = 100;
         let cfg = Arc::new(RollupConfig { block_time, ..Default::default() });
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
@@ -526,7 +526,7 @@ mod tests {
         let timestamp = 100;
         let cfg = Arc::new(RollupConfig { block_time, ..Default::default() });
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
@@ -572,7 +572,7 @@ mod tests {
         let timestamp = 100;
         let cfg = Arc::new(RollupConfig { block_time, canyon_time: Some(0), ..Default::default() });
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
@@ -619,7 +619,7 @@ mod tests {
         let cfg =
             Arc::new(RollupConfig { block_time, ecotone_time: Some(102), ..Default::default() });
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
@@ -667,7 +667,7 @@ mod tests {
         let cfg =
             Arc::new(RollupConfig { block_time, fjord_time: Some(102), ..Default::default() });
         let l2_number = 1;
-        let mut fetcher = MockSystemConfigL2Fetcher::default();
+        let mut fetcher = TestSystemConfigL2Fetcher::default();
         fetcher.insert(l2_number, SystemConfig::default());
         let mut provider = TestChainProvider::default();
         let header = Header { timestamp, ..Default::default() };
