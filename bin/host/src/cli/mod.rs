@@ -44,18 +44,18 @@ pub struct HostCli {
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256)]
     pub l1_head: B256,
-    /// Hash of the L2 block committed to by `--l2-output-root`.
-    #[clap(long, value_parser = parse_b256)]
-    pub l2_head: B256,
-    /// Agreed L2 Output Root to start derivation from.
-    #[clap(long, value_parser = parse_b256)]
-    pub l2_output_root: B256,
-    /// Claimed L2 output root at block # `--l2-block-number` to validate.
-    #[clap(long, value_parser = parse_b256)]
-    pub l2_claim: B256,
-    /// Number of the L2 block that the claim commits to.
-    #[clap(long)]
-    pub l2_block_number: u64,
+    /// Hash of the agreed upon safe L2 block committed to by `--agreed-l2-output-root`.
+    #[clap(long, visible_alias = "l2-head", value_parser = parse_b256)]
+    pub agreed_l2_head_hash: B256,
+    /// Agreed safe L2 Output Root to start derivation from.
+    #[clap(long, visible_alias = "l2-output-root", value_parser = parse_b256)]
+    pub agreed_l2_output_root: B256,
+    /// Claimed L2 output root at block # `--claimed-l2-block-number` to validate.
+    #[clap(long, visible_alias = "l2-claim", value_parser = parse_b256)]
+    pub claimed_l2_output_root: B256,
+    /// Number of the L2 block that the claimed output root commits to.
+    #[clap(long, visible_alias = "l2-block-number")]
+    pub claimed_l2_block_number: u64,
     /// Address of L2 JSON-RPC endpoint to use (eth and debug namespace required).
     #[clap(
         long,
