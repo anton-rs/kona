@@ -297,12 +297,15 @@ where
     ) -> Result<(BlockInfo, L2BlockInfo, Sealed<Header>)> {
         // Find the initial safe head, based off of the starting L2 block number in the boot info.
         caching_oracle
-            .write(&HintType::StartingL2Output.encode_with(&[boot_info.l2_output_root.as_ref()]))
+            .write(
+                &HintType::StartingL2Output
+                    .encode_with(&[boot_info.agreed_l2_output_root.as_ref()]),
+            )
             .await?;
         let mut output_preimage = [0u8; 128];
         caching_oracle
             .get_exact(
-                PreimageKey::new(*boot_info.l2_output_root, PreimageKeyType::Keccak256),
+                PreimageKey::new(*boot_info.agreed_l2_output_root, PreimageKeyType::Keccak256),
                 &mut output_preimage,
             )
             .await?;

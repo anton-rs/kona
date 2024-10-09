@@ -31,22 +31,22 @@ pub const L2_ROLLUP_CONFIG_KEY: U256 = U256::from_be_slice(&[6]);
 /// **Verified inputs:**
 /// - `l1_head`: The L1 head hash containing the safe L2 chain data that may reproduce the L2 head
 ///   hash.
-/// - `l2_output_root`: The latest finalized L2 output root.
+/// - `agreed_l2_output_root`:The agreed upon safe L2 output root.
 /// - `chain_id`: The L2 chain ID.
 ///
 /// **User submitted inputs:**
-/// - `l2_claim`: The L2 output root claim.
-/// - `l2_claim_block`: The L2 claim block number.
+/// - `claimed_l2_output_root`: The L2 output root claim.
+/// - `claimed_l2_block_number`: The L2 claim block number.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BootInfo {
     /// The L1 head hash containing the safe L2 chain data that may reproduce the L2 head hash.
     pub l1_head: B256,
-    /// The latest finalized L2 output root.
-    pub l2_output_root: B256,
+    /// The agreed upon safe L2 output root.
+    pub agreed_l2_output_root: B256,
     /// The L2 output root claim.
-    pub l2_claim: B256,
+    pub claimed_l2_output_root: B256,
     /// The L2 claim block number.
-    pub l2_claim_block: u64,
+    pub claimed_l2_block_number: u64,
     /// The L2 chain ID.
     pub chain_id: u64,
     /// The rollup config for the L2 chain.
@@ -107,6 +107,13 @@ impl BootInfo {
                 .map_err(|e| anyhow!("Failed to deserialize rollup config: {}", e))?
         };
 
-        Ok(Self { l1_head, l2_output_root, l2_claim, l2_claim_block, chain_id, rollup_config })
+        Ok(Self {
+            l1_head,
+            agreed_l2_output_root: l2_output_root,
+            claimed_l2_output_root: l2_claim,
+            claimed_l2_block_number: l2_claim_block,
+            chain_id,
+            rollup_config,
+        })
     }
 }
