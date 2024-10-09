@@ -88,6 +88,7 @@ c-kzg = { version = "1.0.3", default-features = false }
 alloc-no-stdlib = "2.0.4"
 linked_list_allocator = "0.10.5"
 command-fds = { version = "0.3", features = ["tokio"] }
+derive_more = { version = "1.0.0", default-features = false, features = ["full"] }
 
 # Tracing
 tracing = { version = "0.1.40", default-features = false }
