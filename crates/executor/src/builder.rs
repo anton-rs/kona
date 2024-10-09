@@ -67,3 +67,30 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
+
+    fn test_handler_register<F, H>(_: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>)
+    where
+        F: TrieProvider,
+        H: TrieHinter,
+    {
+    }
+
+    #[test]
+    fn test_build_full() {
+        let config = RollupConfig::default();
+        let parent_header = Header::default().seal_slow();
+
+        let executor =
+            StatelessL2BlockExecutorBuilder::new(&config, NoopTrieProvider, NoopTrieHinter)
+                .with_handle_register(test_handler_register)
+                .build();
+
+        assert_eq!(*executor.config, config);
+        assert_eq!(*executor.trie_db.parent_block_header(), parent_header);
+    }
+}
