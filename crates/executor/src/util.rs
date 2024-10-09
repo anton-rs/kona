@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom};
 use alloy_primitives::{Bloom, Log};
 use op_alloy_consensus::{
-    OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxEnvelope, OpTxType,
+    OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxType,
 };
 
 /// Constructs a [OpReceiptEnvelope] from a [Receipt] fields and [OpTxType].
@@ -28,6 +28,9 @@ pub(crate) fn receipt_envelope_from_parts<'a>(
         }
         OpTxType::Eip1559 => {
             OpReceiptEnvelope::Eip1559(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
+        }
+        OpTxType::Eip7702 => {
+            OpReceiptEnvelope::Eip7702(ReceiptWithBloom { receipt: inner_receipt, logs_bloom })
         }
         OpTxType::Deposit => {
             let inner = OpDepositReceiptWithBloom {
@@ -53,15 +56,4 @@ pub(crate) fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
         }
     }
     bloom
-}
-
-/// Extract the gas limit from an [OpTxEnvelope].
-pub(crate) fn extract_tx_gas_limit(tx: &OpTxEnvelope) -> u128 {
-    match tx {
-        OpTxEnvelope::Legacy(tx) => tx.tx().gas_limit.into(),
-        OpTxEnvelope::Eip2930(tx) => tx.tx().gas_limit.into(),
-        OpTxEnvelope::Eip1559(tx) => tx.tx().gas_limit.into(),
-        OpTxEnvelope::Deposit(tx) => tx.gas_limit.into(),
-        _ => unreachable!(),
-    }
 }

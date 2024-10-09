@@ -4,7 +4,7 @@
 use alloc::{boxed::Box, sync::Arc};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
+use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 // Re-export these types used internally to the test pipeline.
 pub use crate::{
@@ -26,8 +26,8 @@ pub use kona_providers::test_utils::{TestChainProvider, TestL2ChainProvider};
 /// A fully custom [NextAttributes].
 #[derive(Default, Debug, Clone)]
 pub struct TestNextAttributes {
-    /// The next [OptimismAttributesWithParent] to return.
-    pub next_attributes: Option<OptimismAttributesWithParent>,
+    /// The next [OpAttributesWithParent] to return.
+    pub next_attributes: Option<OpAttributesWithParent>,
 }
 
 #[async_trait::async_trait]
@@ -64,11 +64,11 @@ impl OriginAdvancer for TestNextAttributes {
 
 #[async_trait::async_trait]
 impl NextAttributes for TestNextAttributes {
-    /// Returns the next valid attributes.
+    /// Returns the next valid [OpAttributesWithParent].
     async fn next_attributes(
         &mut self,
         _: L2BlockInfo,
-    ) -> PipelineResult<OptimismAttributesWithParent> {
+    ) -> PipelineResult<OpAttributesWithParent> {
         self.next_attributes.take().ok_or(PipelineError::Eof.temp())
     }
 }

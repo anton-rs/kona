@@ -11,13 +11,13 @@ use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
 use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use op_alloy_rpc_types_engine::OptimismPayloadAttributes;
+use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// A mock implementation of the [`AttributesBuilder`] for testing.
 #[derive(Debug, Default)]
 pub struct TestAttributesBuilder {
     /// The attributes to return.
-    pub attributes: Vec<anyhow::Result<OptimismPayloadAttributes>>,
+    pub attributes: Vec<anyhow::Result<OpPayloadAttributes>>,
 }
 
 #[async_trait]
@@ -27,7 +27,7 @@ impl AttributesBuilder for TestAttributesBuilder {
         &mut self,
         _l2_parent: L2BlockInfo,
         _epoch: BlockNumHash,
-    ) -> PipelineResult<OptimismPayloadAttributes> {
+    ) -> PipelineResult<OpPayloadAttributes> {
         match self.attributes.pop() {
             Some(Ok(attrs)) => Ok(attrs),
             Some(Err(err)) => {

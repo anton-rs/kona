@@ -14,7 +14,7 @@ use core::fmt::Debug;
 use kona_providers::L2ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use op_alloy_rpc_types_engine::OptimismAttributesWithParent;
+use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
@@ -33,9 +33,9 @@ where
     /// A handle to the next attributes.
     pub attributes: S,
     /// Reset provider for the pipeline.
-    /// A list of prepared [OptimismAttributesWithParent] to be used by the derivation pipeline
+    /// A list of prepared [OpAttributesWithParent] to be used by the derivation pipeline
     /// consumer.
-    pub prepared: VecDeque<OptimismAttributesWithParent>,
+    pub prepared: VecDeque<OpAttributesWithParent>,
     /// The rollup config.
     pub rollup_config: Arc<RollupConfig>,
     /// The L2 Chain Provider used to fetch the system config on reset.
@@ -91,7 +91,7 @@ where
         + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    type Item = OptimismAttributesWithParent;
+    type Item = OpAttributesWithParent;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.prepared.pop_front()
@@ -111,8 +111,8 @@ where
         + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    /// Peeks at the next prepared [OptimismAttributesWithParent] from the pipeline.
-    fn peek(&self) -> Option<&OptimismAttributesWithParent> {
+    /// Peeks at the next prepared [OpAttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&OpAttributesWithParent> {
         self.prepared.front()
     }
 
@@ -208,11 +208,11 @@ mod tests {
     use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
     use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-    use op_alloy_rpc_types_engine::{OptimismAttributesWithParent, OptimismPayloadAttributes};
+    use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
 
-    fn default_test_payload_attributes() -> OptimismAttributesWithParent {
-        OptimismAttributesWithParent {
-            attributes: OptimismPayloadAttributes {
+    fn default_test_payload_attributes() -> OpAttributesWithParent {
+        OpAttributesWithParent {
+            attributes: OpPayloadAttributes {
                 payload_attributes: PayloadAttributes {
                     timestamp: 0,
                     prev_randao: Default::default(),
