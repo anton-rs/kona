@@ -73,3 +73,69 @@ pub(crate) const fn is_protected_v(tx: &TxEnvelope) -> bool {
         _ => true,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_consensus::{
+        Signed, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant, TxEip7702, TxLegacy,
+    };
+    use alloy_primitives::{b256, Signature};
+
+    #[test]
+    fn test_convert_v_to_y_parity() {
+        assert_eq!(convert_v_to_y_parity(27, TxType::Legacy), Ok(false));
+        assert_eq!(convert_v_to_y_parity(28, TxType::Legacy), Ok(true));
+        assert_eq!(convert_v_to_y_parity(36, TxType::Legacy), Ok(true));
+        assert_eq!(convert_v_to_y_parity(37, TxType::Legacy), Ok(false));
+        assert_eq!(convert_v_to_y_parity(1, TxType::Eip2930), Ok(true));
+        assert_eq!(convert_v_to_y_parity(1, TxType::Eip1559), Ok(true));
+        assert_eq!(
+            convert_v_to_y_parity(1, TxType::Eip4844),
+            Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType))
+        );
+        assert_eq!(
+            convert_v_to_y_parity(0, TxType::Eip7702),
+            Err(SpanBatchError::Decoding(SpanDecodingError::InvalidTransactionType))
+        );
+    }
+
+    #[test]
+    fn test_is_protected_v() {
+        let sig = Signature::test_signature();
+        assert!(!is_protected_v(&TxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy::default(),
+            sig,
+            Default::default(),
+        ))));
+        let r = b256!("840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565");
+        let s = b256!("25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1");
+        let v = 27;
+        let valid_sig = Signature::from_scalars_and_parity(r, s, v).unwrap();
+        assert!(!is_protected_v(&TxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy::default(),
+            valid_sig,
+            Default::default(),
+        ))));
+        assert!(is_protected_v(&TxEnvelope::Eip2930(Signed::new_unchecked(
+            TxEip2930::default(),
+            sig,
+            Default::default(),
+        ))));
+        assert!(is_protected_v(&TxEnvelope::Eip1559(Signed::new_unchecked(
+            TxEip1559::default(),
+            sig,
+            Default::default(),
+        ))));
+        assert!(is_protected_v(&TxEnvelope::Eip4844(Signed::new_unchecked(
+            TxEip4844Variant::TxEip4844(TxEip4844::default()),
+            sig,
+            Default::default(),
+        ))));
+        assert!(is_protected_v(&TxEnvelope::Eip7702(Signed::new_unchecked(
+            TxEip7702::default(),
+            sig,
+            Default::default(),
+        ))));
+    }
+}
