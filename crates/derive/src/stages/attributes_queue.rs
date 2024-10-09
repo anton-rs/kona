@@ -266,6 +266,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_attributes_queue_flush() {
+        let mut attributes_queue = new_attributes_queue(None, None, vec![]);
+        attributes_queue.batch = Some(SingleBatch::default());
+        assert!(!attributes_queue.prev.flushed);
+        attributes_queue.flush_channel().await.unwrap();
+        assert!(attributes_queue.prev.flushed);
+        assert!(attributes_queue.batch.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_attributes_queue_reset() {
+        let cfg = RollupConfig::default();
+        let mock = new_test_attributes_provider(None, vec![]);
+        let mock_builder = TestAttributesBuilder::default();
+        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
+        aq.batch = Some(SingleBatch::default());
+        assert!(!aq.prev.reset);
+        let block_info = BlockInfo::default();
+        let system_config = SystemConfig::default();
+        aq.reset(block_info, &system_config).await.unwrap();
+        assert!(aq.batch.is_none());
+        assert!(aq.prev.reset);
+    }
+
+    #[tokio::test]
     async fn test_load_batch_eof() {
         let mut attributes_queue = new_attributes_queue(None, None, vec![]);
         let parent = L2BlockInfo::default();

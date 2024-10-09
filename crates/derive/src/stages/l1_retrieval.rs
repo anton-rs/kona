@@ -142,6 +142,19 @@ mod tests {
     use alloy_primitives::Bytes;
 
     #[tokio::test]
+    async fn test_l1_retrieval_reset() {
+        let traversal = new_populated_test_traversal();
+        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let mut retrieval = L1Retrieval::new(traversal, dap);
+        retrieval.prev.block = None;
+        assert!(retrieval.prev.block.is_none());
+        retrieval.data = None;
+        retrieval.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        assert!(retrieval.data.is_some());
+        assert_eq!(retrieval.prev.block, Some(BlockInfo::default()));
+    }
+
+    #[tokio::test]
     async fn test_l1_retrieval_origin() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
