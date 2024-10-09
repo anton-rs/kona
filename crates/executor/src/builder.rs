@@ -73,17 +73,17 @@ mod tests {
     use super::*;
     use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
 
-    fn test_handler_register<F, H>(_: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>)
-    where
-        F: TrieProvider,
-        H: TrieHinter,
-    {
-    }
-
     #[test]
     fn test_build_full() {
         let config = RollupConfig::default();
         let parent_header = Header::default().seal_slow();
+
+        fn test_handler_register<F, H>(_: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>)
+        where
+            F: TrieProvider,
+            H: TrieHinter,
+        {
+        }
 
         let executor =
             StatelessL2BlockExecutorBuilder::new(&config, NoopTrieProvider, NoopTrieHinter)
