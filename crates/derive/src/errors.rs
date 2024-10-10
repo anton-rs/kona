@@ -75,6 +75,9 @@ pub enum PipelineError {
     /// [L1Retrieval]: crate::stages::L1Retrieval
     #[error("L1 Retrieval missing data")]
     MissingL1Data,
+    /// Invalid batch validity variant.
+    #[error("Invalid batch validity")]
+    InvalidBatchValidity,
     /// [SystemConfig] update error.
     ///
     /// [SystemConfig]: op_alloy_genesis::SystemConfig

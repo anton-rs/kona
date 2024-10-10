@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
-use tracing::trace;
+use tracing::{error, trace};
 
 /// Provides [Batch]es for the [BatchStream] stage.
 #[async_trait]
@@ -150,6 +150,14 @@ where
                         BatchValidity::Drop => {
                             // Flush the stage.
                             self.flush();
+
+                            return Err(PipelineError::Eof.temp());
+                        }
+                        BatchValidity::BatchOutdated => {
+                            if !self.is_active()? {
+                                error!(target: "batch-queue", "BatchOutdated is not allowed pre-holocene");
+                                return Err(PipelineError::InvalidBatchValidity.crit());
+                            }
 
                             return Err(PipelineError::Eof.temp());
                         }
