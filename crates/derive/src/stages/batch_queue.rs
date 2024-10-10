@@ -481,7 +481,6 @@ where
 {
     async fn flush_channel(&mut self) -> PipelineResult<()> {
         self.batches.clear();
-        self.l1_blocks.clear();
         self.next_spans.clear();
         self.prev.flush_channel().await
     }
@@ -567,7 +566,7 @@ mod tests {
         bq.flush_channel().await.unwrap();
         assert!(bq.prev.flushed);
         assert!(bq.batches.is_empty());
-        assert!(bq.l1_blocks.is_empty());
+        assert!(!bq.l1_blocks.is_empty());
         assert!(bq.next_spans.is_empty());
     }
 
