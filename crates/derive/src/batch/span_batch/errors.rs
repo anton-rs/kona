@@ -1,6 +1,6 @@
 //! Span Batch Errors
 
-use thiserror::Error;
+use noerror::Error;
 
 /// Span Batch Errors
 #[derive(Error, Debug, Clone, PartialEq, Eq)]

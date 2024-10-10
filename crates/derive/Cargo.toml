@@ -28,7 +28,7 @@ unsigned-varint.workspace = true
 miniz_oxide.workspace = true
 brotli.workspace = true
 alloc-no-stdlib.workspace = true
-thiserror.workspace = true
+noerror.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 

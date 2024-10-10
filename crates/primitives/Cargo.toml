@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 # General
 anyhow.workspace = true
-thiserror.workspace = true
+noerror.workspace = true
 
 # Alloy
 alloy-eips.workspace = true

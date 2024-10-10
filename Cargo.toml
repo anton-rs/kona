@@ -69,7 +69,7 @@ kona-providers-alloy = { path = "crates/providers-alloy", version = "0.0.1", def
 
 # General
 anyhow = { version = "1.0.89", default-features = false }
-thiserror = { git = "https://github.com/quartiq/thiserror", branch = "no-std", default-features = false }
+noerror = { version = "1.0.64", default-features = false }
 cfg-if = "1.0.0"
 spin = { version = "0.9.8", features = ["mutex"] }
 lru = "0.12.4"

@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 # General
-thiserror.workspace = true
+noerror.workspace = true
 tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-eips.workspace = true

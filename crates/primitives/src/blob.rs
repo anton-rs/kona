@@ -3,7 +3,7 @@
 use alloc::vec;
 use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 use alloy_primitives::Bytes;
-use thiserror::Error;
+use noerror::Error;
 
 /// The blob encoding version
 pub(crate) const BLOB_ENCODING_VERSION: u8 = 0;

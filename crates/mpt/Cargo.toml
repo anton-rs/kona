@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 # General
 tracing.workspace = true
-thiserror.workspace = true
+noerror.workspace = true
 derive_more.workspace = true
 
 # Revm + Alloy

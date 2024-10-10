@@ -1,7 +1,7 @@
 //! Errors for the `kona-derive` crate.
 
 use alloc::string::String;
-use thiserror::Error;
+use noerror::Error;
 
 /// A [Result] type alias where the error is [TrieNodeError].
 pub type TrieNodeResult<T> = Result<T, TrieNodeError>;

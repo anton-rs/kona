@@ -2,7 +2,7 @@
 
 use alloc::string::String;
 use kona_common::errors::IOError;
-use thiserror::Error;
+use noerror::Error;
 
 /// A [PreimageOracleError] is an enum that differentiates pipe-related errors from other errors
 /// in the [PreimageOracleServer] and [HintReaderServer] implementations.
