@@ -1123,10 +1123,6 @@ mod tests {
         assert!(logs[0].contains(&str));
     }
 
-    // TODO: Test block timestamp less than L1 origin
-
-    // TODO: Test missing l1 origin for empty batch
-
     #[tokio::test]
     async fn test_check_batch_exceeds_max_seq_drif() {
         let trace_store: TraceStorage = Default::default();
@@ -1489,10 +1485,6 @@ mod tests {
         assert_eq!(logs.len(), 1);
         assert!(logs[0].contains("failed to fetch block number 41: L2 Block not found"));
     }
-
-    // TODO: Test overlap block tx count mismatch
-
-    // TODO: Test overlap block tx doesn't match
 
     #[tokio::test]
     async fn test_check_batch_failed_to_extract_l2_block_info() {
