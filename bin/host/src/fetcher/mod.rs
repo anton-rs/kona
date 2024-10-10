@@ -35,7 +35,6 @@ where
     /// The blob provider
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// L2 chain provider.
-    /// TODO: OP provider, N = Optimism
     l2_provider: ReqwestProvider,
     /// L2 head
     l2_head: B256,
