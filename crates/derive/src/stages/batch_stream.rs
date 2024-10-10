@@ -155,7 +155,7 @@ where
                         }
                         BatchValidity::Past => {
                             if !self.is_active()? {
-                                error!(target: "batch-queue", "BatchValidity::Past is not allowed pre-holocene");
+                                error!(target: "batch-stream", "BatchValidity::Past is not allowed pre-holocene");
                                 return Err(PipelineError::InvalidBatchValidity.crit());
                             }
 
