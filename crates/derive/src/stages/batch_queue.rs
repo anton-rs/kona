@@ -183,9 +183,9 @@ where
                     self.batches = remaining;
                     return Err(PipelineError::Eof.temp());
                 }
-                BatchValidity::BatchOutdated => {
+                BatchValidity::Past => {
                     if !self.cfg.is_holocene_active(origin.timestamp) {
-                        error!(target: "batch-queue", "BatchOutdated is not allowed pre-holocene");
+                        error!(target: "batch-queue", "BatchValidity::Past is not allowed pre-holocene");
                         return Err(PipelineError::InvalidBatchValidity.crit());
                     }
 
@@ -688,7 +688,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_old_batch_drop_holocene() {
-        // Construct a single batch with BatchValidity::BatchOutdated.
+        // Construct a single batch with BatchValidity::Past.
         let cfg =
             Arc::new(RollupConfig { holocene_time: Some(0), block_time: 2, ..Default::default() });
         assert!(cfg.is_holocene_active(0));

@@ -443,7 +443,7 @@ impl SpanBatch {
         if self.final_timestamp() < next_timestamp {
             warn!("span batch has no new blocks after safe head");
             return if cfg.is_holocene_active(self.final_timestamp()) {
-                BatchValidity::BatchOutdated
+                BatchValidity::Past
             } else {
                 BatchValidity::Drop
             }

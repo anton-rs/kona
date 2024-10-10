@@ -153,9 +153,9 @@ where
 
                             return Err(PipelineError::Eof.temp());
                         }
-                        BatchValidity::BatchOutdated => {
+                        BatchValidity::Past => {
                             if !self.is_active()? {
-                                error!(target: "batch-queue", "BatchOutdated is not allowed pre-holocene");
+                                error!(target: "batch-queue", "BatchValidity::Past is not allowed pre-holocene");
                                 return Err(PipelineError::InvalidBatchValidity.crit());
                             }
 

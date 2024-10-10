@@ -64,7 +64,7 @@ impl SingleBatch {
         if self.timestamp < next_timestamp {
             warn!("dropping batch with old timestamp, min_timestamp: {next_timestamp}");
             return if cfg.is_holocene_active(self.timestamp) {
-                BatchValidity::BatchOutdated
+                BatchValidity::Past
             } else {
                 BatchValidity::Drop
             };
@@ -272,7 +272,7 @@ mod tests {
         let inclusion_block = BlockInfo { number: 10, ..Default::default() };
 
         let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
-        assert_eq!(validity, BatchValidity::BatchOutdated);
+        assert_eq!(validity, BatchValidity::Past);
     }
 
     #[test]
