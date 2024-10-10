@@ -15,12 +15,20 @@ pub enum BatchValidity {
     Undecided,
     /// The batch may be valid, but cannot be processed yet and should be checked again later
     Future,
+    /// Introduced in Holocene, a special variant of the Drop variant that signals not to flush
+    /// the active batch and channel, in the case of processing an old batch
+    Past,
 }
 
 impl BatchValidity {
     /// Returns if the batch is dropped.
     pub const fn is_drop(&self) -> bool {
         matches!(self, Self::Drop)
+    }
+
+    /// Returns if the batch is outdated.
+    pub const fn is_outdated(&self) -> bool {
+        matches!(self, Self::Past)
     }
 
     /// Returns if the batch is future.

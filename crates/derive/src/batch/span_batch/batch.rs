@@ -442,7 +442,11 @@ impl SpanBatch {
         // Drop the batch if it has no new blocks after the safe head.
         if self.final_timestamp() < next_timestamp {
             warn!("span batch has no new blocks after safe head");
-            return BatchValidity::Drop;
+            return if cfg.is_holocene_active(self.final_timestamp()) {
+                BatchValidity::Past
+            } else {
+                BatchValidity::Drop
+            }
         }
 
         BatchValidity::Accept

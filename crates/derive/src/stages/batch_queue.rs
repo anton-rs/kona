@@ -183,6 +183,15 @@ where
                     self.batches = remaining;
                     return Err(PipelineError::Eof.temp());
                 }
+                BatchValidity::Past => {
+                    if !self.cfg.is_holocene_active(origin.timestamp) {
+                        error!(target: "batch-queue", "BatchValidity::Past is not allowed pre-holocene");
+                        return Err(PipelineError::InvalidBatchValidity.crit());
+                    }
+
+                    warn!(target: "batch-queue", "[HOLOCENE] Dropping outdated batch with parent: {}", parent.block_info.number);
+                    continue;
+                }
             }
         }
         self.batches = remaining;
@@ -260,6 +269,9 @@ where
             (self.cfg.is_holocene_active(origin.timestamp) && validity.is_future());
         if drop {
             self.prev.flush();
+            return Ok(());
+        } else if validity.is_outdated() {
+            // If the batch is outdated, we drop it without flushing the previous stage.
             return Ok(());
         }
         self.batches.push(data);
@@ -644,6 +656,41 @@ mod tests {
         // Construct a single batch with BatchValidity::Drop.
         let cfg = Arc::new(RollupConfig::default());
         assert!(!cfg.is_holocene_active(0));
+        let batch = SingleBatch {
+            parent_hash: B256::default(),
+            epoch_num: 0,
+            epoch_hash: B256::default(),
+            timestamp: 100,
+            transactions: Vec::new(),
+        };
+        let parent = L2BlockInfo {
+            block_info: BlockInfo { timestamp: 101, ..Default::default() },
+            ..Default::default()
+        };
+
+        // Setup batch queue deps
+        let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
+        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        mock.origin = Some(BlockInfo::default());
+        let fetcher = TestL2ChainProvider::default();
+
+        // Configure batch queue
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        bq.origin = Some(BlockInfo::default()); // Set the origin
+        bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
+        bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
+
+        // Add the batch to the batch queue
+        bq.add_batch(Batch::Single(batch), parent).await.unwrap();
+        assert!(bq.batches.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_add_old_batch_drop_holocene() {
+        // Construct a single batch with BatchValidity::Past.
+        let cfg =
+            Arc::new(RollupConfig { holocene_time: Some(0), block_time: 2, ..Default::default() });
+        assert!(cfg.is_holocene_active(0));
         let batch = SingleBatch {
             parent_hash: B256::default(),
             epoch_num: 0,

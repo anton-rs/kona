@@ -63,7 +63,11 @@ impl SingleBatch {
         }
         if self.timestamp < next_timestamp {
             warn!("dropping batch with old timestamp, min_timestamp: {next_timestamp}");
-            return BatchValidity::Drop;
+            return if cfg.is_holocene_active(self.timestamp) {
+                BatchValidity::Past
+            } else {
+                BatchValidity::Drop
+            };
         }
 
         // Dependent on the above timestamp check.
@@ -231,6 +235,44 @@ mod tests {
 
         let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
         assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_old_batch() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = RollupConfig { block_time: 2, ..Default::default() };
+        let l1_blocks = vec![BlockInfo::default()];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 10, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Drop);
+    }
+
+    #[test]
+    fn test_drop_old_batch_holocene() {
+        let single_batch = SingleBatch {
+            parent_hash: B256::ZERO,
+            epoch_num: 0xFF,
+            epoch_hash: B256::ZERO,
+            timestamp: 0x00,
+            transactions: vec![Bytes::from(hex!("00"))],
+        };
+
+        let cfg = RollupConfig { holocene_time: Some(0), block_time: 2, ..Default::default() };
+        let l1_blocks = vec![BlockInfo::default()];
+        let l2_safe_head = L2BlockInfo::default();
+        let inclusion_block = BlockInfo { number: 10, ..Default::default() };
+
+        let validity = single_batch.check_batch(&cfg, &l1_blocks, l2_safe_head, &inclusion_block);
+        assert_eq!(validity, BatchValidity::Past);
     }
 
     #[test]
