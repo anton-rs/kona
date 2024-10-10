@@ -12,6 +12,6 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-thiserror.workspace = true
+noerror.workspace = true
 cfg-if.workspace = true
 linked_list_allocator.workspace = true

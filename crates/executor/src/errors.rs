@@ -1,8 +1,8 @@
 //! Errors for the `kona-executor` crate.
 
 use kona_mpt::TrieDBError;
+use noerror::Error;
 use revm::primitives::EVMError;
-use thiserror::Error;
 
 /// The error type for the [StatelessL2BlockExecutor].
 ///

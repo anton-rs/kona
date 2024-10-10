@@ -43,7 +43,7 @@ pub struct MockBeaconClient {
 }
 
 /// A mock beacon client error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, noerror::Error)]
 pub enum MockBeaconClientError {
     /// The config spec is not set
     #[error("config_spec not set")]

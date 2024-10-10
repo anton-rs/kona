@@ -5,9 +5,9 @@ use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
 use kona_primitives::BlobDecodingError;
+use noerror::Error;
 use op_alloy_genesis::system::SystemConfigUpdateError;
 use op_alloy_protocol::DepositError;
-use thiserror::Error;
 
 /// A result type for the derivation pipeline stages.
 pub type PipelineResult<T> = Result<T, PipelineErrorKind>;

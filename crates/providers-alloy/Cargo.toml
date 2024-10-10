@@ -41,14 +41,14 @@ lazy_static = { workspace = true, optional = true }
 prometheus = { workspace = true, optional = true }
 
 # `test-utils` feature dependencies
-thiserror = { workspace = true, optional = true }
+noerror = { workspace = true, optional = true }
 alloy-rpc-client = { workspace = true, optional = true }
 alloy-node-bindings = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true, features = ["reqwest"] } 
 
 [dev-dependencies]
 tokio.workspace = true
-thiserror.workspace = true
+noerror.workspace = true
 serde_json.workspace = true
 alloy-rpc-client.workspace = true
 alloy-node-bindings.workspace = true
@@ -60,7 +60,7 @@ kona-derive = { workspace = true, features = ["serde", "test-utils"] }
 default = []
 metrics = ["dep:prometheus", "dep:lazy_static"]
 test-utils = [
-  "dep:thiserror", 
+  "dep:noerror", 
   "dep:alloy-rpc-client",
   "dep:alloy-node-bindings",
   "dep:alloy-transport-http",
