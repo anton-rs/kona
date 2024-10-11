@@ -25,9 +25,10 @@ use std::{
     io::{stderr, stdin, stdout},
     os::fd::{AsFd, AsRawFd},
     panic::AssertUnwindSafe,
+    process::Command,
     sync::Arc,
 };
-use tokio::{process::Command, sync::RwLock, task};
+use tokio::{sync::RwLock, task};
 use tracing::{debug, error, info};
 use util::Pipe;
 
@@ -215,7 +216,7 @@ pub async fn start_native_client_program(
         ])
         .expect("No errors may occur when mapping file descriptors.");
 
-    let status = command.status().await.map_err(|e| {
+    let status = command.status().map_err(|e| {
         error!(target: "client_program", "Failed to execute client program: {:?}", e);
         anyhow!("Failed to execute client program: {:?}", e)
     })?;
