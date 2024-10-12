@@ -44,11 +44,13 @@ where
 mod tests {
     use super::*;
 
-    use kona_primitives::BlobData;
     use kona_providers::test_utils::TestChainProvider;
     use op_alloy_protocol::BlockInfo;
 
-    use crate::{sources::EthereumDataSourceVariant, traits::test_utils::TestBlobProvider};
+    use crate::{
+        sources::{BlobData, EthereumDataSourceVariant},
+        traits::test_utils::TestBlobProvider,
+    };
 
     #[tokio::test]
     async fn test_variant_next_calldata() {

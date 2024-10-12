@@ -1,17 +1,180 @@
 //! Blob Data Source
 
 use crate::{
-    errors::{BlobProviderError, PipelineError, PipelineResult},
+    errors::{BlobDecodingError, BlobProviderError, PipelineError, PipelineResult},
     traits::{AsyncIterator, BlobProvider},
 };
-use alloc::{boxed::Box, format, string::ToString, vec::Vec};
+use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
+use alloy_eips::{
+    eip1898::NumHash,
+    eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG},
+};
 use alloy_primitives::{Address, Bytes, TxKind};
 use async_trait::async_trait;
-use kona_primitives::{BlobData, IndexedBlobHash};
 use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
+
+/// The blob encoding version
+pub(crate) const BLOB_ENCODING_VERSION: u8 = 0;
+
+/// Maximum blob data size
+pub(crate) const BLOB_MAX_DATA_SIZE: usize = (4 * 31 + 3) * 1024 - 4; // 130044
+
+/// Blob Encoding/Decoding Rounds
+pub(crate) const BLOB_ENCODING_ROUNDS: usize = 1024;
+
+/// The Blob Data
+#[derive(Default, Clone, Debug)]
+pub struct BlobData {
+    /// The blob data
+    pub(crate) data: Option<Bytes>,
+    /// The calldata
+    pub(crate) calldata: Option<Bytes>,
+}
+
+impl BlobData {
+    /// Decodes the blob into raw byte data.
+    /// Returns a [BlobDecodingError] if the blob is invalid.
+    pub(crate) fn decode(&self) -> Result<Bytes, BlobDecodingError> {
+        let data = self.data.as_ref().ok_or(BlobDecodingError::MissingData)?;
+
+        // Validate the blob encoding version
+        if data[VERSIONED_HASH_VERSION_KZG as usize] != BLOB_ENCODING_VERSION {
+            return Err(BlobDecodingError::InvalidEncodingVersion);
+        }
+
+        // Decode the 3 byte big endian length value into a 4 byte integer
+        let length = u32::from_be_bytes([0, data[2], data[3], data[4]]) as usize;
+
+        // Validate the length
+        if length > BLOB_MAX_DATA_SIZE {
+            return Err(BlobDecodingError::InvalidLength);
+        }
+
+        // Round 0 copies the remaining 27 bytes of the first field element
+        let mut output = vec![0u8; BLOB_MAX_DATA_SIZE];
+        output[0..27].copy_from_slice(&data[5..32]);
+
+        // Process the remaining 3 field elements to complete round 0
+        let mut output_pos = 28;
+        let mut input_pos = 32;
+        let mut encoded_byte = [0u8; 4];
+        encoded_byte[0] = data[0];
+
+        for b in encoded_byte.iter_mut().skip(1) {
+            let (enc, opos, ipos) =
+                self.decode_field_element(output_pos, input_pos, &mut output)?;
+            *b = enc;
+            output_pos = opos;
+            input_pos = ipos;
+        }
+
+        // Reassemble the 4 by 6 bit encoded chunks into 3 bytes of output
+        output_pos = self.reassemble_bytes(output_pos, &encoded_byte, &mut output);
+
+        // In each remaining round, decode 4 field elements (128 bytes) of the
+        // input into 127 bytes of output
+        for _ in 1..BLOB_ENCODING_ROUNDS {
+            // Break early if the output position is greater than the length
+            if output_pos >= length {
+                break;
+            }
+
+            for d in &mut encoded_byte {
+                let (enc, opos, ipos) =
+                    self.decode_field_element(output_pos, input_pos, &mut output)?;
+                *d = enc;
+                output_pos = opos;
+                input_pos = ipos;
+            }
+            output_pos = self.reassemble_bytes(output_pos, &encoded_byte, &mut output);
+        }
+
+        // Validate the remaining bytes
+        for o in output.iter().skip(length) {
+            if *o != 0u8 {
+                return Err(BlobDecodingError::InvalidFieldElement);
+            }
+        }
+
+        // Validate the remaining bytes
+        output.truncate(length);
+        for i in input_pos..BYTES_PER_BLOB {
+            if data[i] != 0 {
+                return Err(BlobDecodingError::InvalidFieldElement);
+            }
+        }
+
+        Ok(Bytes::from(output))
+    }
+
+    /// Decodes the next input field element by writing its lower 31 bytes into its
+    /// appropriate place in the output and checking the high order byte is valid.
+    /// Returns a [BlobDecodingError] if a field element is seen with either of its
+    /// two high order bits set.
+    pub(crate) fn decode_field_element(
+        &self,
+        output_pos: usize,
+        input_pos: usize,
+        output: &mut [u8],
+    ) -> Result<(u8, usize, usize), BlobDecodingError> {
+        let Some(data) = self.data.as_ref() else {
+            return Err(BlobDecodingError::MissingData);
+        };
+
+        // two highest order bits of the first byte of each field element should always be 0
+        if data[input_pos] & 0b1100_0000 != 0 {
+            return Err(BlobDecodingError::InvalidFieldElement);
+        }
+        output[output_pos..output_pos + 31].copy_from_slice(&data[input_pos + 1..input_pos + 32]);
+        Ok((data[input_pos], output_pos + 32, input_pos + 32))
+    }
+
+    /// Reassemble 4 by 6 bit encoded chunks into 3 bytes of output and place them in their
+    /// appropriate output positions.
+    pub(crate) fn reassemble_bytes(
+        &self,
+        mut output_pos: usize,
+        encoded_byte: &[u8],
+        output: &mut [u8],
+    ) -> usize {
+        output_pos -= 1;
+        let x = (encoded_byte[0] & 0b0011_1111) | ((encoded_byte[1] & 0b0011_0000) << 2);
+        let y = (encoded_byte[1] & 0b0000_1111) | ((encoded_byte[3] & 0b0000_1111) << 4);
+        let z = (encoded_byte[2] & 0b0011_1111) | ((encoded_byte[3] & 0b0011_0000) << 2);
+        output[output_pos - 32] = z;
+        output[output_pos - (32 * 2)] = y;
+        output[output_pos - (32 * 3)] = x;
+        output_pos
+    }
+
+    /// Fills in the pointers to the fetched blob bodies.
+    /// There should be exactly one placeholder blobOrCalldata
+    /// element for each blob, otherwise an error is returned.
+    pub(crate) fn fill(
+        &mut self,
+        blobs: &[Box<Blob>],
+        index: usize,
+    ) -> Result<(), BlobDecodingError> {
+        // Do not fill if there is no calldata to fill
+        if self.calldata.as_ref().map_or(false, |data| data.is_empty()) {
+            return Ok(());
+        }
+
+        if index >= blobs.len() {
+            return Err(BlobDecodingError::InvalidLength);
+        }
+
+        if blobs[index].is_empty() {
+            return Err(BlobDecodingError::MissingData);
+        }
+
+        self.data = Some(Bytes::from(*blobs[index]));
+        Ok(())
+    }
+}
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]
@@ -60,8 +223,8 @@ where
         }
     }
 
-    fn extract_blob_data(&self, txs: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<IndexedBlobHash>) {
-        let mut index = 0;
+    fn extract_blob_data(&self, txs: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<NumHash>) {
+        let mut number: u64 = 0;
         let mut data = Vec::new();
         let mut hashes = Vec::new();
         for tx in txs {
@@ -83,11 +246,11 @@ where
             let TxKind::Call(to) = tx_kind else { continue };
 
             if to != self.batcher_address {
-                index += blob_hashes.map_or(0, |h| h.len());
+                number += blob_hashes.map_or(0, |h| h.len() as u64);
                 continue;
             }
             if tx.recover_signer().unwrap_or_default() != self.signer {
-                index += blob_hashes.map_or(0, |h| h.len());
+                number += blob_hashes.map_or(0, |h| h.len() as u64);
                 continue;
             }
             if tx.tx_type() != TxType::Eip4844 {
@@ -111,10 +274,10 @@ where
                 continue;
             };
             for blob in blob_hashes {
-                let indexed = IndexedBlobHash { hash: blob, index };
+                let indexed = NumHash { hash: blob, number };
                 hashes.push(indexed);
                 data.push(BlobData::default());
-                index += 1;
+                number += 1;
             }
         }
         (data, hashes)
@@ -218,6 +381,70 @@ pub(crate) mod tests {
     use crate::{errors::PipelineErrorKind, traits::test_utils::TestBlobProvider};
     use alloy_rlp::Decodable;
     use kona_providers::test_utils::TestChainProvider;
+
+    #[test]
+    fn test_reassemble_bytes() {
+        let blob_data = BlobData::default();
+        let mut output = vec![0u8; 128];
+        let encoded_byte = [0x00, 0x00, 0x00, 0x00];
+        let output_pos = blob_data.reassemble_bytes(127, &encoded_byte, &mut output);
+        assert_eq!(output_pos, 126);
+        assert_eq!(output, vec![0u8; 128]);
+    }
+
+    #[test]
+    fn test_cannot_fill_empty_calldata() {
+        let mut blob_data = BlobData { calldata: Some(Bytes::new()), ..Default::default() };
+        let blobs = vec![Box::new(Blob::with_last_byte(1u8))];
+        assert_eq!(blob_data.fill(&blobs, 0), Ok(()));
+    }
+
+    #[test]
+    fn test_fill_oob_index() {
+        let mut blob_data = BlobData::default();
+        let blobs = vec![Box::new(Blob::with_last_byte(1u8))];
+        assert_eq!(blob_data.fill(&blobs, 1), Err(BlobDecodingError::InvalidLength));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_fill_empty_blob() {
+        let mut blob_data = BlobData::default();
+        let blobs = vec![Box::new(Blob::ZERO)];
+        assert_eq!(blob_data.fill(&blobs, 0), Err(BlobDecodingError::MissingData));
+    }
+
+    #[test]
+    fn test_fill_blob() {
+        let mut blob_data = BlobData::default();
+        let blobs = vec![Box::new(Blob::with_last_byte(1u8))];
+        assert_eq!(blob_data.fill(&blobs, 0), Ok(()));
+        let expected = Bytes::from([&[0u8; 131071][..], &[1u8]].concat());
+        assert_eq!(blob_data.data, Some(expected));
+    }
+
+    #[test]
+    fn test_blob_data_decode_missing_data() {
+        let blob_data = BlobData::default();
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::MissingData));
+    }
+
+    #[test]
+    fn test_blob_data_decode_invalid_encoding_version() {
+        let blob_data = BlobData { data: Some(Bytes::from(vec![1u8; 32])), ..Default::default() };
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::InvalidEncodingVersion));
+    }
+
+    #[test]
+    fn test_blob_data_decode_invalid_length() {
+        let mut data = vec![0u8; 32];
+        data[VERSIONED_HASH_VERSION_KZG as usize] = BLOB_ENCODING_VERSION;
+        data[2] = 0xFF;
+        data[3] = 0xFF;
+        data[4] = 0xFF;
+        let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::InvalidLength));
+    }
 
     pub(crate) fn default_test_blob_source() -> BlobSource<TestChainProvider, TestBlobProvider> {
         let chain_provider = TestChainProvider::default();

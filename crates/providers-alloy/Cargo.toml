@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 # Alloy
-alloy-eips.workspace = true
+alloy-eips = { workspace = true, features = ["kzg"] }
 alloy-transport.workspace = true
 alloy-provider = { workspace = true, features = ["reqwest"] }
 alloy-rlp = { workspace = true, features = ["derive"] }
@@ -27,6 +27,8 @@ op-alloy-genesis = { workspace = true, features = ["serde", "std"] }
 
 # General
 lru.workspace = true
+serde.workspace = true
+alloy-serde.workspace = true
 reqwest.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
@@ -34,7 +36,6 @@ async-trait.workspace = true
 # Workspace
 kona-providers.workspace = true
 kona-derive = { workspace = true, features = ["serde"] }
-kona-primitives = { workspace = true, features = ["serde", "online"] }
 
 # `metrics` feature dependencies
 lazy_static = { workspace = true, optional = true }

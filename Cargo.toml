@@ -63,7 +63,6 @@ kona-preimage = { path = "crates/preimage", version = "0.0.3" }
 kona-executor = { path = "crates/executor", version = "0.0.2" }
 kona-common-proc = { path = "crates/common-proc", version = "0.0.3" }
 kona-derive = { path = "crates/derive", version = "0.0.3", default-features = false }
-kona-primitives = { path = "crates/primitives", version = "0.0.2", default-features = false }
 kona-providers = { path = "crates/providers", version = "0.0.1" }
 kona-providers-alloy = { path = "crates/providers-alloy", version = "0.0.1", default-features = false }
 
@@ -123,6 +122,7 @@ rocksdb = { version = "0.22", default-features = false, features = ["snappy"] }
 alloy-rlp = { version = "0.3.8", default-features = false }
 alloy-trie = { version = "0.6.0", default-features = false }
 alloy-eips = { version = "0.4.2", default-features = false }
+alloy-serde = { version = "0.4.2", default-features = false }
 alloy-provider = { version = "0.4.2", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
 alloy-consensus = { version = "0.4.2", default-features = false }
@@ -138,3 +138,15 @@ op-alloy-consensus = { version = "0.4.0", default-features = false }
 op-alloy-protocol = { version = "0.4.0", default-features = false }
 op-alloy-genesis = { version = "0.4.0", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.4.0", default-features = false }
+
+[patch.crates-io]
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-serde = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", branch = "main" }
