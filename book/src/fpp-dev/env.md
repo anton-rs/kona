@@ -57,7 +57,7 @@ The `host` is responsible for:
 
 Other programs (`clients`) may have different requirements for communication with the `host`, but the above is a common pattern for programs built on top of a FPVMs. In general:
 
-1. The `client` program is a state machine that is responsible for bootstrapping itself from the inputs, executing the progam logic, and verifying the outcome.
+1. The `client` program is a state machine that is responsible for bootstrapping itself from the inputs, executing the program logic, and verifying the outcome.
 1. The `host` is responsible for providing the `client` with data it wasn't bootstrapped with, and for executing the program itself.
 
 {{#include ../links.md}}
