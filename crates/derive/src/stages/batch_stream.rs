@@ -1,7 +1,7 @@
 //! This module contains the `BatchStream` stage.
 
 use crate::{
-    batch::{Batch, BatchValidity, SingleBatch, SpanBatch},
+    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
     stages::BatchQueueProvider,
@@ -18,7 +18,7 @@ use tracing::{error, trace};
 #[async_trait]
 pub trait BatchStreamProvider {
     /// Returns the next [Batch] in the [BatchStream] stage.
-    async fn next_batch(&mut self) -> PipelineResult<Batch>;
+    async fn next_batch(&mut self) -> PipelineResult<BatchWithInclusionBlock>;
 
     /// Drains the recent `Channel` if an invalid span batch is found post-holocene.
     fn flush(&mut self);
@@ -122,13 +122,13 @@ where
         // through this stage to the BatchQueue stage.
         if !self.is_active()? {
             trace!(target: "batch_span", "BatchStream stage is inactive, pass-through.");
-            return self.prev.next_batch().await;
+            return self.prev.next_batch().await.map(|b| b.batch);
         }
 
         // If the buffer is empty, attempt to pull a batch from the previous stage.
         if self.buffer.is_empty() {
             // Safety: bubble up any errors from the batch reader.
-            let batch = self.prev.next_batch().await?;
+            let BatchWithInclusionBlock { batch, inclusion_block } = self.prev.next_batch().await?;
 
             // If the next batch is a singular batch, it is immediately
             // forwarded to the `BatchQueue` stage. Otherwise, we buffer
@@ -136,11 +136,12 @@ where
             match batch {
                 Batch::Single(b) => return Ok(Batch::Single(b)),
                 Batch::Span(b) => {
-                    let validity = b
+                    let (validity, _) = b
                         .check_batch_prefix(
                             self.config.as_ref(),
                             l1_origins,
-                            parent.block_info,
+                            parent,
+                            &inclusion_block,
                             &mut self.fetcher,
                         )
                         .await;
@@ -287,7 +288,10 @@ mod test {
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
 
-        let data = vec![Ok(Batch::Single(SingleBatch::default()))];
+        let data = vec![Ok(BatchWithInclusionBlock::new(
+            Default::default(),
+            Batch::Single(SingleBatch::default()),
+        ))];
         let config = Arc::new(RollupConfig { holocene_time: Some(100), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
@@ -308,15 +312,19 @@ mod test {
     async fn test_span_buffer() {
         let mock_batch = SpanBatch {
             batches: vec![
-                SpanBatchElement { epoch_num: 10, timestamp: 2, ..Default::default() },
-                SpanBatchElement { epoch_num: 10, timestamp: 4, ..Default::default() },
+                SpanBatchElement { epoch_num: 1, timestamp: 2, ..Default::default() },
+                SpanBatchElement { epoch_num: 1, timestamp: 4, ..Default::default() },
             ],
             ..Default::default()
         };
-        let mock_origins = [BlockInfo { number: 10, timestamp: 12, ..Default::default() }];
+        let mock_origins = [BlockInfo { number: 1, timestamp: 12, ..Default::default() }];
 
-        let data = vec![Ok(Batch::Span(mock_batch.clone()))];
+        let data = vec![Ok(BatchWithInclusionBlock::new(
+            Default::default(),
+            Batch::Span(mock_batch.clone()),
+        ))];
         let config = Arc::new(RollupConfig {
+            delta_time: Some(0),
             holocene_time: Some(0),
             block_time: 2,
             ..RollupConfig::default()
@@ -331,7 +339,7 @@ mod test {
         // The next batches should be single batches derived from the span batch.
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 2);
         } else {
             panic!("Wrong batch type");
@@ -339,7 +347,7 @@ mod test {
 
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 4);
         } else {
             panic!("Wrong batch type");
@@ -351,12 +359,15 @@ mod test {
         assert!(stream.span.is_none());
 
         // Add more data into the provider, see if the buffer is re-hydrated.
-        stream.prev.batches.push(Ok(Batch::Span(mock_batch)));
+        stream.prev.batches.push(Ok(BatchWithInclusionBlock::new(
+            Default::default(),
+            Batch::Span(mock_batch.clone()),
+        )));
 
         // The next batches should be single batches derived from the span batch.
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 2);
         } else {
             panic!("Wrong batch type");
@@ -364,7 +375,7 @@ mod test {
 
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 4);
         } else {
             panic!("Wrong batch type");
@@ -378,7 +389,10 @@ mod test {
 
     #[tokio::test]
     async fn test_single_batch_pass_through() {
-        let data = vec![Ok(Batch::Single(SingleBatch::default()))];
+        let data = vec![Ok(BatchWithInclusionBlock::new(
+            Default::default(),
+            Batch::Single(SingleBatch::default()),
+        ))];
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(data);
         let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());

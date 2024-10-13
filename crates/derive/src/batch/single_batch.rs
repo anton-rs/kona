@@ -59,11 +59,15 @@ impl SingleBatch {
                 next_timestamp,
                 self.timestamp
             );
+
+            if cfg.is_holocene_active(inclusion_block.timestamp) {
+                return BatchValidity::Drop;
+            }
             return BatchValidity::Future;
         }
         if self.timestamp < next_timestamp {
             warn!("dropping batch with old timestamp, min_timestamp: {next_timestamp}");
-            return if cfg.is_holocene_active(self.timestamp) {
+            return if cfg.is_holocene_active(inclusion_block.timestamp) {
                 BatchValidity::Past
             } else {
                 BatchValidity::Drop
