@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.2...kona-executor-v0.0.3) - 2024-10-13
+
+### Added
+
+- *(executor)* Update EIP-1559 configurability ([#648](https://github.com/anton-rs/kona/pull/648))
+- *(executor)* Use EIP-1559 parameters from payload attributes ([#616](https://github.com/anton-rs/kona/pull/616))
+- *(derive)* bump op-alloy dep ([#605](https://github.com/anton-rs/kona/pull/605))
+- kona-providers ([#596](https://github.com/anton-rs/kona/pull/596))
+- *(executor)* Migrate to `thiserror` ([#544](https://github.com/anton-rs/kona/pull/544))
+- *(mpt)* Migrate to `thiserror` ([#541](https://github.com/anton-rs/kona/pull/541))
+- *(primitives)* Remove Attributes ([#529](https://github.com/anton-rs/kona/pull/529))
+- large dependency update ([#528](https://github.com/anton-rs/kona/pull/528))
+
+### Fixed
+
+- *(executor)* Holocene EIP-1559 params in Header ([#622](https://github.com/anton-rs/kona/pull/622))
+- *(workspace)* hoist and fix lints ([#577](https://github.com/anton-rs/kona/pull/577))
+
+### Other
+
+- *(executor)* move todo to issue: ([#680](https://github.com/anton-rs/kona/pull/680))
+- *(executor)* Cover Builder ([#676](https://github.com/anton-rs/kona/pull/676))
+- *(executor)* Use Upstreamed op-alloy Methods  ([#651](https://github.com/anton-rs/kona/pull/651))
+- *(executor)* Test Coverage over Executor Utilities ([#650](https://github.com/anton-rs/kona/pull/650))
+- doc logos ([#609](https://github.com/anton-rs/kona/pull/609))
+- *(workspace)* Allow stdlib in `cfg(test)` ([#548](https://github.com/anton-rs/kona/pull/548))
+- Bumps Dependency Versions ([#520](https://github.com/anton-rs/kona/pull/520))
+- *(primitives)* rm RawTransaction ([#505](https://github.com/anton-rs/kona/pull/505))
+
 ## [0.0.2](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.1...kona-executor-v0.0.2) - 2024-09-04
 
 ### Added
