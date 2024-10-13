@@ -83,7 +83,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
             .map(|(_, rlp)| {
                 let envelope = ReceiptEnvelope::decode_2718(&mut rlp.as_ref())
                     .map_err(|e| anyhow!("Failed to decode ReceiptEnvelope RLP: {e}"))?;
-                Ok(envelope.as_receipt().expect("Infalliable").clone())
+                Ok(envelope.as_receipt().expect("Infallible").clone())
             })
             .collect::<Result<Vec<_>>>()?;
 
