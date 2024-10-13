@@ -3,7 +3,7 @@
 //! [`BatchStream`]: crate::stages::BatchStream
 
 use crate::{
-    batch::BatchWithInclusionBlock,
+    batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::BatchStreamProvider,
     traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
@@ -21,7 +21,7 @@ pub struct TestBatchStreamProvider {
     /// The origin of the L1 block.
     pub origin: Option<BlockInfo>,
     /// A list of batches to return.
-    pub batches: Vec<PipelineResult<BatchWithInclusionBlock>>,
+    pub batches: Vec<PipelineResult<Batch>>,
     /// Wether the reset method was called.
     pub reset: bool,
     /// Wether the provider was flushed.
@@ -30,7 +30,7 @@ pub struct TestBatchStreamProvider {
 
 impl TestBatchStreamProvider {
     /// Creates a new [TestBatchStreamProvider] with the given origin and batches.
-    pub fn new(batches: Vec<PipelineResult<BatchWithInclusionBlock>>) -> Self {
+    pub fn new(batches: Vec<PipelineResult<Batch>>) -> Self {
         Self { origin: Some(BlockInfo::default()), batches, reset: false, flushed: false }
     }
 }
@@ -53,7 +53,7 @@ impl FlushableStage for TestBatchStreamProvider {
 impl BatchStreamProvider for TestBatchStreamProvider {
     fn flush(&mut self) {}
 
-    async fn next_batch(&mut self) -> PipelineResult<BatchWithInclusionBlock> {
+    async fn next_batch(&mut self) -> PipelineResult<Batch> {
         self.batches.pop().ok_or(PipelineError::Eof.temp())?
     }
 }

@@ -1,7 +1,7 @@
 //! This module contains the `ChannelReader` struct.
 
 use crate::{
-    batch::{Batch, BatchWithInclusionBlock},
+    batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchStreamProvider},
     traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
@@ -110,7 +110,7 @@ where
         self.next_channel();
     }
 
-    async fn next_batch(&mut self) -> PipelineResult<BatchWithInclusionBlock> {
+    async fn next_batch(&mut self) -> PipelineResult<Batch> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
             debug!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
@@ -125,10 +125,7 @@ where
             .next_batch(self.cfg.as_ref())
             .ok_or(PipelineError::NotEnoughData.temp())
         {
-            Ok(batch) => Ok(BatchWithInclusionBlock::new(
-                self.prev.origin().ok_or(PipelineError::MissingOrigin.crit())?,
-                batch,
-            )),
+            Ok(batch) => Ok(batch),
             Err(e) => {
                 self.next_channel();
                 crate::timer!(DISCARD, timer);
@@ -322,7 +319,7 @@ mod test {
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(raw))]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
         let res = reader.next_batch().await.unwrap();
-        matches!(res.batch, Batch::Span(_));
+        matches!(res, Batch::Span(_));
         assert!(reader.next_batch.is_some());
     }
 
@@ -342,7 +339,7 @@ mod test {
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(raw))]);
         let mut reader = ChannelReader::new(mock, config);
         let res = reader.next_batch().await.unwrap();
-        matches!(res.batch, Batch::Span(_));
+        matches!(res, Batch::Span(_));
         assert!(reader.next_batch.is_some());
         reader.flush();
         assert!(reader.next_batch.is_none());
