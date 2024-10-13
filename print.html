@@ -290,7 +290,7 @@ which has the objective of verifying claims about the state of an <a href="https
 </ol>
 <p>Other programs (<code>clients</code>) may have different requirements for communication with the <code>host</code>, but the above is a common pattern for programs built on top of a FPVMs. In general:</p>
 <ol>
-<li>The <code>client</code> program is a state machine that is responsible for bootstrapping itself from the inputs, executing the progam logic, and verifying the outcome.</li>
+<li>The <code>client</code> program is a state machine that is responsible for bootstrapping itself from the inputs, executing the program logic, and verifying the outcome.</li>
 <li>The <code>host</code> is responsible for providing the <code>client</code> with data it wasn't bootstrapped with, and for executing the program itself.</li>
 </ol>
 <!-- External -->
@@ -450,10 +450,10 @@ highest-level API.</p>
 exposes a safe API:</p>
 <pre><code class="language-rs">use kona_common::{io, FileDescriptor};
 
-// Print to `stdout`. Infalliable, will panic if dispatch fails.
+// Print to `stdout`. Infallible, will panic if dispatch fails.
 io::print("Hello, world!");
 
-// Print to `stderr`. Infalliable, will panic if dispatch fails.
+// Print to `stderr`. Infallible, will panic if dispatch fails.
 io::print_err("Goodbye, world!");
 
 // Read from or write to a specified file descriptor. Returns a result with the
