@@ -32,10 +32,10 @@ exposes a safe API:
 ```rs
 use kona_common::{io, FileDescriptor};
 
-// Print to `stdout`. Infalliable, will panic if dispatch fails.
+// Print to `stdout`. Infallible, will panic if dispatch fails.
 io::print("Hello, world!");
 
-// Print to `stderr`. Infalliable, will panic if dispatch fails.
+// Print to `stderr`. Infallible, will panic if dispatch fails.
 io::print_err("Goodbye, world!");
 
 // Read from or write to a specified file descriptor. Returns a result with the
