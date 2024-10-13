@@ -32,7 +32,7 @@ pub(crate) async fn get_live_derivable_receipts_list(
     let consensus_receipts = receipts
         .into_iter()
         .map(|r| {
-            let rpc_receipt = r.inner.as_receipt_with_bloom().expect("Infalliable");
+            let rpc_receipt = r.inner.as_receipt_with_bloom().expect("Infallible");
             let consensus_receipt = ReceiptWithBloom::new(
                 Receipt {
                     status: rpc_receipt.receipt.status,
