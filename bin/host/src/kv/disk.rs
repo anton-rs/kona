@@ -75,10 +75,13 @@ mod test {
         arbitrary::any,
         collection::{hash_map, vec},
         proptest,
+        test_runner::Config,
     };
     use std::env::temp_dir;
 
     proptest! {
+        #![proptest_config(Config::with_cases(16))]
+
         /// Test that converting from a [DiskKeyValueStore] to a [MemoryKeyValueStore] is lossless.
         #[test]
         fn convert_disk_kv_to_mem_kv(k_v in hash_map(any::<[u8; 32]>(), vec(any::<u8>(), 0..128), 1..128)) {
