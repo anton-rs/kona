@@ -358,8 +358,17 @@ mod test {
     fn test_batch_reader() {
         let raw = new_compressed_batch_data();
         let decompressed_len = decompress_to_vec_zlib(&raw).unwrap().len();
-        let mut reader = BatchReader::new(raw, MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize);
+        let mut reader = BatchReader::new(raw, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK as usize);
         reader.next_batch(&RollupConfig::default()).unwrap();
+        assert_eq!(reader.cursor, decompressed_len);
+    }
+
+    #[test]
+    fn test_batch_reader_fjord() {
+        let raw = new_compressed_batch_data();
+        let decompressed_len = decompress_to_vec_zlib(&raw).unwrap().len();
+        let mut reader = BatchReader::new(raw, MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize);
+        reader.next_batch(&RollupConfig { fjord_time: Some(0), ..Default::default() }).unwrap();
         assert_eq!(reader.cursor, decompressed_len);
     }
 
