@@ -512,7 +512,7 @@ mod tests {
     use alloy_rlp::{BytesMut, Encodable};
     use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
-    use op_alloy_genesis::ChainGenesis;
+    use op_alloy_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
     use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -523,7 +523,7 @@ mod tests {
         let file_contents = &(&*file_contents)[..file_contents.len() - 1];
         let data = alloy_primitives::hex::decode(file_contents).unwrap();
         let bytes: alloy_primitives::Bytes = data.into();
-        BatchReader::from(bytes)
+        BatchReader::new(bytes, MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize)
     }
 
     #[test]

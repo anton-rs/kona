@@ -19,8 +19,7 @@ pub use span_batch::{
     RawSpanBatch, SpanBatch, SpanBatchBits, SpanBatchEip1559TransactionData,
     SpanBatchEip2930TransactionData, SpanBatchElement, SpanBatchError,
     SpanBatchLegacyTransactionData, SpanBatchPayload, SpanBatchPrefix, SpanBatchSignature,
-    SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError, FJORD_MAX_SPAN_BATCH_BYTES,
-    MAX_SPAN_BATCH_BYTES,
+    SpanBatchTransactionData, SpanBatchTransactions, SpanDecodingError, MAX_SPAN_BATCH_ELEMENTS,
 };
 
 mod single_batch;
@@ -97,7 +96,7 @@ impl Batch {
                 Ok(Self::Single(single_batch))
             }
             BatchType::Span => {
-                let mut raw_span_batch = RawSpanBatch::decode(r, cfg)?;
+                let mut raw_span_batch = RawSpanBatch::decode(r)?;
                 let span_batch = raw_span_batch
                     .derive(cfg.block_time, cfg.genesis.l2_time, cfg.l2_chain_id)
                     .map_err(PipelineEncodingError::SpanBatchError)?;

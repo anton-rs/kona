@@ -3,7 +3,7 @@
 
 use super::{
     convert_v_to_y_parity, read_tx_data, utils::is_protected_v, SpanBatchBits, SpanBatchError,
-    SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError,
+    SpanBatchSignature, SpanBatchTransactionData, SpanDecodingError, MAX_SPAN_BATCH_ELEMENTS,
 };
 use alloc::vec::Vec;
 use alloy_consensus::{Transaction, TxEnvelope, TxType};
@@ -40,73 +40,46 @@ pub struct SpanBatchTransactions {
 
 impl SpanBatchTransactions {
     /// Encodes the [SpanBatchTransactions] into a writer.
-    pub fn encode(&self, w: &mut Vec<u8>, is_fjord_active: bool) -> Result<(), SpanBatchError> {
-        self.encode_contract_creation_bits(w, is_fjord_active)?;
-        self.encode_y_parity_bits(w, is_fjord_active)?;
+    pub fn encode(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        self.encode_contract_creation_bits(w)?;
+        self.encode_y_parity_bits(w)?;
         self.encode_tx_sigs_rs(w)?;
         self.encode_tx_tos(w)?;
         self.encode_tx_datas(w)?;
         self.encode_tx_nonces(w)?;
         self.encode_tx_gases(w)?;
-        self.encode_protected_bits(w, is_fjord_active)?;
+        self.encode_protected_bits(w)?;
         Ok(())
     }
 
     /// Decodes the [SpanBatchTransactions] from a reader.
-    pub fn decode(&mut self, r: &mut &[u8], is_fjord_active: bool) -> Result<(), SpanBatchError> {
-        self.decode_contract_creation_bits(r, is_fjord_active)?;
-        self.decode_y_parity_bits(r, is_fjord_active)?;
+    pub fn decode(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+        self.decode_contract_creation_bits(r)?;
+        self.decode_y_parity_bits(r)?;
         self.decode_tx_sigs_rs(r)?;
         self.decode_tx_tos(r)?;
         self.decode_tx_datas(r)?;
         self.decode_tx_nonces(r)?;
         self.decode_tx_gases(r)?;
-        self.decode_protected_bits(r, is_fjord_active)?;
+        self.decode_protected_bits(r)?;
         Ok(())
     }
 
     /// Encode the contract creation bits into a writer.
-    pub fn encode_contract_creation_bits(
-        &self,
-        w: &mut Vec<u8>,
-        is_fjord_active: bool,
-    ) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(
-            w,
-            self.total_block_tx_count as usize,
-            &self.contract_creation_bits,
-            is_fjord_active,
-        )?;
+    pub fn encode_contract_creation_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        SpanBatchBits::encode(w, self.total_block_tx_count as usize, &self.contract_creation_bits)?;
         Ok(())
     }
 
     /// Encode the protected bits into a writer.
-    pub fn encode_protected_bits(
-        &self,
-        w: &mut Vec<u8>,
-        is_fjord_active: bool,
-    ) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(
-            w,
-            self.legacy_tx_count as usize,
-            &self.protected_bits,
-            is_fjord_active,
-        )?;
+    pub fn encode_protected_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        SpanBatchBits::encode(w, self.legacy_tx_count as usize, &self.protected_bits)?;
         Ok(())
     }
 
     /// Encode the y parity bits into a writer.
-    pub fn encode_y_parity_bits(
-        &self,
-        w: &mut Vec<u8>,
-        is_fjord_active: bool,
-    ) -> Result<(), SpanBatchError> {
-        SpanBatchBits::encode(
-            w,
-            self.total_block_tx_count as usize,
-            &self.y_parity_bits,
-            is_fjord_active,
-        )?;
+    pub fn encode_y_parity_bits(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
+        SpanBatchBits::encode(w, self.total_block_tx_count as usize, &self.y_parity_bits)?;
         Ok(())
     }
 
@@ -156,35 +129,28 @@ impl SpanBatchTransactions {
     }
 
     /// Decode the contract creation bits from a reader.
-    pub fn decode_contract_creation_bits(
-        &mut self,
-        r: &mut &[u8],
-        is_fjord_active: bool,
-    ) -> Result<(), SpanBatchError> {
-        self.contract_creation_bits =
-            SpanBatchBits::decode(r, self.total_block_tx_count as usize, is_fjord_active)?;
+    pub fn decode_contract_creation_bits(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+        if self.total_block_tx_count > MAX_SPAN_BATCH_ELEMENTS {
+            return Err(SpanBatchError::TooBigSpanBatchSize);
+        }
+
+        self.contract_creation_bits = SpanBatchBits::decode(r, self.total_block_tx_count as usize)?;
         Ok(())
     }
 
     /// Decode the protected bits from a reader.
-    pub fn decode_protected_bits(
-        &mut self,
-        r: &mut &[u8],
-        is_fjord_active: bool,
-    ) -> Result<(), SpanBatchError> {
-        self.protected_bits =
-            SpanBatchBits::decode(r, self.legacy_tx_count as usize, is_fjord_active)?;
+    pub fn decode_protected_bits(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+        if self.legacy_tx_count > MAX_SPAN_BATCH_ELEMENTS {
+            return Err(SpanBatchError::TooBigSpanBatchSize);
+        }
+
+        self.protected_bits = SpanBatchBits::decode(r, self.legacy_tx_count as usize)?;
         Ok(())
     }
 
     /// Decode the y parity bits from a reader.
-    pub fn decode_y_parity_bits(
-        &mut self,
-        r: &mut &[u8],
-        is_fjord_active: bool,
-    ) -> Result<(), SpanBatchError> {
-        self.y_parity_bits =
-            SpanBatchBits::decode(r, self.total_block_tx_count as usize, is_fjord_active)?;
+    pub fn decode_y_parity_bits(&mut self, r: &mut &[u8]) -> Result<(), SpanBatchError> {
+        self.y_parity_bits = SpanBatchBits::decode(r, self.total_block_tx_count as usize)?;
         Ok(())
     }
 

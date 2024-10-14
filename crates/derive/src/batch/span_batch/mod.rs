@@ -10,19 +10,9 @@
 //! txs = contract_creation_bits ++ y_parity_bits ++ tx_sigs ++ tx_tos ++ tx_datas ++ tx_nonces ++ tx_gases ++ protected_bits
 //! ```
 
-/// [MAX_SPAN_BATCH_BYTES] is the maximum amount of bytes that will be needed
-/// to decode every span batch field.
-///
-/// This value cannot be larger than MaxRLPBytesPerChannel because single batch cannot be larger
-/// than channel size.
-pub const MAX_SPAN_BATCH_BYTES: u64 = op_alloy_protocol::MAX_RLP_BYTES_PER_CHANNEL;
-
-/// [FJORD_MAX_SPAN_BATCH_BYTES] is the maximum amount of bytes that will be needed
-/// to decode every span batch field after the Fjord Hardfork.
-///
-/// This value cannot be larger than MaxRLPBytesPerChannel because single batch
-/// cannot be larger than channel size.
-pub const FJORD_MAX_SPAN_BATCH_BYTES: u64 = op_alloy_protocol::FJORD_MAX_RLP_BYTES_PER_CHANNEL;
+/// MAX_SPAN_BATCH_ELEMENTS is the maximum number of blocks, transactions in total,
+/// or transaction per block allowed in a span batch.
+pub const MAX_SPAN_BATCH_ELEMENTS: u64 = 10_000_000;
 
 mod batch;
 pub use batch::SpanBatch;
