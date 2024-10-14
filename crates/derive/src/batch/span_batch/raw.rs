@@ -48,11 +48,6 @@ impl RawSpanBatch {
         BatchType::Span
     }
 
-    /// Returns the timestamp for the span batch.
-    pub const fn timestamp(&self) -> u64 {
-        self.prefix.rel_timestamp
-    }
-
     /// Encodes the [RawSpanBatch] into a writer.
     pub fn encode(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
         self.prefix.encode_prefix(w);
