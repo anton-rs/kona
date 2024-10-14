@@ -910,7 +910,7 @@ mod tests {
         // Validate logs
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);
-        let warn_str = "[HOLOCENE] Dropping future batch with parent: 0";
+        let warn_str = "Dropping batch with parent";
         assert!(logs[0].contains(warn_str));
     }
 

@@ -1,7 +1,7 @@
 //! This module contains the `BatchStream` stage.
 
 use crate::{
-    batch::{Batch, BatchValidity, SingleBatch, SpanBatch},
+    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
     stages::BatchQueueProvider,
@@ -128,19 +128,23 @@ where
         // If the buffer is empty, attempt to pull a batch from the previous stage.
         if self.buffer.is_empty() {
             // Safety: bubble up any errors from the batch reader.
-            let batch = self.prev.next_batch().await?;
+            let batch_with_inclusion = BatchWithInclusionBlock::new(
+                self.origin().ok_or(PipelineError::MissingOrigin.crit())?,
+                self.prev.next_batch().await?,
+            );
 
             // If the next batch is a singular batch, it is immediately
             // forwarded to the `BatchQueue` stage. Otherwise, we buffer
             // the span batch in this stage if it passes the validity checks.
-            match batch {
+            match batch_with_inclusion.batch {
                 Batch::Single(b) => return Ok(Batch::Single(b)),
                 Batch::Span(b) => {
-                    let validity = b
+                    let (validity, _) = b
                         .check_batch_prefix(
                             self.config.as_ref(),
                             l1_origins,
-                            parent.block_info,
+                            parent,
+                            &batch_with_inclusion.inclusion_block,
                             &mut self.fetcher,
                         )
                         .await;
@@ -308,15 +312,16 @@ mod test {
     async fn test_span_buffer() {
         let mock_batch = SpanBatch {
             batches: vec![
-                SpanBatchElement { epoch_num: 10, timestamp: 2, ..Default::default() },
-                SpanBatchElement { epoch_num: 10, timestamp: 4, ..Default::default() },
+                SpanBatchElement { epoch_num: 1, timestamp: 2, ..Default::default() },
+                SpanBatchElement { epoch_num: 1, timestamp: 4, ..Default::default() },
             ],
             ..Default::default()
         };
-        let mock_origins = [BlockInfo { number: 10, timestamp: 12, ..Default::default() }];
+        let mock_origins = [BlockInfo { number: 1, timestamp: 12, ..Default::default() }];
 
         let data = vec![Ok(Batch::Span(mock_batch.clone()))];
         let config = Arc::new(RollupConfig {
+            delta_time: Some(0),
             holocene_time: Some(0),
             block_time: 2,
             ..RollupConfig::default()
@@ -331,7 +336,7 @@ mod test {
         // The next batches should be single batches derived from the span batch.
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 2);
         } else {
             panic!("Wrong batch type");
@@ -339,7 +344,7 @@ mod test {
 
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 4);
         } else {
             panic!("Wrong batch type");
@@ -351,12 +356,12 @@ mod test {
         assert!(stream.span.is_none());
 
         // Add more data into the provider, see if the buffer is re-hydrated.
-        stream.prev.batches.push(Ok(Batch::Span(mock_batch)));
+        stream.prev.batches.push(Ok(Batch::Span(mock_batch.clone())));
 
         // The next batches should be single batches derived from the span batch.
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 2);
         } else {
             panic!("Wrong batch type");
@@ -364,7 +369,7 @@ mod test {
 
         let batch = stream.next_batch(Default::default(), &mock_origins).await.unwrap();
         if let Batch::Single(single) = batch {
-            assert_eq!(single.epoch_num, 10);
+            assert_eq!(single.epoch_num, 1);
             assert_eq!(single.timestamp, 4);
         } else {
             panic!("Wrong batch type");

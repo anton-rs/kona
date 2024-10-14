@@ -36,6 +36,11 @@ pub struct BatchWithInclusionBlock {
 }
 
 impl BatchWithInclusionBlock {
+    /// Creates a new batch with inclusion block.
+    pub const fn new(inclusion_block: BlockInfo, batch: Batch) -> Self {
+        Self { inclusion_block, batch }
+    }
+
     /// Validates the batch can be applied on top of the specified L2 safe head.
     /// The first entry of the l1_blocks should match the origin of the l2_safe_head.
     /// One or more consecutive l1_blocks should be provided.

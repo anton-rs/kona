@@ -78,133 +78,14 @@ impl SpanBatch {
         inclusion_block: &BlockInfo,
         fetcher: &mut BF,
     ) -> BatchValidity {
-        if l1_blocks.is_empty() {
-            warn!("missing L1 block input, cannot proceed with batch checking");
-            return BatchValidity::Undecided;
+        let (prefix_validity, parent_block) =
+            self.check_batch_prefix(cfg, l1_blocks, l2_safe_head, inclusion_block, fetcher).await;
+        if !matches!(prefix_validity, BatchValidity::Accept) {
+            return prefix_validity;
         }
-        if self.batches.is_empty() {
-            warn!("empty span batch, cannot proceed with batch checking");
-            return BatchValidity::Undecided;
-        }
-        let epoch = l1_blocks[0];
-        let mut batch_origin = epoch;
+
         let starting_epoch_num = self.starting_epoch_num();
-        if starting_epoch_num == batch_origin.number + 1 {
-            if l1_blocks.len() < 2 {
-                info!("eager batch wants to advance current epoch {:?}, but could not without more L1 blocks", epoch.id());
-                return BatchValidity::Undecided;
-            }
-            batch_origin = l1_blocks[1];
-        }
-
-        // Span batches are only valid after the Delta hard fork.
-        if !cfg.is_delta_active(batch_origin.timestamp) {
-            warn!(
-                "received SpanBatch (id {:?}) with L1 origin (timestamp {}) before Delta hard fork",
-                batch_origin.id(),
-                batch_origin.timestamp
-            );
-            return BatchValidity::Drop;
-        }
-
-        // Skip out of order batches.
-        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
-        if self.starting_timestamp() > next_timestamp {
-            warn!(
-                "received out-of-order batch for future processing after next batch ({} > {})",
-                self.starting_timestamp(),
-                next_timestamp
-            );
-            return BatchValidity::Future;
-        }
-        // SAFETY: The span batch is not empty so the last element exists.
-        if self.batches.last().unwrap().timestamp < next_timestamp {
-            warn!("span batch has no new blocks after safe head");
-            return BatchValidity::Drop;
-        }
-
-        // Find the parent block of the span batch.
-        // If the span batch does not overlap the current safe chain, parent block should be the L2
-        // safe head.
-        let mut parent_num = l2_safe_head.block_info.number;
-        let mut parent_block = l2_safe_head;
-        if self.starting_timestamp() < next_timestamp {
-            if self.starting_timestamp() > l2_safe_head.block_info.timestamp {
-                // Batch timestamp cannot be between safe head and next timestamp.
-                warn!("batch has misaligned timestamp, block time is too short");
-                return BatchValidity::Drop;
-            }
-            if (l2_safe_head.block_info.timestamp - self.starting_timestamp()) % cfg.block_time != 0
-            {
-                warn!("batch has misaligned timestamp, not overlapped exactly");
-                return BatchValidity::Drop;
-            }
-            parent_num = l2_safe_head.block_info.number -
-                (l2_safe_head.block_info.timestamp - self.starting_timestamp()) / cfg.block_time -
-                1;
-            parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
-                Ok(block) => block,
-                Err(e) => {
-                    warn!("failed to fetch L2 block number {parent_num}: {e}");
-                    // Unable to validate the batch for now. Retry later.
-                    return BatchValidity::Undecided;
-                }
-            };
-        }
-        if !self.check_parent_hash(parent_block.block_info.hash) {
-            warn!(
-                "parent block number mismatch, expected: {parent_num}, received: {}, parent hash: {}, self hash: {}",
-                parent_block.block_info.number,
-                parent_block.block_info.hash,
-                self.parent_check,
-            );
-            return BatchValidity::Drop;
-        }
-
-        // Filter out batches that were included too late.
-        if starting_epoch_num + cfg.seq_window_size < inclusion_block.number {
-            warn!("batch was included too late, sequence window expired");
-            return BatchValidity::Drop;
-        }
-
-        // Check the L1 origin of the batch
-        if starting_epoch_num > parent_block.l1_origin.number + 1 {
-            warn!(
-                "batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid. starting epoch: {} | next epoch: {}",
-                starting_epoch_num,
-                parent_block.l1_origin.number + 1
-            );
-            return BatchValidity::Drop;
-        }
-
-        // Verify the l1 origin hash for each l1 block.
-        // SAFETY: The span batch is not empty so the last element exists.
-        let end_epoch_num = self.batches.last().unwrap().epoch_num;
-        let mut origin_checked = false;
-        // l1Blocks is supplied from batch queue and its length is limited to SequencerWindowSize.
-        for l1_block in l1_blocks {
-            if l1_block.number == end_epoch_num {
-                if !self.check_origin_hash(l1_block.hash) {
-                    warn!(
-                        "batch is for different L1 chain, epoch hash does not match, expected: {}",
-                        l1_block.hash
-                    );
-                    return BatchValidity::Drop;
-                }
-                origin_checked = true;
-                break;
-            }
-        }
-        if !origin_checked {
-            info!("need more l1 blocks to check entire origins of span batch");
-            return BatchValidity::Undecided;
-        }
-
-        // Check if the batch is too old.
-        if starting_epoch_num < parent_block.l1_origin.number {
-            warn!("dropped batch, epoch is too old, minimum: {:?}", parent_block.block_info.id());
-            return BatchValidity::Drop;
-        }
+        let parent_block = parent_block.expect("parent_block must be Some");
 
         let mut origin_index = 0;
         let mut origin_advanced = starting_epoch_num == parent_block.l1_origin.number + 1;
@@ -288,6 +169,8 @@ impl SpanBatch {
         }
 
         // Check overlapped blocks
+        let parent_num = parent_block.block_info.number;
+        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
         if self.starting_timestamp() < next_timestamp {
             for i in 0..(l2_safe_head.block_info.number - parent_num) {
                 let safe_block_num = parent_num + i + 1;
@@ -355,55 +238,116 @@ impl SpanBatch {
         &self,
         cfg: &RollupConfig,
         l1_origins: &[BlockInfo],
-        l2_safe_head: BlockInfo,
+        l2_safe_head: L2BlockInfo,
+        inclusion_block: &BlockInfo,
         fetcher: &mut BF,
-    ) -> BatchValidity {
+    ) -> (BatchValidity, Option<L2BlockInfo>) {
         if l1_origins.is_empty() {
             warn!("missing L1 block input, cannot proceed with batch checking");
-            return BatchValidity::Undecided;
+            return (BatchValidity::Undecided, None);
         }
         if self.batches.is_empty() {
             warn!("empty span batch, cannot proceed with batch checking");
-            return BatchValidity::Undecided;
+            return (BatchValidity::Undecided, None);
         }
 
-        let next_timestamp = l2_safe_head.timestamp + cfg.block_time;
+        let epoch = l1_origins[0];
+        let next_timestamp = l2_safe_head.block_info.timestamp + cfg.block_time;
+
+        let starting_epoch_num = self.starting_epoch_num();
+        let mut batch_origin = epoch;
+        if starting_epoch_num == batch_origin.number + 1 {
+            if l1_origins.len() < 2 {
+                info!("eager batch wants to advance current epoch {:?}, but could not without more L1 blocks", epoch.id());
+                return (BatchValidity::Undecided, None);
+            }
+            batch_origin = l1_origins[1];
+        }
+        if !cfg.is_delta_active(batch_origin.timestamp) {
+            warn!(
+                "received SpanBatch (id {:?}) with L1 origin (timestamp {}) before Delta hard fork",
+                batch_origin.id(),
+                batch_origin.timestamp
+            );
+            return (BatchValidity::Drop, None);
+        }
+
+        if self.starting_timestamp() > next_timestamp {
+            warn!(
+                "received out-of-order batch for future processing after next batch ({} > {})",
+                self.starting_timestamp(),
+                next_timestamp
+            );
+
+            // After holocene is activated, gaps are disallowed.
+            if cfg.is_holocene_active(inclusion_block.timestamp) {
+                return (BatchValidity::Drop, None);
+            }
+            return (BatchValidity::Future, None);
+        }
+
+        // Drop the batch if it has no new blocks after the safe head.
+        if self.final_timestamp() < next_timestamp {
+            warn!("span batch has no new blocks after safe head");
+            return if cfg.is_holocene_active(inclusion_block.timestamp) {
+                (BatchValidity::Past, None)
+            } else {
+                (BatchValidity::Drop, None)
+            };
+        }
 
         // Find the parent block of the span batch.
         // If the span batch does not overlap the current safe chain, parent block should be the L2
         // safe head.
-        let mut parent_num = l2_safe_head.number;
+        let mut parent_num = l2_safe_head.block_info.number;
         let mut parent_block = l2_safe_head;
         if self.starting_timestamp() < next_timestamp {
-            if self.starting_timestamp() > l2_safe_head.timestamp {
+            if self.starting_timestamp() > l2_safe_head.block_info.timestamp {
                 // Batch timestamp cannot be between safe head and next timestamp.
                 warn!("batch has misaligned timestamp, block time is too short");
-                return BatchValidity::Drop;
+                return (BatchValidity::Drop, None);
             }
-            if (l2_safe_head.timestamp - self.starting_timestamp()) % cfg.block_time != 0 {
+            if (l2_safe_head.block_info.timestamp - self.starting_timestamp()) % cfg.block_time != 0
+            {
                 warn!("batch has misaligned timestamp, not overlapped exactly");
-                return BatchValidity::Drop;
+                return (BatchValidity::Drop, None);
             }
-            parent_num = l2_safe_head.number -
-                (l2_safe_head.timestamp - self.starting_timestamp()) / cfg.block_time -
+            parent_num = l2_safe_head.block_info.number -
+                (l2_safe_head.block_info.timestamp - self.starting_timestamp()) / cfg.block_time -
                 1;
             parent_block = match fetcher.l2_block_info_by_number(parent_num).await {
-                Ok(block) => block.block_info,
+                Ok(block) => block,
                 Err(e) => {
                     warn!("failed to fetch L2 block number {parent_num}: {e}");
                     // Unable to validate the batch for now. Retry later.
-                    return BatchValidity::Undecided;
+                    return (BatchValidity::Undecided, None);
                 }
             };
         }
-        if !self.check_parent_hash(parent_block.hash) {
+        if !self.check_parent_hash(parent_block.block_info.hash) {
             warn!(
                 "parent block mismatch, expected: {parent_num}, received: {}. parent hash: {}, parent hash check: {}",
-                parent_block.number,
-                parent_block.hash,
+                parent_block.block_info.number,
+                parent_block.block_info.hash,
                 self.parent_check,
             );
-            return BatchValidity::Drop;
+            return (BatchValidity::Drop, None);
+        }
+
+        // Filter out batches that were included too late.
+        if starting_epoch_num + cfg.seq_window_size < inclusion_block.number {
+            warn!("batch was included too late, sequence window expired");
+            return (BatchValidity::Drop, None);
+        }
+
+        // Check the L1 origin of the batch
+        if starting_epoch_num > parent_block.l1_origin.number + 1 {
+            warn!(
+                "batch is for future epoch too far ahead, while it has the next timestamp, so it must be invalid. starting epoch: {} | next epoch: {}",
+                starting_epoch_num,
+                parent_block.l1_origin.number + 1
+            );
+            return (BatchValidity::Drop, None);
         }
 
         // Verify the l1 origin hash for each l1 block.
@@ -418,7 +362,7 @@ impl SpanBatch {
                         "batch is for different L1 chain, epoch hash does not match, expected: {}",
                         l1_block.hash
                     );
-                    return BatchValidity::Drop;
+                    return (BatchValidity::Drop, None);
                 }
                 origin_checked = true;
                 break;
@@ -426,30 +370,15 @@ impl SpanBatch {
         }
         if !origin_checked {
             info!("need more l1 blocks to check entire origins of span batch");
-            return BatchValidity::Undecided;
+            return (BatchValidity::Undecided, None);
         }
 
-        // Drop the batch if it is out of order. Post-Holocene, gaps are disallowed.
-        if self.starting_timestamp() > next_timestamp {
-            warn!(
-                "received out-of-order batch for future processing after next batch ({} > {})",
-                self.starting_timestamp(),
-                next_timestamp
-            );
-            return BatchValidity::Drop;
+        if starting_epoch_num < parent_block.l1_origin.number {
+            warn!("dropped batch, epoch is too old, minimum: {:?}", parent_block.block_info.id());
+            return (BatchValidity::Drop, None);
         }
 
-        // Drop the batch if it has no new blocks after the safe head.
-        if self.final_timestamp() < next_timestamp {
-            warn!("span batch has no new blocks after safe head");
-            return if cfg.is_holocene_active(self.final_timestamp()) {
-                BatchValidity::Past
-            } else {
-                BatchValidity::Drop
-            }
-        }
-
-        BatchValidity::Accept
+        (BatchValidity::Accept, Some(parent_block))
     }
 
     /// Converts all [SpanBatchElement]s after the L2 safe head to [SingleBatch]es. The resulting
@@ -864,7 +793,7 @@ mod tests {
         );
         let logs = trace_store.get_by_level(Level::WARN);
         assert_eq!(logs.len(), 1);
-        assert!(logs[0].contains("parent block number mismatch, expected: 40, received: 41"));
+        assert!(logs[0].contains("parent block mismatch, expected: 40, received: 41"));
     }
 
     #[tokio::test]
