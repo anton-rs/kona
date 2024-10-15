@@ -1,10 +1,8 @@
 //! Raw Span Batch Prefix
 
+use crate::batch::{SpanBatchError, SpanDecodingError};
 use alloc::vec::Vec;
 use alloy_primitives::FixedBytes;
-use op_alloy_genesis::RollupConfig;
-
-use crate::batch::{SpanBatchError, SpanDecodingError};
 
 /// Span Batch Prefix
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -28,11 +26,6 @@ impl SpanBatchPrefix {
         prefix.decode_parent_check(r)?;
         prefix.decode_l1_origin_check(r)?;
         Ok(prefix)
-    }
-
-    /// Returns if the Fjord hardfork is active based on the relative timestamp of the span batch.
-    pub fn is_fjord_active(&self, cfg: &RollupConfig) -> bool {
-        cfg.is_fjord_active(self.rel_timestamp + cfg.genesis.l2_time)
     }
 
     /// Decodes the relative timestamp from a reader.
@@ -86,17 +79,6 @@ mod test {
     use super::*;
     use alloc::vec::Vec;
     use alloy_primitives::address;
-
-    #[test]
-    fn test_is_fjord_active() {
-        let mut cfg = RollupConfig::default();
-        let prefix = SpanBatchPrefix { rel_timestamp: 10, ..Default::default() };
-        assert!(!prefix.is_fjord_active(&cfg));
-        cfg.fjord_time = Some(11);
-        assert!(!prefix.is_fjord_active(&cfg));
-        cfg.fjord_time = Some(9);
-        assert!(prefix.is_fjord_active(&cfg));
-    }
 
     #[test]
     fn test_span_batch_prefix_encoding_roundtrip() {

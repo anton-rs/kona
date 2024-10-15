@@ -1,6 +1,6 @@
 //! This module contains derivation errors thrown within the pipeline.
 
-use crate::batch::SpanBatchError;
+use crate::batch::{SpanBatchError, MAX_SPAN_BATCH_ELEMENTS};
 use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
@@ -162,10 +162,8 @@ pub enum PipelineEncodingError {
 /// A frame decompression error.
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum BatchDecompressionError {
-    /// The buffer exceeds the [FJORD_MAX_SPAN_BATCH_BYTES] protocol parameter.
-    ///
-    /// [FJORD_MAX_SPAN_BATCH_BYTES]: crate::batch::FJORD_MAX_SPAN_BATCH_BYTES
-    #[error("The batch exceeds the maximum size of {max_size} bytes", max_size = crate::batch::FJORD_MAX_SPAN_BATCH_BYTES)]
+    /// The buffer exceeds the [MAX_SPAN_BATCH_ELEMENTS] protocol parameter.
+    #[error("The batch exceeds the maximum number of elements: {max_size}", max_size = MAX_SPAN_BATCH_ELEMENTS)]
     BatchTooLarge,
 }
 

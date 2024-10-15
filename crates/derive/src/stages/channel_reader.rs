@@ -12,7 +12,9 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::{
+    RollupConfig, SystemConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
+};
 use op_alloy_protocol::BlockInfo;
 use tracing::{debug, error, warn};
 
@@ -72,7 +74,16 @@ where
         if self.next_batch.is_none() {
             let channel =
                 self.prev.next_data().await?.ok_or(PipelineError::ChannelReaderEmpty.temp())?;
-            self.next_batch = Some(BatchReader::from(&channel[..]));
+
+            let origin = self.prev.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+            let max_rlp_bytes_per_channel = if self.cfg.is_fjord_active(origin.timestamp) {
+                MAX_RLP_BYTES_PER_CHANNEL_FJORD
+            } else {
+                MAX_RLP_BYTES_PER_CHANNEL_BEDROCK
+            };
+
+            self.next_batch =
+                Some(BatchReader::new(&channel[..], max_rlp_bytes_per_channel as usize));
         }
         Ok(())
     }
@@ -182,9 +193,24 @@ pub(crate) struct BatchReader {
     decompressed: Vec<u8>,
     /// The current cursor in the `decompressed` data.
     cursor: usize,
+    /// The maximum RLP bytes per channel.
+    max_rlp_bytes_per_channel: usize,
 }
 
 impl BatchReader {
+    /// Creates a new [BatchReader] from the given data and max decompressed RLP bytes per channel.
+    pub(crate) fn new<T>(data: T, max_rlp_bytes_per_channel: usize) -> Self
+    where
+        T: Into<Vec<u8>>,
+    {
+        Self {
+            data: Some(data.into()),
+            decompressed: Vec::new(),
+            cursor: 0,
+            max_rlp_bytes_per_channel,
+        }
+    }
+
     /// Pulls out the next batch from the reader.
     pub(crate) fn next_batch(&mut self, cfg: &RollupConfig) -> Option<Batch> {
         // If the data is not already decompressed, decompress it.
@@ -210,9 +236,15 @@ impl BatchReader {
                 (compression_type & 0x0F) == ZLIB_RESERVED_COMPRESSION_METHOD
             {
                 self.decompressed = decompress_to_vec_zlib(&data).ok()?;
+
+                // Check the size of the decompressed channel RLP.
+                if self.decompressed.len() > self.max_rlp_bytes_per_channel {
+                    return None;
+                }
             } else if compression_type == CHANNEL_VERSION_BROTLI {
                 brotli_used = true;
-                self.decompressed = decompress_brotli(&data[1..]).ok()?;
+                self.decompressed =
+                    decompress_brotli(&data[1..], self.max_rlp_bytes_per_channel).ok()?;
             } else {
                 error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
                 crate::inc!(BATCH_READER_ERRORS, &["unsupported_compression_type"]);
@@ -239,14 +271,7 @@ impl BatchReader {
 
         // Advance the cursor on the reader.
         self.cursor = self.decompressed.len() - decompressed_reader.len();
-
         Some(batch)
-    }
-}
-
-impl<T: Into<Vec<u8>>> From<T> for BatchReader {
-    fn from(data: T) -> Self {
-        Self { data: Some(data.into()), decompressed: Vec::new(), cursor: 0 }
     }
 }
 
@@ -268,7 +293,10 @@ mod test {
     async fn test_flush_channel_reader() {
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(new_compressed_batch_data()))]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        reader.next_batch = Some(BatchReader::from(new_compressed_batch_data()));
+        reader.next_batch = Some(BatchReader::new(
+            new_compressed_batch_data(),
+            MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize,
+        ));
         reader.flush_channel().await.unwrap();
         assert!(reader.next_batch.is_none());
     }
@@ -277,7 +305,10 @@ mod test {
     async fn test_reset_channel_reader() {
         let mock = TestChannelReaderProvider::new(vec![Ok(None)]);
         let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
-        reader.next_batch = Some(BatchReader::from(vec![0x00, 0x01, 0x02]));
+        reader.next_batch = Some(BatchReader::new(
+            vec![0x00, 0x01, 0x02],
+            MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize,
+        ));
         assert!(!reader.prev.reset);
         reader.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
         assert!(reader.next_batch.is_none());
@@ -327,8 +358,17 @@ mod test {
     fn test_batch_reader() {
         let raw = new_compressed_batch_data();
         let decompressed_len = decompress_to_vec_zlib(&raw).unwrap().len();
-        let mut reader = BatchReader::from(raw);
+        let mut reader = BatchReader::new(raw, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK as usize);
         reader.next_batch(&RollupConfig::default()).unwrap();
+        assert_eq!(reader.cursor, decompressed_len);
+    }
+
+    #[test]
+    fn test_batch_reader_fjord() {
+        let raw = new_compressed_batch_data();
+        let decompressed_len = decompress_to_vec_zlib(&raw).unwrap().len();
+        let mut reader = BatchReader::new(raw, MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize);
+        reader.next_batch(&RollupConfig { fjord_time: Some(0), ..Default::default() }).unwrap();
         assert_eq!(reader.cursor, decompressed_len);
     }
 

@@ -1,10 +1,8 @@
 //! Raw Span Batch
 
-use alloc::{vec, vec::Vec};
-use op_alloy_genesis::RollupConfig;
-
 use super::{SpanBatch, SpanBatchElement, SpanBatchError, SpanBatchPayload, SpanBatchPrefix};
 use crate::batch::{BatchType, SpanDecodingError};
+use alloc::{vec, vec::Vec};
 
 /// Raw Span Batch
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,28 +48,16 @@ impl RawSpanBatch {
         BatchType::Span
     }
 
-    /// Returns the timestamp for the span batch.
-    pub const fn timestamp(&self) -> u64 {
-        self.prefix.rel_timestamp
-    }
-
-    fn is_fjord_active(prefix: &SpanBatchPrefix, cfg: &RollupConfig) -> bool {
-        let timestamp = cfg.genesis.l2_time + prefix.rel_timestamp;
-        cfg.is_fjord_active(timestamp)
-    }
-
     /// Encodes the [RawSpanBatch] into a writer.
-    pub fn encode(&self, w: &mut Vec<u8>, cfg: &RollupConfig) -> Result<(), SpanBatchError> {
+    pub fn encode(&self, w: &mut Vec<u8>) -> Result<(), SpanBatchError> {
         self.prefix.encode_prefix(w);
-        let is_fjord_active = Self::is_fjord_active(&self.prefix, cfg);
-        self.payload.encode_payload(w, is_fjord_active)
+        self.payload.encode_payload(w)
     }
 
     /// Decodes the [RawSpanBatch] from a reader.]
-    pub fn decode(r: &mut &[u8], cfg: &RollupConfig) -> Result<Self, SpanBatchError> {
+    pub fn decode(r: &mut &[u8]) -> Result<Self, SpanBatchError> {
         let prefix = SpanBatchPrefix::decode_prefix(r)?;
-        let is_fjord_active = Self::is_fjord_active(&prefix, cfg);
-        let payload = SpanBatchPayload::decode_payload(r, is_fjord_active)?;
+        let payload = SpanBatchPayload::decode_payload(r)?;
         Ok(Self { prefix, payload })
     }
 
@@ -137,7 +123,7 @@ impl RawSpanBatch {
 
 #[cfg(test)]
 mod test {
-    use super::{RawSpanBatch, RollupConfig, SpanBatch, SpanBatchElement};
+    use super::{RawSpanBatch, SpanBatch, SpanBatchElement};
     use alloc::{vec, vec::Vec};
     use alloy_primitives::FixedBytes;
 
@@ -177,13 +163,11 @@ mod test {
     fn test_decode_encode_raw_span_batch() {
         // Load in the raw span batch from the `op-node` derivation pipeline implementation.
         let raw_span_batch_hex = include_bytes!("../../../testdata/raw_batch.hex");
-        let cfg = RollupConfig::default();
-        let mut raw_span_batch =
-            RawSpanBatch::decode(&mut raw_span_batch_hex.as_slice(), &cfg).unwrap();
+        let mut raw_span_batch = RawSpanBatch::decode(&mut raw_span_batch_hex.as_slice()).unwrap();
         raw_span_batch.payload.txs.recover_v(981).unwrap();
 
         let mut encoding_buf = Vec::new();
-        raw_span_batch.encode(&mut encoding_buf, &cfg).unwrap();
+        raw_span_batch.encode(&mut encoding_buf).unwrap();
         assert_eq!(encoding_buf, raw_span_batch_hex);
     }
 }
