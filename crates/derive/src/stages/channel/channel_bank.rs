@@ -43,7 +43,7 @@ where
     /// Channels in FIFO order.
     channel_queue: VecDeque<ChannelId>,
     /// The previous stage of the derivation pipeline.
-    prev: P,
+    pub(crate) prev: P,
 }
 
 impl<P> ChannelBank<P>
@@ -287,6 +287,18 @@ mod tests {
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    #[test]
+    fn test_channel_bank_into_prev() {
+        let frames = new_test_frames(1);
+        let mock = TestNextFrameProvider::new(frames.into_iter().map(Ok).collect());
+        let cfg = Arc::new(RollupConfig::default());
+        let channel_bank = ChannelBank::new(cfg, mock);
+
+        let prev = channel_bank.into_prev();
+        assert_eq!(prev.origin(), Some(BlockInfo::default()));
+        assert_eq!(prev.data.len(), 1)
+    }
 
     #[test]
     fn test_try_read_channel_at_index_missing_channel() {
