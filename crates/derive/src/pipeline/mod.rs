@@ -3,7 +3,7 @@
 /// Re-export trait arguments.
 pub use crate::traits::{
     AttributesBuilder, DataAvailabilityProvider, NextAttributes, OriginAdvancer, OriginProvider,
-    Pipeline, ResetProvider, ResettableStage, StepResult,
+    Pipeline, ResetProvider, Signal, SignalReceiver, StepResult,
 };
 
 /// Re-export kona provider traits.

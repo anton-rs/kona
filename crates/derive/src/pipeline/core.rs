@@ -2,11 +2,11 @@
 
 use super::{
     NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError, PipelineResult,
-    ResettableStage, StepResult,
+    StepResult,
 };
 use crate::{
     errors::PipelineErrorKind,
-    traits::{FlushableStage, Signal},
+    traits::{ActivationSignal, ResetSignal, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
@@ -21,13 +21,7 @@ use tracing::{error, trace, warn};
 #[derive(Debug)]
 pub struct DerivationPipeline<S, P>
 where
-    S: NextAttributes
-        + ResettableStage
-        + FlushableStage
-        + OriginProvider
-        + OriginAdvancer
-        + Debug
-        + Send,
+    S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     /// A handle to the next attributes.
@@ -44,13 +38,7 @@ where
 
 impl<S, P> DerivationPipeline<S, P>
 where
-    S: NextAttributes
-        + ResettableStage
-        + FlushableStage
-        + OriginProvider
-        + OriginAdvancer
-        + Debug
-        + Send,
+    S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     /// Creates a new instance of the [DerivationPipeline].
@@ -65,13 +53,7 @@ where
 
 impl<S, P> OriginProvider for DerivationPipeline<S, P>
 where
-    S: NextAttributes
-        + ResettableStage
-        + FlushableStage
-        + OriginProvider
-        + OriginAdvancer
-        + Debug
-        + Send,
+    S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
@@ -81,14 +63,7 @@ where
 
 impl<S, P> Iterator for DerivationPipeline<S, P>
 where
-    S: NextAttributes
-        + ResettableStage
-        + FlushableStage
-        + OriginProvider
-        + OriginAdvancer
-        + Debug
-        + Send
-        + Sync,
+    S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
     type Item = OpAttributesWithParent;
@@ -99,40 +74,28 @@ where
 }
 
 #[async_trait]
-impl<S, P> Pipeline for DerivationPipeline<S, P>
+impl<S, P> SignalReceiver for DerivationPipeline<S, P>
 where
-    S: NextAttributes
-        + ResettableStage
-        + FlushableStage
-        + OriginProvider
-        + OriginAdvancer
-        + Debug
-        + Send
-        + Sync,
+    S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
 {
-    /// Peeks at the next prepared [OpAttributesWithParent] from the pipeline.
-    fn peek(&self) -> Option<&OpAttributesWithParent> {
-        self.prepared.front()
-    }
-
-    /// Resets the pipeline by calling the [`ResettableStage::reset`] method.
+    /// Signals the pipeline by calling the [`SignalReceiver::signal`] method.
     ///
-    /// During a reset, each stage is recursively called from the top-level
+    /// During a [`Signal::Reset`], each stage is recursively called from the top-level
     /// [crate::stages::AttributesQueue] to the bottom [crate::stages::L1Traversal]
     /// with a head-recursion pattern. This effectively clears the internal state
     /// of each stage in the pipeline from bottom on up.
     ///
+    /// [`Signal::Activation`] does a similar thing to the reset, with different
+    /// holocene-specific reset rules.
+    ///
     /// ### Parameters
     ///
-    /// The `l2_block_info` is the new L2 cursor to step on. It is needed during
-    /// reset to fetch the system config at that block height.
-    ///
-    /// The `l1_block_info` is the new L1 origin set in the [crate::stages::L1Traversal]
-    /// stage.
+    /// The `signal` is contains the signal variant with any necessary parameters.
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         match signal {
-            Signal::Reset { l2_safe_head, l1_origin } => {
+            s @ Signal::Reset(ResetSignal { l2_safe_head, .. }) |
+            s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
                 let system_config = self
                     .l2_chain_provider
                     .system_config_by_number(
@@ -141,7 +104,8 @@ where
                     )
                     .await
                     .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
-                match self.attributes.reset(l1_origin, &system_config).await {
+                s.with_system_config(system_config);
+                match self.attributes.signal(s).await {
                     Ok(()) => trace!(target: "pipeline", "Stages reset"),
                     Err(err) => {
                         if let PipelineErrorKind::Temporary(PipelineError::Eof) = err {
@@ -154,10 +118,22 @@ where
                 }
             }
             Signal::FlushChannel => {
-                self.attributes.flush_channel().await?;
+                self.attributes.signal(signal).await?;
             }
         }
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<S, P> Pipeline for DerivationPipeline<S, P>
+where
+    S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
+    P: L2ChainProvider + Send + Sync + Debug,
+{
+    /// Peeks at the next prepared [OpAttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&OpAttributesWithParent> {
+        self.prepared.front()
     }
 
     /// Attempts to progress the pipeline.
@@ -201,13 +177,13 @@ mod tests {
     use crate::{
         pipeline::{DerivationPipeline, PipelineError, StepResult},
         test_utils::*,
-        traits::{Pipeline, Signal},
+        traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
     };
     use alloc::sync::Arc;
     use alloy_rpc_types_engine::PayloadAttributes;
     use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
-    use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+    use op_alloy_protocol::L2BlockInfo;
     use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
 
     fn default_test_payload_attributes() -> OpAttributesWithParent {
@@ -291,6 +267,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_derivation_pipeline_signal_activation() {
+        let rollup_config = Arc::new(RollupConfig::default());
+        let mut l2_chain_provider = TestL2ChainProvider::default();
+        l2_chain_provider.system_configs.insert(0, SystemConfig::default());
+        let attributes = TestNextAttributes::default();
+        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+
+        // Signal the pipeline to reset.
+        let result = pipeline.signal(ActivationSignal::default().signal()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_derivation_pipeline_flush_channel() {
+        let rollup_config = Arc::new(RollupConfig::default());
+        let l2_chain_provider = TestL2ChainProvider::default();
+        let attributes = TestNextAttributes::default();
+        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+
+        // Signal the pipeline to reset.
+        let result = pipeline.signal(Signal::FlushChannel).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_derivation_pipeline_signal_reset_missing_sys_config() {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
@@ -298,9 +299,7 @@ mod tests {
         let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
 
         // Signal the pipeline to reset.
-        let l2_safe_head = L2BlockInfo::default();
-        let l1_origin = BlockInfo::default();
-        let result = pipeline.signal(Signal::Reset { l2_safe_head, l1_origin }).await.unwrap_err();
+        let result = pipeline.signal(ResetSignal::default().signal()).await.unwrap_err();
         assert_eq!(result, PipelineError::Provider("System config not found".to_string()).temp());
     }
 
@@ -313,9 +312,7 @@ mod tests {
         let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
 
         // Signal the pipeline to reset.
-        let l2_safe_head = L2BlockInfo::default();
-        let l1_origin = BlockInfo::default();
-        let result = pipeline.signal(Signal::Reset { l2_safe_head, l1_origin }).await;
+        let result = pipeline.signal(ResetSignal::default().signal()).await;
         assert!(result.is_ok());
     }
 }

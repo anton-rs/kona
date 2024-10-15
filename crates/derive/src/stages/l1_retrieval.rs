@@ -4,13 +4,13 @@ use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
     stages::FrameQueueProvider,
     traits::{
-        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, ResettableStage,
+        ActivationSignal, AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider,
+        ResetSignal, Signal, SignalReceiver,
     },
 };
 use alloc::boxed::Box;
 use alloy_primitives::Address;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
 /// Provides L1 blocks for the [L1Retrieval] stage.
@@ -41,7 +41,7 @@ pub trait L1RetrievalProvider {
 pub struct L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + SignalReceiver,
 {
     /// The previous stage in the pipeline.
     pub prev: P,
@@ -54,7 +54,7 @@ where
 impl<DAP, P> L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + SignalReceiver,
 {
     /// Creates a new [L1Retrieval] stage with the previous [L1Traversal] stage and given
     /// [DataAvailabilityProvider].
@@ -70,7 +70,7 @@ where
 impl<DAP, P> OriginAdvancer for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -81,7 +81,7 @@ where
 impl<DAP, P> FrameQueueProvider for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send,
 {
     type Item = DAP::Item;
 
@@ -110,7 +110,7 @@ where
 impl<DAP, P> OriginProvider for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider,
-    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + SignalReceiver,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -118,15 +118,21 @@ where
 }
 
 #[async_trait]
-impl<DAP, P> ResettableStage for L1Retrieval<DAP, P>
+impl<DAP, P> SignalReceiver for L1Retrieval<DAP, P>
 where
     DAP: DataAvailabilityProvider + Send,
-    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + ResettableStage + Send,
+    P: L1RetrievalProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.prev.reset(base, cfg).await?;
-        self.data = Some(self.provider.open_data(&base).await?);
-        crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        self.prev.signal(signal).await?;
+        match signal {
+            Signal::Reset(ResetSignal { l1_origin, .. }) |
+            Signal::Activation(ActivationSignal { l1_origin, .. }) => {
+                self.data = Some(self.provider.open_data(&l1_origin).await?);
+                crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
+            }
+            _ => {}
+        }
         Ok(())
     }
 }
@@ -142,14 +148,52 @@ mod tests {
     use alloy_primitives::Bytes;
 
     #[tokio::test]
-    async fn test_l1_retrieval_reset() {
+    async fn test_l1_retrieval_flush_channel() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
         retrieval.data = None;
-        retrieval.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        retrieval.signal(Signal::FlushChannel).await.unwrap();
+        assert!(retrieval.data.is_none());
+        assert!(retrieval.prev.block.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_l1_retrieval_activation_signal() {
+        let traversal = new_populated_test_traversal();
+        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let mut retrieval = L1Retrieval::new(traversal, dap);
+        retrieval.prev.block = None;
+        assert!(retrieval.prev.block.is_none());
+        retrieval.data = None;
+        retrieval
+            .signal(
+                ActivationSignal { system_config: Some(Default::default()), ..Default::default() }
+                    .signal(),
+            )
+            .await
+            .unwrap();
+        assert!(retrieval.data.is_some());
+        assert_eq!(retrieval.prev.block, Some(BlockInfo::default()));
+    }
+
+    #[tokio::test]
+    async fn test_l1_retrieval_reset_signal() {
+        let traversal = new_populated_test_traversal();
+        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let mut retrieval = L1Retrieval::new(traversal, dap);
+        retrieval.prev.block = None;
+        assert!(retrieval.prev.block.is_none());
+        retrieval.data = None;
+        retrieval
+            .signal(
+                ResetSignal { system_config: Some(Default::default()), ..Default::default() }
+                    .signal(),
+            )
+            .await
+            .unwrap();
         assert!(retrieval.data.is_some());
         assert_eq!(retrieval.prev.block, Some(BlockInfo::default()));
     }

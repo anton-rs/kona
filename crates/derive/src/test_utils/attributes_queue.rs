@@ -4,12 +4,11 @@ use crate::{
     batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     stages::AttributesProvider,
-    traits::{AttributesBuilder, FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{AttributesBuilder, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
@@ -65,17 +64,13 @@ impl OriginAdvancer for TestAttributesProvider {
 }
 
 #[async_trait]
-impl FlushableStage for TestAttributesProvider {
-    async fn flush_channel(&mut self) -> PipelineResult<()> {
-        self.flushed = true;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl ResettableStage for TestAttributesProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
-        self.reset = true;
+impl SignalReceiver for TestAttributesProvider {
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        match signal {
+            Signal::FlushChannel => self.flushed = true,
+            Signal::Reset { .. } => self.reset = true,
+            _ => {}
+        }
         Ok(())
     }
 }
