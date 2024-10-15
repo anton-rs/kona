@@ -1,17 +1,9 @@
 //! This module contains the [ChannelProvider] stage.
 
 use super::{ChannelAssembler, ChannelBank, ChannelReaderProvider, NextFrameProvider};
-use crate::{
-    pipeline::{OriginAdvancer, PipelineResult, ResettableStage},
-    prelude::OriginProvider,
-    stages::multiplexed::multiplexed_stage,
-};
-use alloc::{boxed::Box, sync::Arc};
+use crate::{pipeline::PipelineResult, stages::multiplexed::multiplexed_stage};
 use alloy_primitives::Bytes;
-use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::BlockInfo;
 
 multiplexed_stage!(
     ChannelProvider<NextFrameProvider>,

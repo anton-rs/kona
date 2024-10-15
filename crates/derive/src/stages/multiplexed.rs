@@ -22,6 +22,10 @@ macro_rules! multiplexed_stage {
         }
         default_stage: $last_stage_name:ident
     ) => {
+        use $crate::pipeline::{OriginAdvancer, OriginProvider, ResettableStage};
+        use async_trait::async_trait;
+        use alloc::boxed::Box;
+
         #[doc = concat!("The active stage of the ", stringify!($provider_name), ".")]
         #[derive(Debug)]
         enum ActiveStage<P>
@@ -51,12 +55,21 @@ macro_rules! multiplexed_stage {
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
-            #[doc = "The configuration for the stage."]
+            /// The rollup configuration.
             cfg: alloc::sync::Arc<op_alloy_genesis::RollupConfig>,
-            #[doc = "The previous stage of the derivation pipeline."]
-            #[doc = "If this is [None], the provider has been instantiated, and one of the sub-stages owns it."]
+            /// The previous stage of the derivation pipeline.
+            ///
+            /// If this is set to [None], the multiplexer has been activated and the active stage
+            /// owns the previous stage.
+            ///
+            /// Must be [None] if `active_stage` is [Some].
             prev: Option<P>,
-            #[doc = "The active stage of the provider."]
+            /// The active stage of the provider.
+            ///
+            /// If this is set to [None], the multiplexer has not been activated and the previous
+            /// stage is owned by the multiplexer.
+            ///
+            /// Must be [None] if `prev` is [Some].
             active_stage: Option<ActiveStage<P>>,
         }
 
@@ -65,7 +78,7 @@ macro_rules! multiplexed_stage {
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
             /// Creates a new instance of the provider.
-            pub const fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
+            pub const fn new(cfg: alloc::sync::Arc<op_alloy_genesis::RollupConfig>, prev: P) -> Self {
                 Self {
                     cfg,
                     prev: Some(prev),
@@ -92,48 +105,45 @@ macro_rules! multiplexed_stage {
                         }
                     );
                     return self.active_stage.as_mut().expect("Active stage must be available");
-                }
+                } else {
+                    // Otherwise, check if the active stage should be changed.
+                    let origin = self.origin().expect("origin must be available");
+                    let active_stage = self.active_stage.take().expect("Active stage must be available");
 
-                // Otherwise, check if the active stage should be changed.
-                let active_stage = self.active_stage.take().expect("Active stage must be available");
-                let origin = match active_stage {
-                    $(ActiveStage::$stage_name(ref stage) => stage.origin(),)*
-                    ActiveStage::$last_stage_name(ref stage) => stage.origin(),
-                }.expect("origin must be available");
+                    // If a new stage has activated, transfer ownership of the previous stage to the new stage to
+                    // re-link the pipeline at runtime.
+                    $(if self.cfg.$stage_condition(origin.timestamp) {
+                        // If the correct stage is already active, return it.
+                        if matches!(active_stage, ActiveStage::$stage_name(_)) {
+                            self.active_stage = Some(active_stage);
+                            return self.active_stage.as_mut().expect("Active stage must be available");
+                        }
 
-                // If a new stage has activated, transfer ownership of the previous stage to the new stage to
-                // re-link the pipeline at runtime.
-                $(if self.cfg.$stage_condition(origin.timestamp) {
-                    // If the correct stage is already active, return it.
-                    if matches!(active_stage, ActiveStage::$stage_name(_)) {
-                        self.active_stage = Some(active_stage);
-                        return self.active_stage.as_mut().expect("Active stage must be available");
+                        // Otherwise, dissolve the active stage and create a new one, granting ownership of
+                        // the previous stage to the new stage.
+                        let prev = active_stage.into_prev();
+                        self.active_stage = Some(ActiveStage::$stage_name($stage_name::new(self.cfg.clone(), prev)));
+                    } else)* {
+                        // If the correct stage is already active, return it.
+                        if matches!(active_stage, ActiveStage::$last_stage_name(_)) {
+                            self.active_stage = Some(active_stage);
+                            return self.active_stage.as_mut().expect("Active stage must be available");
+                        }
+
+                        self.active_stage = Some(ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), active_stage.into_prev())));
                     }
-
-                    // Otherwise, dissolve the active stage and create a new one, granting ownership of
-                    // the previous stage to the new stage.
-                    let prev = active_stage.into_prev();
-                    self.active_stage = Some(ActiveStage::$stage_name($stage_name::new(self.cfg.clone(), prev)));
-                } else)* {
-                    // If the correct stage is already active, return it.
-                    if matches!(active_stage, ActiveStage::$last_stage_name(_)) {
-                        self.active_stage = Some(active_stage);
-                        return self.active_stage.as_mut().expect("Active stage must be available");
-                    }
-
-                    self.active_stage = Some(ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), active_stage.into_prev())));
                 }
 
                 self.active_stage.as_mut().expect("Active stage must be available")
             }
         }
 
-        #[async_trait::async_trait]
+        #[async_trait]
         impl<P> OriginAdvancer for $provider_name<P>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
         {
-            async fn advance_origin(&mut self) -> PipelineResult<()> {
+            async fn advance_origin(&mut self) -> $crate::pipeline::PipelineResult<()> {
                 match self.active_stage_mut() {
                     $(ActiveStage::$stage_name(stage) => stage.advance_origin().await,)*
                     ActiveStage::$last_stage_name(stage) => stage.advance_origin().await,
@@ -145,7 +155,7 @@ macro_rules! multiplexed_stage {
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
-            fn origin(&self) -> Option<BlockInfo> {
+            fn origin(&self) -> Option<op_alloy_protocol::BlockInfo> {
                 match self.active_stage_ref() {
                     Some(stage) => {
                         match stage {
@@ -158,16 +168,16 @@ macro_rules! multiplexed_stage {
             }
         }
 
-        #[async_trait::async_trait]
+        #[async_trait]
         impl<P> ResettableStage for $provider_name<P>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
         {
             async fn reset(
                 &mut self,
-                block_info: BlockInfo,
-                system_config: &SystemConfig,
-            ) -> PipelineResult<()> {
+                block_info: op_alloy_protocol::BlockInfo,
+                system_config: &op_alloy_genesis::SystemConfig,
+            ) -> $crate::pipeline::PipelineResult<()> {
                 match self.active_stage_mut() {
                     $(ActiveStage::$stage_name(stage) => stage.reset(block_info, system_config).await,)*
                     ActiveStage::$last_stage_name(stage) => stage.reset(block_info, system_config).await,
