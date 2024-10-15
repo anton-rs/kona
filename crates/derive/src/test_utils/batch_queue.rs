@@ -4,11 +4,10 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::BatchQueueProvider,
-    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 /// A mock provider for the [BatchQueue] stage.
@@ -56,17 +55,13 @@ impl OriginAdvancer for TestBatchQueueProvider {
 }
 
 #[async_trait]
-impl FlushableStage for TestBatchQueueProvider {
-    async fn flush_channel(&mut self) -> PipelineResult<()> {
-        self.flushed = true;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl ResettableStage for TestBatchQueueProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
-        self.reset = true;
+impl SignalReceiver for TestBatchQueueProvider {
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        match signal {
+            Signal::Reset { .. } => self.reset = true,
+            Signal::FlushChannel => self.flushed = true,
+            _ => {}
+        }
         Ok(())
     }
 }

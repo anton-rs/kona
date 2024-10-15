@@ -4,7 +4,7 @@ use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchStreamProvider},
-    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 use op_alloy_genesis::{
-    RollupConfig, SystemConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
+    RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
 };
 use op_alloy_protocol::BlockInfo;
 use tracing::{debug, error, warn};
@@ -49,7 +49,7 @@ pub trait ChannelReaderProvider {
 #[derive(Debug)]
 pub struct ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// The previous stage of the derivation pipeline.
     prev: P,
@@ -61,7 +61,7 @@ where
 
 impl<P> ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Create a new [ChannelReader] stage.
     pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
@@ -98,7 +98,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -108,7 +108,7 @@ where
 #[async_trait]
 impl<P> BatchStreamProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     /// This method is called by the BatchStream if an invalid span batch is found.
     /// In the case of an invalid span batch, the associated channel must be flushed.
@@ -148,7 +148,7 @@ where
 
 impl<P> OriginProvider for ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -156,27 +156,23 @@ where
 }
 
 #[async_trait]
-impl<P> ResettableStage for ChannelReader<P>
+impl<P> SignalReceiver for ChannelReader<P>
 where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
+    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug + Send,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.prev.reset(base, cfg).await?;
-        self.next_channel();
-        crate::inc!(STAGE_RESETS, &["channel-reader"]);
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl<P> FlushableStage for ChannelReader<P>
-where
-    P: ChannelReaderProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
-{
-    async fn flush_channel(&mut self) -> PipelineResult<()> {
-        // Drop the current in-progress channel.
-        warn!(target: "channel-reader", "Flushed channel");
-        self.next_batch = None;
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        match signal {
+            Signal::FlushChannel => {
+                // Drop the current in-progress channel.
+                warn!(target: "channel-reader", "Flushed channel");
+                self.next_batch = None;
+            }
+            s => {
+                self.prev.signal(s).await?;
+                self.next_channel();
+                crate::inc!(STAGE_RESETS, &["channel-reader"]);
+            }
+        }
         Ok(())
     }
 }
@@ -278,7 +274,9 @@ impl BatchReader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{errors::PipelineErrorKind, test_utils::TestChannelReaderProvider};
+    use crate::{
+        errors::PipelineErrorKind, test_utils::TestChannelReaderProvider, traits::ResetSignal,
+    };
     use alloc::vec;
 
     fn new_compressed_batch_data() -> Bytes {
@@ -297,7 +295,7 @@ mod test {
             new_compressed_batch_data(),
             MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize,
         ));
-        reader.flush_channel().await.unwrap();
+        reader.signal(Signal::FlushChannel).await.unwrap();
         assert!(reader.next_batch.is_none());
     }
 
@@ -310,7 +308,7 @@ mod test {
             MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize,
         ));
         assert!(!reader.prev.reset);
-        reader.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        reader.signal(ResetSignal::default().signal()).await.unwrap();
         assert!(reader.next_batch.is_none());
         assert!(reader.prev.reset);
     }

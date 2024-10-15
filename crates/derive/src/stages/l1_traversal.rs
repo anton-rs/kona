@@ -3,7 +3,9 @@
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
     stages::L1RetrievalProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{
+        ActivationSignal, OriginAdvancer, OriginProvider, ResetSignal, Signal, SignalReceiver,
+    },
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::Address;
@@ -129,12 +131,19 @@ impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
 }
 
 #[async_trait]
-impl<F: ChainProvider + Send> ResettableStage for L1Traversal<F> {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.block = Some(base);
-        self.done = false;
-        self.system_config = *cfg;
-        crate::inc!(STAGE_RESETS, &["l1-traversal"]);
+impl<F: ChainProvider + Send> SignalReceiver for L1Traversal<F> {
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        match signal {
+            Signal::Reset(ResetSignal { l1_origin, system_config, .. }) |
+            Signal::Activation(ActivationSignal { l1_origin, system_config, .. }) => {
+                self.block = Some(l1_origin);
+                self.done = false;
+                self.system_config = system_config.expect("System config must be provided.");
+                crate::inc!(STAGE_RESETS, &["l1-traversal"]);
+            }
+            _ => {}
+        }
+
         Ok(())
     }
 }
@@ -211,16 +220,47 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_l1_traversal_reset() {
+    async fn test_l1_traversal_flush_channel() {
         let blocks = vec![BlockInfo::default(), BlockInfo::default()];
         let receipts = new_receipts();
         let mut traversal = new_test_traversal(blocks, receipts);
         assert!(traversal.advance_origin().await.is_ok());
-        let base = BlockInfo::default();
+        traversal.done = true;
+        assert!(traversal.signal(Signal::FlushChannel).await.is_ok());
+        assert_eq!(traversal.origin(), Some(BlockInfo::default()));
+        assert!(traversal.done);
+    }
+
+    #[tokio::test]
+    async fn test_l1_traversal_activation_signal() {
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
+        assert!(traversal.advance_origin().await.is_ok());
         let cfg = SystemConfig::default();
         traversal.done = true;
-        assert!(traversal.reset(base, &cfg).await.is_ok());
-        assert_eq!(traversal.origin(), Some(base));
+        assert!(traversal
+            .signal(ActivationSignal { system_config: Some(cfg), ..Default::default() }.signal())
+            .await
+            .is_ok());
+        assert_eq!(traversal.origin(), Some(BlockInfo::default()));
+        assert_eq!(traversal.system_config, cfg);
+        assert!(!traversal.done);
+    }
+
+    #[tokio::test]
+    async fn test_l1_traversal_reset_signal() {
+        let blocks = vec![BlockInfo::default(), BlockInfo::default()];
+        let receipts = new_receipts();
+        let mut traversal = new_test_traversal(blocks, receipts);
+        assert!(traversal.advance_origin().await.is_ok());
+        let cfg = SystemConfig::default();
+        traversal.done = true;
+        assert!(traversal
+            .signal(ResetSignal { system_config: Some(cfg), ..Default::default() }.signal())
+            .await
+            .is_ok());
+        assert_eq!(traversal.origin(), Some(BlockInfo::default()));
         assert_eq!(traversal.system_config, cfg);
         assert!(!traversal.done);
     }

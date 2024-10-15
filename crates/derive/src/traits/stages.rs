@@ -2,23 +2,15 @@
 
 use alloc::boxed::Box;
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::BlockInfo;
 
-use crate::errors::PipelineResult;
+use crate::{errors::PipelineResult, traits::Signal};
 
-/// Describes the functionality fo a resettable stage within the derivation pipeline.
+/// Providers a way for the pipeline to accept a signal from the driver.
 #[async_trait]
-pub trait ResettableStage {
-    /// Resets the derivation stage to its initial state.
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()>;
-}
-
-/// Describes the functionality of a stage that can receive a channel flush signal.
-#[async_trait]
-pub trait FlushableStage {
-    /// Flushes the current channel.
-    async fn flush_channel(&mut self) -> PipelineResult<()>;
+pub trait SignalReceiver {
+    /// Receives a signal from the driver.
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()>;
 }
 
 /// Provides a method for accessing the pipeline's current L1 origin.

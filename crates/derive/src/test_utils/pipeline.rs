@@ -2,7 +2,7 @@
 //! as well as its stages and providers.
 
 use alloc::{boxed::Box, sync::Arc};
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
@@ -18,8 +18,7 @@ pub use crate::{
     },
     test_utils::TestAttributesBuilder,
     traits::{
-        test_utils::TestDAP, FlushableStage, NextAttributes, OriginAdvancer, OriginProvider,
-        ResettableStage,
+        test_utils::TestDAP, NextAttributes, OriginAdvancer, OriginProvider, Signal, SignalReceiver,
     },
 };
 pub use kona_providers::test_utils::{TestChainProvider, TestL2ChainProvider};
@@ -32,17 +31,9 @@ pub struct TestNextAttributes {
 }
 
 #[async_trait::async_trait]
-impl FlushableStage for TestNextAttributes {
-    /// Flushes the stage.
-    async fn flush_channel(&mut self) -> PipelineResult<()> {
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl ResettableStage for TestNextAttributes {
+impl SignalReceiver for TestNextAttributes {
     /// Resets the derivation stage to its initial state.
-    async fn reset(&mut self, _: BlockInfo, _: &SystemConfig) -> PipelineResult<()> {
+    async fn signal(&mut self, _: Signal) -> PipelineResult<()> {
         Ok(())
     }
 }

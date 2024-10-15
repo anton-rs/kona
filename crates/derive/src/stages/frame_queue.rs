@@ -3,13 +3,13 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::NextFrameProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Frame};
 use tracing::{debug, error, trace};
 
@@ -32,7 +32,7 @@ pub trait FrameQueueProvider {
 #[derive(Debug)]
 pub struct FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// The previous stage in the pipeline.
     pub prev: P,
@@ -44,7 +44,7 @@ where
 
 impl<P> FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     ///
@@ -148,7 +148,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -158,7 +158,7 @@ where
 #[async_trait]
 impl<P> NextFrameProvider for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn next_frame(&mut self) -> PipelineResult<Frame> {
         self.load_frames().await?;
@@ -175,7 +175,7 @@ where
 
 impl<P> OriginProvider for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -183,16 +183,12 @@ where
 }
 
 #[async_trait]
-impl<P> ResettableStage for FrameQueue<P>
+impl<P> SignalReceiver for FrameQueue<P>
 where
-    P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: FrameQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
-    async fn reset(
-        &mut self,
-        block_info: BlockInfo,
-        system_config: &SystemConfig,
-    ) -> PipelineResult<()> {
-        self.prev.reset(block_info, system_config).await?;
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        self.prev.signal(signal).await?;
         self.queue = VecDeque::default();
         crate::inc!(STAGE_RESETS, &["frame-queue"]);
         Ok(())
@@ -202,7 +198,7 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::test_utils::TestFrameQueueProvider;
+    use crate::{test_utils::TestFrameQueueProvider, traits::ResetSignal};
     use alloc::{vec, vec::Vec};
     use op_alloy_protocol::DERIVATION_VERSION_0;
 
@@ -236,7 +232,7 @@ pub(crate) mod tests {
         let mock = TestFrameQueueProvider::new(vec![]);
         let mut frame_queue = FrameQueue::new(mock, Default::default());
         assert!(!frame_queue.prev.reset);
-        frame_queue.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        frame_queue.signal(ResetSignal::default().signal()).await.unwrap();
         assert_eq!(frame_queue.queue.len(), 0);
         assert!(frame_queue.prev.reset);
     }

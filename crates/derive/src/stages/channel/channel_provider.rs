@@ -16,7 +16,7 @@ multiplexed_stage!(
 #[async_trait]
 impl<P> ChannelReaderProvider for ChannelProvider<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
         match self.active_stage_mut()? {
@@ -30,13 +30,13 @@ where
 mod test {
     use super::{ActiveStage, ChannelProvider};
     use crate::{
-        pipeline::ResettableStage,
         prelude::{OriginProvider, PipelineError},
         stages::{frame_queue::tests::new_test_frames, ChannelReaderProvider},
         test_utils::TestNextFrameProvider,
+        traits::{ResetSignal, SignalReceiver},
     };
     use alloc::sync::Arc;
-    use op_alloy_genesis::{RollupConfig, SystemConfig};
+    use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::BlockInfo;
 
     #[test]
@@ -170,7 +170,7 @@ mod test {
         assert!(channel_bank.channel_queue.len() == 1);
 
         // Reset the channel provider.
-        channel_provider.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        channel_provider.signal(ResetSignal::default().signal()).await.unwrap();
 
         // Ensure the channel queue is empty after reset.
         let Ok(ActiveStage::ChannelBank(channel_bank)) = channel_provider.active_stage_mut() else {
@@ -200,7 +200,7 @@ mod test {
         assert!(channel_assembler.channel.is_some());
 
         // Reset the channel provider.
-        channel_provider.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        channel_provider.signal(ResetSignal::default().signal()).await.unwrap();
 
         // Ensure the channel assembler is empty after reset.
         let Ok(ActiveStage::ChannelAssembler(channel_assembler)) =

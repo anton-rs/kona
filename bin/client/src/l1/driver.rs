@@ -12,14 +12,14 @@ use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
-    errors::PipelineErrorKind,
+    errors::{PipelineErrorKind, ResetError},
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
-    traits::{BlobProvider, OriginProvider, Signal},
+    traits::{ActivationSignal, BlobProvider, OriginProvider, ResetSignal, Signal, SignalReceiver},
 };
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
 use kona_mpt::{TrieHinter, TrieProvider};
@@ -256,18 +256,38 @@ where
                     // stages can make progress.
                     match e {
                         PipelineErrorKind::Temporary(_) => { /* continue */ }
-                        PipelineErrorKind::Reset(_) => {
-                            // Reset the pipeline to the initial L2 safe head and L1 origin,
-                            // and try again.
-                            self.pipeline
-                                .signal(Signal::Reset {
-                                    l2_safe_head: self.l2_safe_head,
-                                    l1_origin: self
-                                        .pipeline
-                                        .origin()
-                                        .ok_or_else(|| anyhow!("Missing L1 origin"))?,
-                                })
-                                .await?;
+                        PipelineErrorKind::Reset(e) => {
+                            if matches!(e, ResetError::HoloceneActivation) {
+                                self.pipeline
+                                    .signal(
+                                        ActivationSignal {
+                                            l2_safe_head: self.l2_safe_head,
+                                            l1_origin: self
+                                                .pipeline
+                                                .origin()
+                                                .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                            system_config: None,
+                                        }
+                                        .signal(),
+                                    )
+                                    .await?;
+                            } else {
+                                // Reset the pipeline to the initial L2 safe head and L1 origin,
+                                // and try again.
+                                self.pipeline
+                                    .signal(
+                                        ResetSignal {
+                                            l2_safe_head: self.l2_safe_head,
+                                            l1_origin: self
+                                                .pipeline
+                                                .origin()
+                                                .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                            system_config: None,
+                                        }
+                                        .signal(),
+                                    )
+                                    .await?;
+                            }
                         }
                         PipelineErrorKind::Critical(_) => return Err(e.into()),
                     }

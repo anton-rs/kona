@@ -4,13 +4,13 @@ use super::NextFrameProvider;
 use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
     stages::ChannelReaderProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, map::HashMap, Bytes};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Channel, ChannelId, Frame};
 use tracing::{trace, warn};
 
@@ -34,7 +34,7 @@ pub(crate) const FJORD_MAX_CHANNEL_BANK_SIZE: usize = 1_000_000_000;
 #[derive(Debug)]
 pub struct ChannelBank<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// The rollup configuration.
     pub(crate) cfg: Arc<RollupConfig>,
@@ -48,7 +48,7 @@ where
 
 impl<P> ChannelBank<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
@@ -210,7 +210,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for ChannelBank<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -220,7 +220,7 @@ where
 #[async_trait]
 impl<P> ChannelReaderProvider for ChannelBank<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
         crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
@@ -251,7 +251,7 @@ where
 
 impl<P> OriginProvider for ChannelBank<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -259,16 +259,12 @@ where
 }
 
 #[async_trait]
-impl<P> ResettableStage for ChannelBank<P>
+impl<P> SignalReceiver for ChannelBank<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
-    async fn reset(
-        &mut self,
-        block_info: BlockInfo,
-        system_config: &SystemConfig,
-    ) -> PipelineResult<()> {
-        self.prev.reset(block_info, system_config).await?;
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        self.prev.signal(signal).await?;
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
         crate::inc!(STAGE_RESETS, &["channel-bank"]);
@@ -282,6 +278,7 @@ mod tests {
     use crate::{
         stages::frame_queue::tests::new_test_frames,
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
+        traits::ResetSignal,
     };
     use alloc::vec;
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
@@ -457,10 +454,8 @@ mod tests {
         let mut channel_bank = ChannelBank::new(cfg, mock);
         channel_bank.channels.insert([0xFF; 16], Channel::default());
         channel_bank.channel_queue.push_back([0xFF; 16]);
-        let block_info = BlockInfo::default();
-        let system_config = SystemConfig::default();
         assert!(!channel_bank.prev.reset);
-        channel_bank.reset(block_info, &system_config).await.unwrap();
+        channel_bank.signal(ResetSignal::default().signal()).await.unwrap();
         assert_eq!(channel_bank.channels.len(), 0);
         assert_eq!(channel_bank.channel_queue.len(), 0);
         assert!(channel_bank.prev.reset);

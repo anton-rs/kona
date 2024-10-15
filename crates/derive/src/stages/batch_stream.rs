@@ -5,12 +5,12 @@ use crate::{
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
     stages::BatchQueueProvider,
-    traits::{FlushableStage, OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, trace};
 
@@ -36,7 +36,7 @@ pub trait BatchStreamProvider {
 #[derive(Debug)]
 pub struct BatchStream<P, BF>
 where
-    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// The previous stage in the derivation pipeline.
@@ -54,7 +54,7 @@ where
 
 impl<P, BF> BatchStream<P, BF>
 where
-    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// Create a new [BatchStream] stage.
@@ -102,7 +102,7 @@ where
 #[async_trait]
 impl<P, BF> BatchQueueProvider for BatchStream<P, BF>
 where
-    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     fn flush(&mut self) {
@@ -181,7 +181,7 @@ where
 #[async_trait]
 impl<P, BF> OriginAdvancer for BatchStream<P, BF>
 where
-    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
@@ -191,7 +191,7 @@ where
 
 impl<P, BF> OriginProvider for BatchStream<P, BF>
 where
-    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
     BF: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
@@ -200,36 +200,17 @@ where
 }
 
 #[async_trait]
-impl<P, BF> ResettableStage for BatchStream<P, BF>
+impl<P, BF> SignalReceiver for BatchStream<P, BF>
 where
-    P: BatchStreamProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug + Send,
+    P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug + Send,
     BF: L2ChainProvider + Send + Debug,
 {
-    async fn reset(&mut self, base: BlockInfo, cfg: &SystemConfig) -> PipelineResult<()> {
-        self.prev.reset(base, cfg).await?;
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        self.prev.signal(signal).await?;
         self.buffer.clear();
         self.span.take();
         crate::inc!(STAGE_RESETS, &["batch-span"]);
         Ok(())
-    }
-}
-
-#[async_trait]
-impl<P, BF> FlushableStage for BatchStream<P, BF>
-where
-    P: BatchStreamProvider
-        + OriginAdvancer
-        + OriginProvider
-        + ResettableStage
-        + FlushableStage
-        + Debug
-        + Send,
-    BF: L2ChainProvider + Debug + Send,
-{
-    async fn flush_channel(&mut self) -> PipelineResult<()> {
-        self.span.take();
-        self.buffer.clear();
-        self.prev.flush_channel().await
     }
 }
 
@@ -239,6 +220,7 @@ mod test {
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
         test_utils::{CollectingLayer, TestBatchStreamProvider, TraceStorage},
+        traits::ResetSignal,
     };
     use kona_providers::test_utils::TestL2ChainProvider;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -265,7 +247,7 @@ mod test {
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
         assert!(!stream.prev.reset);
-        stream.reset(BlockInfo::default(), &SystemConfig::default()).await.unwrap();
+        stream.signal(ResetSignal::default().signal()).await.unwrap();
         assert!(stream.prev.reset);
         assert!(stream.buffer.is_empty());
         assert!(stream.span.is_none());
@@ -279,7 +261,7 @@ mod test {
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
         assert!(!stream.prev.flushed);
-        stream.flush_channel().await.unwrap();
+        stream.signal(Signal::FlushChannel).await.unwrap();
         assert!(stream.prev.flushed);
         assert!(stream.buffer.is_empty());
         assert!(stream.span.is_none());

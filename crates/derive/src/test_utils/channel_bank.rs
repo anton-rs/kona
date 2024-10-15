@@ -5,11 +5,10 @@
 use crate::{
     errors::{PipelineError, PipelineResult},
     stages::NextFrameProvider,
-    traits::{OriginAdvancer, OriginProvider, ResettableStage},
+    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_genesis::SystemConfig;
 use op_alloy_protocol::{BlockInfo, Frame};
 
 /// A mock [NextFrameProvider] for testing the [ChannelBank] stage.
@@ -57,8 +56,8 @@ impl NextFrameProvider for TestNextFrameProvider {
 }
 
 #[async_trait]
-impl ResettableStage for TestNextFrameProvider {
-    async fn reset(&mut self, _base: BlockInfo, _cfg: &SystemConfig) -> PipelineResult<()> {
+impl SignalReceiver for TestNextFrameProvider {
+    async fn signal(&mut self, _: Signal) -> PipelineResult<()> {
         self.reset = true;
         Ok(())
     }

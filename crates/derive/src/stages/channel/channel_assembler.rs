@@ -2,14 +2,14 @@
 
 use super::{ChannelReaderProvider, NextFrameProvider};
 use crate::{
-    pipeline::{OriginAdvancer, PipelineResult, ResettableStage},
+    pipeline::{OriginAdvancer, PipelineResult, Signal, SignalReceiver},
     prelude::{OriginProvider, PipelineError},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Channel};
 
 /// The [ChannelAssembler] stage is responsible for assembling the [Frame]s from the [FrameQueue]
@@ -21,7 +21,7 @@ use op_alloy_protocol::{BlockInfo, Channel};
 #[derive(Debug)]
 pub struct ChannelAssembler<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// The rollup configuration.
     pub(crate) cfg: Arc<RollupConfig>,
@@ -33,7 +33,7 @@ where
 
 impl<P> ChannelAssembler<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Creates a new [ChannelAssembler] stage with the given configuration and previous stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
@@ -64,7 +64,7 @@ where
 #[async_trait]
 impl<P> ChannelReaderProvider for ChannelAssembler<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
         let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
@@ -113,7 +113,7 @@ where
 #[async_trait]
 impl<P> OriginAdvancer for ChannelAssembler<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.prev.advance_origin().await
@@ -122,7 +122,7 @@ where
 
 impl<P> OriginProvider for ChannelAssembler<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.prev.origin()
@@ -130,16 +130,12 @@ where
 }
 
 #[async_trait]
-impl<P> ResettableStage for ChannelAssembler<P>
+impl<P> SignalReceiver for ChannelAssembler<P>
 where
-    P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
+    P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
-    async fn reset(
-        &mut self,
-        block_info: BlockInfo,
-        system_config: &SystemConfig,
-    ) -> PipelineResult<()> {
-        self.prev.reset(block_info, system_config).await?;
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        self.prev.signal(signal).await?;
         self.channel = None;
         crate::inc!(STAGE_RESETS, &["channel-assembly"]);
         Ok(())
