@@ -14,7 +14,6 @@
 /// [OriginAdvancer]: crate::pipeline::OriginAdvancer
 /// [OriginProvider]: crate::pipeline::OriginProvider
 /// [ResettableStage]: crate::pipeline::ResettableStage
-#[macro_export]
 macro_rules! multiplexed_stage {
     (
         $provider_name:ident<$prev_type:ident>,
@@ -177,3 +176,5 @@ macro_rules! multiplexed_stage {
         }
     }
 }
+
+pub(crate) use multiplexed_stage;

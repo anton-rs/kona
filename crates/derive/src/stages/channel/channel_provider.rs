@@ -2,9 +2,9 @@
 
 use super::{ChannelAssembler, ChannelBank, ChannelReaderProvider, NextFrameProvider};
 use crate::{
-    multiplexed_stage,
     pipeline::{OriginAdvancer, PipelineResult, ResettableStage},
     prelude::OriginProvider,
+    stages::multiplexed::multiplexed_stage,
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Bytes;

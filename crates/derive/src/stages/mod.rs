@@ -39,7 +39,8 @@ pub use batch_queue::{BatchQueue, BatchQueueProvider};
 mod attributes_queue;
 pub use attributes_queue::{AttributesProvider, AttributesQueue};
 
-mod multiplexed;
+#[macro_use]
+pub(crate) mod multiplexed;
 
 mod utils;
 pub use utils::decompress_brotli;
