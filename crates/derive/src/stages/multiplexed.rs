@@ -15,9 +15,6 @@
 /// - The previous stage must implement [OriginAdvancer], [OriginProvider], [ResettableStage], and
 ///   [Debug].
 /// - The stages must implement an `into_prev` method that returns the owned previous stage.
-/// - The stages must implement a `new` method that creates a new instance of the stage, with the
-///   signature `fn new(cfg: Arc<RollupConfig>, prev: P) -> Self`. TODO: Use additional fields in
-///   the `new` method of sub-stages.
 ///
 /// ## Example Usage
 /// ```rust,ignore
@@ -30,7 +27,8 @@
 /// );
 /// ```
 ///
-/// To add additional fields to the multiplexer stage, that must be passed to the `new` function:
+/// To add additional fields to the multiplexer stage, that must be passed to the `new` function of
+/// the multiplexer and sub-stages:
 /// ```rust,ignore
 /// multiplexed_stage!(
 ///     MyStage<MyPrevStageTrait>,
@@ -39,7 +37,7 @@
 ///         block_wait: u64,
 ///     }
 ///     stages: {
-///        EcotoneStage => is_ecotone_active,
+///        EcotoneStage(block_wait) => is_ecotone_active,
 ///     }
 ///     default_stage: BedrockStage
 /// );
@@ -65,9 +63,9 @@ macro_rules! multiplexed_stage {
             }
         )?
         stages: {
-            $($stage_name:ident => $stage_condition:ident,)*
+            $($stage_name:ident$(($($input_name:ident$(,)?)+))? => $stage_condition:ident,)*
         }
-        default_stage: $last_stage_name:ident
+        default_stage: $last_stage_name:ident$(($($last_input_name:ident$(,)?)+))?
     ) => {
         use $crate::pipeline::{OriginAdvancer, OriginProvider, ResettableStage};
         use async_trait::async_trait;
@@ -153,9 +151,9 @@ macro_rules! multiplexed_stage {
 
                     self.active_stage = Some(
                         $(if self.cfg.$stage_condition(origin.timestamp) {
-                            ActiveStage::$stage_name($stage_name::new(self.cfg.clone(), prev))
+                            ActiveStage::$stage_name($stage_name::new(self.cfg.clone(), prev$($(, self.$input_name.clone())*)?))
                         } else)* {
-                            ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), prev))
+                            ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), prev$($(, self.$last_input_name.clone())*)?))
                         }
                     );
                     return self.active_stage.as_mut().expect("Active stage must be available");
@@ -176,7 +174,7 @@ macro_rules! multiplexed_stage {
                         // Otherwise, dissolve the active stage and create a new one, granting ownership of
                         // the previous stage to the new stage.
                         let prev = active_stage.into_prev();
-                        self.active_stage = Some(ActiveStage::$stage_name($stage_name::new(self.cfg.clone(), prev)));
+                        self.active_stage = Some(ActiveStage::$stage_name($stage_name::new(self.cfg.clone(), prev$($(, self.$input_name.clone())*)?)));
                     } else)* {
                         // If the correct stage is already active, return it.
                         if matches!(active_stage, ActiveStage::$last_stage_name(_)) {
@@ -184,7 +182,7 @@ macro_rules! multiplexed_stage {
                             return self.active_stage.as_mut().expect("Active stage must be available");
                         }
 
-                        self.active_stage = Some(ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), active_stage.into_prev())));
+                        self.active_stage = Some(ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), active_stage.into_prev()$($(, self.$last_input_name.clone())*)?)));
                     }
                 }
 
