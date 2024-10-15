@@ -65,7 +65,7 @@ macro_rules! multiplexed_stage {
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
             /// Creates a new instance of the provider.
-            pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
+            pub const fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
                 Self {
                     cfg,
                     prev: Some(prev),
@@ -74,7 +74,7 @@ macro_rules! multiplexed_stage {
             }
 
             #[doc = concat!("Returns a mutable ref to the active stage of the ", stringify!($provider_name), ".")]
-            fn active_stage_ref(&self) -> Option<&ActiveStage<P>> {
+            const fn active_stage_ref(&self) -> Option<&ActiveStage<P>> {
                 self.active_stage.as_ref()
             }
 
