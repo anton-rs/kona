@@ -37,11 +37,11 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// The rollup configuration.
-    cfg: Arc<RollupConfig>,
+    pub(crate) cfg: Arc<RollupConfig>,
     /// Map of channels by ID.
-    channels: HashMap<ChannelId, Channel>,
+    pub(crate) channels: HashMap<ChannelId, Channel>,
     /// Channels in FIFO order.
-    channel_queue: VecDeque<ChannelId>,
+    pub(crate) channel_queue: VecDeque<ChannelId>,
     /// The previous stage of the derivation pipeline.
     pub(crate) prev: P,
 }

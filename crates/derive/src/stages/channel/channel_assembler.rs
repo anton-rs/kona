@@ -24,11 +24,11 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Debug,
 {
     /// The rollup configuration.
-    cfg: Arc<RollupConfig>,
+    pub(crate) cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
-    prev: P,
+    pub(crate) prev: P,
     /// The current [Channel] being assembled.
-    channel: Option<Channel>,
+    pub(crate) channel: Option<Channel>,
 }
 
 impl<P> ChannelAssembler<P>
@@ -89,9 +89,10 @@ where
         }
 
         if let Some(channel) = self.channel.as_mut() {
-            // Add the frame to the channel. If this fails, return None and discard the frame.
+            // Add the frame to the channel. If this fails, return NotEnoughData and discard the
+            // frame.
             if channel.add_frame(next_frame, origin).is_err() {
-                return Ok(None);
+                return Err(PipelineError::NotEnoughData.temp());
             }
 
             // If the channel is ready, forward the channel to the next stage.
@@ -105,7 +106,7 @@ where
             }
         }
 
-        Ok(None)
+        Err(PipelineError::NotEnoughData.temp())
     }
 }
 
@@ -149,6 +150,7 @@ where
 mod test {
     use super::ChannelAssembler;
     use crate::{
+        prelude::PipelineError,
         stages::{frame_queue::tests::new_test_frames, ChannelReaderProvider},
         test_utils::TestNextFrameProvider,
     };
@@ -169,7 +171,7 @@ mod test {
         // Read in the first frame. Since the frame isn't the last, the assembler
         // should return None.
         assert!(assembler.channel.is_none());
-        assert!(assembler.next_data().await.unwrap().is_none());
+        assert_eq!(assembler.next_data().await.unwrap_err(), PipelineError::NotEnoughData.temp());
         assert!(assembler.channel.is_some());
 
         // Push the origin forward past channel timeout.
@@ -178,7 +180,7 @@ mod test {
 
         // Assert that the assembler has timed out the channel.
         assert!(assembler.is_timed_out().unwrap());
-        assert!(assembler.next_data().await.unwrap().is_none());
+        assert_eq!(assembler.next_data().await.unwrap_err(), PipelineError::NotEnoughData.temp());
         assert!(assembler.channel.is_none());
     }
 
@@ -192,7 +194,7 @@ mod test {
         // Send in the second frame first. This should result in no channel being created,
         // and the frame being discarded.
         assert!(assembler.channel.is_none());
-        assert!(assembler.next_data().await.unwrap().is_none());
+        assert_eq!(assembler.next_data().await.unwrap_err(), PipelineError::NotEnoughData.temp());
         assert!(assembler.channel.is_none());
     }
 
@@ -205,7 +207,7 @@ mod test {
 
         // Send in the first frame. This should result in a channel being created.
         assert!(assembler.channel.is_none());
-        assert!(assembler.next_data().await.unwrap().is_none());
+        assert_eq!(assembler.next_data().await.unwrap_err(), PipelineError::NotEnoughData.temp());
         assert!(assembler.channel.is_some());
 
         // Send in a malformed second frame. This should result in an error in `add_frame`.
@@ -213,7 +215,7 @@ mod test {
             f.id = Default::default();
             f
         }));
-        assert!(assembler.next_data().await.unwrap().is_none());
+        assert_eq!(assembler.next_data().await.unwrap_err(), PipelineError::NotEnoughData.temp());
         assert!(assembler.channel.is_some());
 
         // Send in the second frame again. This should return the channel bytes.
