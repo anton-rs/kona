@@ -283,7 +283,7 @@ mod test {
 
     fn new_compressed_batch_data() -> Bytes {
         let file_contents =
-            alloc::string::String::from_utf8_lossy(include_bytes!("../../testdata/batch.hex"));
+            alloc::string::String::from_utf8_lossy(include_bytes!("../../../testdata/batch.hex"));
         let file_contents = &(&*file_contents)[..file_contents.len() - 1];
         let data = alloy_primitives::hex::decode(file_contents).unwrap();
         data.into()

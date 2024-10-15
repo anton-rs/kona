@@ -1,6 +1,9 @@
 //! This module contains derivation errors thrown within the pipeline.
 
-use crate::batch::{SpanBatchError, MAX_SPAN_BATCH_ELEMENTS};
+use crate::{
+    batch::{SpanBatchError, MAX_SPAN_BATCH_ELEMENTS},
+    stages::MultiplexerError,
+};
 use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
@@ -47,15 +50,20 @@ pub enum PipelineError {
     /// [PipelineError::Eof] will be encountered.
     #[error("Not enough data")]
     NotEnoughData,
-    /// No channels are available in the [ChannelBank].
+    /// No channels are available in the [ChannelProvider].
     ///
-    /// [ChannelBank]: crate::stages::ChannelBank
-    #[error("The channel bank is empty")]
-    ChannelBankEmpty,
-    /// Failed to find channel in the [ChannelBank].
+    /// [ChannelProvider]: crate::stages::ChannelProvider
+    #[error("The channel provider is empty")]
+    ChannelProviderEmpty,
+    /// The channel has already been built by the [ChannelAssembler] stage.
     ///
-    /// [ChannelBank]: crate::stages::ChannelBank
-    #[error("Channel not found in channel bank")]
+    /// [ChannelAssembler]: crate::stages::ChannelAssembler
+    #[error("Channel already built")]
+    ChannelAlreadyBuilt,
+    /// Failed to find channel in the [ChannelProvider].
+    ///
+    /// [ChannelProvider]: crate::stages::ChannelProvider
+    #[error("Channel not found in channel provider")]
     ChannelNotFound,
     /// No channel returned by the [ChannelReader] stage.
     ///
@@ -89,6 +97,9 @@ pub enum PipelineError {
     /// [PipelineEncodingError] variant.
     #[error("Decode error: {0}")]
     BadEncoding(#[from] PipelineEncodingError),
+    /// A multiplexer stage error.
+    #[error("Multiplexer error: {0}")]
+    Multiplexer(#[from] MultiplexerError),
     /// Provider error variant.
     #[error("Blob provider error: {0}")]
     Provider(String),

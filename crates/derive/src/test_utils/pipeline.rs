@@ -6,6 +6,7 @@ use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
+use crate::stages::ChannelProvider;
 // Re-export these types used internally to the test pipeline.
 pub use crate::{
     batch::SingleBatch,
@@ -80,10 +81,10 @@ pub type TestL1Retrieval = L1Retrieval<TestDAP, TestL1Traversal>;
 pub type TestFrameQueue = FrameQueue<TestL1Retrieval>;
 
 /// A [ChannelBank] using test providers and sources.
-pub type TestChannelBank = ChannelBank<TestFrameQueue>;
+pub type TestChannelProvider = ChannelProvider<TestFrameQueue>;
 
 /// A [ChannelReader] using test providers and sources.
-pub type TestChannelReader = ChannelReader<TestChannelBank>;
+pub type TestChannelReader = ChannelReader<TestChannelProvider>;
 
 /// A [BatchStream] using test providers and sources.
 pub type TestBatchStream = BatchStream<TestChannelReader, TestL2ChainProvider>;

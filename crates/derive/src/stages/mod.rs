@@ -8,7 +8,7 @@
 //! 1. L1 Traversal
 //! 2. L1 Retrieval
 //! 3. Frame Queue
-//! 4. Channel Bank
+//! 4. Channel Provider
 //! 5. Channel Reader (Batch Decoding)
 //! 6. Batch Stream (Introduced in the Holocene Hardfork)
 //! 7. Batch Queue
@@ -24,11 +24,11 @@ pub use l1_retrieval::{L1Retrieval, L1RetrievalProvider};
 mod frame_queue;
 pub use frame_queue::{FrameQueue, FrameQueueProvider};
 
-mod channel_bank;
-pub use channel_bank::{ChannelBank, ChannelBankProvider};
-
-mod channel_reader;
-pub use channel_reader::{ChannelReader, ChannelReaderProvider};
+mod channel;
+pub use channel::{
+    ChannelAssembler, ChannelBank, ChannelProvider, ChannelReader, ChannelReaderProvider,
+    NextFrameProvider,
+};
 
 mod batch_stream;
 pub use batch_stream::{BatchStream, BatchStreamProvider};
@@ -38,6 +38,10 @@ pub use batch_queue::{BatchQueue, BatchQueueProvider};
 
 mod attributes_queue;
 pub use attributes_queue::{AttributesProvider, AttributesQueue};
+
+#[macro_use]
+mod multiplexed;
+pub use multiplexed::MultiplexerError;
 
 mod utils;
 pub use utils::decompress_brotli;
