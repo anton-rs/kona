@@ -40,7 +40,8 @@ mod attributes_queue;
 pub use attributes_queue::{AttributesProvider, AttributesQueue};
 
 #[macro_use]
-pub(crate) mod multiplexed;
+mod multiplexed;
+pub use multiplexed::MultiplexerError;
 
 mod utils;
 pub use utils::decompress_brotli;

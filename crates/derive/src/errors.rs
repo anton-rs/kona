@@ -1,6 +1,6 @@
 //! This module contains derivation errors thrown within the pipeline.
 
-use crate::batch::{SpanBatchError, MAX_SPAN_BATCH_ELEMENTS};
+use crate::{batch::SpanBatchError, stages::MultiplexerError};
 use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
@@ -94,6 +94,9 @@ pub enum PipelineError {
     /// [PipelineEncodingError] variant.
     #[error("Decode error: {0}")]
     BadEncoding(#[from] PipelineEncodingError),
+    /// A multiplexer stage error.
+    #[error("Multiplexer error: {0}")]
+    Multiplexer(#[from] MultiplexerError),
     /// Provider error variant.
     #[error("Blob provider error: {0}")]
     Provider(String),

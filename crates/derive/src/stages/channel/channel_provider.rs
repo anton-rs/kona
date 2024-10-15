@@ -1,7 +1,7 @@
 //! This module contains the [ChannelProvider] stage.
 
 use super::{ChannelAssembler, ChannelBank, ChannelReaderProvider, NextFrameProvider};
-use crate::{pipeline::PipelineResult, stages::multiplexed::multiplexed_stage};
+use crate::stages::multiplexed::multiplexed_stage;
 use alloy_primitives::Bytes;
 use core::fmt::Debug;
 
@@ -19,7 +19,7 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
-        match self.active_stage_mut() {
+        match self.active_stage_mut()? {
             ActiveStage::ChannelAssembler(stage) => stage.next_data().await,
             ActiveStage::ChannelBank(stage) => stage.next_data().await,
         }

@@ -1,5 +1,15 @@
 //! Contains the [multiplexed_stage] macro.
 
+use thiserror::Error;
+
+/// An error type for the multiplexer stages.
+#[derive(Error, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MultiplexerError {
+    /// Thrown when the multiplexer has not yet been activated, but a sub-stage is being accessed.
+    #[error("The multiplexer has not been activated.")]
+    NotActivated,
+}
+
 /// The [multiplexed_stage] macro generates a new stage that swaps its underlying functionality
 /// depending on the active hardfork.
 ///
@@ -67,7 +77,10 @@ macro_rules! multiplexed_stage {
         }
         default_stage: $last_stage_name:ident$(($($last_input_name:ident$(,)?)+))?
     ) => {
-        use $crate::pipeline::{OriginAdvancer, OriginProvider, ResettableStage};
+        use $crate::{
+            pipeline::{OriginAdvancer, OriginProvider, ResettableStage, PipelineError, PipelineResult},
+            stages::MultiplexerError
+        };
         use async_trait::async_trait;
         use alloc::boxed::Box;
 
@@ -144,10 +157,10 @@ macro_rules! multiplexed_stage {
             }
 
             #[doc = concat!("Returns a mutable ref to the active stage of the ", stringify!($provider_name), ".")]
-            fn active_stage_mut(&mut self) -> &mut ActiveStage<P$(, $provider_generic)*> {
+            fn active_stage_mut(&mut self) -> PipelineResult<&mut ActiveStage<P$(, $provider_generic)*>> {
                 // If the multiplexer has not been activated, activate the correct stage.
                 if let Some(prev) = self.prev.take() {
-                    let origin = prev.origin().expect("origin must be available");
+                    let origin = prev.origin().ok_or(PipelineError::MissingOrigin.crit())?;
 
                     self.active_stage = Some(
                         $(if self.cfg.$stage_condition(origin.timestamp) {
@@ -156,11 +169,11 @@ macro_rules! multiplexed_stage {
                             ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), prev$($(, self.$last_input_name.clone())*)?))
                         }
                     );
-                    return self.active_stage.as_mut().expect("Active stage must be available");
+                    return self.active_stage.as_mut().ok_or(PipelineError::from(MultiplexerError::NotActivated).crit());
                 } else {
                     // Otherwise, check if the active stage should be changed.
-                    let origin = self.origin().expect("origin must be available");
-                    let active_stage = self.active_stage.take().expect("Active stage must be available");
+                    let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+                    let active_stage = self.active_stage.take().ok_or(PipelineError::from(MultiplexerError::NotActivated).crit())?;
 
                     // If a new stage has activated, transfer ownership of the previous stage to the new stage to
                     // re-link the pipeline at runtime.
@@ -168,7 +181,7 @@ macro_rules! multiplexed_stage {
                         // If the correct stage is already active, return it.
                         if matches!(active_stage, ActiveStage::$stage_name(_)) {
                             self.active_stage = Some(active_stage);
-                            return self.active_stage.as_mut().expect("Active stage must be available");
+                            return self.active_stage.as_mut().ok_or(PipelineError::from(MultiplexerError::NotActivated).crit());
                         }
 
                         // Otherwise, dissolve the active stage and create a new one, granting ownership of
@@ -179,14 +192,14 @@ macro_rules! multiplexed_stage {
                         // If the correct stage is already active, return it.
                         if matches!(active_stage, ActiveStage::$last_stage_name(_)) {
                             self.active_stage = Some(active_stage);
-                            return self.active_stage.as_mut().expect("Active stage must be available");
+                            return self.active_stage.as_mut().ok_or(PipelineError::from(MultiplexerError::NotActivated).crit());
                         }
 
                         self.active_stage = Some(ActiveStage::$last_stage_name($last_stage_name::new(self.cfg.clone(), active_stage.into_prev()$($(, self.$last_input_name.clone())*)?)));
                     }
                 }
 
-                self.active_stage.as_mut().expect("Active stage must be available")
+                self.active_stage.as_mut().ok_or(PipelineError::from(MultiplexerError::NotActivated).crit())
             }
         }
 
@@ -195,8 +208,8 @@ macro_rules! multiplexed_stage {
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
         {
-            async fn advance_origin(&mut self) -> $crate::pipeline::PipelineResult<()> {
-                match self.active_stage_mut() {
+            async fn advance_origin(&mut self) -> PipelineResult<()> {
+                match self.active_stage_mut()? {
                     $(ActiveStage::$stage_name(stage) => stage.advance_origin().await,)*
                     ActiveStage::$last_stage_name(stage) => stage.advance_origin().await,
                 }
@@ -229,8 +242,8 @@ macro_rules! multiplexed_stage {
                 &mut self,
                 block_info: op_alloy_protocol::BlockInfo,
                 system_config: &op_alloy_genesis::SystemConfig,
-            ) -> $crate::pipeline::PipelineResult<()> {
-                match self.active_stage_mut() {
+            ) -> PipelineResult<()> {
+                match self.active_stage_mut()? {
                     $(ActiveStage::$stage_name(stage) => stage.reset(block_info, system_config).await,)*
                     ActiveStage::$last_stage_name(stage) => stage.reset(block_info, system_config).await,
                 }
