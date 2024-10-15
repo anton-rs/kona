@@ -53,15 +53,7 @@ where
             .channel
             .as_ref()
             .map(|c| {
-                let timed_out = c.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
-                    origin.number;
-                if timed_out {
-                    crate::observe!(
-                        CHANNEL_TIMEOUTS,
-                        (origin.number - c.open_block_number()) as f64
-                    );
-                }
-                timed_out
+                c.open_block_number() + self.cfg.channel_timeout(origin.timestamp) < origin.number
             })
             .unwrap_or_default();
 
@@ -75,17 +67,18 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
+        let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+
+        // Time out the channel if it has timed out.
         if self.channel.is_some() && self.is_timed_out()? {
+            #[cfg(feature = "metrics")]
+            {
+                let open_block_number =
+                    self.channel.as_ref().map(|c| c.open_block_number()).unwrap_or_default();
+                crate::observe!(CHANNEL_TIMEOUTS, (origin.number - open_block_number) as f64);
+            }
             self.channel = None;
         }
-
-        // If the channel is already completed, and it hasn't been forwarded,
-        // throw an error.
-        if self.channel.as_ref().map(|c| c.is_ready()).unwrap_or_default() {
-            return Err(PipelineError::ChannelAlreadyBuilt.crit());
-        }
-
-        let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
 
         // Grab the next frame from the previous stage.
         let next_frame = self.prev.next_frame().await?;
@@ -95,30 +88,21 @@ where
             self.channel = Some(Channel::new(next_frame.id, origin));
         }
 
-        // If the frame number is greater than 0, and the channel is not yet
-        // started, return None.
-        if next_frame.number > 0 && self.channel.is_none() {
-            return Ok(None);
-        }
+        if let Some(channel) = self.channel.as_mut() {
+            // Add the frame to the channel. If this fails, return None and discard the frame.
+            if channel.add_frame(next_frame, origin).is_err() {
+                return Ok(None);
+            }
 
-        // Get a mutable reference to the stage's channel.
-        let Some(channel) = self.channel.as_mut() else {
-            return Err(PipelineError::ChannelNotFound.crit());
-        };
+            // If the channel is ready, forward the channel to the next stage.
+            if channel.is_ready() {
+                let channel_bytes =
+                    channel.frame_data().ok_or(PipelineError::ChannelNotFound.crit())?;
 
-        // Add the frame to the channel. If this fails, return None and discard the frame.
-        if channel.add_frame(next_frame, origin).is_err() {
-            return Ok(None);
-        }
-
-        // If the channel is ready, forward the channel to the next stage.
-        if channel.is_ready() {
-            let channel_bytes =
-                channel.frame_data().ok_or(PipelineError::ChannelNotFound.crit())?;
-
-            // Reset the channel and return the bytes.
-            self.channel = None;
-            return Ok(Some(channel_bytes));
+                // Reset the channel and return the compressed bytes.
+                self.channel = None;
+                return Ok(Some(channel_bytes));
+            }
         }
 
         Ok(None)
@@ -163,5 +147,77 @@ where
 
 #[cfg(test)]
 mod test {
-    // TODO
+    use super::ChannelAssembler;
+    use crate::{
+        stages::{frame_queue::tests::new_test_frames, ChannelReaderProvider},
+        test_utils::TestNextFrameProvider,
+    };
+    use alloc::sync::Arc;
+    use op_alloy_genesis::RollupConfig;
+    use op_alloy_protocol::BlockInfo;
+
+    #[tokio::test]
+    async fn test_assembler_channel_timeout() {
+        let frames = new_test_frames(2);
+        let mock = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
+        let cfg = Arc::new(RollupConfig::default());
+        let mut assembler = ChannelAssembler::new(cfg, mock);
+
+        // Set the origin to default block info @ block # 0.
+        assembler.prev.block_info = Some(BlockInfo::default());
+
+        // Read in the first frame. Since the frame isn't the last, the assembler
+        // should return None.
+        assert!(assembler.channel.is_none());
+        assert!(assembler.next_data().await.unwrap().is_none());
+        assert!(assembler.channel.is_some());
+
+        // Push the origin forward past channel timeout.
+        assembler.prev.block_info =
+            Some(BlockInfo { number: assembler.cfg.channel_timeout(0) + 1, ..Default::default() });
+
+        // Assert that the assembler has timed out the channel.
+        assert!(assembler.is_timed_out().unwrap());
+        assert!(assembler.next_data().await.unwrap().is_none());
+        assert!(assembler.channel.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_assembler_non_starting_frame() {
+        let frames = new_test_frames(2);
+        let mock = TestNextFrameProvider::new(frames.into_iter().map(Ok).collect());
+        let cfg = Arc::new(RollupConfig::default());
+        let mut assembler = ChannelAssembler::new(cfg, mock);
+
+        // Send in the second frame first. This should result in no channel being created,
+        // and the frame being discarded.
+        assert!(assembler.channel.is_none());
+        assert!(assembler.next_data().await.unwrap().is_none());
+        assert!(assembler.channel.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_assembler_already_built() {
+        let frames = new_test_frames(2);
+        let mock = TestNextFrameProvider::new(frames.clone().into_iter().rev().map(Ok).collect());
+        let cfg = Arc::new(RollupConfig::default());
+        let mut assembler = ChannelAssembler::new(cfg, mock);
+
+        // Send in the first frame. This should result in a channel being created.
+        assert!(assembler.channel.is_none());
+        assert!(assembler.next_data().await.unwrap().is_none());
+        assert!(assembler.channel.is_some());
+
+        // Send in a malformed second frame. This should result in an error in `add_frame`.
+        assembler.prev.data.push(Ok(frames[1].clone()).map(|mut f| {
+            f.id = Default::default();
+            f
+        }));
+        assert!(assembler.next_data().await.unwrap().is_none());
+        assert!(assembler.channel.is_some());
+
+        // Send in the second frame again. This should return the channel bytes.
+        assert!(assembler.next_data().await.unwrap().is_some());
+        assert!(assembler.channel.is_none());
+    }
 }
