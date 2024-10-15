@@ -41,7 +41,7 @@ where
         Self { cfg, prev, channel: None }
     }
 
-    /// Consumes [self] and returns the previous stage.
+    /// Consumes [Self] and returns the previous stage.
     pub fn into_prev(self) -> P {
         self.prev
     }
