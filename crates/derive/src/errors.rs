@@ -47,20 +47,20 @@ pub enum PipelineError {
     /// [PipelineError::Eof] will be encountered.
     #[error("Not enough data")]
     NotEnoughData,
-    /// No channels are available in the [ChannelBank].
+    /// No channels are available in the [ChannelProvider].
     ///
-    /// [ChannelBank]: crate::stages::ChannelBank
-    #[error("The channel bank is empty")]
-    ChannelBankEmpty,
+    /// [ChannelProvider]: crate::stages::ChannelProvider
+    #[error("The channel provider is empty")]
+    ChannelProviderEmpty,
     /// The channel has already been built by the [ChannelAssembler] stage.
     ///
     /// [ChannelAssembler]: crate::stages::ChannelAssembler
     #[error("Channel already built")]
     ChannelAlreadyBuilt,
-    /// Failed to find channel in the [ChannelBank].
+    /// Failed to find channel in the [ChannelProvider].
     ///
-    /// [ChannelBank]: crate::stages::ChannelBank
-    #[error("Channel not found in channel bank / assembler")]
+    /// [ChannelProvider]: crate::stages::ChannelProvider
+    #[error("Channel not found in channel provider")]
     ChannelNotFound,
     /// No channel returned by the [ChannelReader] stage.
     ///

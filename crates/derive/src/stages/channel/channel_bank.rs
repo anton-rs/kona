@@ -78,7 +78,7 @@ where
         };
         while total_size > max_channel_bank_size {
             let id =
-                self.channel_queue.pop_front().ok_or(PipelineError::ChannelBankEmpty.crit())?;
+                self.channel_queue.pop_front().ok_or(PipelineError::ChannelProviderEmpty.crit())?;
             let channel = self.channels.remove(&id).ok_or(PipelineError::ChannelNotFound.crit())?;
             total_size -= channel.size();
         }
@@ -156,8 +156,9 @@ where
         // Return an `Ok(None)` if the first channel is timed out. There may be more timed
         // out channels at the head of the queue and we want to remove them all.
         let first = self.channel_queue[0];
-        let channel = self.channels.get(&first).ok_or(PipelineError::ChannelBankEmpty.crit())?;
-        let origin = self.origin().ok_or(PipelineError::ChannelBankEmpty.crit())?;
+        let channel =
+            self.channels.get(&first).ok_or(PipelineError::ChannelProviderEmpty.crit())?;
+        let origin = self.origin().ok_or(PipelineError::ChannelProviderEmpty.crit())?;
         if channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) < origin.number
         {
             warn!(
@@ -199,7 +200,7 @@ where
     fn try_read_channel_at_index(&mut self, index: usize) -> PipelineResult<Bytes> {
         let channel_id = self.channel_queue[index];
         let channel =
-            self.channels.get(&channel_id).ok_or(PipelineError::ChannelBankEmpty.crit())?;
+            self.channels.get(&channel_id).ok_or(PipelineError::ChannelProviderEmpty.crit())?;
         let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
 
         let timed_out = channel.open_block_number() + self.cfg.channel_timeout(origin.timestamp) <
@@ -212,7 +213,7 @@ where
         self.channels.remove(&channel_id);
         self.channel_queue.remove(index);
 
-        frame_data.ok_or(PipelineError::ChannelBankEmpty.crit())
+        frame_data.ok_or(PipelineError::ChannelProviderEmpty.crit())
     }
 }
 
@@ -237,7 +238,7 @@ where
             Err(e) => {
                 if !matches!(e, PipelineErrorKind::Temporary(PipelineError::Eof)) {
                     crate::timer!(DISCARD, timer);
-                    return Err(PipelineError::ChannelBankEmpty.crit());
+                    return Err(PipelineError::ChannelProviderEmpty.crit());
                 }
             }
             data => return data,
@@ -304,7 +305,7 @@ mod tests {
         let mut channel_bank = ChannelBank::new(cfg, mock);
         channel_bank.channel_queue.push_back([0xFF; 16]);
         let err = channel_bank.try_read_channel_at_index(0).unwrap_err();
-        assert_eq!(err, PipelineError::ChannelBankEmpty.crit());
+        assert_eq!(err, PipelineError::ChannelProviderEmpty.crit());
     }
 
     #[test]
