@@ -1,6 +1,9 @@
 //! This module contains derivation errors thrown within the pipeline.
 
-use crate::{batch::SpanBatchError, stages::MultiplexerError};
+use crate::{
+    batch::{SpanBatchError, MAX_SPAN_BATCH_ELEMENTS},
+    stages::MultiplexerError,
+};
 use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
