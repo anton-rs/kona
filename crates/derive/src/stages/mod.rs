@@ -8,7 +8,7 @@
 //! 1. L1 Traversal
 //! 2. L1 Retrieval
 //! 3. Frame Queue
-//! 4. Channel Bank
+//! 4. Channel Provider
 //! 5. Channel Reader (Batch Decoding)
 //! 6. Batch Stream (Introduced in the Holocene Hardfork)
 //! 7. Batch Queue
