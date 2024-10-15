@@ -11,9 +11,28 @@
 /// When a new fork with a stage definition activates, relative to the pipeline origin, the active
 /// stage is dissolved and the ownership of the previous stage is transferred to the new stage.
 ///
+/// Stage requirements:
+/// - The previous stage must implement [OriginAdvancer], [OriginProvider], [ResettableStage], and
+///   [Debug].
+/// - The stages must implement an `into_prev` method that returns the owned previous stage.
+/// - The stages must implement a `new` method that creates a new instance of the stage, with the
+///   signature `fn new(cfg: Arc<RollupConfig>, prev: P) -> Self`.
+///
+/// ## Example Usage
+/// ```rust,ignore
+/// multiplexed_stage!(
+///     MyStage<MyPrevStageTrait>,
+///     stages: {
+///        EcotoneStage => is_ecotone_active,
+///     }
+///     default_stage: BedrockStage
+/// );
+/// ```
+///
 /// [OriginAdvancer]: crate::pipeline::OriginAdvancer
 /// [OriginProvider]: crate::pipeline::OriginProvider
 /// [ResettableStage]: crate::pipeline::ResettableStage
+/// [Debug]: core::fmt::Debug
 macro_rules! multiplexed_stage {
     (
         $provider_name:ident<$prev_type:ident>,
