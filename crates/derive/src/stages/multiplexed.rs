@@ -16,7 +16,8 @@
 ///   [Debug].
 /// - The stages must implement an `into_prev` method that returns the owned previous stage.
 /// - The stages must implement a `new` method that creates a new instance of the stage, with the
-///   signature `fn new(cfg: Arc<RollupConfig>, prev: P) -> Self`.
+///   signature `fn new(cfg: Arc<RollupConfig>, prev: P) -> Self`. TODO: Use additional fields in
+///   the `new` method of sub-stages.
 ///
 /// ## Example Usage
 /// ```rust,ignore
@@ -29,13 +30,40 @@
 /// );
 /// ```
 ///
+/// To add additional fields to the multiplexer stage, that must be passed to the `new` function:
+/// ```rust,ignore
+/// multiplexed_stage!(
+///     MyStage<MyPrevStageTrait>,
+///     additional_fields: {
+///         /// The number of blocks to wait before advancing the origin.
+///         block_wait: u64,
+///     }
+///     stages: {
+///        EcotoneStage => is_ecotone_active,
+///     }
+///     default_stage: BedrockStage
+/// );
+///
+/// // -- snip --
+///
+/// let cfg = Arc::new(RollupConfig::default());
+/// let prev = MyPrevStage::default();
+/// MyStage::new(cfg.clone(), prev, 10);
+/// ```
+///
 /// [OriginAdvancer]: crate::pipeline::OriginAdvancer
 /// [OriginProvider]: crate::pipeline::OriginProvider
 /// [ResettableStage]: crate::pipeline::ResettableStage
 /// [Debug]: core::fmt::Debug
 macro_rules! multiplexed_stage {
     (
-        $provider_name:ident<$prev_type:ident>,
+        $provider_name:ident<$prev_type:ident$(, $provider_generic:ident: $($provider_generic_bound:ident)*)*>,
+        $(
+            additional_fields: {
+                $(#[doc = $comment:expr])?
+                $($field_name:ident: $field_type:ty,)+
+            }
+        )?
         stages: {
             $($stage_name:ident => $stage_condition:ident,)*
         }
@@ -47,7 +75,7 @@ macro_rules! multiplexed_stage {
 
         #[doc = concat!("The active stage of the ", stringify!($provider_name), ".")]
         #[derive(Debug)]
-        enum ActiveStage<P>
+        enum ActiveStage<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
@@ -55,7 +83,7 @@ macro_rules! multiplexed_stage {
             $last_stage_name($last_stage_name<P>),
         }
 
-        impl<P> ActiveStage<P>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> ActiveStage<P$(, $provider_generic)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
@@ -70,7 +98,7 @@ macro_rules! multiplexed_stage {
 
         #[doc = concat!("The ", stringify!($provider_name), " stage is responsible for multiplexing sub-stages.")]
         #[derive(Debug)]
-        pub struct $provider_name<P>
+        pub struct $provider_name<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
@@ -89,29 +117,36 @@ macro_rules! multiplexed_stage {
             /// stage is owned by the multiplexer.
             ///
             /// Must be [None] if `prev` is [Some].
-            active_stage: Option<ActiveStage<P>>,
+            active_stage: Option<ActiveStage<P$(, $provider_generic)*>>,
+            $(
+                $(#[doc = $comment])?
+                $($field_name: $field_type,)+
+            )?
         }
 
-        impl<P> $provider_name<P>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> $provider_name<P$(, $provider_generic)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
             /// Creates a new instance of the provider.
-            pub const fn new(cfg: alloc::sync::Arc<op_alloy_genesis::RollupConfig>, prev: P) -> Self {
+            pub const fn new(cfg: alloc::sync::Arc<op_alloy_genesis::RollupConfig>, prev: P$( $(, $field_name: $field_type)+ )?) -> Self {
                 Self {
                     cfg,
                     prev: Some(prev),
                     active_stage: None,
+                    $(
+                        $($field_name,)+
+                    )?
                 }
             }
 
             #[doc = concat!("Returns a mutable ref to the active stage of the ", stringify!($provider_name), ".")]
-            const fn active_stage_ref(&self) -> Option<&ActiveStage<P>> {
+            const fn active_stage_ref(&self) -> Option<&ActiveStage<P$(, $provider_generic)*>> {
                 self.active_stage.as_ref()
             }
 
             #[doc = concat!("Returns a mutable ref to the active stage of the ", stringify!($provider_name), ".")]
-            fn active_stage_mut(&mut self) -> &mut ActiveStage<P> {
+            fn active_stage_mut(&mut self) -> &mut ActiveStage<P$(, $provider_generic)*> {
                 // If the multiplexer has not been activated, activate the correct stage.
                 if let Some(prev) = self.prev.take() {
                     let origin = prev.origin().expect("origin must be available");
@@ -158,7 +193,7 @@ macro_rules! multiplexed_stage {
         }
 
         #[async_trait]
-        impl<P> OriginAdvancer for $provider_name<P>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> OriginAdvancer for $provider_name<P$(, $provider_generic)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
         {
@@ -170,7 +205,7 @@ macro_rules! multiplexed_stage {
             }
         }
 
-        impl<P> OriginProvider for $provider_name<P>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> OriginProvider for $provider_name<P$(, $provider_generic)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Debug,
         {
@@ -188,7 +223,7 @@ macro_rules! multiplexed_stage {
         }
 
         #[async_trait]
-        impl<P> ResettableStage for $provider_name<P>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> ResettableStage for $provider_name<P$(, $provider_generic)*>
         where
             P: $prev_type + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
         {
