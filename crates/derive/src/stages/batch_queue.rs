@@ -502,7 +502,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stages::channel_reader::BatchReader,
+        stages::channel::channel_reader::BatchReader,
         test_utils::{CollectingLayer, TestBatchQueueProvider, TraceStorage},
     };
     use alloc::vec;

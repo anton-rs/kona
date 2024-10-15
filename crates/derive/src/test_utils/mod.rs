@@ -2,7 +2,7 @@
 
 pub mod pipeline;
 pub use pipeline::{
-    new_test_pipeline, TestAttributesQueue, TestBatchQueue, TestBatchStream, TestChannelBank,
+    new_test_pipeline, TestAttributesQueue, TestBatchQueue, TestBatchStream, TestChannelProvider,
     TestFrameQueue, TestL1Retrieval, TestL1Traversal, TestNextAttributes, TestPipeline,
 };
 
@@ -18,7 +18,7 @@ mod batch_stream;
 pub use batch_stream::TestBatchStreamProvider;
 
 mod channel_bank;
-pub use channel_bank::TestChannelBankProvider;
+pub use channel_bank::TestNextFrameProvider;
 
 mod channel_reader;
 pub use channel_reader::TestChannelReaderProvider;

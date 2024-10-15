@@ -52,10 +52,15 @@ pub enum PipelineError {
     /// [ChannelBank]: crate::stages::ChannelBank
     #[error("The channel bank is empty")]
     ChannelBankEmpty,
+    /// The channel has already been built by the [ChannelAssembler] stage.
+    ///
+    /// [ChannelAssembler]: crate::stages::ChannelAssembler
+    #[error("Channel already built")]
+    ChannelAlreadyBuilt,
     /// Failed to find channel in the [ChannelBank].
     ///
     /// [ChannelBank]: crate::stages::ChannelBank
-    #[error("Channel not found in channel bank")]
+    #[error("Channel not found in channel bank / assembler")]
     ChannelNotFound,
     /// No channel returned by the [ChannelReader] stage.
     ///

@@ -2,7 +2,7 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult},
-    stages::ChannelBankProvider,
+    stages::NextFrameProvider,
     traits::{OriginAdvancer, OriginProvider, ResettableStage},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -156,7 +156,7 @@ where
 }
 
 #[async_trait]
-impl<P> ChannelBankProvider for FrameQueue<P>
+impl<P> NextFrameProvider for FrameQueue<P>
 where
     P: FrameQueueProvider + OriginAdvancer + OriginProvider + ResettableStage + Send + Debug,
 {
