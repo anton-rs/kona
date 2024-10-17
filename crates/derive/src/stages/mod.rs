@@ -30,11 +30,8 @@ pub use channel::{
     NextFrameProvider,
 };
 
-mod batch_stream;
-pub use batch_stream::{BatchStream, BatchStreamProvider};
-
-mod batch_queue;
-pub use batch_queue::{BatchQueue, BatchQueueProvider};
+mod batch;
+pub use batch::{BatchQueue, BatchStream, BatchStreamProvider, BatchValidator, NextBatchProvider};
 
 mod attributes_queue;
 pub use attributes_queue::{AttributesProvider, AttributesQueue};

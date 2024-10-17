@@ -3,7 +3,7 @@
 use crate::{
     batch::Batch,
     errors::{PipelineError, PipelineResult},
-    stages::BatchQueueProvider,
+    stages::NextBatchProvider,
     traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, vec::Vec};
@@ -37,9 +37,13 @@ impl OriginProvider for TestBatchQueueProvider {
 }
 
 #[async_trait]
-impl BatchQueueProvider for TestBatchQueueProvider {
+impl NextBatchProvider for TestBatchQueueProvider {
     fn flush(&mut self) {
         self.flushed = true;
+    }
+
+    fn span_buffer_size(&self) -> usize {
+        self.batches.len()
     }
 
     async fn next_batch(&mut self, _: L2BlockInfo, _: &[BlockInfo]) -> PipelineResult<Batch> {
