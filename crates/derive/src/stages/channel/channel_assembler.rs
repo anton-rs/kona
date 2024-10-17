@@ -81,7 +81,7 @@ where
                 }
                 warn!(
                     target: "channel-assembler",
-                    "Channel (ID: {}) timed at L1 origin #{}, open block #{}. Discarding channel.",
+                    "Channel (ID: {}) timed out at L1 origin #{}, open block #{}. Discarding channel.",
                     hex::encode(channel.id()),
                     origin.number,
                     channel.open_block_number()
@@ -183,14 +183,20 @@ mod test {
     use crate::{
         prelude::PipelineError,
         stages::{frame_queue::tests::new_test_frames, ChannelReaderProvider},
-        test_utils::TestNextFrameProvider,
+        test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
     };
     use alloc::sync::Arc;
     use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::BlockInfo;
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]
     async fn test_assembler_channel_timeout() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
         let frames = new_test_frames(2);
         let mock = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
@@ -213,6 +219,18 @@ mod test {
         assert!(assembler.is_timed_out().unwrap());
         assert_eq!(assembler.next_data().await.unwrap_err(), PipelineError::NotEnoughData.temp());
         assert!(assembler.channel.is_none());
+
+        // Assert that the info log was emitted.
+        let info_logs = trace_store.get_by_level(Level::INFO);
+        assert_eq!(info_logs.len(), 1);
+        let info_str = "Starting new channel";
+        assert!(info_logs[0].contains(info_str));
+
+        // Assert that the warning log was emitted.
+        let warning_logs = trace_store.get_by_level(Level::WARN);
+        assert_eq!(warning_logs.len(), 1);
+        let warn_str = "timed out at L1 origin";
+        assert!(warning_logs[0].contains(warn_str));
     }
 
     #[tokio::test]
@@ -231,6 +249,10 @@ mod test {
 
     #[tokio::test]
     async fn test_assembler_already_built() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
         let frames = new_test_frames(2);
         let mock = TestNextFrameProvider::new(frames.clone().into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
@@ -252,5 +274,11 @@ mod test {
         // Send in the second frame again. This should return the channel bytes.
         assert!(assembler.next_data().await.unwrap().is_some());
         assert!(assembler.channel.is_none());
+
+        // Assert that the error log was emitted.
+        let error_logs = trace_store.get_by_level(Level::ERROR);
+        assert_eq!(error_logs.len(), 1);
+        let error_str = "Failed to add frame to channel";
+        assert!(error_logs[0].contains(error_str));
     }
 }
