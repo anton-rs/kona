@@ -31,7 +31,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: rui314/setup-mold@v1
       - name: Clone `asterisc` repository
         if: "!contains(matrix.target, 'native')"
         run: |
