@@ -57,14 +57,14 @@ lto = "fat"
 [workspace.dependencies]
 # Workspace
 kona-client = { path = "bin/client", version = "0.1.0" }
-kona-mpt = { path = "crates/mpt", version = "0.0.3" }
-kona-common = { path = "crates/common", version = "0.0.3" }
-kona-preimage = { path = "crates/preimage", version = "0.0.3" }
-kona-executor = { path = "crates/executor", version = "0.0.2" }
-kona-common-proc = { path = "crates/common-proc", version = "0.0.3" }
-kona-derive = { path = "crates/derive", version = "0.0.3", default-features = false }
-kona-primitives = { path = "crates/primitives", version = "0.0.2", default-features = false }
-kona-providers = { path = "crates/providers", version = "0.0.1" }
+kona-mpt = { path = "crates/mpt", version = "0.0.4" }
+kona-common = { path = "crates/common", version = "0.0.4" }
+kona-preimage = { path = "crates/preimage", version = "0.0.4" }
+kona-executor = { path = "crates/executor", version = "0.0.3" }
+kona-common-proc = { path = "crates/common-proc", version = "0.0.4" }
+kona-derive = { path = "crates/derive", version = "0.0.4", default-features = false }
+kona-primitives = { path = "crates/primitives", version = "0.0.3", default-features = false }
+kona-providers = { path = "crates/providers", version = "0.0.2" }
 kona-providers-alloy = { path = "crates/providers-alloy", version = "0.0.1", default-features = false }
 
 # General
