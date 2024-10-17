@@ -4,7 +4,7 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
-    stages::BatchQueueProvider,
+    stages::NextBatchProvider,
     traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -100,7 +100,7 @@ where
 }
 
 #[async_trait]
-impl<P, BF> BatchQueueProvider for BatchStream<P, BF>
+impl<P, BF> NextBatchProvider for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
@@ -111,6 +111,10 @@ where
             self.span = None;
             self.buffer.clear();
         }
+    }
+
+    fn span_buffer_size(&self) -> usize {
+        self.buffer.len()
     }
 
     async fn next_batch(
