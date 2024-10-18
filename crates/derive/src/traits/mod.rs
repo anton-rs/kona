@@ -15,6 +15,3 @@ pub use reset::ResetProvider;
 
 mod stages;
 pub use stages::{OriginAdvancer, OriginProvider, SignalReceiver};
-
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_utils;

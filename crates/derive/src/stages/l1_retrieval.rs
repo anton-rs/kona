@@ -142,7 +142,7 @@ mod tests {
     use super::*;
     use crate::{
         stages::l1_traversal::tests::*,
-        traits::test_utils::{TestDAP, TestIter},
+        test_utils::{TestDAP, TestIter},
     };
     use alloc::vec;
     use alloy_primitives::Bytes;

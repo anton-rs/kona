@@ -1,14 +1,11 @@
-//! Test Utilities for derive traits
+//! An implementation of the [DataAvailabilityProvider] trait for tests.
 
 use crate::{
-    errors::{BlobProviderError, PipelineError, PipelineResult},
-    sources::IndexedBlobHash,
-    traits::{AsyncIterator, BlobProvider, DataAvailabilityProvider},
+    errors::{PipelineError, PipelineResult},
+    traits::{AsyncIterator, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, vec, vec::Vec};
-use alloy_eips::eip4844::Blob;
-use alloy_primitives::{map::HashMap, Address, Bytes, B256};
-use anyhow::Result;
+use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_protocol::BlockInfo;
@@ -53,48 +50,5 @@ impl DataAvailabilityProvider for TestDAP {
             .map(|i| i.as_ref().map_or_else(|_| Err(PipelineError::Eof.temp()), |r| Ok(r.clone())))
             .collect::<Vec<PipelineResult<Bytes>>>();
         Ok(TestIter { open_data_calls: vec![(*block_ref, self.batch_inbox_address)], results })
-    }
-}
-
-/// A mock blob provider for testing.
-#[derive(Debug, Clone, Default)]
-pub struct TestBlobProvider {
-    /// Maps block hashes to blob data.
-    pub blobs: HashMap<B256, Blob>,
-    /// whether the blob provider should return an error.
-    pub should_error: bool,
-}
-
-impl TestBlobProvider {
-    /// Insert a blob into the mock blob provider.
-    pub fn insert_blob(&mut self, hash: B256, blob: Blob) {
-        self.blobs.insert(hash, blob);
-    }
-
-    /// Clears blobs from the mock blob provider.
-    pub fn clear(&mut self) {
-        self.blobs.clear();
-    }
-}
-
-#[async_trait]
-impl BlobProvider for TestBlobProvider {
-    type Error = BlobProviderError;
-
-    async fn get_blobs(
-        &mut self,
-        _block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Box<Blob>>, Self::Error> {
-        if self.should_error {
-            return Err(BlobProviderError::SlotDerivation);
-        }
-        let mut blobs = Vec::new();
-        for blob_hash in blob_hashes {
-            if let Some(data) = self.blobs.get(&blob_hash.hash) {
-                blobs.push(Box::new(*data));
-            }
-        }
-        Ok(blobs)
     }
 }
