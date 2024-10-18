@@ -23,7 +23,7 @@ Before working with this repository locally, you'll need to install several depe
 1. Before anything, [create an issue](https://github.com/anton-rs/kona/issues/new) to discuss the change you're
    wanting to make, if it is significant or changes functionality. Feel free to skip this step for trivial changes.
 1. Once your change is implemented, ensure that all checks are passing before creating a PR. The full CI pipeline can
-   be ran locally via the `justfile`s in the repository.
+   be run locally via the `justfile`s in the repository.
 1. Make sure to update any documentation that has gone stale as a result of the change, in the `README` files, the [book][book],
    and in rustdoc comments.
 1. Once you have sign-off from a maintainer, you may merge your pull request yourself if you have permissions to do so.
