@@ -6,11 +6,8 @@ use crate::{
 };
 use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
-use alloy_eips::{
-    eip1898::NumHash,
-    eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG},
-};
-use alloy_primitives::{Address, Bytes};
+use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
+use alloy_primitives::{Address, Bytes, B256};
 use async_trait::async_trait;
 use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
@@ -24,6 +21,22 @@ pub(crate) const BLOB_MAX_DATA_SIZE: usize = (4 * 31 + 3) * 1024 - 4; // 130044
 
 /// Blob Encoding/Decoding Rounds
 pub(crate) const BLOB_ENCODING_ROUNDS: usize = 1024;
+
+/// A Blob hash
+#[derive(Default, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct IndexedBlobHash {
+    /// The index of the blob
+    pub index: usize,
+    /// The hash of the blob
+    pub hash: B256,
+}
+
+impl PartialEq for IndexedBlobHash {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.hash == other.hash
+    }
+}
 
 /// The Blob Data
 #[derive(Default, Clone, Debug)]
@@ -223,7 +236,7 @@ where
         }
     }
 
-    fn extract_blob_data(&self, txs: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<NumHash>) {
+    fn extract_blob_data(&self, txs: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<IndexedBlobHash>) {
         let mut number: u64 = 0;
         let mut data = Vec::new();
         let mut hashes = Vec::new();
@@ -274,7 +287,7 @@ where
                 continue;
             };
             for blob in blob_hashes {
-                let indexed = NumHash { hash: blob, number };
+                let indexed = IndexedBlobHash { hash: blob, index: number as usize };
                 hashes.push(indexed);
                 data.push(BlobData::default());
                 number += 1;
@@ -381,6 +394,27 @@ pub(crate) mod tests {
     use crate::{errors::PipelineErrorKind, traits::test_utils::TestBlobProvider};
     use alloy_rlp::Decodable;
     use kona_providers::test_utils::TestChainProvider;
+
+    #[test]
+    fn test_indexed_blob_hash() {
+        let hash = B256::from([1; 32]);
+        let indexed_blob_hash = IndexedBlobHash { index: 1, hash };
+
+        assert_eq!(indexed_blob_hash.index, 1);
+        assert_eq!(indexed_blob_hash.hash, hash);
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_indexed_blob_hash_serde_roundtrip() {
+        let hash = B256::from([1; 32]);
+        let indexed_blob_hash = IndexedBlobHash { index: 1, hash };
+
+        let serialized = serde_json::to_string(&indexed_blob_hash).unwrap();
+        let deserialized: IndexedBlobHash = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(indexed_blob_hash, deserialized);
+    }
 
     #[test]
     fn test_reassemble_bytes() {

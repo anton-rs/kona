@@ -1,9 +1,9 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation
 //! pipeline's stages.
 
-use crate::errors::PipelineResult;
+use crate::{errors::PipelineResult, sources::IndexedBlobHash};
 use alloc::{boxed::Box, fmt::Debug, vec::Vec};
-use alloy_eips::{eip1898::NumHash, eip4844::Blob};
+use alloy_eips::eip4844::Blob;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Display;
@@ -19,7 +19,7 @@ pub trait BlobProvider {
     async fn get_blobs(
         &mut self,
         block_ref: &BlockInfo,
-        blob_hashes: &[NumHash],
+        blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Box<Blob>>, Self::Error>;
 }
 

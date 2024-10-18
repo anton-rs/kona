@@ -2165,6 +2165,7 @@ dependencies = [
  "futures",
  "kona-client",
  "kona-common",
+ "kona-derive",
  "kona-mpt",
  "kona-preimage",
  "kona-providers-alloy",

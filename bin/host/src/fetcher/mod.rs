@@ -3,9 +3,7 @@
 
 use crate::{kv::KeyValueStore, util};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
-use alloy_eips::{
-    eip1898::NumHash, eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId,
-};
+use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
@@ -14,6 +12,7 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
+use kona_derive::sources::IndexedBlobHash;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use op_alloy_protocol::BlockInfo;
@@ -188,7 +187,7 @@ where
                 let timestamp = u64::from_be_bytes(timestamp_data_bytes);
 
                 let partial_block_ref = BlockInfo { timestamp, ..Default::default() };
-                let indexed_hash = NumHash { number: index, hash };
+                let indexed_hash = IndexedBlobHash { index: index as usize, hash };
 
                 // Fetch the blob sidecar from the blob provider.
                 let mut sidecars = self

@@ -1,8 +1,9 @@
 //! Contains an online implementation of the `BeaconClient` trait.
 
-use alloy_eips::{eip1898::NumHash, eip4844::BlobTransactionSidecarItem};
+use alloy_eips::eip4844::BlobTransactionSidecarItem;
 use alloy_primitives::FixedBytes;
 use async_trait::async_trait;
+use kona_derive::sources::IndexedBlobHash;
 use reqwest::Client;
 
 /// The config spec engine api method.
@@ -150,7 +151,7 @@ pub trait BeaconClient {
     async fn beacon_blob_side_cars(
         &self,
         slot: u64,
-        hashes: &[NumHash],
+        hashes: &[IndexedBlobHash],
     ) -> Result<Vec<APIBlobSidecar>, Self::Error>;
 }
 
@@ -219,7 +220,7 @@ impl BeaconClient for OnlineBeaconClient {
     async fn beacon_blob_side_cars(
         &self,
         slot: u64,
-        hashes: &[NumHash],
+        hashes: &[IndexedBlobHash],
     ) -> Result<Vec<APIBlobSidecar>, Self::Error> {
         crate::inc!(PROVIDER_CALLS, &["beacon_client", "beacon_blob_side_cars"]);
         crate::timer!(
@@ -258,7 +259,7 @@ impl BeaconClient for OnlineBeaconClient {
         // Filter the sidecars by the hashes, in-order.
         hashes.iter().for_each(|hash| {
             if let Some(sidecar) =
-                raw_response.data.iter().find(|sidecar| sidecar.inner.index == hash.number)
+                raw_response.data.iter().find(|sidecar| sidecar.inner.index == hash.index as u64)
             {
                 sidecars.push(sidecar.clone());
             }
