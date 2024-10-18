@@ -1,6 +1,6 @@
 # `kona-build`
 
-This directory contains the cross compilation docker images and custom `rustc` targets used to build verifiable programs targeting various FPVMs.
+This directory contains the cross-compilation docker images and custom `rustc` targets used to build verifiable programs targeting various FPVMs.
 
 ## Usage
 
