@@ -4,7 +4,7 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     pipeline::L2ChainProvider,
-    stages::BatchQueueProvider,
+    stages::NextBatchProvider,
     traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
@@ -100,7 +100,7 @@ where
 }
 
 #[async_trait]
-impl<P, BF> BatchQueueProvider for BatchStream<P, BF>
+impl<P, BF> NextBatchProvider for BatchStream<P, BF>
 where
     P: BatchStreamProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
@@ -111,6 +111,10 @@ where
             self.span = None;
             self.buffer.clear();
         }
+    }
+
+    fn span_buffer_size(&self) -> usize {
+        self.buffer.len()
     }
 
     async fn next_batch(
@@ -334,7 +338,7 @@ mod test {
 
         let err = stream.next_batch(Default::default(), &mock_origins).await.unwrap_err();
         assert_eq!(err, PipelineError::Eof.temp());
-        assert_eq!(stream.buffer.len(), 0);
+        assert_eq!(stream.span_buffer_size(), 0);
         assert!(stream.span.is_none());
 
         // Add more data into the provider, see if the buffer is re-hydrated.
@@ -359,7 +363,7 @@ mod test {
 
         let err = stream.next_batch(Default::default(), &mock_origins).await.unwrap_err();
         assert_eq!(err, PipelineError::Eof.temp());
-        assert_eq!(stream.buffer.len(), 0);
+        assert_eq!(stream.span_buffer_size(), 0);
         assert!(stream.span.is_none());
     }
 
@@ -376,7 +380,7 @@ mod test {
         // The next batch should be passed through to the [BatchQueue] stage.
         let batch = stream.next_batch(Default::default(), &[]).await.unwrap();
         assert!(matches!(batch, Batch::Single(_)));
-        assert_eq!(stream.buffer.len(), 0);
+        assert_eq!(stream.span_buffer_size(), 0);
         assert!(stream.span.is_none());
     }
 }
