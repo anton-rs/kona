@@ -51,13 +51,25 @@ where
     }
 
     /// Returns `true` if the pipeline origin is behind the parent origin.
+    ///
+    /// ## Takes
+    /// - `parent`: The parent block of the current batch.
+    ///
+    /// ## Returns
+    /// - `true` if the origin is behind the parent origin.
     fn origin_behind(&self, parent: &L2BlockInfo) -> bool {
         self.prev.origin().map_or(true, |origin| origin.number < parent.l1_origin.number)
     }
 
     /// Updates the [BatchValidator]'s view of the L1 origin blocks.
     ///
-    fn update_origins(&mut self, parent: &L2BlockInfo) -> PipelineResult<()> {
+    /// ## Takes
+    /// - `parent`: The parent block of the current batch.
+    ///
+    /// ## Returns
+    /// - `Ok(())` if the update was successful.
+    /// - `Err(PipelineError)` if the update failed.
+    pub(crate) fn update_origins(&mut self, parent: &L2BlockInfo) -> PipelineResult<()> {
         // NOTE: The origin is used to determine if it's behind.
         // It is the future origin that gets saved into the l1 blocks array.
         // We always update the origin of this stage if it's not the same so
@@ -115,7 +127,17 @@ where
     }
 
     /// Attempts to derive an empty batch, if the sequencing window is expired.
-    fn try_derive_empty_batch(&mut self, parent: &L2BlockInfo) -> PipelineResult<SingleBatch> {
+    ///
+    /// ## Takes
+    /// - `parent`: The parent block of the current batch.
+    ///
+    /// ## Returns
+    /// - `Ok(SingleBatch)` if an empty batch was derived.
+    /// - `Err(PipelineError)` if an empty batch could not be derived.
+    pub(crate) fn try_derive_empty_batch(
+        &mut self,
+        parent: &L2BlockInfo,
+    ) -> PipelineResult<SingleBatch> {
         let epoch = self.l1_blocks[0];
 
         // If the current epoch is too old compared to the L1 block we are at,
@@ -268,6 +290,16 @@ where
 }
 
 #[async_trait]
+impl<P> OriginAdvancer for BatchValidator<P>
+where
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
+{
+    async fn advance_origin(&mut self) -> PipelineResult<()> {
+        self.prev.advance_origin().await
+    }
+}
+
+#[async_trait]
 impl<P> SignalReceiver for BatchValidator<P>
 where
     P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
@@ -297,13 +329,14 @@ mod test {
     use super::BatchValidator;
     use crate::{
         batch::{Batch, SingleBatch},
-        pipeline::PipelineResult,
+        pipeline::{PipelineResult, SignalReceiver},
         prelude::PipelineError,
-        stages::AttributesProvider,
+        stages::{AttributesProvider, NextBatchProvider},
         test_utils::TestBatchQueueProvider,
+        traits::{ResetSignal, Signal},
     };
     use alloc::sync::Arc;
-    use alloy_eips::BlockNumHash;
+    use alloy_eips::{BlockNumHash, NumHash};
     use alloy_primitives::B256;
     use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::{BlockInfo, L2BlockInfo};
@@ -314,7 +347,7 @@ mod test {
         let mut mock = TestBatchQueueProvider::new(vec![]);
         mock.origin = Some(BlockInfo::default());
         let mut bv = BatchValidator::new(cfg, mock);
-        bv.origin = Some(BlockInfo::default());
+        bv.origin = Some(BlockInfo { number: 1, ..Default::default() });
 
         let mock_parent = L2BlockInfo {
             l1_origin: BlockNumHash { number: 5, ..Default::default() },
@@ -324,7 +357,132 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_batch_validator_origin_behind_out_of_data() {
+    async fn test_batch_validator_origin_behind_startup() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mut mock = TestBatchQueueProvider::new(vec![]);
+        mock.origin = Some(BlockInfo::default());
+        let mut bv = BatchValidator::new(cfg, mock);
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            l2_safe_head: L2BlockInfo::new(
+                BlockInfo::default(),
+                NumHash::new(1, Default::default()),
+                0,
+            ),
+            system_config: None,
+        }))
+        .await
+        .unwrap();
+
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 2, ..Default::default() },
+            ..Default::default()
+        };
+        assert_eq!(bv.l1_blocks.len(), 1);
+        bv.update_origins(&mock_parent).unwrap();
+        assert_eq!(bv.l1_blocks.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_origin_behind_advance() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mut mock = TestBatchQueueProvider::new(vec![]);
+        mock.origin = Some(BlockInfo { number: 2, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            l2_safe_head: L2BlockInfo::new(
+                BlockInfo::default(),
+                NumHash::new(1, Default::default()),
+                0,
+            ),
+            system_config: None,
+        }))
+        .await
+        .unwrap();
+
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 1, ..Default::default() },
+            ..Default::default()
+        };
+        assert_eq!(bv.l1_blocks.len(), 1);
+        bv.update_origins(&mock_parent).unwrap();
+        assert_eq!(bv.l1_blocks.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_advance_epoch() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mut mock = TestBatchQueueProvider::new(vec![]);
+        mock.origin = Some(BlockInfo { number: 2, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            l2_safe_head: L2BlockInfo::new(
+                BlockInfo::default(),
+                NumHash::new(1, Default::default()),
+                0,
+            ),
+            system_config: None,
+        }))
+        .await
+        .unwrap();
+
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 2, ..Default::default() },
+            ..Default::default()
+        };
+        assert_eq!(bv.l1_blocks.len(), 1);
+        assert_eq!(bv.l1_blocks[0].number, 1);
+        bv.update_origins(&mock_parent).unwrap();
+        assert_eq!(bv.l1_blocks.len(), 1);
+        assert_eq!(bv.l1_blocks[0].number, 2);
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_advance_epoch_origin_jump() {
+        let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
+        let mut mock = TestBatchQueueProvider::new(vec![]);
+        mock.origin = Some(BlockInfo { number: 2, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            l2_safe_head: L2BlockInfo::new(
+                BlockInfo::default(),
+                NumHash::new(1, Default::default()),
+                0,
+            ),
+            system_config: None,
+        }))
+        .await
+        .unwrap();
+
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 2, ..Default::default() },
+            ..Default::default()
+        };
+        assert_eq!(bv.l1_blocks.len(), 1);
+        assert_eq!(bv.l1_blocks[0].number, 1);
+
+        // Add an extra origin block to force an origin jump.
+        bv.l1_blocks.push(BlockInfo { number: 1, ..Default::default() });
+
+        let result = std::panic::catch_unwind(move || {
+            bv.update_origins(&mock_parent).unwrap();
+        });
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_origin_behind_drain_prev() {
         let cfg = Arc::new(RollupConfig::default());
         let mut mock = TestBatchQueueProvider::new(
             (0..5).into_iter().map(|_| Ok(Batch::Single(SingleBatch::default()))).collect(),
@@ -337,10 +495,15 @@ mod test {
             l1_origin: BlockNumHash { number: 5, ..Default::default() },
             ..Default::default()
         };
-        assert_eq!(
-            bv.next_batch(mock_parent).await.unwrap_err(),
-            PipelineError::NotEnoughData.temp()
-        );
+        assert_eq!(bv.prev.span_buffer_size(), 5);
+        for i in 0..5 {
+            assert_eq!(
+                bv.next_batch(mock_parent).await.unwrap_err(),
+                PipelineError::NotEnoughData.temp()
+            );
+            assert_eq!(bv.prev.span_buffer_size(), 4 - i);
+        }
+        assert_eq!(bv.next_batch(mock_parent).await.unwrap_err(), PipelineError::Eof.temp());
     }
 
     #[tokio::test]
