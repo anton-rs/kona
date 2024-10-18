@@ -1,13 +1,12 @@
 //! Contains an online implementation of the `BlobProvider` trait.
 
-use alloy_eips::eip4844::Blob;
+use alloy_eips::eip4844::{Blob, BlobTransactionSidecarItem};
 use async_trait::async_trait;
-use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
-use kona_primitives::{APIBlobSidecar, BlobSidecar, IndexedBlobHash};
+use kona_derive::{errors::BlobProviderError, sources::IndexedBlobHash, traits::BlobProvider};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
-use crate::{BeaconClient, OnlineBeaconClient};
+use crate::{APIBlobSidecar, BeaconClient, OnlineBeaconClient};
 
 /// An online implementation of the [BlobProvider] trait.
 #[derive(Debug, Clone)]
@@ -82,7 +81,7 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
         &self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<BlobSidecar>, BlobProviderError> {
+    ) -> Result<Vec<BlobTransactionSidecarItem>, BlobProviderError> {
         if blob_hashes.is_empty() {
             return Ok(Vec::new());
         }
@@ -98,10 +97,10 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index as u64).collect::<Vec<u64>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as usize)))
+            .filter(|s| blob_hash_indicies.contains(&s.inner.index))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -109,7 +108,7 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
             return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
+        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobTransactionSidecarItem>>())
     }
 }
 
@@ -127,7 +126,7 @@ where
         &mut self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, Self::Error> {
+    ) -> Result<Vec<Box<Blob>>, Self::Error> {
         crate::inc!(PROVIDER_CALLS, &["blob_provider", "get_blobs"]);
         crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
@@ -151,7 +150,7 @@ where
             }
         };
 
-        // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
+        // Validate the blob sidecars straight away with the num hashes.
         let blobs = match sidecars
             .into_iter()
             .enumerate()
@@ -159,12 +158,15 @@ where
                 let hash = blob_hashes
                     .get(i)
                     .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
-                match sidecar.verify_blob(hash) {
+                match sidecar.verify_blob(&alloy_eips::eip1898::NumHash {
+                    hash: hash.hash,
+                    number: hash.index as u64,
+                }) {
                     Ok(_) => Ok(sidecar.blob),
                     Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                 }
             })
-            .collect::<Result<Vec<Blob>, BlobProviderError>>()
+            .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
         {
             Ok(blobs) => blobs,
             Err(e) => {
@@ -236,7 +238,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, 
         &self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<BlobSidecar>, BlobProviderError> {
+    ) -> Result<Vec<BlobTransactionSidecarItem>, BlobProviderError> {
         let Some(fallback) = self.fallback.as_ref() else {
             return Err(BlobProviderError::Backend(
                 "cannot fetch blobs: the primary blob provider failed, and no fallback is configured".to_string()
@@ -258,10 +260,10 @@ impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, 
         let sidecars = fallback.beacon_blob_side_cars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index as u64).collect::<Vec<_>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&(s.inner.index as usize)))
+            .filter(|s| blob_hash_indicies.contains(&s.inner.index))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -269,7 +271,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, 
             return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobSidecar>>())
+        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobTransactionSidecarItem>>())
     }
 }
 
@@ -288,7 +290,7 @@ where
         &mut self,
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Blob>, BlobProviderError> {
+    ) -> Result<Vec<Box<Blob>>, BlobProviderError> {
         match self.primary.get_blobs(block_ref, blob_hashes).await {
             Ok(blobs) => Ok(blobs),
             Err(primary_err) => {
@@ -309,7 +311,7 @@ where
                         }
                     };
 
-                // Validate the blob sidecars straight away with the `IndexedBlobHash`es.
+                // Validate the blob sidecars straight away with the num hashes.
                 let blobs = match sidecars
                     .into_iter()
                     .enumerate()
@@ -317,12 +319,15 @@ where
                         let hash = blob_hashes.get(i).ok_or(BlobProviderError::Backend(
                             "fallback: failed to get blob hash".to_string(),
                         ))?;
-                        match sidecar.verify_blob(hash) {
+                        match sidecar.verify_blob(&alloy_eips::eip1898::NumHash {
+                            hash: hash.hash,
+                            number: hash.index as u64,
+                        }) {
                             Ok(_) => Ok(sidecar.blob),
                             Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                         }
                     })
-                    .collect::<Result<Vec<Blob>, BlobProviderError>>()
+                    .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
                 {
                     Ok(blobs) => blobs,
                     Err(e) => {
@@ -435,9 +440,11 @@ impl<B: BeaconClient, F: BlobSidecarProvider> From<OnlineBlobProviderBuilder<B, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::MockBeaconClient;
+    use crate::{
+        test_utils::MockBeaconClient, APIConfigResponse, APIGenesisResponse,
+        APIGetBlobSidecarsResponse,
+    };
     use alloy_primitives::b256;
-    use kona_primitives::{APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 
     #[test]
     fn test_build_online_provider_with_fallback() {
@@ -645,7 +652,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err(),
             BlobProviderError::Backend(
-                "invalid sidecar ordering, blob hash index 4 does not match sidecar index 0"
+                "wrong versioned hash: have 0x001611aa000000000457ff00ff0001feed85761635b18d5c3dad729a4fac0460, expected 0x01e5ee2f6cbbafb3c03f05f340e795fe5b5a8edbcc9ac3fc7bd3d1940b99ef3c"
                     .to_string()
             )
         );
@@ -657,7 +664,10 @@ mod tests {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
             blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar { inner: BlobSidecar::default(), ..Default::default() }],
+                data: vec![APIBlobSidecar {
+                    inner: BlobTransactionSidecarItem::default(),
+                    ..Default::default()
+                }],
             }),
             ..Default::default()
         };
@@ -668,7 +678,7 @@ mod tests {
             ..Default::default()
         }];
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
-        assert_eq!(result.unwrap_err(), BlobProviderError::Backend("expected hash 0x0101010101010101010101010101010101010101010101010101010101010101 for blob at index 0 but got 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1".to_string()));
+        assert_eq!(result.unwrap_err(), BlobProviderError::Backend("wrong versioned hash: have 0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1, expected 0x0101010101010101010101010101010101010101010101010101010101010101".to_string()));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -677,7 +687,10 @@ mod tests {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
             blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar { inner: BlobSidecar::default(), ..Default::default() }],
+                data: vec![APIBlobSidecar {
+                    inner: BlobTransactionSidecarItem::default(),
+                    ..Default::default()
+                }],
             }),
             ..Default::default()
         };
@@ -690,7 +703,7 @@ mod tests {
         let result = blob_provider.get_blobs(&block_ref, &blob_hashes).await;
         assert_eq!(
             result,
-            Err(BlobProviderError::Backend("blob at index 0 failed verification".to_string()))
+            Err(BlobProviderError::Backend("KZG error: CError(C_KZG_BADARGS)".to_string()))
         );
     }
 

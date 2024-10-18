@@ -1,14 +1,12 @@
 //! Test Utilities for Online Providers
 
+use crate::{APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
 use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
 use async_trait::async_trait;
-use kona_primitives::{
-    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
-    IndexedBlobHash,
-};
+use kona_derive::sources::IndexedBlobHash;
 use reqwest::Client;
 
 /// Spawns an Anvil instance and returns a provider and the instance.
