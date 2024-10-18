@@ -1,7 +1,7 @@
 [package]
 name = "kona-common"
 description = "Common traits and system interfaces for developing client programs on top of Fault Proof VMs."
-version = "0.0.3"
+version = "0.0.4"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
