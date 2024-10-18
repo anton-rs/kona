@@ -102,20 +102,6 @@ impl APIConfigResponse {
     }
 }
 
-/// An API version response.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct APIVersionResponse {
-    /// The data.
-    pub data: VersionInformation,
-}
-
-/// Version information.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct VersionInformation {
-    /// The version.
-    pub version: String,
-}
-
 impl APIGenesisResponse {
     /// Creates a new API genesis response.
     pub const fn new(genesis_time: u64) -> Self {
