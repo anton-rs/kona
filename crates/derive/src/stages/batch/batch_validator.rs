@@ -46,7 +46,7 @@ where
     P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Create a new [BatchValidator] stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
+    pub const fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
         Self { cfg, prev, origin: None, l1_blocks: Vec::new() }
     }
 
@@ -485,7 +485,7 @@ mod test {
     async fn test_batch_validator_origin_behind_drain_prev() {
         let cfg = Arc::new(RollupConfig::default());
         let mut mock = TestBatchQueueProvider::new(
-            (0..5).into_iter().map(|_| Ok(Batch::Single(SingleBatch::default()))).collect(),
+            (0..5).map(|_| Ok(Batch::Single(SingleBatch::default()))).collect(),
         );
         mock.origin = Some(BlockInfo::default());
         let mut bv = BatchValidator::new(cfg, mock);

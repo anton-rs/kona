@@ -34,6 +34,7 @@ pub trait NextBatchProvider {
     /// complete and the batch has been consumed, an [PipelineError::Eof] error is returned.
     ///
     /// [ChannelReader]: crate::stages::ChannelReader
+    /// [PipelineError::Eof]: crate::errors::PipelineError::Eof
     async fn next_batch(
         &mut self,
         parent: L2BlockInfo,
