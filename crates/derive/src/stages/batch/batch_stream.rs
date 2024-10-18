@@ -338,7 +338,7 @@ mod test {
 
         let err = stream.next_batch(Default::default(), &mock_origins).await.unwrap_err();
         assert_eq!(err, PipelineError::Eof.temp());
-        assert_eq!(stream.buffer.len(), 0);
+        assert_eq!(stream.span_buffer_size(), 0);
         assert!(stream.span.is_none());
 
         // Add more data into the provider, see if the buffer is re-hydrated.
@@ -363,7 +363,7 @@ mod test {
 
         let err = stream.next_batch(Default::default(), &mock_origins).await.unwrap_err();
         assert_eq!(err, PipelineError::Eof.temp());
-        assert_eq!(stream.buffer.len(), 0);
+        assert_eq!(stream.span_buffer_size(), 0);
         assert!(stream.span.is_none());
     }
 
@@ -380,7 +380,7 @@ mod test {
         // The next batch should be passed through to the [BatchQueue] stage.
         let batch = stream.next_batch(Default::default(), &[]).await.unwrap();
         assert!(matches!(batch, Batch::Single(_)));
-        assert_eq!(stream.buffer.len(), 0);
+        assert_eq!(stream.span_buffer_size(), 0);
         assert!(stream.span.is_none());
     }
 }

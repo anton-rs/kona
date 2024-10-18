@@ -54,6 +54,10 @@ impl NextBatchProvider for TestBatchQueueProvider {
 #[async_trait]
 impl OriginAdvancer for TestBatchQueueProvider {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
+        self.origin = self.origin.map(|mut origin| {
+            origin.number += 1;
+            origin
+        });
         Ok(())
     }
 }
