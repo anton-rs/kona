@@ -3,7 +3,8 @@
 //! [KonaHandleRegister]: kona_executor::KonaHandleRegister
 
 use alloc::sync::Arc;
-use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
+use kona_executor::TrieDB;
+use kona_mpt::{TrieHinter, TrieProvider};
 use revm::{
     handler::register::EvmHandler,
     primitives::{spec_to_generic, SpecId},

@@ -1,18 +1,15 @@
 //! Contains utilities for the L2 executor.
 
-use crate::{ExecutorError, ExecutorResult};
+use crate::{constants::HOLOCENE_EXTRA_DATA_VERSION, ExecutorError, ExecutorResult};
 use alloc::vec::Vec;
 use alloy_consensus::{Eip658Value, Header, Receipt, ReceiptWithBloom};
 use alloy_eips::eip1559::BaseFeeParams;
-use alloy_primitives::{Bloom, Bytes, Log, B64};
+use alloy_primitives::{logs_bloom, Bytes, Log, B64};
 use op_alloy_consensus::{
     OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTxType,
 };
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
-
-/// The version byte for the Holocene extra data.
-const HOLOCENE_EXTRA_DATA_VERSION: u8 = 0x00;
 
 /// Constructs a [OpReceiptEnvelope] from a [Receipt] fields and [OpTxType].
 pub(crate) fn receipt_envelope_from_parts<'a>(
@@ -49,18 +46,6 @@ pub(crate) fn receipt_envelope_from_parts<'a>(
             OpReceiptEnvelope::Deposit(inner)
         }
     }
-}
-
-/// Compute the logs bloom filter for the given logs.
-pub(crate) fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
-    let mut bloom = Bloom::ZERO;
-    for log in logs {
-        bloom.m3_2048(log.address.as_slice());
-        for topic in log.topics() {
-            bloom.m3_2048(topic.as_slice());
-        }
-    }
-    bloom
 }
 
 /// Parse Holocene [Header] extra data.
@@ -140,7 +125,7 @@ pub(crate) fn encode_canyon_base_fee_params(config: &RollupConfig) -> B64 {
 #[cfg(test)]
 mod test {
     use super::decode_holocene_eip_1559_params;
-    use crate::util::{encode_canyon_base_fee_params, encode_holocene_eip_1559_params};
+    use crate::executor::util::{encode_canyon_base_fee_params, encode_holocene_eip_1559_params};
     use alloy_consensus::Header;
     use alloy_eips::eip1559::BaseFeeParams;
     use alloy_primitives::{b64, hex, B64};

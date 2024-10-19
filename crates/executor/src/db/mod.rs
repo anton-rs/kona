@@ -1,15 +1,12 @@
 //! This module contains an implementation of an in-memory Trie DB for [revm], that allows for
 //! incremental updates through fetching node preimages on the fly during execution.
 
-use crate::{
-    errors::{TrieDBError, TrieDBResult},
-    TrieHinter, TrieNode, TrieNodeError, TrieProvider,
-};
+use crate::errors::{TrieDBError, TrieDBResult};
 use alloc::{string::ToString, vec::Vec};
 use alloy_consensus::{Header, Sealed, EMPTY_ROOT_HASH};
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
-use alloy_trie::Nibbles;
+use kona_mpt::{Nibbles, TrieHinter, TrieNode, TrieNodeError, TrieProvider};
 use revm::{
     db::{states::StorageSlot, BundleState},
     primitives::{AccountInfo, Bytecode, HashMap, BLOCK_HASH_HISTORY},
@@ -50,7 +47,8 @@ pub use account::TrieAccount;
 /// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
 /// use anyhow::Result;
-/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieDB};
+/// use kona_executor::TrieDB;
+/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
 ///
 /// let mock_starting_root = B256::default();
@@ -116,19 +114,8 @@ where
     }
 
     /// Returns a shared reference to the root [TrieNode] of the trie DB.
-    pub const fn root_node_ref(&self) -> &TrieNode {
+    pub const fn root(&self) -> &TrieNode {
         &self.root_node
-    }
-
-    /// Returns a mutable reference to the root [TrieNode] of the trie DB.
-    ///
-    /// # Safety
-    /// This method is unsafe because it allows for the mutation of the root node, which enables
-    /// the caller to mutate the [TrieNode] of the DB without updating the root hash. This can lead
-    /// to inconsistencies in the trie DB's state. The caller must ensure that the root hash is
-    /// updated after mutating the root node.
-    pub unsafe fn root_node_mut(&mut self) -> &mut TrieNode {
-        &mut self.root_node
     }
 
     /// Returns the mapping of [Address]es to storage roots.
@@ -136,15 +123,18 @@ where
         &self.storage_roots
     }
 
-    /// Returns the mapping of [Address]es to storage roots.
+    /// Returns a reference to the current parent block header of the trie DB.
+    pub const fn parent_block_header(&self) -> &Sealed<Header> {
+        &self.parent_block_header
+    }
+
+    /// Sets the parent block header of the trie DB. Should be called after a block has been
+    /// executed and the Header has been created.
     ///
-    /// # Safety
-    /// This method is unsafe because it allows for the mutation of the storage roots, which enables
-    /// the caller to mutate the [TrieNode] of an account in the DB without updating the root hash
-    /// or validating the account storage root within the state trie. The caller must ensure
-    /// that any changes to the storage roots are consistent with the state trie.
-    pub unsafe fn storage_roots_mut(&mut self) -> &mut HashMap<Address, TrieNode> {
-        &mut self.storage_roots
+    /// ## Takes
+    /// - `parent_block_header`: The parent block header of the current block.
+    pub fn set_parent_block_header(&mut self, parent_block_header: Sealed<Header>) {
+        self.parent_block_header = parent_block_header;
     }
 
     /// Applies a [BundleState] changeset to the [TrieNode] and recomputes the state root hash.
@@ -172,20 +162,6 @@ where
 
         // Extract the new state root from the root node.
         self.root_node.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)
-    }
-
-    /// Returns a reference to the current parent block header of the trie DB.
-    pub const fn parent_block_header(&self) -> &Sealed<Header> {
-        &self.parent_block_header
-    }
-
-    /// Sets the parent block header of the trie DB. Should be called after a block has been
-    /// executed and the Header has been created.
-    ///
-    /// ## Takes
-    /// - `parent_block_header`: The parent block header of the current block.
-    pub fn set_parent_block_header(&mut self, parent_block_header: Sealed<Header>) {
-        self.parent_block_header = parent_block_header;
     }
 
     /// Fetches the [TrieAccount] of an account from the trie DB.
@@ -409,9 +385,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{NoopTrieHinter, NoopTrieProvider};
     use alloy_consensus::Sealable;
     use alloy_primitives::b256;
+    use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
 
     fn new_test_db() -> TrieDB<NoopTrieProvider, NoopTrieHinter> {
         TrieDB::new(
@@ -432,18 +408,7 @@ mod tests {
     #[test]
     fn test_trie_db_root_node_ref() {
         let db = new_test_db();
-        let root_node = db.root_node_ref();
-        assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
-    }
-
-    #[test]
-    fn test_trie_db_root_node_mut() {
-        let mut db = new_test_db();
-        unsafe {
-            let root_node = db.root_node_mut();
-            root_node.blind()
-        }
-        let root_node = db.root_node_ref();
+        let root_node = db.root();
         assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
     }
 
@@ -452,17 +417,6 @@ mod tests {
         let db = new_test_db();
         let storage_roots = db.storage_roots();
         assert!(storage_roots.is_empty());
-    }
-
-    #[test]
-    fn test_trie_db_storage_roots_mut() {
-        let mut db = new_test_db();
-        unsafe {
-            let storage_roots = db.storage_roots_mut();
-            storage_roots.insert(Address::default(), TrieNode::new_blinded(B256::default()));
-        }
-        let storage_roots = db.storage_roots();
-        assert_eq!(storage_roots.len(), 1);
     }
 
     #[test]
