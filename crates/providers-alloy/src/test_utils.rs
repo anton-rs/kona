@@ -1,9 +1,10 @@
 //! Test Utilities for Online Providers
 
-use crate::{APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse};
+use crate::{APIConfigResponse, APIGenesisResponse};
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
 use alloy_rpc_client::RpcClient;
+use alloy_rpc_types_beacon::sidecar::{BeaconBlobBundle, BlobData};
 use alloy_transport_http::Http;
 use async_trait::async_trait;
 use kona_derive::sources::IndexedBlobHash;
@@ -37,7 +38,7 @@ pub struct MockBeaconClient {
     /// The beacon genesis.
     pub beacon_genesis: Option<APIGenesisResponse>,
     /// The blob sidecars.
-    pub blob_sidecars: Option<APIGetBlobSidecarsResponse>,
+    pub blob_sidecars: Option<BeaconBlobBundle>,
 }
 
 /// A mock beacon client error
@@ -70,7 +71,7 @@ impl crate::BeaconClient for MockBeaconClient {
         &self,
         _: u64,
         _: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>, Self::Error> {
+    ) -> Result<Vec<BlobData>, Self::Error> {
         self.blob_sidecars
             .clone()
             .ok_or_else(|| MockBeaconClientError::BlobSidecarsNotSet)
