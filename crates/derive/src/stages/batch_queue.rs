@@ -1076,7 +1076,6 @@ mod tests {
                 transactions: batch_txs,
                 ommers: Vec::new(),
                 withdrawals: None,
-                requests: None,
             },
         };
         let second = OpBlock {
@@ -1085,7 +1084,6 @@ mod tests {
                 transactions: second_batch_txs,
                 ommers: Vec::new(),
                 withdrawals: None,
-                requests: None,
             },
         };
         let fetcher = TestL2ChainProvider {

@@ -6,8 +6,8 @@ use crate::{
 };
 use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
-use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
-use alloy_primitives::{Address, Bytes, B256};
+use alloy_eips::eip4844::{Blob, IndexedBlobHash, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
+use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
@@ -21,22 +21,6 @@ pub(crate) const BLOB_MAX_DATA_SIZE: usize = (4 * 31 + 3) * 1024 - 4; // 130044
 
 /// Blob Encoding/Decoding Rounds
 pub(crate) const BLOB_ENCODING_ROUNDS: usize = 1024;
-
-/// A Blob hash
-#[derive(Default, Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct IndexedBlobHash {
-    /// The index of the blob
-    pub index: usize,
-    /// The hash of the blob
-    pub hash: B256,
-}
-
-impl PartialEq for IndexedBlobHash {
-    fn eq(&self, other: &Self) -> bool {
-        self.index == other.index && self.hash == other.hash
-    }
-}
 
 /// The Blob Data
 #[derive(Default, Clone, Debug)]
@@ -287,7 +271,7 @@ where
                 continue;
             };
             for blob in blob_hashes {
-                let indexed = IndexedBlobHash { hash: blob, index: number as usize };
+                let indexed = IndexedBlobHash { hash: blob, index: number };
                 hashes.push(indexed);
                 data.push(BlobData::default());
                 number += 1;
@@ -392,6 +376,7 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::{errors::PipelineErrorKind, traits::test_utils::TestBlobProvider};
+    use alloy_primitives::B256;
     use alloy_rlp::Decodable;
     use kona_providers::test_utils::TestChainProvider;
 

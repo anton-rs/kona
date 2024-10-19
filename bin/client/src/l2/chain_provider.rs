@@ -112,7 +112,6 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
                     .rollup_config
                     .is_canyon_active(timestamp)
                     .then(Vec::new),
-                requests: None,
             },
         };
         Ok(optimism_block)
