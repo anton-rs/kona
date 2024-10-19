@@ -6,7 +6,7 @@ use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
 use alloy_transport::{RpcError, TransportErrorKind, TransportResult};
 use async_trait::async_trait;
-use kona_providers::{ChainProvider, L2ChainProvider};
+use kona_derive::traits::{ChainProvider, L2ChainProvider};
 use lru::LruCache;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};

@@ -1,13 +1,15 @@
 //! Contains the `PipelineBuilder` object that is used to build a `DerivationPipeline`.
 
 use super::{AttributesBuilder, DataAvailabilityProvider, DerivationPipeline};
-use crate::stages::{
-    AttributesQueue, BatchQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
-    L1Retrieval, L1Traversal,
+use crate::{
+    stages::{
+        AttributesQueue, BatchQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
+        L1Retrieval, L1Traversal,
+    },
+    traits::{ChainProvider, L2ChainProvider},
 };
 use alloc::sync::Arc;
 use core::fmt::Debug;
-use kona_providers::{ChainProvider, L2ChainProvider};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
 

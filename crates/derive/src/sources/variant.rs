@@ -1,15 +1,13 @@
 //! Data source
 
-use alloc::boxed::Box;
-use alloy_primitives::Bytes;
-use async_trait::async_trait;
-use kona_providers::ChainProvider;
-
 use crate::{
     errors::PipelineResult,
     sources::{BlobSource, CalldataSource},
-    traits::{AsyncIterator, BlobProvider},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
 };
+use alloc::boxed::Box;
+use alloy_primitives::Bytes;
+use async_trait::async_trait;
 
 /// An enum over the various data sources.
 #[derive(Debug, Clone)]
@@ -43,8 +41,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use kona_providers::test_utils::TestChainProvider;
+    use crate::test_utils::TestChainProvider;
     use op_alloy_protocol::BlockInfo;
 
     use crate::{

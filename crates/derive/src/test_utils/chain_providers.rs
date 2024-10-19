@@ -1,6 +1,6 @@
-//! Test Utilities for Provider Traits
+//! Test Utilities for chain provider traits
 
-use crate::{ChainProvider, L2ChainProvider};
+use crate::traits::{ChainProvider, L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{map::HashMap, B256};

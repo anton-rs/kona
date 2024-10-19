@@ -1,8 +1,8 @@
 //! Test Utilities for the [crate::pipeline::DerivationPipeline]
 //! as well as its stages and providers.
 
+use crate::test_utils::{TestChainProvider, TestL2ChainProvider};
 use alloc::{boxed::Box, sync::Arc};
-use kona_providers::test_utils::{TestChainProvider, TestL2ChainProvider};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;

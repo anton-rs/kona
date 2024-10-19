@@ -1,9 +1,9 @@
 //! The Span Batch Type
 
+use crate::traits::L2ChainProvider;
 use alloc::vec::Vec;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::FixedBytes;
-use kona_providers::L2ChainProvider;
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
@@ -472,12 +472,11 @@ impl SpanBatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{CollectingLayer, TraceStorage};
+    use crate::test_utils::{CollectingLayer, TestL2ChainProvider, TraceStorage};
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_eips::BlockNumHash;
     use alloy_primitives::{b256, Bytes};
-    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::{OpBlock, OpTxType};
     use op_alloy_genesis::ChainGenesis;
     use tracing::Level;

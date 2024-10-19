@@ -4,12 +4,11 @@
 use crate::{
     errors::PipelineResult,
     sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},
-    traits::{BlobProvider, DataAvailabilityProvider},
+    traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
-use kona_providers::ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
 
@@ -87,10 +86,10 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::TestChainProvider;
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::address;
-    use kona_providers::test_utils::TestChainProvider;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
     use op_alloy_protocol::BlockInfo;
 

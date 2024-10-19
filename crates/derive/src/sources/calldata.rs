@@ -2,13 +2,12 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult},
-    traits::AsyncIterator,
+    traits::{AsyncIterator, ChainProvider},
 };
 use alloc::{boxed::Box, collections::VecDeque, format};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
-use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
 
 /// A data iterator that reads from calldata.
@@ -104,10 +103,9 @@ impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::PipelineErrorKind;
+    use crate::{errors::PipelineErrorKind, test_utils::TestChainProvider};
     use alloy_consensus::{Signed, TxEip2930, TxEip4844, TxEip4844Variant, TxLegacy};
     use alloy_primitives::{address, Address, Signature, TxKind};
-    use kona_providers::test_utils::TestChainProvider;
 
     pub(crate) fn test_legacy_tx(to: Address) -> TxEnvelope {
         let sig = Signature::test_signature();

@@ -61,9 +61,8 @@ kona-common = { path = "crates/common", version = "0.0.3", default-features = fa
 kona-derive = { path = "crates/derive", version = "0.0.3", default-features = false }
 kona-preimage = { path = "crates/preimage", version = "0.0.3", default-features = false }
 kona-executor = { path = "crates/executor", version = "0.0.2", default-features = false }
-kona-providers = { path = "crates/providers", version = "0.0.1", default-features = false }
 kona-common-proc = { path = "crates/common-proc", version = "0.0.3", default-features = false }
-kona-providers-alloy = { path = "crates/providers-alloy", version = "0.0.1", default-features = false }
+kona-derive-alloy = { path = "crates/derive-alloy", version = "0.0.1", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.8", default-features = false }
@@ -123,7 +122,7 @@ miniz_oxide = "0.8.0"
 brotli = { version = "7.0.0", default-features = false }
 
 # Testing
-pprof = "0.13.0" 
+pprof = "0.13.0"
 proptest = "1.5"
 criterion = "0.5.1"
 

@@ -13,8 +13,8 @@ use alloy_rpc_types::{
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
 use kona_derive::sources::IndexedBlobHash;
+use kona_derive_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_preimage::{PreimageKey, PreimageKeyType};
-use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;

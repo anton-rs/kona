@@ -10,6 +10,9 @@ pub use pipeline::{
 mod blob_provider;
 pub use blob_provider::TestBlobProvider;
 
+mod chain_providers;
+pub use chain_providers::{TestChainProvider, TestL2ChainProvider, TestProviderError};
+
 mod data_availability_provider;
 pub use data_availability_provider::{TestDAP, TestIter};
 

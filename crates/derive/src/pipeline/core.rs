@@ -6,12 +6,11 @@ use super::{
 };
 use crate::{
     errors::PipelineErrorKind,
-    traits::{ActivationSignal, ResetSignal, Signal, SignalReceiver},
+    traits::{ActivationSignal, L2ChainProvider, ResetSignal, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_providers::L2ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
@@ -176,12 +175,11 @@ where
 mod tests {
     use crate::{
         pipeline::{DerivationPipeline, PipelineError, StepResult},
-        test_utils::*,
+        test_utils::{TestL2ChainProvider, *},
         traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
     };
     use alloc::sync::Arc;
     use alloy_rpc_types_engine::PayloadAttributes;
-    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
     use op_alloy_protocol::L2BlockInfo;
     use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};

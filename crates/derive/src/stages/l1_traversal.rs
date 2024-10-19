@@ -4,13 +4,13 @@ use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
     stages::L1RetrievalProvider,
     traits::{
-        ActivationSignal, OriginAdvancer, OriginProvider, ResetSignal, Signal, SignalReceiver,
+        ActivationSignal, ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal,
+        SignalReceiver,
     },
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
-use kona_providers::ChainProvider;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
@@ -151,11 +151,10 @@ impl<F: ChainProvider + Send> SignalReceiver for L1Traversal<F> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::errors::PipelineErrorKind;
+    use crate::{errors::PipelineErrorKind, test_utils::TestChainProvider};
     use alloc::vec;
     use alloy_consensus::Receipt;
     use alloy_primitives::{address, b256, hex, Bytes, Log, LogData, B256};
-    use kona_providers::test_utils::TestChainProvider;
     use op_alloy_genesis::system::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
 
     const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");

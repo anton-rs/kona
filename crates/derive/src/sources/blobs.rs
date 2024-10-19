@@ -2,14 +2,13 @@
 
 use crate::{
     errors::{BlobDecodingError, BlobProviderError, PipelineError, PipelineResult},
-    traits::{AsyncIterator, BlobProvider},
+    traits::{AsyncIterator, BlobProvider, ChainProvider},
 };
 use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 use alloy_primitives::{Address, Bytes, B256};
 use async_trait::async_trait;
-use kona_providers::ChainProvider;
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
@@ -391,9 +390,11 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::{errors::PipelineErrorKind, test_utils::TestBlobProvider};
+    use crate::{
+        errors::PipelineErrorKind,
+        test_utils::{TestBlobProvider, TestChainProvider},
+    };
     use alloy_rlp::Decodable;
-    use kona_providers::test_utils::TestChainProvider;
 
     #[test]
     fn test_indexed_blob_hash() {

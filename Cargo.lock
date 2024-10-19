@@ -2185,7 +2185,6 @@ dependencies = [
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
- "kona-providers",
  "lru",
  "op-alloy-consensus",
  "op-alloy-genesis",
@@ -2236,7 +2235,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "brotli",
- "kona-providers",
  "lazy_static",
  "miniz_oxide",
  "op-alloy-consensus",
@@ -2253,6 +2251,37 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unsigned-varint",
+]
+
+[[package]]
+name = "kona-derive-alloy"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-node-bindings",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rlp",
+ "alloy-rpc-client",
+ "alloy-rpc-types-beacon",
+ "alloy-serde",
+ "alloy-transport",
+ "alloy-transport-http",
+ "async-trait",
+ "kona-derive",
+ "lazy_static",
+ "lru",
+ "op-alloy-consensus",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "prometheus",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2299,9 +2328,9 @@ dependencies = [
  "kona-client",
  "kona-common",
  "kona-derive",
+ "kona-derive-alloy",
  "kona-mpt",
  "kona-preimage",
- "kona-providers-alloy",
  "op-alloy-genesis",
  "op-alloy-protocol",
  "os_pipe",
@@ -2352,51 +2381,6 @@ dependencies = [
  "os_pipe",
  "rkyv",
  "serde",
- "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "kona-providers"
-version = "0.0.1"
-dependencies = [
- "alloy-consensus",
- "alloy-primitives",
- "async-trait",
- "op-alloy-consensus",
- "op-alloy-genesis",
- "op-alloy-protocol",
- "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
-]
-
-[[package]]
-name = "kona-providers-alloy"
-version = "0.0.1"
-dependencies = [
- "alloy-consensus",
- "alloy-eips",
- "alloy-node-bindings",
- "alloy-primitives",
- "alloy-provider",
- "alloy-rlp",
- "alloy-rpc-client",
- "alloy-rpc-types-beacon",
- "alloy-serde",
- "alloy-transport",
- "alloy-transport-http",
- "async-trait",
- "kona-derive",
- "kona-providers",
- "lazy_static",
- "lru",
- "op-alloy-consensus",
- "op-alloy-genesis",
- "op-alloy-protocol",
- "prometheus",
- "reqwest",
- "serde",
- "serde_json",
  "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
  "tokio",
  "tracing",
