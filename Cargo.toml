@@ -86,6 +86,7 @@ alloy-rpc-client = { version = "0.5.0", default-features = false }
 alloy-node-bindings = { version = "0.5.0", default-features = false }
 alloy-transport-http = { version = "0.5.0", default-features = false }
 alloy-rpc-types-engine = { version = "0.5.0", default-features = false }
+alloy-rpc-types-beacon = { version = "0.5.0", default-features = false }
 
 # General
 anyhow = { version = "1.0.89", default-features = false }

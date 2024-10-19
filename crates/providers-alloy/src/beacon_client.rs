@@ -1,7 +1,6 @@
 //! Contains an online implementation of the `BeaconClient` trait.
 
-use alloy_eips::eip4844::BlobTransactionSidecarItem;
-use alloy_primitives::FixedBytes;
+use alloy_rpc_types_beacon::sidecar::{BeaconBlobBundle, BlobData};
 use async_trait::async_trait;
 use kona_derive::sources::IndexedBlobHash;
 use reqwest::Client;
@@ -14,54 +13,6 @@ pub(crate) const GENESIS_METHOD: &str = "eth/v1/beacon/genesis";
 
 /// The blob sidecars engine api method prefix.
 pub(crate) const SIDECARS_METHOD_PREFIX: &str = "eth/v1/beacon/blob_sidecars";
-
-/// An API blob sidecar.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct APIBlobSidecar {
-    /// The inner blob sidecar.
-    #[serde(flatten)]
-    pub inner: BlobTransactionSidecarItem,
-    /// The signed block header.
-    #[serde(rename = "signed_block_header")]
-    pub signed_block_header: SignedBeaconBlockHeader,
-    // The inclusion-proof of the blob-sidecar into the beacon-block is ignored,
-    // since we verify blobs by their versioned hashes against the execution-layer block instead.
-}
-
-/// A signed beacon block header.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct SignedBeaconBlockHeader {
-    /// The message.
-    pub message: BeaconBlockHeader,
-    // The signature is ignored, since we verify blobs against EL versioned-hashes
-}
-
-/// A beacon block header.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct BeaconBlockHeader {
-    /// The slot.
-    #[serde(with = "alloy_serde::quantity")]
-    pub slot: u64,
-    /// The proposer index.
-    #[serde(with = "alloy_serde::quantity")]
-    pub proposer_index: u64,
-    /// The parent root.
-    #[serde(rename = "parent_root")]
-    pub parent_root: FixedBytes<32>,
-    /// The state root.
-    #[serde(rename = "state_root")]
-    pub state_root: FixedBytes<32>,
-    /// The body root.
-    #[serde(rename = "body_root")]
-    pub body_root: FixedBytes<32>,
-}
-
-/// An response for fetching blob sidecars.
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct APIGetBlobSidecarsResponse {
-    /// The data.
-    pub data: Vec<APIBlobSidecar>,
-}
 
 /// A reduced genesis data.
 #[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -102,34 +53,10 @@ impl APIConfigResponse {
     }
 }
 
-/// An API version response.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct APIVersionResponse {
-    /// The data.
-    pub data: VersionInformation,
-}
-
-/// Version information.
-#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct VersionInformation {
-    /// The version.
-    pub version: String,
-}
-
 impl APIGenesisResponse {
     /// Creates a new API genesis response.
     pub const fn new(genesis_time: u64) -> Self {
         Self { data: ReducedGenesisData { genesis_time } }
-    }
-}
-
-impl Clone for APIGetBlobSidecarsResponse {
-    fn clone(&self) -> Self {
-        let mut data = Vec::with_capacity(self.data.len());
-        for sidecar in &self.data {
-            data.push(sidecar.clone());
-        }
-        Self { data }
     }
 }
 
@@ -152,7 +79,7 @@ pub trait BeaconClient {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>, Self::Error>;
+    ) -> Result<Vec<BlobData>, Self::Error>;
 }
 
 /// An online implementation of the [BeaconClient] trait.
@@ -221,7 +148,7 @@ impl BeaconClient for OnlineBeaconClient {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>, Self::Error> {
+    ) -> Result<Vec<BlobData>, Self::Error> {
         crate::inc!(PROVIDER_CALLS, &["beacon_client", "beacon_blob_side_cars"]);
         crate::timer!(
             START,
@@ -245,7 +172,7 @@ impl BeaconClient for OnlineBeaconClient {
                 return Err(e);
             }
         };
-        let raw_response = match raw_response.json::<APIGetBlobSidecarsResponse>().await {
+        let raw_response = match raw_response.json::<BeaconBlobBundle>().await {
             Ok(response) => response,
             Err(e) => {
                 crate::timer!(DISCARD, timer);
@@ -259,7 +186,7 @@ impl BeaconClient for OnlineBeaconClient {
         // Filter the sidecars by the hashes, in-order.
         hashes.iter().for_each(|hash| {
             if let Some(sidecar) =
-                raw_response.data.iter().find(|sidecar| sidecar.inner.index == hash.index as u64)
+                raw_response.data.iter().find(|sidecar| sidecar.index == hash.index as u64)
             {
                 sidecars.push(sidecar.clone());
             }
