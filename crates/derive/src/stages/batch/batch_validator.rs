@@ -16,10 +16,10 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{debug, error, info, warn};
 
-/// The [BatchValidator] stage is responsible for sequencing the [Batch]es for the
-/// [AttributesQueue]'s consumption.
+/// The [BatchValidator] stage is responsible for validating the [SingleBatch]es from
+/// the [BatchStream] [AttributesQueue]'s consumption.
 ///
-/// [Batch]: crate::batch::Batch
+/// [BatchStream]: crate::stages::BatchStream
 /// [AttributesQueue]: crate::stages::attributes_queue::AttributesQueue
 #[derive(Debug)]
 pub struct BatchValidator<P>
@@ -91,10 +91,11 @@ where
                 // reset is called, the origin behind is false.
                 self.l1_blocks.clear();
             }
-            info!(
+            debug!(
                 target: "batch-validator",
-                "Advancing batch validator origin to L1 block #{}",
-                self.origin.map(|b| b.number).unwrap_or_default()
+                "Advancing batch validator origin to L1 block #{}.{}",
+                self.origin.map(|b| b.number).unwrap_or_default(),
+                origin_behind.then(|| " (origin behind)").unwrap_or_default()
             );
         }
 
@@ -107,7 +108,7 @@ where
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
                     self.l1_blocks.drain(0..i);
-                    info!(target: "batch-validator", "Advancing batch validator sequencer epoch");
+                    debug!(target: "batch-validator", "Advancing internal L1 epoch");
                     break;
                 }
             }
@@ -143,10 +144,6 @@ where
         // there is still room to receive batches for the current epoch.
         // No need to force-create empty batch(es) towards the next epoch yet.
         if !force_empty_batches {
-            info!(
-                target: "batch-validator",
-                "Sequencer window not expired, waiting for next batch"
-            );
             return Err(PipelineError::Eof.temp());
         }
 
@@ -161,7 +158,7 @@ where
         // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
         // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
-            info!(target: "batch-validator", "Generating empty batch for epoch: {}", epoch.number);
+            info!(target: "batch-validator", "Generating empty batch for epoch #{}", epoch.number);
             return Ok(SingleBatch {
                 parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
@@ -173,7 +170,7 @@ where
 
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
-        info!(
+        debug!(
             target: "batch-validator",
             "Advancing batch validator to next epoch: {}, timestamp: {}, epoch timestamp: {}",
             next_epoch.number, next_timestamp, next_epoch.timestamp
@@ -244,7 +241,7 @@ where
             &stage_origin,
         ) {
             BatchValidity::Accept => {
-                debug!(target: "batch-validator", "Found next singular batch");
+                info!(target: "batch-validator", "Found next batch (epoch #{})", next_batch.epoch_num);
                 Ok(next_batch)
             }
             BatchValidity::Past => {
