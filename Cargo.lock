@@ -2337,6 +2337,7 @@ dependencies = [
  "reqwest",
  "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
  "tokio",
+ "tracing-subscriber",
 ]
 
 [[package]]

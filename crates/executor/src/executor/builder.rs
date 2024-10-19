@@ -1,8 +1,7 @@
 //! Contains the builder pattern for the [StatelessL2BlockExecutor].
 
-use crate::db::TrieDB;
-
 use super::StatelessL2BlockExecutor;
+use crate::db::TrieDB;
 use alloy_consensus::{Header, Sealable, Sealed};
 use kona_mpt::{TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
