@@ -1,12 +1,13 @@
 //! Contains an online implementation of the `BlobProvider` trait.
 
 use alloy_eips::eip4844::{Blob, BlobTransactionSidecarItem};
+use alloy_rpc_types_beacon::sidecar::BlobData;
 use async_trait::async_trait;
 use kona_derive::{errors::BlobProviderError, sources::IndexedBlobHash, traits::BlobProvider};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
-use crate::{APIBlobSidecar, BeaconClient, OnlineBeaconClient};
+use crate::{BeaconClient, OnlineBeaconClient};
 
 /// An online implementation of the [BlobProvider] trait.
 #[derive(Debug, Clone)]
@@ -63,7 +64,7 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>, BlobProviderError> {
+    ) -> Result<Vec<BlobData>, BlobProviderError> {
         self.beacon_client
             .beacon_blob_side_cars(slot, hashes)
             .await
@@ -100,7 +101,7 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
         let blob_hash_indicies = blob_hashes.iter().map(|b| b.index as u64).collect::<Vec<u64>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&s.inner.index))
+            .filter(|s| blob_hash_indicies.contains(&s.index))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -108,7 +109,15 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
             return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobTransactionSidecarItem>>())
+        Ok(filtered
+            .into_iter()
+            .map(|s| BlobTransactionSidecarItem {
+                index: s.index,
+                blob: s.blob,
+                kzg_commitment: s.kzg_commitment,
+                kzg_proof: s.kzg_proof,
+            })
+            .collect::<Vec<BlobTransactionSidecarItem>>())
     }
 }
 
@@ -192,7 +201,7 @@ pub trait BlobSidecarProvider {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>, BlobProviderError>;
+    ) -> Result<Vec<BlobData>, BlobProviderError>;
 }
 
 /// Blanket implementation of the [BlobSidecarProvider] trait for all types that
@@ -203,7 +212,7 @@ impl<B: BeaconClient + Send + Sync> BlobSidecarProvider for B {
         &self,
         slot: u64,
         hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<APIBlobSidecar>, BlobProviderError> {
+    ) -> Result<Vec<BlobData>, BlobProviderError> {
         self.beacon_blob_side_cars(slot, hashes)
             .await
             .map_err(|e| BlobProviderError::Backend(e.to_string()))
@@ -263,7 +272,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, 
         let blob_hash_indicies = blob_hashes.iter().map(|b| b.index as u64).collect::<Vec<_>>();
         let filtered = sidecars
             .into_iter()
-            .filter(|s| blob_hash_indicies.contains(&s.inner.index))
+            .filter(|s| blob_hash_indicies.contains(&s.index))
             .collect::<Vec<_>>();
 
         // Validate the correct number of blob sidecars were retrieved.
@@ -271,7 +280,15 @@ impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, 
             return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
-        Ok(filtered.into_iter().map(|s| s.inner).collect::<Vec<BlobTransactionSidecarItem>>())
+        Ok(filtered
+            .into_iter()
+            .map(|s| BlobTransactionSidecarItem {
+                index: s.index,
+                blob: s.blob,
+                kzg_commitment: s.kzg_commitment,
+                kzg_proof: s.kzg_proof,
+            })
+            .collect::<Vec<BlobTransactionSidecarItem>>())
     }
 }
 
@@ -440,11 +457,12 @@ impl<B: BeaconClient, F: BlobSidecarProvider> From<OnlineBlobProviderBuilder<B, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        test_utils::MockBeaconClient, APIConfigResponse, APIGenesisResponse,
-        APIGetBlobSidecarsResponse,
-    };
+    use crate::{test_utils::MockBeaconClient, APIConfigResponse, APIGenesisResponse};
     use alloy_primitives::b256;
+    use alloy_rpc_types_beacon::{
+        header::{BeaconBlockHeader, Header},
+        sidecar::BeaconBlobBundle,
+    };
 
     #[test]
     fn test_build_online_provider_with_fallback() {
@@ -488,7 +506,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_blobs() {
         let json_bytes = include_bytes!("testdata/eth_v1_beacon_sidecars_goerli.json");
-        let sidecars: APIGetBlobSidecarsResponse = serde_json::from_slice(json_bytes).unwrap();
+        let sidecars: BeaconBlobBundle = serde_json::from_slice(json_bytes).unwrap();
         let blob_hashes = vec![
             IndexedBlobHash {
                 index: 0,
@@ -602,8 +620,24 @@ mod tests {
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
-            blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar::default()],
+            blob_sidecars: Some(BeaconBlobBundle {
+                data: vec![BlobData {
+                    index: 0,
+                    blob: Box::new(Blob::default()),
+                    kzg_commitment: Default::default(),
+                    kzg_proof: Default::default(),
+                    signed_block_header: Header {
+                        message: BeaconBlockHeader {
+                            slot: 0,
+                            proposer_index: 0,
+                            parent_root: Default::default(),
+                            state_root: Default::default(),
+                            body_root: Default::default(),
+                        },
+                        signature: Default::default(),
+                    },
+                    kzg_commitment_inclusion_proof: Default::default(),
+                }],
             }),
             ..Default::default()
         };
@@ -617,7 +651,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_blobs_invalid_ordering() {
         let json_bytes = include_bytes!("testdata/eth_v1_beacon_sidecars_goerli.json");
-        let sidecars: APIGetBlobSidecarsResponse = serde_json::from_slice(json_bytes).unwrap();
+        let sidecars: BeaconBlobBundle = serde_json::from_slice(json_bytes).unwrap();
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
@@ -663,10 +697,23 @@ mod tests {
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
-            blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar {
-                    inner: BlobTransactionSidecarItem::default(),
-                    ..Default::default()
+            blob_sidecars: Some(BeaconBlobBundle {
+                data: vec![BlobData {
+                    index: 0,
+                    blob: Box::new(Blob::default()),
+                    kzg_commitment: Default::default(),
+                    kzg_proof: Default::default(),
+                    signed_block_header: Header {
+                        message: BeaconBlockHeader {
+                            slot: 0,
+                            proposer_index: 0,
+                            parent_root: Default::default(),
+                            state_root: Default::default(),
+                            body_root: Default::default(),
+                        },
+                        signature: Default::default(),
+                    },
+                    kzg_commitment_inclusion_proof: Default::default(),
                 }],
             }),
             ..Default::default()
@@ -686,10 +733,23 @@ mod tests {
         let beacon_client = MockBeaconClient {
             beacon_genesis: Some(APIGenesisResponse::new(10)),
             config_spec: Some(APIConfigResponse::new(12)),
-            blob_sidecars: Some(APIGetBlobSidecarsResponse {
-                data: vec![APIBlobSidecar {
-                    inner: BlobTransactionSidecarItem::default(),
-                    ..Default::default()
+            blob_sidecars: Some(BeaconBlobBundle {
+                data: vec![BlobData {
+                    index: 0,
+                    blob: Box::new(Blob::default()),
+                    kzg_commitment: Default::default(),
+                    kzg_proof: Default::default(),
+                    signed_block_header: Header {
+                        message: BeaconBlockHeader {
+                            slot: 0,
+                            proposer_index: 0,
+                            parent_root: Default::default(),
+                            state_root: Default::default(),
+                            body_root: Default::default(),
+                        },
+                        signature: Default::default(),
+                    },
+                    kzg_commitment_inclusion_proof: Default::default(),
                 }],
             }),
             ..Default::default()
@@ -710,7 +770,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_blob_fallback() {
         let json_bytes = include_bytes!("testdata/eth_v1_beacon_sidecars_goerli.json");
-        let sidecars: APIGetBlobSidecarsResponse = serde_json::from_slice(json_bytes).unwrap();
+        let sidecars: BeaconBlobBundle = serde_json::from_slice(json_bytes).unwrap();
 
         // Provide no sidecars to the primary provider to trigger a fallback fetch
         let beacon_client = MockBeaconClient {
@@ -755,9 +815,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_blobs_fallback_partial_sidecar() {
         let json_bytes = include_bytes!("testdata/eth_v1_beacon_sidecars_goerli.json");
-        let all_sidecars: APIGetBlobSidecarsResponse = serde_json::from_slice(json_bytes).unwrap();
+        let all_sidecars: BeaconBlobBundle = serde_json::from_slice(json_bytes).unwrap();
 
-        let online_sidecars = APIGetBlobSidecarsResponse {
+        let online_sidecars = BeaconBlobBundle {
             // Remove some sidecars from the online provider to trigger a fallback fetch
             data: all_sidecars.data.clone().into_iter().take(2).collect::<Vec<_>>(),
         };
