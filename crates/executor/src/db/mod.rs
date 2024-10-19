@@ -47,7 +47,8 @@ pub use account::TrieAccount;
 /// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
 /// use anyhow::Result;
-/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider, TrieDB};
+/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
+/// use kona_executor::TrieDB;
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
 ///
 /// let mock_starting_root = B256::default();
