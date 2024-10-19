@@ -172,7 +172,7 @@ where
         // that we can, so we can advance to the next epoch.
         debug!(
             target: "batch-validator",
-            "Advancing batch validator to next epoch: {}, timestamp: {}, epoch timestamp: {}",
+            "Advancing batch validator epoch: {}, timestamp: {}, epoch timestamp: {}",
             next_epoch.number, next_timestamp, next_epoch.timestamp
         );
         self.l1_blocks.remove(0);
@@ -576,7 +576,8 @@ mod test {
         assert!(bv.next_batch(mock_parent).await.unwrap().transactions.is_empty());
 
         let trace_lock = trace_store.lock();
-        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::INFO)).count(), 2);
+        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::DEBUG)).count(), 1);
+        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::INFO)).count(), 1);
         assert!(trace_lock[0].1.contains("Advancing batch validator origin"));
         assert!(trace_lock[1].1.contains("Generating empty batch for epoch"));
     }
@@ -613,8 +614,9 @@ mod test {
         assert_eq!(bv.next_batch(mock_parent).await.unwrap_err(), PipelineError::Eof.temp());
 
         let trace_lock = trace_store.lock();
-        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::INFO)).count(), 2);
+        dbg!(&trace_lock);
+        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::DEBUG)).count(), 2);
         assert!(trace_lock[0].1.contains("Advancing batch validator origin"));
-        assert!(trace_lock[1].1.contains("Advancing batch validator to next epoch"));
+        assert!(trace_lock[1].1.contains("Advancing batch validator epoch"));
     }
 }
