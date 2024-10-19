@@ -49,7 +49,7 @@ mod tests {
 
     use crate::{
         sources::{BlobData, EthereumDataSourceVariant},
-        traits::test_utils::TestBlobProvider,
+        test_utils::TestBlobProvider,
     };
 
     #[tokio::test]

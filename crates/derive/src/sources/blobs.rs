@@ -391,7 +391,7 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::{errors::PipelineErrorKind, traits::test_utils::TestBlobProvider};
+    use crate::{errors::PipelineErrorKind, test_utils::TestBlobProvider};
     use alloy_rlp::Decodable;
     use kona_providers::test_utils::TestChainProvider;
 

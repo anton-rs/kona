@@ -2,26 +2,22 @@
 //! as well as its stages and providers.
 
 use alloc::{boxed::Box, sync::Arc};
+use kona_providers::test_utils::{TestChainProvider, TestL2ChainProvider};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
-use crate::stages::ChannelProvider;
 // Re-export these types used internally to the test pipeline.
-pub use crate::{
-    batch::SingleBatch,
+use crate::{
     errors::PipelineError,
     pipeline::{DerivationPipeline, PipelineBuilder, PipelineResult},
     stages::{
-        AttributesProvider, AttributesQueue, BatchQueue, BatchStream, ChannelBank, ChannelReader,
-        FrameQueue, L1Retrieval, L1Traversal,
+        AttributesQueue, BatchQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
+        L1Retrieval, L1Traversal,
     },
-    test_utils::TestAttributesBuilder,
-    traits::{
-        test_utils::TestDAP, NextAttributes, OriginAdvancer, OriginProvider, Signal, SignalReceiver,
-    },
+    test_utils::{TestAttributesBuilder, TestDAP},
+    traits::{NextAttributes, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
-pub use kona_providers::test_utils::{TestChainProvider, TestL2ChainProvider};
 
 /// A fully custom [NextAttributes].
 #[derive(Default, Debug, Clone)]

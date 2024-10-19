@@ -96,7 +96,8 @@ mod tests {
 
     use crate::{
         sources::{EthereumDataSource, EthereumDataSourceVariant},
-        traits::{test_utils::TestBlobProvider, AsyncIterator, DataAvailabilityProvider},
+        test_utils::TestBlobProvider,
+        traits::{AsyncIterator, DataAvailabilityProvider},
     };
 
     #[tokio::test]

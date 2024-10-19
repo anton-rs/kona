@@ -1,10 +1,17 @@
 //! Test Utilities for `kona-derive`.
 
-pub mod pipeline;
+mod pipeline;
 pub use pipeline::{
     new_test_pipeline, TestAttributesQueue, TestBatchQueue, TestBatchStream, TestChannelProvider,
-    TestFrameQueue, TestL1Retrieval, TestL1Traversal, TestNextAttributes, TestPipeline,
+    TestChannelReader, TestFrameQueue, TestL1Retrieval, TestL1Traversal, TestNextAttributes,
+    TestPipeline,
 };
+
+mod blob_provider;
+pub use blob_provider::TestBlobProvider;
+
+mod data_availability_provider;
+pub use data_availability_provider::{TestDAP, TestIter};
 
 mod batch_queue;
 pub use batch_queue::TestBatchQueueProvider;
