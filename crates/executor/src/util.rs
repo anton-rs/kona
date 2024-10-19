@@ -170,7 +170,7 @@ mod test {
         let mock_header = Header { extra_data: params.to_vec().into(), ..Default::default() };
         let params = decode_holocene_eip_1559_params(&mock_header).unwrap();
 
-        assert_eq!(params.elasticity_multiplier, 0xBADC_0DE);
+        assert_eq!(params.elasticity_multiplier, 0x0BAD_C0DE);
         assert_eq!(params.max_change_denominator, 0xBEEF_BABE);
     }
 
