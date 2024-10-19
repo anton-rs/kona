@@ -82,21 +82,20 @@ where
         if self.origin != self.prev.origin() {
             self.origin = self.prev.origin();
             if !origin_behind {
-                let origin = match self.origin.as_ref().ok_or(PipelineError::MissingOrigin.crit()) {
-                    Ok(o) => o,
-                    Err(e) => {
-                        return Err(e);
-                    }
-                };
+                let origin = self.origin.as_ref().ok_or(PipelineError::MissingOrigin.crit())?;
                 self.l1_blocks.push(*origin);
             } else {
                 // This is to handle the special case of startup.
-                // At startup, the batch queue is reset and includes the
-                // l1 origin. That is the only time where immediately after
+                // At startup, the batch validator is reset and includes the
+                // l1 origin. That is the only time when immediately after
                 // reset is called, the origin behind is false.
                 self.l1_blocks.clear();
             }
-            info!(target: "batch-queue", "Advancing batch queue origin: {:?}", self.origin);
+            info!(
+                target: "batch-validator",
+                "Advancing batch validator origin to L1 block #{}",
+                self.origin.map(|b| b.number).unwrap_or_default()
+            );
         }
 
         // If the epoch is advanced, update the l1 blocks.
@@ -105,18 +104,10 @@ where
         // Because the span batch can be reverted during processing the batch, then we must
         // preserve existing l1 blocks to verify the epochs of the next candidate batch.
         if !self.l1_blocks.is_empty() && parent.l1_origin.number > self.l1_blocks[0].number {
-            let is_holocene_active = self.cfg.is_holocene_active(
-                self.origin.ok_or(PipelineError::MissingOrigin.crit())?.timestamp,
-            );
-
             for (i, block) in self.l1_blocks.iter().enumerate() {
                 if parent.l1_origin.number == block.number {
-                    if is_holocene_active && i > 1 {
-                        panic!("Origin jump detected post-Holocene");
-                    }
-
                     self.l1_blocks.drain(0..i);
-                    info!(target: "batch-sequencer", "Advancing epoch");
+                    info!(target: "batch-validator", "Advancing batch validator sequencer epoch");
                     break;
                 }
             }
@@ -152,14 +143,12 @@ where
         // there is still room to receive batches for the current epoch.
         // No need to force-create empty batch(es) towards the next epoch yet.
         if !force_empty_batches {
+            info!(
+                target: "batch-validator",
+                "Sequencer window not expired, waiting for next batch"
+            );
             return Err(PipelineError::Eof.temp());
         }
-
-        info!(
-            target: "batch-sequencer",
-            "Generating empty batches for epoch: {} | parent: {}",
-            epoch.number, parent.l1_origin.number
-        );
 
         // The next L1 block is needed to proceed towards the next epoch.
         if self.l1_blocks.len() < 2 {
@@ -172,7 +161,7 @@ where
         // to preserve that L2 time >= L1 time. If this is the first block of the epoch, always
         // generate a batch to ensure that we at least have one batch per epoch.
         if next_timestamp < next_epoch.timestamp || first_of_epoch {
-            info!(target: "batch-sequencer", "Generating empty batch for epoch: {}", epoch.number);
+            info!(target: "batch-validator", "Generating empty batch for epoch: {}", epoch.number);
             return Ok(SingleBatch {
                 parent_hash: parent.block_info.hash,
                 epoch_num: epoch.number,
@@ -185,8 +174,8 @@ where
         // At this point we have auto generated every batch for the current epoch
         // that we can, so we can advance to the next epoch.
         info!(
-            target: "batch-sequencer",
-            "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
+            target: "batch-validator",
+            "Advancing batch validator to next epoch: {}, timestamp: {}, epoch timestamp: {}",
             next_epoch.number, next_timestamp, next_epoch.timestamp
         );
         self.l1_blocks.remove(0);
@@ -205,7 +194,7 @@ where
 
         // If the origin is behind, we must drain previous stages to catch up.
         let stage_origin = self.origin.ok_or(PipelineError::MissingOrigin.crit())?;
-        if self.origin_behind(&parent) || parent.l1_origin.number < stage_origin.number {
+        if self.origin_behind(&parent) || parent.l1_origin.number == stage_origin.number {
             self.prev.next_batch(parent, self.l1_blocks.as_ref()).await?;
             return Err(PipelineError::NotEnoughData.temp());
         }
@@ -241,7 +230,7 @@ where
         // The batch must be a single batch - this stage does not support span batches.
         let Batch::Single(next_batch) = next_batch else {
             error!(
-                target: "batch-sequencer",
+                target: "batch-validator",
                 "BatchValidator received a batch that is not a SingleBatch"
             );
             return Err(PipelineError::InvalidBatchType.crit());
@@ -255,21 +244,21 @@ where
             &stage_origin,
         ) {
             BatchValidity::Accept => {
-                debug!(target: "batch-sequencer", "Found next singular batch");
+                debug!(target: "batch-validator", "Found next singular batch");
                 Ok(next_batch)
             }
             BatchValidity::Past => {
-                warn!(target: "batch-sequencer", "Dropping old batch");
+                warn!(target: "batch-validator", "Dropping old batch");
                 Err(PipelineError::NotEnoughData.temp())
             }
             BatchValidity::Drop => {
-                warn!(target: "batch-sequencer", "Invalid singular batch, flushing current channel.");
+                warn!(target: "batch-validator", "Invalid singular batch, flushing current channel.");
                 self.prev.flush();
                 Err(PipelineError::NotEnoughData.temp())
             }
             BatchValidity::Undecided => Err(PipelineError::NotEnoughData.temp()),
             BatchValidity::Future => {
-                error!(target: "batch-sequencer", "Future batch detected in BatchValidator.");
+                error!(target: "batch-validator", "Future batch detected in BatchValidator.");
                 Err(PipelineError::InvalidBatchValidity.crit())
             }
         }
@@ -314,7 +303,7 @@ where
                 // During normal resets we will later throw out this block.
                 self.l1_blocks.clear();
                 self.l1_blocks.push(l1_origin);
-                crate::inc!(STAGE_RESETS, &["batch-sequencer"]);
+                crate::inc!(STAGE_RESETS, &["batch-validator"]);
             }
             s @ Signal::Activation(_) | s @ Signal::FlushChannel => {
                 self.prev.signal(s).await?;
@@ -328,18 +317,21 @@ where
 mod test {
     use super::BatchValidator;
     use crate::{
-        batch::{Batch, SingleBatch},
+        batch::{Batch, SingleBatch, SpanBatch},
+        errors::{PipelineErrorKind, ResetError},
         pipeline::{PipelineResult, SignalReceiver},
         prelude::PipelineError,
         stages::{AttributesProvider, NextBatchProvider},
-        test_utils::TestBatchQueueProvider,
-        traits::{ResetSignal, Signal},
+        test_utils::{CollectingLayer, TestBatchQueueProvider, TraceStorage},
+        traits::{OriginAdvancer, ResetSignal, Signal},
     };
     use alloc::sync::Arc;
     use alloy_eips::{BlockNumHash, NumHash};
     use alloy_primitives::B256;
     use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+    use tracing::Level;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]
     async fn test_batch_validator_origin_behind_eof() {
@@ -440,45 +432,9 @@ mod test {
         };
         assert_eq!(bv.l1_blocks.len(), 1);
         assert_eq!(bv.l1_blocks[0].number, 1);
-        bv.update_origins(&mock_parent).unwrap();
+        assert_eq!(bv.next_batch(mock_parent).await.unwrap_err(), PipelineError::Eof.temp());
         assert_eq!(bv.l1_blocks.len(), 1);
         assert_eq!(bv.l1_blocks[0].number, 2);
-    }
-
-    #[tokio::test]
-    async fn test_batch_validator_advance_epoch_origin_jump() {
-        let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
-        let mut mock = TestBatchQueueProvider::new(vec![]);
-        mock.origin = Some(BlockInfo { number: 2, ..Default::default() });
-        let mut bv = BatchValidator::new(cfg, mock);
-
-        // Reset the pipeline to add the L1 origin to the stage.
-        bv.signal(Signal::Reset(ResetSignal {
-            l1_origin: BlockInfo { number: 1, ..Default::default() },
-            l2_safe_head: L2BlockInfo::new(
-                BlockInfo::default(),
-                NumHash::new(1, Default::default()),
-                0,
-            ),
-            system_config: None,
-        }))
-        .await
-        .unwrap();
-
-        let mock_parent = L2BlockInfo {
-            l1_origin: BlockNumHash { number: 2, ..Default::default() },
-            ..Default::default()
-        };
-        assert_eq!(bv.l1_blocks.len(), 1);
-        assert_eq!(bv.l1_blocks[0].number, 1);
-
-        // Add an extra origin block to force an origin jump.
-        bv.l1_blocks.push(BlockInfo { number: 1, ..Default::default() });
-
-        let result = std::panic::catch_unwind(move || {
-            bv.update_origins(&mock_parent).unwrap();
-        });
-        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -507,37 +463,161 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_batch_validator_l1_origin_mismatch() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mut mock = TestBatchQueueProvider::new(vec![Ok(Batch::Single(SingleBatch::default()))]);
+        mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+        bv.origin = Some(BlockInfo::default());
+        bv.l1_blocks.push(BlockInfo::default());
+
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 0, hash: [0xFF; 32].into() },
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            bv.next_batch(mock_parent).await.unwrap_err(),
+            PipelineErrorKind::Reset(ResetError::L1OriginMismatch(_, _))
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_received_span_batch() {
+        let cfg = Arc::new(RollupConfig::default());
+        let mut mock = TestBatchQueueProvider::new(vec![Ok(Batch::Span(SpanBatch::default()))]);
+        mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+        bv.origin = Some(BlockInfo::default());
+        bv.l1_blocks.push(BlockInfo::default());
+
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 0, ..Default::default() },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            bv.next_batch(mock_parent).await.unwrap_err(),
+            PipelineError::InvalidBatchType.crit()
+        );
+        assert_eq!(bv.next_batch(mock_parent).await.unwrap_err(), PipelineError::Eof.temp());
+    }
+
+    #[tokio::test]
     async fn test_batch_validator_next_batch_valid() {
         let cfg = Arc::new(RollupConfig {
-            max_sequencer_drift: 700,
             holocene_time: Some(0),
+            block_time: 2,
+            max_sequencer_drift: 700,
             ..Default::default()
         });
         assert!(cfg.is_holocene_active(0));
         let batch = SingleBatch {
             parent_hash: B256::default(),
-            epoch_num: 0,
+            epoch_num: 2,
             epoch_hash: B256::default(),
-            timestamp: 100,
+            timestamp: 4,
             transactions: Vec::new(),
         };
         let parent = L2BlockInfo {
-            block_info: BlockInfo { timestamp: 100, ..Default::default() },
+            l1_origin: BlockNumHash { number: 0, ..Default::default() },
+            block_info: BlockInfo { timestamp: 2, ..Default::default() },
             ..Default::default()
         };
 
         // Setup batch validator deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
         let mut mock = TestBatchQueueProvider::new(batch_vec);
-        mock.origin = Some(BlockInfo::default());
+        mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
 
         // Configure batch validator
         let mut bv = BatchValidator::new(cfg, mock);
-        bv.origin = Some(BlockInfo::default());
-        bv.l1_blocks.push(BlockInfo::default());
-        bv.l1_blocks.push(BlockInfo::default());
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            ..Default::default()
+        }))
+        .await
+        .unwrap();
+        bv.l1_blocks.push(BlockInfo { number: 1, ..Default::default() });
 
         // Grab the next batch.
-        assert!(bv.next_batch(parent).await.is_ok());
+        let produced_batch = bv.next_batch(parent).await.unwrap();
+        assert_eq!(batch, produced_batch);
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_next_batch_sequence_window_expired() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let cfg = Arc::new(RollupConfig { seq_window_size: 5, ..Default::default() });
+        let mut mock = TestBatchQueueProvider::new(vec![]);
+        mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            ..Default::default()
+        }))
+        .await
+        .unwrap();
+
+        // Advance the origin of the previous stage to block #6.
+        for _ in 0..6 {
+            bv.advance_origin().await.unwrap();
+        }
+
+        // The sequence window is expired, so we should generate an empty batch.
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 0, ..Default::default() },
+            ..Default::default()
+        };
+        assert!(bv.next_batch(mock_parent).await.unwrap().transactions.is_empty());
+
+        let trace_lock = trace_store.lock();
+        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::INFO)).count(), 2);
+        assert!(trace_lock[0].1.contains("Advancing batch validator origin"));
+        assert!(trace_lock[1].1.contains("Generating empty batch for epoch"));
+    }
+
+    #[tokio::test]
+    async fn test_batch_validator_next_batch_sequence_window_expired_advance_epoch() {
+        let trace_store: TraceStorage = Default::default();
+        let layer = CollectingLayer::new(trace_store.clone());
+        tracing_subscriber::Registry::default().with(layer).init();
+
+        let cfg = Arc::new(RollupConfig { seq_window_size: 5, ..Default::default() });
+        let mut mock = TestBatchQueueProvider::new(vec![]);
+        mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
+        let mut bv = BatchValidator::new(cfg, mock);
+
+        // Reset the pipeline to add the L1 origin to the stage.
+        bv.signal(Signal::Reset(ResetSignal {
+            l1_origin: BlockInfo { number: 1, ..Default::default() },
+            ..Default::default()
+        }))
+        .await
+        .unwrap();
+
+        // Advance the origin of the previous stage to block #6.
+        for _ in 0..6 {
+            bv.advance_origin().await.unwrap();
+        }
+
+        // The sequence window is expired, so we should generate an empty batch.
+        let mock_parent = L2BlockInfo {
+            l1_origin: BlockNumHash { number: 1, ..Default::default() },
+            ..Default::default()
+        };
+        assert_eq!(bv.next_batch(mock_parent).await.unwrap_err(), PipelineError::Eof.temp());
+
+        let trace_lock = trace_store.lock();
+        assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::INFO)).count(), 2);
+        assert!(trace_lock[0].1.contains("Advancing batch validator origin"));
+        assert!(trace_lock[1].1.contains("Advancing batch validator to next epoch"));
     }
 }
