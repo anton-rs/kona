@@ -719,7 +719,7 @@ let executor = StatelessL2BlcokExecutor::builder(&amp;cfg, provider, hinter)
 that is designed to execute verifiable programs.</p>
 <p>Full specification for the <code>cannon</code> &amp; <code>cannon-rs</code> FPVMs, as an example, is available in the <a href="https://specs.optimism.io/experimental/fault-proof/cannon-fault-proof-vm.html#cannon-fault-proof-virtual-machine">Optimism Monorepo</a>.</p>
 <h4 id="fault-proof-program"><a class="header" href="#fault-proof-program">Fault Proof Program</a></h4>
-<p>A <code>Fault Proof Program</code> is a program, commonly written in a general purpose language such as Golang, C, or Rust, that may be compiled down
+<p>A <code>Fault Proof Program</code> is a program, commonly written in a general-purpose language such as Golang, C, or Rust, that may be compiled down
 to a compatible <code>Fault Proof VM</code> target and provably executed on that target VM.</p>
 <p>Examples of <code>Fault Proof Programs</code> include the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program">OP Program</a>, which runs on top of <a href="https://github.com/ethereum-optimism/optimism/tree/develop/cannon"><code>cannon</code></a>, <a href="https://github.com/anton-rs/cannon-rs"><code>cannon-rs</code></a>, and
 <a href="https://github.com/ethereum-optimism/asterisc"><code>asterisc</code></a> to verify a claim about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
@@ -754,7 +754,7 @@ discuss the change you wish to make via issue.</p>
 <li>Before anything, <a href="https://github.com/anton-rs/kona/issues/new">create an issue</a> to discuss the change you're
 wanting to make, if it is significant or changes functionality. Feel free to skip this step for trivial changes.</li>
 <li>Once your change is implemented, ensure that all checks are passing before creating a PR. The full CI pipeline can
-be ran locally via the <code>justfile</code>s in the repository.</li>
+be run locally via the <code>justfile</code>s in the repository.</li>
 <li>Make sure to update any documentation that has gone stale as a result of the change, in the <code>README</code> files, the [book][book],
 and in rustdoc comments.</li>
 <li>Once you have sign-off from a maintainer, you may merge your pull request yourself if you have permissions to do so.
