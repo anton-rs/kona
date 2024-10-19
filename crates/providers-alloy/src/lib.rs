@@ -39,10 +39,7 @@ pub mod alloy_providers;
 pub use alloy_providers::{AlloyChainProvider, AlloyL2ChainProvider};
 
 pub mod beacon_client;
-pub use beacon_client::{
-    APIBlobSidecar, APIConfigResponse, APIGenesisResponse, APIGetBlobSidecarsResponse,
-    BeaconClient, OnlineBeaconClient,
-};
+pub use beacon_client::{APIConfigResponse, APIGenesisResponse, BeaconClient, OnlineBeaconClient};
 
 pub mod blob_provider;
 pub use blob_provider::{
