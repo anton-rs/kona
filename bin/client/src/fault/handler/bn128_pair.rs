@@ -20,6 +20,9 @@ const PAIR_ELEMENT_LEN: usize = 64 + 128;
 pub(crate) const FPVM_ECPAIRING: PrecompileWithAddress =
     PrecompileWithAddress(ECPAIRING_ADDRESS, Precompile::Standard(fpvm_ecpairing));
 
+pub(crate) const FPVM_ECPAIRING_GRANITE: PrecompileWithAddress =
+    PrecompileWithAddress(ECPAIRING_ADDRESS, Precompile::Standard(fpvm_ecpairing_granite));
+
 /// Performs an FPVM-accelerated `ecpairing` precompile call.
 fn fpvm_ecpairing(input: &Bytes, gas_limit: u64) -> PrecompileResult {
     let gas_used =
@@ -58,4 +61,14 @@ fn fpvm_ecpairing(input: &Bytes, gas_limit: u64) -> PrecompileResult {
     .map_err(|e| PrecompileError::Other(e.to_string()))?;
 
     Ok(PrecompileOutput::new(gas_used, result_data.into()))
+}
+
+/// Performs an FPVM-accelerated `ecpairing` precompile call after the Granite hardfork.
+fn fpvm_ecpairing_granite(input: &Bytes, gas_limit: u64) -> PrecompileResult {
+    const BN256_MAX_PAIRING_SIZE_GRANITE: usize = 112_687;
+    if input.len() > BN256_MAX_PAIRING_SIZE_GRANITE {
+        return Err(PrecompileError::Bn128PairLength.into());
+    }
+
+    fpvm_ecpairing(input, gas_limit)
 }

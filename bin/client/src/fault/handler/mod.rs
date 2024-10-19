@@ -37,6 +37,11 @@ pub(crate) fn fpvm_handle_register<F, H>(
             kzg_point_eval::FPVM_KZG_POINT_EVAL,
         ];
         ctx_precompiles.extend(override_precompiles);
+
+        if spec_id.is_enabled_in(SpecId::GRANITE) {
+            ctx_precompiles.extend([bn128_pair::FPVM_ECPAIRING_GRANITE]);
+        }
+
         ctx_precompiles
     });
 }
