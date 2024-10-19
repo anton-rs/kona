@@ -2230,11 +2230,11 @@ version = "0.0.1"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
- "anyhow",
  "async-trait",
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "thiserror 1.0.64 (git+https://github.com/quartiq/thiserror?branch=no-std)",
 ]
 
 [[package]]

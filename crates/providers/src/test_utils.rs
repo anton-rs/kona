@@ -4,7 +4,6 @@ use crate::{ChainProvider, L2ChainProvider};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{map::HashMap, B256};
-use anyhow::Result;
 use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -73,44 +72,64 @@ impl TestChainProvider {
     }
 }
 
+/// An error for the [TestChainProvider] and [TestL2ChainProvider].
+#[derive(Debug, thiserror::Error)]
+pub enum TestProviderError {
+    /// The block was not found.
+    #[error("Block not found")]
+    BlockNotFound,
+    /// The header was not found.
+    #[error("Header not found")]
+    HeaderNotFound,
+    /// The receipts were not found.
+    #[error("Receipts not found")]
+    ReceiptsNotFound,
+    /// The L2 block was not found.
+    #[error("L2 Block not found")]
+    L2BlockNotFound,
+    /// The system config was not found.
+    #[error("System config not found")]
+    SystemConfigNotFound(u64),
+}
+
 #[async_trait]
 impl ChainProvider for TestChainProvider {
-    type Error = anyhow::Error;
+    type Error = TestProviderError;
 
-    async fn header_by_hash(&mut self, hash: B256) -> Result<Header> {
+    async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error> {
         if let Some((_, header)) = self.headers.iter().find(|(_, b)| b.hash_slow() == hash) {
             Ok(header.clone())
         } else {
-            Err(anyhow::anyhow!("Header not found"))
+            Err(TestProviderError::HeaderNotFound)
         }
     }
 
-    async fn block_info_by_number(&mut self, _number: u64) -> Result<BlockInfo> {
+    async fn block_info_by_number(&mut self, _number: u64) -> Result<BlockInfo, Self::Error> {
         if let Some((_, block)) = self.blocks.iter().find(|(n, _)| *n == _number) {
             Ok(*block)
         } else {
-            Err(anyhow::anyhow!("Block not found"))
+            Err(TestProviderError::BlockNotFound)
         }
     }
 
-    async fn receipts_by_hash(&mut self, _hash: B256) -> Result<Vec<Receipt>> {
+    async fn receipts_by_hash(&mut self, _hash: B256) -> Result<Vec<Receipt>, Self::Error> {
         if let Some((_, receipts)) = self.receipts.iter().find(|(h, _)| *h == _hash) {
             Ok(receipts.clone())
         } else {
-            Err(anyhow::anyhow!("Receipts not found"))
+            Err(TestProviderError::ReceiptsNotFound)
         }
     }
 
     async fn block_info_and_transactions_by_hash(
         &mut self,
         hash: B256,
-    ) -> Result<(BlockInfo, Vec<TxEnvelope>)> {
+    ) -> Result<(BlockInfo, Vec<TxEnvelope>), Self::Error> {
         let block = self
             .blocks
             .iter()
             .find(|(_, b)| b.hash == hash)
             .map(|(_, b)| *b)
-            .ok_or_else(|| anyhow::anyhow!("Block not found"))?;
+            .ok_or_else(|| TestProviderError::BlockNotFound)?;
         let txs = self
             .transactions
             .iter()
@@ -147,35 +166,35 @@ impl TestL2ChainProvider {
 
 #[async_trait]
 impl L2ChainProvider for TestL2ChainProvider {
-    type Error = anyhow::Error;
+    type Error = TestProviderError;
 
-    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
+    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
         if self.short_circuit {
-            return self.blocks.first().copied().ok_or_else(|| anyhow::anyhow!("Block not found"));
+            return self.blocks.first().copied().ok_or_else(|| TestProviderError::BlockNotFound);
         }
         self.blocks
             .iter()
             .find(|b| b.block_info.number == number)
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("Block not found"))
+            .ok_or_else(|| TestProviderError::BlockNotFound)
     }
 
-    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock> {
+    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock, Self::Error> {
         self.op_blocks
             .iter()
             .find(|p| p.header.number == number)
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("L2 Block not found"))
+            .ok_or_else(|| TestProviderError::L2BlockNotFound)
     }
 
     async fn system_config_by_number(
         &mut self,
         number: u64,
         _: Arc<RollupConfig>,
-    ) -> Result<SystemConfig> {
+    ) -> Result<SystemConfig, Self::Error> {
         self.system_configs
             .get(&number)
-            .ok_or_else(|| anyhow::anyhow!("System config not found"))
+            .ok_or_else(|| TestProviderError::SystemConfigNotFound(number))
             .cloned()
     }
 }
