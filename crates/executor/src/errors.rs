@@ -1,6 +1,7 @@
 //! Errors for the `kona-executor` crate.
 
-use kona_mpt::TrieDBError;
+use alloc::string::String;
+use kona_mpt::TrieNodeError;
 use revm::primitives::EVMError;
 use thiserror::Error;
 
@@ -46,3 +47,25 @@ pub enum ExecutorError {
 
 /// A [Result] type for the [ExecutorError] enum.
 pub type ExecutorResult<T> = Result<T, ExecutorError>;
+
+/// A [Result] type alias where the error is [TrieDBError].
+pub type TrieDBResult<T> = Result<T, TrieDBError>;
+
+/// An error type for [TrieDB] operations.
+///
+/// [TrieDB]: crate::TrieDB
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum TrieDBError {
+    /// Trie root node has not been blinded.
+    #[error("Trie root node has not been blinded")]
+    RootNotBlinded,
+    /// Missing account info for bundle account.
+    #[error("Missing account info for bundle account.")]
+    MissingAccountInfo,
+    /// Trie node error.
+    #[error("Trie node error: {0}")]
+    TrieNode(#[from] TrieNodeError),
+    /// Trie provider error.
+    #[error("Trie provider error: {0}")]
+    Provider(String),
+}

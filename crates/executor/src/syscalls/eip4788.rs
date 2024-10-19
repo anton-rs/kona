@@ -1,10 +1,13 @@
 //! Contains the logic for executing the pre-block beacon root call.
 
-use crate::errors::{ExecutorError, ExecutorResult};
+use crate::{
+    db::TrieDB,
+    errors::{ExecutorError, ExecutorResult},
+};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
-use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
+use kona_mpt::{TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{

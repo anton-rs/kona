@@ -1,8 +1,8 @@
 //! Contains logic specific to Canyon hardfork activation.
 
-use crate::errors::ExecutorResult;
+use crate::{db::TrieDB, errors::ExecutorResult};
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
-use kona_mpt::{TrieDB, TrieHinter, TrieProvider};
+use kona_mpt::{TrieHinter, TrieProvider};
 use op_alloy_genesis::RollupConfig;
 use revm::{
     primitives::{Account, Bytecode, HashMap},

@@ -13,12 +13,11 @@ workspace = true
 
 [dependencies]
 # General
-tracing.workspace = true
 thiserror.workspace = true
 derive_more = { workspace = true, features = ["full"] }
 
 # Revm + Alloy
-revm.workspace = true
+alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp.workspace = true
 alloy-trie.workspace = true
 alloy-consensus.workspace = true
@@ -36,6 +35,13 @@ rand.workspace = true
 anyhow.workspace = true
 reqwest.workspace = true
 futures.workspace = true
+
+alloy-consensus.workspace = true
+alloy-provider.workspace = true
+alloy-rpc-types = { workspace = true, features = ["eth"] }
+alloy-transport-http.workspace = true
+
+rand.workspace = true
 proptest.workspace = true
 tokio = { workspace = true, features = ["full"] }
 criterion = { workspace = true, features = ["html_reports"] }
