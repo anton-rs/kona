@@ -15,31 +15,32 @@ workspace = true
 # General
 tracing.workspace = true
 thiserror.workspace = true
-derive_more.workspace = true
+derive_more = { workspace = true, features = ["full"] }
 
 # Revm + Alloy
 revm.workspace = true
-alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp.workspace = true
-alloy-consensus.workspace = true
 alloy-trie.workspace = true
+alloy-consensus.workspace = true
+alloy-primitives = { workspace = true, features = ["rlp"] }
 
 [dev-dependencies]
-tokio.workspace = true
+# Alloy
+alloy-provider.workspace = true
+alloy-consensus.workspace = true
+alloy-transport-http.workspace = true
+alloy-rpc-types = { workspace = true, features = ["eth"] }
+
+# General
+rand.workspace = true
 anyhow.workspace = true
 reqwest.workspace = true
 futures.workspace = true
-tracing-subscriber.workspace = true
-
-alloy-consensus.workspace = true
-alloy-provider.workspace = true
-alloy-rpc-types = { workspace = true, features = ["eth"] }
-alloy-transport-http.workspace = true
-
-rand.workspace = true
 proptest.workspace = true
-criterion.workspace = true
-pprof.workspace = true
+tokio = { workspace = true, features = ["full"] }
+criterion = { workspace = true, features = ["html_reports"] }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
+pprof = { workspace = true, features = ["criterion", "flamegraph", "frame-pointer"] }
 
 [[bench]]
 name = "trie_node"

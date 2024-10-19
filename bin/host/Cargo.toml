@@ -20,33 +20,37 @@ kona-common.workspace = true
 kona-preimage.workspace = true
 kona-providers-alloy.workspace = true
 
-# Alloy & Revm
-alloy-eips.workspace = true
-alloy-consensus.workspace = true
+# Alloy
 alloy-rlp.workspace = true
+alloy-eips.workspace = true
 alloy-provider.workspace = true
-alloy-transport-http.workspace = true 
+alloy-consensus.workspace = true
 alloy-rpc-client.workspace = true 
+alloy-transport-http.workspace = true 
 alloy-rpc-types = { workspace = true, features = ["eth"] }
 alloy-primitives = { workspace = true, features = ["serde"] }
+
+# Op Alloy
 op-alloy-genesis = { workspace = true, features = ["std", "serde"] }
 op-alloy-protocol = { workspace = true, features = ["std", "serde"] }
+
+# Revm
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
 
 # General
 anyhow.workspace = true
 tracing.workspace = true
-async-trait.workspace = true
 reqwest.workspace = true
-tokio.workspace = true
 futures.workspace = true
-clap.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-tracing-subscriber.workspace = true
-command-fds.workspace = true
 os_pipe.workspace = true
-rocksdb.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+rocksdb = { workspace = true, features = ["snappy"] }
+command-fds = { workspace = true, features = ["tokio"] }
+clap = { workspace = true, features = ["derive", "env"] }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
 
 [dev-dependencies]
 proptest.workspace = true

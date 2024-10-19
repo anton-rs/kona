@@ -20,6 +20,6 @@ cfg-if.workspace = true
 kona-common.workspace = true
 
 # Proc Macros
-syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
+syn = { version = "2.0", features = ["full"] }

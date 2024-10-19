@@ -1459,7 +1459,6 @@ mod tests {
                 transactions: Vec::new(),
                 ommers: Vec::new(),
                 withdrawals: None,
-                requests: None,
             },
         };
         let mut fetcher = TestL2ChainProvider {
@@ -1534,7 +1533,6 @@ mod tests {
                 transactions: Vec::new(),
                 ommers: Vec::new(),
                 withdrawals: None,
-                requests: None,
             },
         };
         let mut fetcher = TestL2ChainProvider {
@@ -1611,7 +1609,6 @@ mod tests {
                 transactions: Vec::new(),
                 ommers: Vec::new(),
                 withdrawals: None,
-                requests: None,
             },
         };
         let mut fetcher = TestL2ChainProvider {
