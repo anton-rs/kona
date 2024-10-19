@@ -3,9 +3,8 @@
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
-    traits::L2ChainProvider,
     stages::NextBatchProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
