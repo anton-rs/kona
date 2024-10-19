@@ -1,47 +1,51 @@
 [package]
 name = "kona-client"
 version = "0.1.0"
+publish = false
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-repository.workspace = true
 homepage.workspace = true
-publish = false
+repository.workspace = true
 
 [dependencies]
 # Workspace
-kona-common.workspace = true
-kona-common-proc.workspace = true
-kona-preimage.workspace = true
 kona-mpt.workspace = true
+kona-common.workspace = true
 kona-derive.workspace = true
+kona-preimage.workspace = true
 kona-executor.workspace = true
 kona-providers.workspace = true
-op-alloy-genesis = { workspace = true, features = ["serde"] }
-op-alloy-protocol.workspace = true
-op-alloy-rpc-types-engine.workspace = true
-alloy-rpc-types-engine.workspace = true
+kona-common-proc.workspace = true
 
-# Revm + Alloy
-revm.workspace = true
-alloy-primitives.workspace = true
-alloy-consensus.workspace = true
+# Alloy
 alloy-rlp.workspace = true
 alloy-eips.workspace = true
+alloy-consensus.workspace = true
+alloy-primitives.workspace = true
+alloy-rpc-types-engine.workspace = true
+
+# Op Alloy
+op-alloy-protocol.workspace = true
 op-alloy-consensus.workspace = true
+op-alloy-rpc-types-engine.workspace = true
+op-alloy-genesis = { workspace = true, features = ["serde"] }
+
+# Revm
+revm.workspace = true
 
 # General
-cfg-if.workspace = true
-anyhow.workspace = true
 lru.workspace = true
 spin.workspace = true
-async-trait.workspace = true
-tracing.workspace = true
 serde.workspace = true
+cfg-if.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
 serde_json.workspace = true
+async-trait.workspace = true
 
 # `tracing-subscriber` feature dependencies
-tracing-subscriber = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 
 [features]
 tracing-subscriber = ["dep:tracing-subscriber"]

@@ -12,29 +12,35 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-# General
-thiserror.workspace = true
-tracing.workspace = true
-alloy-primitives = { workspace = true, features = ["rlp"] }
-alloy-eips.workspace = true
-alloy-consensus = { workspace = true, features = ["k256"] }
-op-alloy-consensus.workspace = true
-op-alloy-genesis.workspace = true
-op-alloy-rpc-types-engine.workspace = true
-revm = { workspace = true, features = ["optimism"] }
-
 # Workspace
 kona-mpt.workspace = true
 
+# Alloy
+alloy-eips.workspace = true
+alloy-consensus = { workspace = true, features = ["k256"] }
+alloy-primitives = { workspace = true, features = ["rlp"] }
+
+# Op Alloy
+op-alloy-consensus.workspace = true
+op-alloy-genesis.workspace = true
+op-alloy-rpc-types-engine.workspace = true
+
+# Revm
+revm = { workspace = true, features = ["optimism"] }
+
+# General
+thiserror.workspace = true
+tracing.workspace = true
+
 [dev-dependencies]
+rand.workspace = true
 anyhow.workspace = true
 alloy-rlp.workspace = true
-serde.workspace = true
 serde_json.workspace = true
-rand.workspace = true
-criterion.workspace = true
-pprof.workspace = true 
 alloy-rpc-types-engine.workspace = true
+serde = { workspace = true, features = ["derive"] }
+criterion = { workspace = true, features = ["html_reports"] }
+pprof = { workspace = true, features = ["criterion", "flamegraph", "frame-pointer"] }
 
 [[bench]]
 name = "execution"

@@ -13,10 +13,10 @@ workspace = true
 
 [dependencies]
 # General
-thiserror.workspace = true
 tracing.workspace = true
-alloy-primitives.workspace = true
+thiserror.workspace = true
 async-trait.workspace = true
+alloy-primitives.workspace = true
 
 # Workspace
 kona-common.workspace = true
@@ -25,11 +25,11 @@ kona-common.workspace = true
 rkyv = { workspace = true, optional = true }
 
 # `serde` feature dependencies
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
-tokio.workspace = true
 os_pipe.workspace = true
+tokio = { workspace = true, features = ["full"] }
 
 [features]
 default = []

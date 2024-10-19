@@ -14,54 +14,56 @@ workspace = true
 [dependencies]
 # Alloy
 alloy-eips.workspace = true
+alloy-rpc-types-engine.workspace = true
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map"] }
-alloy-rpc-types-engine.workspace = true
-op-alloy-consensus = { workspace = true, features = ["k256"] }
-op-alloy-protocol.workspace = true
+
+# Op Alloy
 op-alloy-genesis.workspace = true
+op-alloy-protocol.workspace = true
 op-alloy-rpc-types-engine.workspace = true
+op-alloy-consensus = { workspace = true, features = ["k256"] }
 
 # General
-unsigned-varint.workspace = true
-miniz_oxide.workspace = true
 brotli.workspace = true
-alloc-no-stdlib.workspace = true
-thiserror.workspace = true
 tracing.workspace = true
+thiserror.workspace = true
+miniz_oxide.workspace = true
 async-trait.workspace = true
+unsigned-varint.workspace = true
+alloc-no-stdlib.workspace = true
 
 # Workspace
 kona-providers.workspace = true
 
 # `serde` feature dependencies
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
 
 # `metrics` feature dependencies
 lazy_static = { workspace = true, optional = true }
-prometheus = { workspace = true, optional = true }
+prometheus = { workspace = true, optional = true, features = ["process"] }
 
 # `test-utils` feature dependencies
 spin = { workspace = true, optional = true }
+anyhow = { workspace = true, optional = true }
 alloy-rpc-client = { workspace = true, optional = true }
-tracing-subscriber = { workspace = true, optional = true }
 alloy-node-bindings = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true } 
-anyhow = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 
 [dev-dependencies]
 spin.workspace = true
 anyhow.workspace = true
-alloy-rpc-client.workspace = true
-alloy-transport-http.workspace = true
-alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
-tokio.workspace = true
 proptest.workspace = true
-tracing-subscriber.workspace = true
-alloy-node-bindings.workspace = true
 serde_json.workspace = true
+alloy-rpc-client.workspace = true
+alloy-node-bindings.workspace = true
+alloy-transport-http.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
 kona-providers = { workspace = true, features = ["test-utils"] }
+alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
 
 [features]
 default = ["serde"]

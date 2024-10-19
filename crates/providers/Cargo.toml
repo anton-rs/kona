@@ -17,8 +17,8 @@ alloy-consensus.workspace = true
 alloy-primitives.workspace = true
 
 # OP Alloy
-op-alloy-protocol.workspace = true
 op-alloy-genesis.workspace = true
+op-alloy-protocol.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 
 # Misc
