@@ -99,6 +99,9 @@ pub enum PipelineError {
     /// [L1Retrieval]: crate::stages::L1Retrieval
     #[error("L1 Retrieval missing data")]
     MissingL1Data,
+    /// Invalid batch type passed.
+    #[error("Invalid batch type passed to stage")]
+    InvalidBatchType,
     /// Invalid batch validity variant.
     #[error("Invalid batch validity")]
     InvalidBatchValidity,

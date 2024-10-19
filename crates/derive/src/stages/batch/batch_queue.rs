@@ -1,5 +1,6 @@
 //! This module contains the `BatchQueue` stage implementation.
 
+use super::NextBatchProvider;
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
@@ -13,26 +14,6 @@ use kona_providers::L2ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
-
-/// Provides [Batch]es for the [BatchQueue] stage.
-#[async_trait]
-pub trait BatchQueueProvider {
-    /// Returns the next [Batch] in the [ChannelReader] stage, if the stage is not complete.
-    /// This function can only be called once while the stage is in progress, and will return
-    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
-    /// complete and the batch has been consumed, an [PipelineError::Eof] error is returned.
-    ///
-    /// [ChannelReader]: crate::stages::ChannelReader
-    async fn next_batch(
-        &mut self,
-        parent: L2BlockInfo,
-        l1_origins: &[BlockInfo],
-    ) -> PipelineResult<Batch>;
-
-    /// Allows the [BatchQueue] to flush the buffer in the [crate::stages::BatchStream]
-    /// if an invalid single batch is found. Pre-holocene hardfork, this will be a no-op.
-    fn flush(&mut self);
-}
 
 /// [BatchQueue] is responsible for o rdering unordered batches
 /// and gnerating empty batches when the sequence window has passed.
@@ -51,7 +32,7 @@ pub trait BatchQueueProvider {
 #[derive(Debug)]
 pub struct BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
@@ -79,7 +60,7 @@ where
 
 impl<P, BF> BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
     BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
@@ -282,7 +263,7 @@ where
 #[async_trait]
 impl<P, BF> OriginAdvancer for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
@@ -293,7 +274,7 @@ where
 #[async_trait]
 impl<P, BF> AttributesProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     /// Returns the next valid batch upon the given safe head.
@@ -450,7 +431,7 @@ where
 
 impl<P, BF> OriginProvider for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
     BF: L2ChainProvider + Debug,
 {
     fn origin(&self) -> Option<BlockInfo> {
@@ -461,7 +442,7 @@ where
 #[async_trait]
 impl<P, BF> SignalReceiver for BatchQueue<P, BF>
 where
-    P: BatchQueueProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
+    P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
     BF: L2ChainProvider + Send + Debug,
 {
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
@@ -509,7 +490,7 @@ mod tests {
 
     fn new_batch_reader() -> BatchReader {
         let file_contents =
-            alloc::string::String::from_utf8_lossy(include_bytes!("../../testdata/batch.hex"));
+            alloc::string::String::from_utf8_lossy(include_bytes!("../../../testdata/batch.hex"));
         let file_contents = &(&*file_contents)[..file_contents.len() - 1];
         let data = alloy_primitives::hex::decode(file_contents).unwrap();
         let bytes: alloy_primitives::Bytes = data.into();
