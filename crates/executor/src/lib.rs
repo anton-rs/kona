@@ -15,7 +15,7 @@ use alloy_eips::{
     eip1559::BaseFeeParams,
     eip2718::{Decodable2718, Encodable2718},
 };
-use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, B64, U256};
+use alloy_primitives::{address, keccak256, Address, Bytes, TxKind, B256, U256};
 use kona_mpt::{ordered_trie_with_encoder, TrieDB, TrieDBError, TrieHinter, TrieProvider};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
@@ -43,7 +43,10 @@ mod canyon;
 use canyon::ensure_create2_deployer_canyon;
 
 mod util;
-use util::{logs_bloom, receipt_envelope_from_parts};
+use util::{
+    decode_holocene_eip_1559_params, encode_holocene_eip_1559_params, logs_bloom,
+    receipt_envelope_from_parts,
+};
 
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
@@ -108,13 +111,15 @@ where
         let block_number = initialized_block_env.number.to::<u64>();
         let base_fee = initialized_block_env.basefee.to::<u128>();
         let gas_limit = payload.gas_limit.ok_or(ExecutorError::MissingGasLimit)?;
+        let transactions =
+            payload.transactions.as_ref().ok_or(ExecutorError::MissingTransactions)?;
 
         info!(
             target: "client_executor",
             "Executing block # {block_number} | Gas limit: {gas_limit} | Tx count: {tx_len}",
             block_number = block_number,
             gas_limit = gas_limit,
-            tx_len = payload.transactions.as_ref().map(|txs| txs.len()).unwrap_or_default(),
+            tx_len = transactions.len(),
         );
 
         let mut state =
@@ -138,8 +143,7 @@ where
         )?;
 
         let mut cumulative_gas_used = 0u64;
-        let mut receipts: Vec<OpReceiptEnvelope> =
-            Vec::with_capacity(payload.transactions.as_ref().map(|t| t.len()).unwrap_or_default());
+        let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(transactions.len());
         let is_regolith = self.config.is_regolith_active(payload.payload_attributes.timestamp);
 
         // Construct the block-scoped EVM with the given configuration.
@@ -162,18 +166,15 @@ where
         };
 
         // Execute the transactions in the payload.
-        let transactions = if let Some(ref txs) = payload.transactions {
-            txs.iter()
-                .map(|raw_tx| {
-                    let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref())
-                        .map_err(ExecutorError::RLPError)?;
-                    Ok((tx, raw_tx.as_ref()))
-                })
-                .collect::<ExecutorResult<Vec<_>>>()?
-        } else {
-            Vec::new()
-        };
-        for (transaction, raw_transaction) in transactions {
+        let decoded_txs = transactions
+            .iter()
+            .map(|raw_tx| {
+                let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref())
+                    .map_err(ExecutorError::RLPError)?;
+                Ok((tx, raw_tx.as_ref()))
+            })
+            .collect::<ExecutorResult<Vec<_>>>()?;
+        for (transaction, raw_transaction) in decoded_txs {
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
@@ -261,8 +262,7 @@ where
         // Recompute the header roots.
         let state_root = state.database.state_root(&bundle)?;
 
-        let transactions_root =
-            Self::compute_transactions_root(payload.transactions.unwrap_or_default().as_slice());
+        let transactions_root = Self::compute_transactions_root(transactions.as_slice());
         let receipts_root = Self::compute_receipts_root(
             &receipts,
             self.config,
@@ -303,23 +303,14 @@ where
             .unwrap_or_default();
 
         // At holocene activation, the base fee parameters from the payload are placed
-        // into the Header's `nonce` field. Prior to Holocene, the `nonce` field should
-        // be set to 0.
+        // into the Header's `extra_data` field.
         //
-        // If the payload's `eip_1559_params` are equal to `0`, then the header's `nonce`
+        // If the payload's `eip_1559_params` are equal to `0`, then the header's `extraData`
         // field is set to the encoded canyon base fee parameters.
         let encoded_base_fee_params = self
             .config
             .is_holocene_active(payload.payload_attributes.timestamp)
-            .then(|| {
-                let payload_params =
-                    payload.eip_1559_params.ok_or(ExecutorError::MissingEIP1559Params)?;
-
-                let params = (payload_params == B64::ZERO)
-                    .then(|| encode_canyon_base_fee_params(self.config))
-                    .unwrap_or(payload_params);
-                Ok::<_, ExecutorError>(params)
-            })
+            .then(|| encode_holocene_eip_1559_params(self.config, &payload))
             .transpose()?
             .unwrap_or_default();
 
@@ -340,13 +331,12 @@ where
             gas_used: cumulative_gas_used,
             timestamp: payload.payload_attributes.timestamp,
             mix_hash: payload.payload_attributes.prev_randao,
-            nonce: encoded_base_fee_params,
+            nonce: Default::default(),
             base_fee_per_gas: base_fee.try_into().ok(),
             blob_gas_used,
             excess_blob_gas: excess_blob_gas.and_then(|x| x.try_into().ok()),
             parent_beacon_block_root: payload.payload_attributes.parent_beacon_block_root,
-            // Provide no extra data on OP Stack chains
-            extra_data: Bytes::default(),
+            extra_data: encoded_base_fee_params,
         }
         .seal_slow();
 
@@ -432,7 +422,9 @@ where
     /// ## Returns
     /// The active [SpecId] for the executor.
     fn revm_spec_id(&self, timestamp: u64) -> SpecId {
-        if self.config.is_fjord_active(timestamp) {
+        if self.config.is_holocene_active(timestamp) {
+            SpecId::HOLOCENE
+        } else if self.config.is_fjord_active(timestamp) {
             SpecId::FJORD
         } else if self.config.is_ecotone_active(timestamp) {
             SpecId::ECOTONE
@@ -558,22 +550,12 @@ where
         let base_fee_params =
             if config.is_holocene_active(payload_attrs.payload_attributes.timestamp) {
                 // After Holocene activation, the base fee parameters are stored in the
-                // `nonce` field of the parent header. If the `nonce` field is not zero,
-                // then the base fee parameters are extracted from the `nonce` field.
-                // Otherwise, the canyon base fee parameters are used for the current block.
-                (parent_header.nonce != B64::ZERO)
-                    .then(|| {
-                        // SAFETY: The `nonce` field is always 8 bytes, and the 4-byte segments are
-                        // guaranteed to be valid `u32` values.
-                        let denominator: u32 =
-                            u32::from_be_bytes(parent_header.nonce[0..4].try_into().unwrap());
-                        let elasticity: u32 =
-                            u32::from_be_bytes(parent_header.nonce[4..8].try_into().unwrap());
-                        BaseFeeParams {
-                            max_change_denominator: denominator as u128,
-                            elasticity_multiplier: elasticity as u128,
-                        }
-                    })
+                // `extraData` field of the parent header. If Holocene wasn't active in the
+                // parent block, the default base fee parameters are used.
+                config
+                    .is_holocene_active(parent_header.timestamp)
+                    .then(|| decode_holocene_eip_1559_params(parent_header))
+                    .transpose()?
                     .unwrap_or(config.canyon_base_fee_params)
             } else if config.is_canyon_active(payload_attrs.payload_attributes.timestamp) {
                 // If the payload attribute timestamp is past canyon activation,
@@ -705,22 +687,10 @@ where
     }
 }
 
-/// Encodes the canyon base fee parameters, per Holocene spec.
-///
-/// <https://specs.optimism.io/protocol/holocene/exec-engine.html#eip1559params-encoding>
-fn encode_canyon_base_fee_params(config: &RollupConfig) -> B64 {
-    let params = config.canyon_base_fee_params;
-
-    let mut buf = B64::ZERO;
-    buf[0..4].copy_from_slice(&(params.max_change_denominator as u32).to_be_bytes());
-    buf[4..8].copy_from_slice(&(params.elasticity_multiplier as u32).to_be_bytes());
-    buf
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use alloy_primitives::{address, b256, b64, hex};
+    use alloy_primitives::{address, b256, hex};
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
@@ -772,18 +742,6 @@ mod test {
                 .ok_or_else(|| anyhow!("Header not found for hash: {}", hash))?;
             Header::decode(&mut encoded_header.as_ref()).map_err(|e| anyhow!(e))
         }
-    }
-
-    #[test]
-    fn test_encode_canyon_1559_params() {
-        let cfg = RollupConfig {
-            canyon_base_fee_params: BaseFeeParams {
-                max_change_denominator: 32,
-                elasticity_multiplier: 64,
-            },
-            ..Default::default()
-        };
-        assert_eq!(encode_canyon_base_fee_params(&cfg), b64!("0000002000000040"));
     }
 
     #[test]
