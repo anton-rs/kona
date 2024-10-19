@@ -2,11 +2,10 @@
 
 use crate::{
     errors::{BlobProviderError, PipelineError, PipelineResult},
-    sources::IndexedBlobHash,
     traits::{AsyncIterator, BlobProvider, DataAvailabilityProvider},
 };
 use alloc::{boxed::Box, vec, vec::Vec};
-use alloy_eips::eip4844::Blob;
+use alloy_eips::eip4844::{Blob, IndexedBlobHash};
 use alloy_primitives::{map::HashMap, Address, Bytes, B256};
 use anyhow::Result;
 use async_trait::async_trait;

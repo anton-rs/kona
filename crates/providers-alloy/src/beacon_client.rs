@@ -1,9 +1,8 @@
 //! Contains an online implementation of the `BeaconClient` trait.
 
-use alloy_eips::eip4844::BlobTransactionSidecarItem;
+use alloy_eips::eip4844::{BlobTransactionSidecarItem, IndexedBlobHash};
 use alloy_primitives::FixedBytes;
 use async_trait::async_trait;
-use kona_derive::sources::IndexedBlobHash;
 use reqwest::Client;
 
 /// The config spec engine api method.
@@ -259,7 +258,7 @@ impl BeaconClient for OnlineBeaconClient {
         // Filter the sidecars by the hashes, in-order.
         hashes.iter().for_each(|hash| {
             if let Some(sidecar) =
-                raw_response.data.iter().find(|sidecar| sidecar.inner.index == hash.index as u64)
+                raw_response.data.iter().find(|sidecar| sidecar.inner.index == hash.index)
             {
                 sidecars.push(sidecar.clone());
             }

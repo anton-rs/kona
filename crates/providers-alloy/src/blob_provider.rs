@@ -1,8 +1,8 @@
 //! Contains an online implementation of the `BlobProvider` trait.
 
-use alloy_eips::eip4844::{Blob, BlobTransactionSidecarItem};
+use alloy_eips::eip4844::{Blob, BlobTransactionSidecarItem, IndexedBlobHash};
 use async_trait::async_trait;
-use kona_derive::{errors::BlobProviderError, sources::IndexedBlobHash, traits::BlobProvider};
+use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
 
@@ -97,7 +97,7 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index as u64).collect::<Vec<u64>>();
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<u64>>();
         let filtered = sidecars
             .into_iter()
             .filter(|s| blob_hash_indicies.contains(&s.inner.index))
@@ -158,10 +158,7 @@ where
                 let hash = blob_hashes
                     .get(i)
                     .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
-                match sidecar.verify_blob(&alloy_eips::eip1898::NumHash {
-                    hash: hash.hash,
-                    number: hash.index as u64,
-                }) {
+                match sidecar.verify_blob(hash) {
                     Ok(_) => Ok(sidecar.blob),
                     Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                 }
@@ -260,7 +257,7 @@ impl<B: BeaconClient, F: BlobSidecarProvider> OnlineBlobProviderWithFallback<B, 
         let sidecars = fallback.beacon_blob_side_cars(slot, blob_hashes).await?;
 
         // Filter blob sidecars that match the indicies in the specified list.
-        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index as u64).collect::<Vec<_>>();
+        let blob_hash_indicies = blob_hashes.iter().map(|b| b.index).collect::<Vec<_>>();
         let filtered = sidecars
             .into_iter()
             .filter(|s| blob_hash_indicies.contains(&s.inner.index))
@@ -319,10 +316,7 @@ where
                         let hash = blob_hashes.get(i).ok_or(BlobProviderError::Backend(
                             "fallback: failed to get blob hash".to_string(),
                         ))?;
-                        match sidecar.verify_blob(&alloy_eips::eip1898::NumHash {
-                            hash: hash.hash,
-                            number: hash.index as u64,
-                        }) {
+                        match sidecar.verify_blob(hash) {
                             Ok(_) => Ok(sidecar.blob),
                             Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                         }

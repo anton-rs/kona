@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 # Alloy
-alloy-eips.workspace = true
+alloy-eips = { workspace = true, features = ["kzg-sidecar"] }
 alloy-rlp = { workspace = true, features = ["derive"] }
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map"] }

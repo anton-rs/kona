@@ -27,7 +27,7 @@ revm.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
 alloy-rlp.workspace = true
-alloy-eips.workspace = true
+alloy-eips = { workspace = true, features = ["kzg-sidecar"] }
 op-alloy-consensus.workspace = true
 
 # General
