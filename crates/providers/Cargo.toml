@@ -25,8 +25,8 @@ op-alloy-consensus = { workspace = true, features = ["k256"] }
 async-trait.workspace = true
 
 # `test-utils` feature
-anyhow = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
 
 [features]
 default = []
-test-utils = ["dep:anyhow"]
+test-utils = ["dep:thiserror"]
