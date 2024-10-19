@@ -1,6 +1,6 @@
 [package]
-name = "kona-providers-alloy"
-description = "Alloy provider implementations for Kona"
+name = "kona-derive-alloy"
+description = "An alloy-backed derivation pipeline for the OP Stack, built on `kona-derive`"
 version = "0.0.1"
 edition.workspace = true
 authors.workspace = true
@@ -35,7 +35,6 @@ alloy-serde.workspace = true
 async-trait.workspace = true
 
 # Workspace
-kona-providers.workspace = true
 kona-derive = { workspace = true, features = ["serde"] }
 
 # `metrics` feature dependencies
@@ -46,7 +45,7 @@ prometheus = { workspace = true, optional = true, features = ["process"] }
 thiserror = { workspace = true, optional = true }
 alloy-rpc-client = { workspace = true, optional = true }
 alloy-node-bindings = { workspace = true, optional = true }
-alloy-transport-http = { workspace = true, optional = true, features = ["reqwest"] } 
+alloy-transport-http = { workspace = true, optional = true, features = ["reqwest"] }
 
 [dev-dependencies]
 thiserror.workspace = true
@@ -55,17 +54,15 @@ alloy-rpc-client.workspace = true
 alloy-node-bindings.workspace = true
 alloy-transport-http.workspace = true
 tokio = { workspace = true, features = ["full"] }
-kona-providers = { workspace = true, features = ["test-utils"] }
 kona-derive = { workspace = true, features = ["serde", "test-utils"] }
 
 [features]
 default = []
 metrics = ["dep:prometheus", "dep:lazy_static"]
 test-utils = [
-  "dep:thiserror", 
+  "dep:thiserror",
   "dep:alloy-rpc-client",
   "dep:alloy-node-bindings",
   "dep:alloy-transport-http",
   "kona-derive/test-utils",
-  "kona-providers/test-utils",
 ]

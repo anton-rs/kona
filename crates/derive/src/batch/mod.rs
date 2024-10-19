@@ -1,8 +1,8 @@
 //! This module contains the batch types for the OP Stack derivation pipeline: [SpanBatch] &
 //! [SingleBatch].
 
+use crate::traits::L2ChainProvider;
 use alloy_rlp::{Buf, Decodable};
-use kona_providers::L2ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 

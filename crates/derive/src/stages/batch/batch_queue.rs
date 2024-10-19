@@ -5,12 +5,13 @@ use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     stages::attributes_queue::AttributesProvider,
-    traits::{OriginAdvancer, OriginProvider, ResetSignal, Signal, SignalReceiver},
+    traits::{
+        L2ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal, SignalReceiver,
+    },
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use kona_providers::L2ChainProvider;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use tracing::{error, info, warn};
@@ -474,14 +475,13 @@ mod tests {
     use super::*;
     use crate::{
         stages::channel::channel_reader::BatchReader,
-        test_utils::{CollectingLayer, TestBatchQueueProvider, TraceStorage},
+        test_utils::{CollectingLayer, TestBatchQueueProvider, TestL2ChainProvider, TraceStorage},
     };
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_eips::{eip2718::Decodable2718, BlockNumHash};
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
-    use kona_providers::test_utils::TestL2ChainProvider;
     use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
     use op_alloy_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
     use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};

@@ -4,6 +4,9 @@
 mod pipeline;
 pub use pipeline::{ActivationSignal, Pipeline, ResetSignal, Signal, StepResult};
 
+mod providers;
+pub use providers::{ChainProvider, L2ChainProvider};
+
 mod attributes;
 pub use attributes::{AttributesBuilder, NextAttributes};
 

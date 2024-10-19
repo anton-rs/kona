@@ -4,7 +4,7 @@ use crate::{
     errors::{
         BuilderError, PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult,
     },
-    traits::AttributesBuilder,
+    traits::{AttributesBuilder, ChainProvider, L2ChainProvider},
 };
 use alloc::{boxed::Box, fmt::Debug, string::ToString, sync::Arc, vec, vec::Vec};
 use alloy_consensus::{Eip658Value, Receipt};
@@ -13,7 +13,6 @@ use alloy_primitives::{address, Address, Bytes, B256, B64};
 use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
-use kona_providers::{ChainProvider, L2ChainProvider};
 use op_alloy_consensus::Hardforks;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
@@ -266,11 +265,13 @@ async fn derive_deposits(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{errors::ResetError, test_utils::TestSystemConfigL2Fetcher};
+    use crate::{
+        errors::ResetError,
+        test_utils::{TestChainProvider, TestSystemConfigL2Fetcher},
+    };
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_primitives::{Log, LogData, B256, U256, U64};
-    use kona_providers::test_utils::TestChainProvider;
     use op_alloy_genesis::SystemConfig;
     use op_alloy_protocol::{BlockInfo, DepositError};
 

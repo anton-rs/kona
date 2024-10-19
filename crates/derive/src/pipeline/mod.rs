@@ -6,9 +6,6 @@ pub use crate::traits::{
     Pipeline, ResetProvider, Signal, SignalReceiver, StepResult,
 };
 
-/// Re-export kona provider traits.
-pub use kona_providers::{ChainProvider, L2ChainProvider};
-
 /// Re-export error types.
 pub use crate::errors::{PipelineError, PipelineResult};
 

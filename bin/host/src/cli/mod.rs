@@ -14,7 +14,7 @@ use clap::{
     builder::styling::{AnsiColor, Color, Style},
     ArgAction, Parser,
 };
-use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
+use kona_derive_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};

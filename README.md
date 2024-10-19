@@ -31,7 +31,7 @@ rollup state transition in order to verify an [L2 output root][g-output-root] fr
 
 ### Alternative Backends
 
-Kona's libraries were built with alternative backend support and extensibility in mind - it is not just a fault proof 
+Kona's libraries were built with alternative backend support and extensibility in mind - it is not just a fault proof
 program! Kona is also used by:
 
 - [`op-succinct`][op-succinct]
@@ -59,11 +59,13 @@ see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html
 
 - [`common`](./crates/common): A suite of utilities for developing `client` programs to be run on top of Fault Proof VMs.
 - [`common-proc`](./crates/common-proc): Proc macro for the `client` program entrypoint.
-- [`primitives`](./crates/primitives): Primitive types for use in `kona` crates.
 - [`preimage`](./crates/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
+
+**Protocol**
 - [`mpt`](./crates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
 - [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
+  - [`derive-alloy`](./crates/derive-alloy/): Online, `alloy`-backed derivation pipeline.
 
 ## Book
 

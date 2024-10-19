@@ -3,9 +3,8 @@
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
-    pipeline::L2ChainProvider,
     stages::NextBatchProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
@@ -223,10 +222,9 @@ mod test {
     use super::*;
     use crate::{
         batch::{SingleBatch, SpanBatchElement},
-        test_utils::{CollectingLayer, TestBatchStreamProvider, TraceStorage},
+        test_utils::{CollectingLayer, TestBatchStreamProvider, TestL2ChainProvider, TraceStorage},
         traits::ResetSignal,
     };
-    use kona_providers::test_utils::TestL2ChainProvider;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]
