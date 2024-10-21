@@ -65,17 +65,17 @@ pub enum MultiplexerError {
 /// [Debug]: core::fmt::Debug
 macro_rules! multiplexed_stage {
     (
-        $provider_name:ident<$prev_type:ident$(, $provider_generic:ident: $($provider_generic_bound:ident)*)*>,
+        $provider_name:ident<$prev_type:ident$(, $provider_generic:ident: $($provider_generic_bound:ident)*)*>$(,)?
         $(
             additional_fields: {
                 $(#[doc = $comment:expr])?
                 $($field_name:ident: $field_type:ty,)+
             }
-        )?
+        )?$(,)?
         stages: {
-            $($stage_name:ident$(($($input_name:ident$(,)?)+))? => $stage_condition:ident,)*
-        }
-        default_stage: $last_stage_name:ident$(($($last_input_name:ident$(,)?)+))?
+            $($stage_name:ident$(<$($stage_generic:ident$(, )?)+>)?$(($($input_name:ident$(,)?)+))? => $stage_condition:ident,)*
+        }$(,)?
+        default_stage: $last_stage_name:ident$(<$($last_stage_generic:ident$(, )?)+>)?$(($($last_input_name:ident$(,)?)+))?
     ) => {
         use $crate::{
             pipeline::{OriginAdvancer, OriginProvider, SignalReceiver, Signal, PipelineError, PipelineResult},
@@ -88,15 +88,15 @@ macro_rules! multiplexed_stage {
         #[derive(Debug)]
         enum ActiveStage<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + core::fmt::Debug,
         {
-            $($stage_name($stage_name<P>,),)*
-            $last_stage_name($last_stage_name<P>),
+            $($stage_name($stage_name<P$(, $stage_generic)*>,),)*
+            $last_stage_name($last_stage_name<P$($(, $last_stage_generic)+)?>),
         }
 
-        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> ActiveStage<P$(, $provider_generic)*>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ Clone + core::fmt::Debug)*> ActiveStage<P$(, $provider_generic)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + core::fmt::Debug,
         {
             /// Dissolves the active stage and returns the previous stage.
             pub(crate) fn into_prev(self) -> P {
@@ -109,9 +109,9 @@ macro_rules! multiplexed_stage {
 
         #[doc = concat!("The ", stringify!($provider_name), " stage is responsible for multiplexing sub-stages.")]
         #[derive(Debug)]
-        pub struct $provider_name<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*>
+        pub struct $provider_name<P$(, $provider_generic: $($provider_generic_bound +)+ Clone + core::fmt::Debug)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + core::fmt::Debug,
         {
             /// The rollup configuration.
             cfg: alloc::sync::Arc<op_alloy_genesis::RollupConfig>,
@@ -135,9 +135,9 @@ macro_rules! multiplexed_stage {
             )?
         }
 
-        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> $provider_name<P$(, $provider_generic)*>
+        impl<P$(, $provider_generic: $($provider_generic_bound +) + Clone + core::fmt::Debug)*> $provider_name<P$(, $provider_generic)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + core::fmt::Debug,
         {
             /// Creates a new instance of the provider.
             pub const fn new(cfg: alloc::sync::Arc<op_alloy_genesis::RollupConfig>, prev: P$( $(, $field_name: $field_type)+ )?) -> Self {
@@ -204,9 +204,9 @@ macro_rules! multiplexed_stage {
         }
 
         #[async_trait]
-        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> OriginAdvancer for $provider_name<P$(, $provider_generic)*>
+        impl<P$(, $provider_generic: $($provider_generic_bound +)+ Send + Clone + core::fmt::Debug)*> OriginAdvancer for $provider_name<P$(, $provider_generic)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Send + core::fmt::Debug,
         {
             async fn advance_origin(&mut self) -> PipelineResult<()> {
                 match self.active_stage_mut()? {
@@ -216,9 +216,9 @@ macro_rules! multiplexed_stage {
             }
         }
 
-        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> OriginProvider for $provider_name<P$(, $provider_generic)*>
+        impl<P$(, $provider_generic: $($provider_generic_bound +) + Clone + core::fmt::Debug)*> OriginProvider for $provider_name<P$(, $provider_generic)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + core::fmt::Debug,
         {
             fn origin(&self) -> Option<op_alloy_protocol::BlockInfo> {
                 match self.active_stage_ref() {
@@ -234,9 +234,9 @@ macro_rules! multiplexed_stage {
         }
 
         #[async_trait]
-        impl<P$(, $provider_generic: $($provider_generic_bound +)+ core::fmt::Debug)*> SignalReceiver for $provider_name<P$(, $provider_generic)*>
+        impl<P$(, $provider_generic: $($provider_generic_bound +) + Send + Clone + core::fmt::Debug)*> SignalReceiver for $provider_name<P$(, $provider_generic)*>
         where
-            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
+            P: $prev_type + OriginAdvancer + OriginProvider + SignalReceiver + Send + core::fmt::Debug,
         {
             async fn signal(
                 &mut self,

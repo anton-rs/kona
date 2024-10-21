@@ -1,7 +1,10 @@
 //! Test Utilities for the [crate::pipeline::DerivationPipeline]
 //! as well as its stages and providers.
 
-use crate::test_utils::{TestChainProvider, TestL2ChainProvider};
+use crate::{
+    stages::BatchProvider,
+    test_utils::{TestChainProvider, TestL2ChainProvider},
+};
 use alloc::{boxed::Box, sync::Arc};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
@@ -12,8 +15,8 @@ use crate::{
     errors::PipelineError,
     pipeline::{DerivationPipeline, PipelineBuilder, PipelineResult},
     stages::{
-        AttributesQueue, BatchQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
-        L1Retrieval, L1Traversal,
+        AttributesQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue, L1Retrieval,
+        L1Traversal,
     },
     test_utils::{TestAttributesBuilder, TestDAP},
     traits::{NextAttributes, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
@@ -77,10 +80,10 @@ pub type TestChannelReader = ChannelReader<TestChannelProvider>;
 pub type TestBatchStream = BatchStream<TestChannelReader, TestL2ChainProvider>;
 
 /// A [BatchQueue] using test providers and sources.
-pub type TestBatchQueue = BatchQueue<TestBatchStream, TestL2ChainProvider>;
+pub type TestBatchProvider = BatchProvider<TestBatchStream, TestL2ChainProvider>;
 
 /// An [AttributesQueue] using test providers and sources.
-pub type TestAttributesQueue = AttributesQueue<TestBatchQueue, TestAttributesBuilder>;
+pub type TestAttributesQueue = AttributesQueue<TestBatchProvider, TestAttributesBuilder>;
 
 /// A [DerivationPipeline] using test providers and sources.
 pub type TestPipeline = DerivationPipeline<TestAttributesQueue, TestL2ChainProvider>;

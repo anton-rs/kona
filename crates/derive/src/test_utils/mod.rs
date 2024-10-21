@@ -2,9 +2,9 @@
 
 mod pipeline;
 pub use pipeline::{
-    new_test_pipeline, TestAttributesQueue, TestBatchQueue, TestBatchStream, TestChannelProvider,
-    TestChannelReader, TestFrameQueue, TestL1Retrieval, TestL1Traversal, TestNextAttributes,
-    TestPipeline,
+    new_test_pipeline, TestAttributesQueue, TestBatchProvider, TestBatchStream,
+    TestChannelProvider, TestChannelReader, TestFrameQueue, TestL1Retrieval, TestL1Traversal,
+    TestNextAttributes, TestPipeline,
 };
 
 mod blob_provider;
@@ -16,8 +16,8 @@ pub use chain_providers::{TestChainProvider, TestL2ChainProvider, TestProviderEr
 mod data_availability_provider;
 pub use data_availability_provider::{TestDAP, TestIter};
 
-mod batch_queue;
-pub use batch_queue::TestBatchQueueProvider;
+mod batch_provider;
+pub use batch_provider::TestNextBatchProvider;
 
 mod attributes_queue;
 pub use attributes_queue::{
@@ -27,8 +27,8 @@ pub use attributes_queue::{
 mod batch_stream;
 pub use batch_stream::TestBatchStreamProvider;
 
-mod channel_bank;
-pub use channel_bank::TestNextFrameProvider;
+mod channel_provider;
+pub use channel_provider::TestNextFrameProvider;
 
 mod channel_reader;
 pub use channel_reader::TestChannelReaderProvider;
