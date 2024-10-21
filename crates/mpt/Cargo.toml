@@ -30,11 +30,9 @@ alloy-transport-http.workspace = true
 alloy-rpc-types = { workspace = true, features = ["eth"] }
 
 # General
+rand.workspace = true
 anyhow.workspace = true
 reqwest.workspace = true
-futures.workspace = true
-
-rand.workspace = true
 proptest.workspace = true
 tokio = { workspace = true, features = ["full"] }
 criterion = { workspace = true, features = ["html_reports"] }
