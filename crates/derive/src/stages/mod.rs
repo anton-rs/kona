@@ -38,9 +38,5 @@ pub use batch::{
 mod attributes_queue;
 pub use attributes_queue::AttributesQueue;
 
-#[macro_use]
-mod multiplexed;
-pub use multiplexed::MultiplexerError;
-
 mod utils;
 pub use utils::decompress_brotli;
