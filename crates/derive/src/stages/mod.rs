@@ -34,7 +34,7 @@ mod batch;
 pub use batch::{BatchQueue, BatchStream, BatchStreamProvider, BatchValidator, NextBatchProvider};
 
 mod attributes_queue;
-pub use attributes_queue::{AttributesProvider, AttributesQueue};
+pub use attributes_queue::AttributesQueue;
 
 #[macro_use]
 mod multiplexed;

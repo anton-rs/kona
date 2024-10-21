@@ -4,7 +4,8 @@ use crate::{
     batch::SingleBatch,
     errors::{PipelineError, PipelineResult, ResetError},
     traits::{
-        AttributesBuilder, NextAttributes, OriginAdvancer, OriginProvider, Signal, SignalReceiver,
+        AttributesBuilder, AttributesProvider, NextAttributes, OriginAdvancer, OriginProvider,
+        Signal, SignalReceiver,
     },
 };
 use alloc::{boxed::Box, sync::Arc};
@@ -14,18 +15,6 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
 use tracing::info;
-
-/// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
-///
-/// [BatchQueue]: crate::stages::BatchQueue
-#[async_trait]
-pub trait AttributesProvider {
-    /// Returns the next valid batch upon the given safe head.
-    async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch>;
-
-    /// Returns whether the current batch is the last in its span.
-    fn is_last_in_span(&self) -> bool;
-}
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [OpPayloadAttributes].
