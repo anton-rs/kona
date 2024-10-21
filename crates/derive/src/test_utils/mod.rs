@@ -41,3 +41,8 @@ pub use tracing::{CollectingLayer, TraceStorage};
 
 mod sys_config_fetcher;
 pub use sys_config_fetcher::TestSystemConfigL2Fetcher;
+
+mod frames;
+pub use frames::{FrameQueueAsserter, FrameQueueBuilder};
+
+mod macros;

@@ -31,7 +31,7 @@ mod test {
     use super::{ActiveStage, ChannelProvider};
     use crate::{
         prelude::{OriginProvider, PipelineError},
-        stages::{frame_queue::tests::new_test_frames, ChannelReaderProvider},
+        stages::ChannelReaderProvider,
         test_utils::TestNextFrameProvider,
         traits::{ResetSignal, SignalReceiver},
     };
@@ -153,7 +153,10 @@ mod test {
 
     #[tokio::test]
     async fn test_channel_provider_reset_bank() {
-        let frames = new_test_frames(2);
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         let provider = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
         let mut channel_provider = ChannelProvider::new(cfg.clone(), provider);
@@ -181,7 +184,10 @@ mod test {
 
     #[tokio::test]
     async fn test_channel_provider_reset_assembler() {
-        let frames = new_test_frames(2);
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         let provider = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
         let mut channel_provider = ChannelProvider::new(cfg.clone(), provider);

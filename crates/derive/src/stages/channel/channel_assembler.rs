@@ -200,7 +200,7 @@ mod test {
     use super::ChannelAssembler;
     use crate::{
         prelude::PipelineError,
-        stages::{frame_queue::tests::new_test_frames, ChannelReaderProvider},
+        stages::ChannelReaderProvider,
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
     };
     use alloc::sync::Arc;
@@ -217,7 +217,10 @@ mod test {
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
 
-        let frames = new_test_frames(2);
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         let mock = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
         let mut assembler = ChannelAssembler::new(cfg, mock);
@@ -255,7 +258,10 @@ mod test {
 
     #[tokio::test]
     async fn test_assembler_non_starting_frame() {
-        let frames = new_test_frames(2);
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         let mock = TestNextFrameProvider::new(frames.into_iter().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
         let mut assembler = ChannelAssembler::new(cfg, mock);
@@ -273,7 +279,10 @@ mod test {
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
 
-        let frames = new_test_frames(2);
+        let frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         let mock = TestNextFrameProvider::new(frames.clone().into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
         let mut assembler = ChannelAssembler::new(cfg, mock);
@@ -308,7 +317,10 @@ mod test {
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
 
-        let mut frames = new_test_frames(2);
+        let mut frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         frames[1].data = vec![0; MAX_RLP_BYTES_PER_CHANNEL_BEDROCK as usize];
         let mock = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
@@ -339,7 +351,10 @@ mod test {
         let layer = CollectingLayer::new(trace_store.clone());
         tracing_subscriber::Registry::default().with(layer).init();
 
-        let mut frames = new_test_frames(2);
+        let mut frames = [
+            crate::frame!(0xFF, 0, vec![0xDD; 50], false),
+            crate::frame!(0xFF, 1, vec![0xDD; 50], true),
+        ];
         frames[1].data = vec![0; MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize];
         let mock = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig { fjord_time: Some(0), ..Default::default() });
