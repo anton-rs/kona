@@ -49,11 +49,6 @@ where
         Self { cfg, prev, origin: None, l1_blocks: Vec::new() }
     }
 
-    /// Consumes [Self] and returns the previous stage.
-    pub fn into_prev(self) -> P {
-        self.prev
-    }
-
     /// Returns `true` if the pipeline origin is behind the parent origin.
     ///
     /// ## Takes

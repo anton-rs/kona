@@ -78,11 +78,6 @@ where
         }
     }
 
-    /// Consumes [Self] and returns the inner previous stage.
-    pub fn into_prev(self) -> P {
-        self.prev
-    }
-
     /// Pops the next batch from the current queued up span-batch cache.
     /// The parent is used to set the parent hash of the batch.
     /// The parent is verified when the batch is later validated.
