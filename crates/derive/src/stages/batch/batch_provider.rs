@@ -44,7 +44,7 @@ where
     ///
     /// Must be [None] if `prev` or `batch_validator` is [Some].
     batch_queue: Option<BatchQueue<P, F>>,
-    /// The channel assembler stage of the provider.
+    /// The batch validator stage of the provider.
     ///
     /// Must be [None] if `prev` or `batch_queue` is [Some].
     batch_validator: Option<BatchValidator<P>>,
@@ -75,7 +75,7 @@ where
         } else if self.batch_queue.is_some() && self.cfg.is_holocene_active(origin.timestamp) {
             // If the batch queue is active and Holocene is also active, transition to the batch
             // validator.
-            let batch_queue = self.batch_queue.take().expect("Must have channel bank");
+            let batch_queue = self.batch_queue.take().expect("Must have batch queue");
             let mut bv = BatchValidator::new(self.cfg.clone(), batch_queue.prev);
             bv.l1_blocks = batch_queue.l1_blocks;
             self.batch_validator = Some(bv);

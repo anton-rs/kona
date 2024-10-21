@@ -319,12 +319,10 @@ mod test {
     use super::BatchValidator;
     use crate::{
         batch::{Batch, SingleBatch, SpanBatch},
-        errors::{PipelineErrorKind, ResetError},
-        pipeline::{PipelineResult, SignalReceiver},
-        prelude::PipelineError,
+        errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
         stages::NextBatchProvider,
-        test_utils::{CollectingLayer, TestBatchQueueProvider, TraceStorage},
-        traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal},
+        test_utils::{CollectingLayer, TestNextBatchProvider, TraceStorage},
+        traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal, SignalReceiver},
     };
     use alloc::sync::Arc;
     use alloy_eips::{BlockNumHash, NumHash};
