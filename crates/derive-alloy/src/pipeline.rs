@@ -5,7 +5,7 @@ use kona_derive::{
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
-        AttributesQueue, BatchQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
+        AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
 };
@@ -34,7 +34,7 @@ pub type OnlineAttributesBuilder =
 
 /// An `online` attributes queue for the derivation pipeline.
 pub type OnlineAttributesQueue<DAP> = AttributesQueue<
-    BatchQueue<
+    BatchProvider<
         BatchStream<
             ChannelReader<
                 ChannelProvider<FrameQueue<L1Retrieval<DAP, L1Traversal<AlloyChainProvider>>>>,

@@ -6,7 +6,7 @@ use alloy_primitives::Bytes;
 use core::fmt::Debug;
 
 multiplexed_stage!(
-    ChannelProvider<NextFrameProvider>,
+    ChannelProvider<NextFrameProvider>
     stages: {
         ChannelAssembler => is_holocene_active,
     }
