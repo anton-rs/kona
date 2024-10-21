@@ -3,8 +3,10 @@
 use crate::{
     batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
-    stages::AttributesProvider,
-    traits::{AttributesBuilder, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{
+        AttributesBuilder, AttributesProvider, OriginAdvancer, OriginProvider, Signal,
+        SignalReceiver,
+    },
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
