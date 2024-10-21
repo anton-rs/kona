@@ -4,9 +4,9 @@ use super::NextBatchProvider;
 use crate::{
     batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
-    stages::attributes_queue::AttributesProvider,
     traits::{
-        L2ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal, SignalReceiver,
+        AttributesProvider, L2ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal,
+        SignalReceiver,
     },
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};

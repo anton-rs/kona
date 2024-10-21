@@ -1,11 +1,23 @@
 //! Contains traits for working with payload attributes and their providers.
 
-use crate::errors::PipelineResult;
+use crate::{batch::SingleBatch, errors::PipelineResult};
 use alloc::boxed::Box;
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
 use op_alloy_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
+
+/// [AttributesProvider] is a trait abstraction that generalizes the [BatchQueue] stage.
+///
+/// [BatchQueue]: crate::stages::BatchQueue
+#[async_trait]
+pub trait AttributesProvider {
+    /// Returns the next valid batch upon the given safe head.
+    async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch>;
+
+    /// Returns whether the current batch is the last in its span.
+    fn is_last_in_span(&self) -> bool;
+}
 
 /// [NextAttributes] defines the interface for pulling attributes from
 /// the top level `AttributesQueue` stage of the pipeline.

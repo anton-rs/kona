@@ -6,8 +6,7 @@ use crate::{
     errors::ResetError,
     pipeline::{OriginAdvancer, PipelineResult, Signal, SignalReceiver},
     prelude::{OriginProvider, PipelineError, PipelineErrorKind},
-    stages::AttributesProvider,
-    traits::ResetSignal,
+    traits::{AttributesProvider, ResetSignal},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
@@ -318,9 +317,9 @@ mod test {
         errors::{PipelineErrorKind, ResetError},
         pipeline::{PipelineResult, SignalReceiver},
         prelude::PipelineError,
-        stages::{AttributesProvider, NextBatchProvider},
+        stages::NextBatchProvider,
         test_utils::{CollectingLayer, TestBatchQueueProvider, TraceStorage},
-        traits::{OriginAdvancer, ResetSignal, Signal},
+        traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal},
     };
     use alloc::sync::Arc;
     use alloy_eips::{BlockNumHash, NumHash};
