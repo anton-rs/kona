@@ -37,26 +37,26 @@ where
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
-    cfg: Arc<RollupConfig>,
+    pub(crate) cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
-    prev: P,
+    pub(crate) prev: P,
     /// The l1 block ref
-    origin: Option<BlockInfo>,
+    pub(crate) origin: Option<BlockInfo>,
     /// A consecutive, time-centric window of L1 Blocks.
     /// Every L1 origin of unsafe L2 Blocks must be included in this list.
     /// If every L2 Block corresponding to a single L1 Block becomes safe,
     /// the block is popped from this list.
     /// If new L2 Block's L1 origin is not included in this list, fetch and
     /// push it to the list.
-    l1_blocks: Vec<BlockInfo>,
+    pub(crate) l1_blocks: Vec<BlockInfo>,
     /// A set of batches in order from when we've seen them.
-    batches: Vec<BatchWithInclusionBlock>,
+    pub(crate) batches: Vec<BatchWithInclusionBlock>,
     /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
     ///
     /// [SpanBatch]: crate::batch::SpanBatch
-    next_spans: Vec<SingleBatch>,
+    pub(crate) next_spans: Vec<SingleBatch>,
     /// Used to validate the batches.
-    fetcher: BF,
+    pub(crate) fetcher: BF,
 }
 
 impl<P, BF> BatchQueue<P, BF>
