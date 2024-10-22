@@ -12,7 +12,7 @@ use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 
 /// A mock provider for the [BatchQueue] stage.
 #[derive(Debug, Default)]
-pub struct TestBatchQueueProvider {
+pub struct TestNextBatchProvider {
     /// The origin of the L1 block.
     pub origin: Option<BlockInfo>,
     /// A list of batches to return.
@@ -23,21 +23,21 @@ pub struct TestBatchQueueProvider {
     pub reset: bool,
 }
 
-impl TestBatchQueueProvider {
+impl TestNextBatchProvider {
     /// Creates a new [MockBatchQueueProvider] with the given origin and batches.
     pub fn new(batches: Vec<PipelineResult<Batch>>) -> Self {
         Self { origin: Some(BlockInfo::default()), batches, flushed: false, reset: false }
     }
 }
 
-impl OriginProvider for TestBatchQueueProvider {
+impl OriginProvider for TestNextBatchProvider {
     fn origin(&self) -> Option<BlockInfo> {
         self.origin
     }
 }
 
 #[async_trait]
-impl NextBatchProvider for TestBatchQueueProvider {
+impl NextBatchProvider for TestNextBatchProvider {
     fn flush(&mut self) {
         self.flushed = true;
     }
@@ -52,7 +52,7 @@ impl NextBatchProvider for TestBatchQueueProvider {
 }
 
 #[async_trait]
-impl OriginAdvancer for TestBatchQueueProvider {
+impl OriginAdvancer for TestNextBatchProvider {
     async fn advance_origin(&mut self) -> PipelineResult<()> {
         self.origin = self.origin.map(|mut origin| {
             origin.number += 1;
@@ -63,7 +63,7 @@ impl OriginAdvancer for TestBatchQueueProvider {
 }
 
 #[async_trait]
-impl SignalReceiver for TestBatchQueueProvider {
+impl SignalReceiver for TestNextBatchProvider {
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         match signal {
             Signal::Reset { .. } => self.reset = true,

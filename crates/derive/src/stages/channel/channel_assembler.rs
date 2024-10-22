@@ -44,11 +44,6 @@ where
         Self { cfg, prev, channel: None }
     }
 
-    /// Consumes [Self] and returns the previous stage.
-    pub fn into_prev(self) -> P {
-        self.prev
-    }
-
     /// Returns whether or not the channel currently being assembled has timed out.
     pub fn is_timed_out(&self) -> PipelineResult<bool> {
         let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;

@@ -26,18 +26,18 @@ where
     P: NextBatchProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// The rollup configuration.
-    cfg: Arc<RollupConfig>,
+    pub(crate) cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
-    prev: P,
+    pub(crate) prev: P,
     /// The L1 origin of the batch sequencer.
-    origin: Option<BlockInfo>,
+    pub(crate) origin: Option<BlockInfo>,
     /// A consecutive, time-centric window of L1 Blocks.
     /// Every L1 origin of unsafe L2 Blocks must be included in this list.
     /// If every L2 Block corresponding to a single L1 Block becomes safe,
     /// the block is popped from this list.
     /// If new L2 Block's L1 origin is not included in this list, fetch and
     /// push it to the list.
-    l1_blocks: Vec<BlockInfo>,
+    pub(crate) l1_blocks: Vec<BlockInfo>,
 }
 
 impl<P> BatchValidator<P>
@@ -314,12 +314,10 @@ mod test {
     use super::BatchValidator;
     use crate::{
         batch::{Batch, SingleBatch, SpanBatch},
-        errors::{PipelineErrorKind, ResetError},
-        pipeline::{PipelineResult, SignalReceiver},
-        prelude::PipelineError,
+        errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
         stages::NextBatchProvider,
-        test_utils::{CollectingLayer, TestBatchQueueProvider, TraceStorage},
-        traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal},
+        test_utils::{CollectingLayer, TestNextBatchProvider, TraceStorage},
+        traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal, SignalReceiver},
     };
     use alloc::sync::Arc;
     use alloy_eips::{BlockNumHash, NumHash};
@@ -332,7 +330,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_origin_behind_eof() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(vec![]);
+        let mut mock = TestNextBatchProvider::new(vec![]);
         mock.origin = Some(BlockInfo::default());
         let mut bv = BatchValidator::new(cfg, mock);
         bv.origin = Some(BlockInfo { number: 1, ..Default::default() });
@@ -347,7 +345,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_origin_behind_startup() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(vec![]);
+        let mut mock = TestNextBatchProvider::new(vec![]);
         mock.origin = Some(BlockInfo::default());
         let mut bv = BatchValidator::new(cfg, mock);
 
@@ -376,7 +374,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_origin_behind_advance() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(vec![]);
+        let mut mock = TestNextBatchProvider::new(vec![]);
         mock.origin = Some(BlockInfo { number: 2, ..Default::default() });
         let mut bv = BatchValidator::new(cfg, mock);
 
@@ -405,7 +403,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_advance_epoch() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(vec![]);
+        let mut mock = TestNextBatchProvider::new(vec![]);
         mock.origin = Some(BlockInfo { number: 2, ..Default::default() });
         let mut bv = BatchValidator::new(cfg, mock);
 
@@ -436,7 +434,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_origin_behind_drain_prev() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(
+        let mut mock = TestNextBatchProvider::new(
             (0..5).map(|_| Ok(Batch::Single(SingleBatch::default()))).collect(),
         );
         mock.origin = Some(BlockInfo::default());
@@ -461,7 +459,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_l1_origin_mismatch() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(vec![Ok(Batch::Single(SingleBatch::default()))]);
+        let mut mock = TestNextBatchProvider::new(vec![Ok(Batch::Single(SingleBatch::default()))]);
         mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
         let mut bv = BatchValidator::new(cfg, mock);
         bv.origin = Some(BlockInfo::default());
@@ -481,7 +479,7 @@ mod test {
     #[tokio::test]
     async fn test_batch_validator_received_span_batch() {
         let cfg = Arc::new(RollupConfig::default());
-        let mut mock = TestBatchQueueProvider::new(vec![Ok(Batch::Span(SpanBatch::default()))]);
+        let mut mock = TestNextBatchProvider::new(vec![Ok(Batch::Span(SpanBatch::default()))]);
         mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
         let mut bv = BatchValidator::new(cfg, mock);
         bv.origin = Some(BlockInfo::default());
@@ -523,7 +521,7 @@ mod test {
 
         // Setup batch validator deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
 
         // Configure batch validator
@@ -550,7 +548,7 @@ mod test {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = Arc::new(RollupConfig { seq_window_size: 5, ..Default::default() });
-        let mut mock = TestBatchQueueProvider::new(vec![]);
+        let mut mock = TestNextBatchProvider::new(vec![]);
         mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
         let mut bv = BatchValidator::new(cfg, mock);
 
@@ -588,7 +586,7 @@ mod test {
         tracing_subscriber::Registry::default().with(layer).init();
 
         let cfg = Arc::new(RollupConfig { seq_window_size: 5, ..Default::default() });
-        let mut mock = TestBatchQueueProvider::new(vec![]);
+        let mut mock = TestNextBatchProvider::new(vec![]);
         mock.origin = Some(BlockInfo { number: 1, ..Default::default() });
         let mut bv = BatchValidator::new(cfg, mock);
 

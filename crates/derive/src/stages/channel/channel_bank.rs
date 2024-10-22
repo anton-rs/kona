@@ -56,11 +56,6 @@ where
         Self { cfg, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
     }
 
-    /// Consumes [Self] and returns the previous stage.
-    pub fn into_prev(self) -> P {
-        self.prev
-    }
-
     /// Returns the size of the channel bank by accumulating over all channels.
     pub fn size(&self) -> usize {
         self.channels.iter().fold(0, |acc, (_, c)| acc + c.size())
@@ -283,18 +278,6 @@ mod tests {
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
     use tracing::Level;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-    #[test]
-    fn test_channel_bank_into_prev() {
-        let frames = [crate::frame!(0xFF, 0, vec![0xDD; 50], true)];
-        let mock = TestNextFrameProvider::new(frames.into_iter().map(Ok).collect());
-        let cfg = Arc::new(RollupConfig::default());
-        let channel_bank = ChannelBank::new(cfg, mock);
-
-        let prev = channel_bank.into_prev();
-        assert_eq!(prev.origin(), Some(BlockInfo::default()));
-        assert_eq!(prev.data.len(), 1)
-    }
 
     #[test]
     fn test_try_read_channel_at_index_missing_channel() {

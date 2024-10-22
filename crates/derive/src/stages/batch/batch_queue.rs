@@ -37,26 +37,26 @@ where
     BF: L2ChainProvider + Debug,
 {
     /// The rollup config.
-    cfg: Arc<RollupConfig>,
+    pub(crate) cfg: Arc<RollupConfig>,
     /// The previous stage of the derivation pipeline.
-    prev: P,
+    pub(crate) prev: P,
     /// The l1 block ref
-    origin: Option<BlockInfo>,
+    pub(crate) origin: Option<BlockInfo>,
     /// A consecutive, time-centric window of L1 Blocks.
     /// Every L1 origin of unsafe L2 Blocks must be included in this list.
     /// If every L2 Block corresponding to a single L1 Block becomes safe,
     /// the block is popped from this list.
     /// If new L2 Block's L1 origin is not included in this list, fetch and
     /// push it to the list.
-    l1_blocks: Vec<BlockInfo>,
+    pub(crate) l1_blocks: Vec<BlockInfo>,
     /// A set of batches in order from when we've seen them.
-    batches: Vec<BatchWithInclusionBlock>,
+    pub(crate) batches: Vec<BatchWithInclusionBlock>,
     /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
     ///
     /// [SpanBatch]: crate::batch::SpanBatch
-    next_spans: Vec<SingleBatch>,
+    pub(crate) next_spans: Vec<SingleBatch>,
     /// Used to validate the batches.
-    fetcher: BF,
+    pub(crate) fetcher: BF,
 }
 
 impl<P, BF> BatchQueue<P, BF>
@@ -475,7 +475,7 @@ mod tests {
     use super::*;
     use crate::{
         stages::channel::channel_reader::BatchReader,
-        test_utils::{CollectingLayer, TestBatchQueueProvider, TestL2ChainProvider, TraceStorage},
+        test_utils::{CollectingLayer, TestL2ChainProvider, TestNextBatchProvider, TraceStorage},
     };
     use alloc::vec;
     use alloy_consensus::Header;
@@ -500,7 +500,7 @@ mod tests {
     #[test]
     fn test_pop_next_batch() {
         let cfg = Arc::new(RollupConfig::default());
-        let mock = TestBatchQueueProvider::new(vec![]);
+        let mock = TestNextBatchProvider::new(vec![]);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
@@ -514,7 +514,7 @@ mod tests {
     #[tokio::test]
     async fn test_batch_queue_reset() {
         let cfg = Arc::new(RollupConfig::default());
-        let mock = TestBatchQueueProvider::new(vec![]);
+        let mock = TestNextBatchProvider::new(vec![]);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
         bq.l1_blocks.push(BlockInfo::default());
@@ -535,7 +535,7 @@ mod tests {
     #[tokio::test]
     async fn test_batch_queue_flush() {
         let cfg = Arc::new(RollupConfig::default());
-        let mock = TestBatchQueueProvider::new(vec![]);
+        let mock = TestNextBatchProvider::new(vec![]);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
         bq.l1_blocks.push(BlockInfo::default());
@@ -574,7 +574,7 @@ mod tests {
 
         // Setup batch queue deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
 
@@ -605,7 +605,7 @@ mod tests {
 
         // Setup batch queue deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
 
@@ -639,7 +639,7 @@ mod tests {
 
         // Setup batch queue deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
 
@@ -674,7 +674,7 @@ mod tests {
 
         // Setup batch queue deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
 
@@ -693,7 +693,7 @@ mod tests {
     async fn test_derive_next_batch_missing_origin() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
-        let mock = TestBatchQueueProvider::new(data);
+        let mock = TestNextBatchProvider::new(data);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
@@ -709,7 +709,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -730,7 +730,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -754,7 +754,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -778,7 +778,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -811,7 +811,7 @@ mod tests {
 
         // Setup batch queue deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
 
@@ -852,7 +852,7 @@ mod tests {
 
         // Setup batch queue deps
         let batch_vec = vec![PipelineResult::Ok(Batch::Single(batch.clone()))];
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
 
@@ -891,7 +891,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -910,7 +910,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -926,7 +926,7 @@ mod tests {
         let mut reader = new_batch_reader();
         let cfg = Arc::new(RollupConfig::default());
         let batch = reader.next_batch(cfg.as_ref()).unwrap();
-        let mock = TestBatchQueueProvider::new(vec![Ok(batch)]);
+        let mock = TestNextBatchProvider::new(vec![Ok(batch)]);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
@@ -942,7 +942,7 @@ mod tests {
         while let Some(batch) = reader.next_batch(cfg.as_ref()) {
             batch_vec.push(Ok(batch));
         }
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
@@ -1012,7 +1012,7 @@ mod tests {
         tx.encode(&mut buf);
         let prefixed = [&[OpTxType::Deposit as u8], &buf[..]].concat();
         second_batch_txs.insert(0, Bytes::copy_from_slice(&prefixed));
-        let mut mock = TestBatchQueueProvider::new(batch_vec);
+        let mut mock = TestNextBatchProvider::new(batch_vec);
         let origin_check =
             b256!("8527cdb6f601acf9b483817abd1da92790c92b19000000000000000000000000");
         mock.origin = Some(BlockInfo {
@@ -1099,7 +1099,7 @@ mod tests {
     async fn test_batch_queue_empty_bytes() {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let cfg = Arc::new(RollupConfig::default());
-        let mock = TestBatchQueueProvider::new(data);
+        let mock = TestNextBatchProvider::new(data);
         let fetcher = TestL2ChainProvider::default();
         let mut bq = BatchQueue::new(cfg, mock, fetcher);
         let parent = L2BlockInfo::default();
