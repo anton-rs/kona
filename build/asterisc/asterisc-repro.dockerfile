@@ -24,7 +24,7 @@ RUN git clone https://github.com/ethereum-optimism/asterisc && \
   git checkout $ASTERISC_TAG && \
   make && \
   cp rvgo/bin/asterisc /asterisc-bin
-  
+
 ################################################################
 #               Build kona-client @ `CLIENT_TAG`               #
 ################################################################
@@ -46,14 +46,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends git
 
 # Build kona-client on the selected tag
 RUN git checkout $CLIENT_TAG && \
-  cargo build -Zbuild-std=core,alloc --workspace --bin kona --locked --profile release-client-lto --exclude kona-host && \
+  cargo build -Zbuild-std=core,alloc --workspace --bin kona --locked --profile release-client-lto --exclude kona-host --exclude kona-derive-alloy && \
   mv ./target/riscv64gc-unknown-none-elf/release-client-lto/kona /kona-client-elf
 
 ################################################################
 #                Build kona-host @ `CLIENT_TAG`                #
 ################################################################
 
-FROM ubuntu:22.04 AS host-build 
+FROM ubuntu:22.04 AS host-build
 SHELL ["/bin/bash", "-c"]
 
 ARG CLIENT_TAG
@@ -76,7 +76,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   pkg-config
 
 # Install rust
-ENV RUST_VERSION=1.80.0
+ENV RUST_VERSION=1.81.0
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain ${RUST_VERSION} --component rust-src
 ENV PATH="/root/.cargo/bin:${PATH}"
 
@@ -123,7 +123,7 @@ RUN $ASTERISC_BIN_PATH run \
 #                       Export Artifacts                       #
 ################################################################
 
-FROM scratch AS export-stage
+FROM ubuntu:22.04 AS export-stage
 
 COPY --from=prestate-build /asterisc .
 COPY --from=prestate-build /kona-client-elf .
