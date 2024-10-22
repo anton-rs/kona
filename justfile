@@ -119,7 +119,7 @@ build-asterisc *args='':
     ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host --exclude kona-derive-alloy
 
 # Build the `kona-client` prestate artifacts for the latest release.
-build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
+build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
   #!/bin/bash
   PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
   OUTPUT_DIR={{out}}
@@ -132,6 +132,23 @@ build-client-prestate-asterisc kona_tag asterisc_tag out='./prestate-artifacts-a
     --build-arg ASTERISC_TAG={{asterisc_tag}} \
     --platform linux/amd64 \
     .
+
+# Build the `kona-client` prestate artifacts for the latest release, with an image containing the resulting
+# binaries.
+build-client-prestate-asterisc-image kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
+  #!/bin/bash
+  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
+  OUTPUT_DIR={{out}}
+
+  echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
+  docker build \
+    -f $PATH_TO_REPRO_BUILDER \
+    -t kona-fpp-asterisc:latest \
+    --build-arg CLIENT_TAG={{kona_tag}} \
+    --build-arg ASTERISC_TAG={{asterisc_tag}} \
+    --platform linux/amd64 \
+    .
+
 # Clones and checks out the monorepo at the commit present in `.monorepo`
 monorepo:
   [ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo
