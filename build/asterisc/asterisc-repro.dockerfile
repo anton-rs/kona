@@ -86,7 +86,7 @@ RUN git checkout $CLIENT_TAG && \
   mv ./target/release/kona-host /kona-host
 
 ################################################################
-#        Create `prestate.json` + `prestate-proof.json`        #
+#      Create `prestate.bin.gz` + `prestate-proof.json`        #
 ################################################################
 
 FROM ubuntu:22.04 AS prestate-build
@@ -95,7 +95,7 @@ SHELL ["/bin/bash", "-c"]
 # Set env
 ENV ASTERISC_BIN_PATH="/asterisc"
 ENV CLIENT_BIN_PATH="/kona-client-elf"
-ENV PRESTATE_OUT_PATH="/prestate.json"
+ENV PRESTATE_OUT_PATH="/prestate.bin.gz"
 ENV PROOF_OUT_PATH="/prestate-proof.json"
 
 # Copy asterisc binary
@@ -104,7 +104,7 @@ COPY --from=asterisc-build /asterisc-bin $ASTERISC_BIN_PATH
 # Copy kona-client binary
 COPY --from=client-build /kona-client-elf $CLIENT_BIN_PATH
 
-# Create `prestate.json`
+# Create `prestate.bin.gz`
 RUN $ASTERISC_BIN_PATH load-elf \
   --path=$CLIENT_BIN_PATH \
   --out=$PRESTATE_OUT_PATH
@@ -127,6 +127,6 @@ FROM ubuntu:22.04 AS export-stage
 
 COPY --from=prestate-build /asterisc .
 COPY --from=prestate-build /kona-client-elf .
-COPY --from=prestate-build /prestate.json .
+COPY --from=prestate-build /prestate.bin.gz .
 COPY --from=prestate-build /prestate-proof.json .
 COPY --from=host-build /kona-host .
