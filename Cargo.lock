@@ -2766,8 +2766,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 [[package]]
 name = "op-alloy-consensus"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99d49163f952491820088dd0e66f3a35d63337c3066eceff0a931bf83a8e2101"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/sys-config-accessor#68901eddba61716d79ea8b11a44bb984b330e0f0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2782,8 +2781,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-genesis"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e46c2ab105f679f0cbfbc3fb762f3456d4b8556c841e667fc8f3c2226eb6c1e"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/sys-config-accessor#68901eddba61716d79ea8b11a44bb984b330e0f0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2796,8 +2794,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-protocol"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c439457b2a1791325603fc18a94cc175e0b4b1127f11ff8a45071f05d044dcb"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/sys-config-accessor#68901eddba61716d79ea8b11a44bb984b330e0f0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2813,8 +2810,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-rpc-types-engine"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a42a5ac4e07ed226b6a2aeefaad9b2cc7ec160e372ba626a4214d681a355fc2"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/feat/sys-config-accessor#68901eddba61716d79ea8b11a44bb984b330e0f0"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-engine",
