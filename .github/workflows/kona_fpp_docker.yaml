@@ -1,6 +1,16 @@
 name: Build and Publish Kona FPP Images
 
-on: [workflow_dispatch, workflow_call]
+on:
+  workflow_dispatch:
+    inputs:
+      kona_client_tag:
+        description: Tag for `kona` to build `kona-client`
+        required: true
+        type: string
+      asterisc_tag:
+        description: Tag for `asterisc` to build the prestate artifacts
+        required: true
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -39,3 +49,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
+          build-args: |
+            CLIENT_TAG=${{ inputs.kona_client_tag }}
+            ASTERISC_TAG=${{ inputs.asterisc_tag }}
