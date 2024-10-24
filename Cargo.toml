@@ -65,28 +65,28 @@ kona-common-proc = { path = "crates/common-proc", version = "0.0.3", default-fea
 kona-derive-alloy = { path = "crates/derive-alloy", version = "0.0.1", default-features = false }
 
 # Alloy
-alloy-rlp = { version = "0.3.8", default-features = false }
+alloy-rlp = { version = "0.3.9", default-features = false }
 alloy-trie = { version = "0.7.2", default-features = false }
-alloy-eips = { version = "0.5.2", default-features = false }
-alloy-serde = { version = "0.5.2", default-features = false }
-alloy-provider = { version = "0.5.2", default-features = false }
+alloy-eips = { version = "0.5.4", default-features = false }
+alloy-serde = { version = "0.5.4", default-features = false }
+alloy-provider = { version = "0.5.4", default-features = false }
 alloy-primitives = { version = "0.8", default-features = false }
-alloy-consensus = { version = "0.5.2", default-features = false }
-alloy-transport = { version = "0.5.2", default-features = false }
-alloy-rpc-types = { version = "0.5.2", default-features = false }
-alloy-rpc-client = { version = "0.5.2", default-features = false }
-alloy-node-bindings = { version = "0.5.2", default-features = false }
-alloy-transport-http = { version = "0.5.2", default-features = false }
-alloy-rpc-types-engine = { version = "0.5.2", default-features = false }
-alloy-rpc-types-beacon = { version = "0.5.2", default-features = false }
+alloy-consensus = { version = "0.5.4", default-features = false }
+alloy-transport = { version = "0.5.4", default-features = false }
+alloy-rpc-types = { version = "0.5.4", default-features = false }
+alloy-rpc-client = { version = "0.5.4", default-features = false }
+alloy-node-bindings = { version = "0.5.4", default-features = false }
+alloy-transport-http = { version = "0.5.4", default-features = false }
+alloy-rpc-types-engine = { version = "0.5.4", default-features = false }
+alloy-rpc-types-beacon = { version = "0.5.4", default-features = false }
 
 # OP Alloy
-op-alloy-genesis = { version = "0.5.0", default-features = false }
-op-alloy-protocol = { version = "0.5.0", default-features = false }
-op-alloy-consensus = { version = "0.5.0", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.5.0", default-features = false }
+op-alloy-genesis = { version = "0.5.1", default-features = false }
+op-alloy-protocol = { version = "0.5.1", default-features = false }
+op-alloy-consensus = { version = "0.5.1", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.5.1", default-features = false }
 
-# thiserror with `no_std` support
+# `no_std` support
 thiserror = { git = "https://github.com/quartiq/thiserror", branch = "no-std", default-features = false }
 
 # General
@@ -128,8 +128,8 @@ criterion = "0.5.1"
 
 # Serialization
 rkyv = "0.8.8"
-serde = { version = "1.0.210", default-features = false }
-serde_json = { version = "1.0.128", default-features = false }
+serde = { version = "1.0.213", default-features = false }
+serde_json = { version = "1.0.132", default-features = false }
 
 # Ethereum
 unsigned-varint = "0.8.0"
