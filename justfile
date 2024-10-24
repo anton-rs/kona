@@ -30,7 +30,7 @@ action-tests test_name='Test_ProgramAction':
 
   if [ ! -d "monorepo/.devnet" ]; then
     echo "Building devnet allocs for the monorepo"
-    (cd monorepo && make devnet-allocs-tests)
+    (cd monorepo && make devnet-allocs)
   fi
 
   echo "Building client and host programs for the native target"
@@ -42,7 +42,7 @@ action-tests test_name='Test_ProgramAction':
   export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
 
   cd monorepo/op-e2e/actions/proofs && \
-    go test -run "{{test_name}}" -v ./...
+    go test -run "{{test_name}}" -v -count=1 ./...
 
 # Clean the action tests directory
 clean-actions:
@@ -151,7 +151,7 @@ build-client-prestate-asterisc-image kona_tag asterisc_tag out='./prestate-artif
 
 # Clones and checks out the monorepo at the commit present in `.monorepo`
 monorepo:
-  [ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo
+  ([ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo) || exit 0
   cd monorepo && git checkout $(cat ../.monorepo)
 
 # Updates the pinned version of the monorepo

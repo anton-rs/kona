@@ -137,7 +137,7 @@ where
         let expiry_epoch = epoch.number + self.cfg.seq_window_size;
         let force_empty_batches = expiry_epoch <= stage_origin.number;
         let first_of_epoch = epoch.number == parent.l1_origin.number + 1;
-        let next_timestamp = epoch.timestamp + self.cfg.block_time;
+        let next_timestamp = parent.block_info.timestamp + self.cfg.block_time;
 
         // If the sequencer window did not expire,
         // there is still room to receive batches for the current epoch.
@@ -224,13 +224,14 @@ where
         };
 
         // The batch must be a single batch - this stage does not support span batches.
-        let Batch::Single(next_batch) = next_batch else {
+        let Batch::Single(mut next_batch) = next_batch else {
             error!(
                 target: "batch-validator",
                 "BatchValidator received a batch that is not a SingleBatch"
             );
             return Err(PipelineError::InvalidBatchType.crit());
         };
+        next_batch.parent_hash = parent.block_info.hash;
 
         // Check the validity of the single batch before forwarding it.
         match next_batch.check_batch(
