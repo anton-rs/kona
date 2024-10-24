@@ -160,7 +160,7 @@ mod test {
             PreimageKey::new(*keccak256(MOCK_DATA_B), PreimageKeyType::Keccak256);
 
         let preimages = {
-            let mut preimages = HashMap::new();
+            let mut preimages = HashMap::default();
             preimages.insert(key_a, MOCK_DATA_A.to_vec());
             preimages.insert(key_b, MOCK_DATA_B.to_vec());
             Arc::new(Mutex::new(preimages))
@@ -212,7 +212,7 @@ mod test {
             PreimageKey::new(*keccak256(MOCK_DATA_B), PreimageKeyType::Keccak256);
 
         let preimages = {
-            let mut preimages = HashMap::new();
+            let mut preimages = HashMap::default();
             preimages.insert(key_a, MOCK_DATA_A.to_vec());
             preimages.insert(key_b, MOCK_DATA_B.to_vec());
             Arc::new(Mutex::new(preimages))

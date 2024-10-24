@@ -16,7 +16,7 @@ pub struct MemoryKeyValueStore {
 impl MemoryKeyValueStore {
     /// Create a new [MemoryKeyValueStore] with an empty store.
     pub fn new() -> Self {
-        Self { store: HashMap::new() }
+        Self { store: HashMap::default() }
     }
 }
 

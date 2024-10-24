@@ -53,7 +53,7 @@ where
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
         crate::set!(STAGE_RESETS, 0, &["channel-bank"]);
-        Self { cfg, channels: HashMap::new(), channel_queue: VecDeque::new(), prev }
+        Self { cfg, channels: HashMap::default(), channel_queue: VecDeque::new(), prev }
     }
 
     /// Returns the size of the channel bank by accumulating over all channels.
