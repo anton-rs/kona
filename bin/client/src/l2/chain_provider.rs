@@ -111,7 +111,7 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
                     .boot_info
                     .rollup_config
                     .is_canyon_active(timestamp)
-                    .then(Vec::new),
+                    .then(|| alloy_eips::eip4895::Withdrawals::new(Vec::new())),
             },
         };
         Ok(optimism_block)
