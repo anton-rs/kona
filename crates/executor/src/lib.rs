@@ -9,6 +9,8 @@
 
 extern crate alloc;
 
+extern crate noerror as thiserror;
+
 mod errors;
 pub use errors::{ExecutorError, ExecutorResult, TrieDBError, TrieDBResult};
 

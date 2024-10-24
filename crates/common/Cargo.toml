@@ -13,5 +13,6 @@ workspace = true
 
 [dependencies]
 cfg-if.workspace = true
-thiserror.workspace = true
+noerror.workspace = true
+# thiserror.workspace = true
 linked_list_allocator.workspace = true

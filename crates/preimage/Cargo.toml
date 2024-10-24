@@ -14,7 +14,8 @@ workspace = true
 [dependencies]
 # General
 tracing.workspace = true
-thiserror.workspace = true
+noerror.workspace = true
+# thiserror.workspace = true
 async-trait.workspace = true
 alloy-primitives.workspace = true
 

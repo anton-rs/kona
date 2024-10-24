@@ -8,6 +8,7 @@
 #![cfg_attr(any(target_arch = "mips", target_arch = "riscv64", target_os = "zkvm"), no_std)]
 
 extern crate alloc;
+extern crate noerror as thiserror;
 
 pub mod errors;
 

@@ -8,6 +8,7 @@
 #![cfg_attr(not(any(test, feature = "test-utils")), warn(unused_crate_dependencies))]
 
 extern crate alloc;
+extern crate noerror as thiserror;
 
 /// Re-export commonly used types and traits.
 pub mod prelude {

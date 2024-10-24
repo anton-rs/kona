@@ -8,6 +8,7 @@
 #![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
+extern crate noerror as thiserror;
 
 mod errors;
 pub use errors::{OrderedListWalkerError, OrderedListWalkerResult, TrieNodeError, TrieNodeResult};
