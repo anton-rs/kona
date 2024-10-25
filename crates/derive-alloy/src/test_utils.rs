@@ -42,18 +42,20 @@ pub struct MockBeaconClient {
 }
 
 /// A mock beacon client error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, derive_more::Display)]
 pub enum MockBeaconClientError {
     /// The config spec is not set
-    #[error("config_spec not set")]
+    #[display("config_spec not set")]
     ConfigSpecNotSet,
     /// The beacon genesis is not set
-    #[error("beacon_genesis not set")]
+    #[display("beacon_genesis not set")]
     BeaconGenesisNotSet,
     /// The blob sidecars are not set
-    #[error("blob_sidecars not set")]
+    #[display("blob_sidecars not set")]
     BlobSidecarsNotSet,
 }
+
+impl core::error::Error for MockBeaconClientError {}
 
 #[async_trait]
 impl crate::BeaconClient for MockBeaconClient {
