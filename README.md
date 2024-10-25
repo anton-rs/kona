@@ -69,7 +69,8 @@ see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html
 
 ## Book
 
-The [book][book] contains a more in-depth overview of the project, contributor guidelines, tutorials for getting started with building your own programs, and a reference for the libraries and tools provided by Kona.
+The [book][book] contains a more in-depth overview of the project, contributor guidelines, tutorials for
+getting started with building your own programs, and a reference for the libraries and tools provided by Kona.
 
 ## Credits
 
