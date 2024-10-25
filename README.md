@@ -74,7 +74,8 @@ getting started with building your own programs, and a reference for the librari
 
 ## Credits
 
-`kona` is inspired by the work of several teams, namely [OP Labs][op-labs] and other contributors' work on the [`op-program`][op-program] and [BadBoiLabs][bad-boi-labs]'s work on [Cannon-rs][badboi-cannon-rs].
+`kona` is inspired by the work of several teams, namely [OP Labs][op-labs] and other contributors' work on the
+[`op-program`][op-program] and [BadBoiLabs][bad-boi-labs]'s work on [Cannon-rs][badboi-cannon-rs].
 
 [op-stack]: https://github.com/ethereum-optimism/optimism
 [op-program]: https://github.com/ethereum-optimism/optimism/tree/develop/op-program
