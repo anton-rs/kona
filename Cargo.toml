@@ -86,9 +86,6 @@ op-alloy-protocol = { version = "0.5.1", default-features = false }
 op-alloy-consensus = { version = "0.5.1", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.5.1", default-features = false }
 
-# `no_std` support
-thiserror = { git = "https://github.com/quartiq/thiserror", branch = "no-std", default-features = false }
-
 # General
 lru = "0.12.4"
 spin = "0.9.8"

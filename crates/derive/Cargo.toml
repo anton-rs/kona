@@ -28,11 +28,11 @@ op-alloy-consensus = { workspace = true, features = ["k256"] }
 # General
 brotli.workspace = true
 tracing.workspace = true
-thiserror.workspace = true
 miniz_oxide.workspace = true
 async-trait.workspace = true
 unsigned-varint.workspace = true
 alloc-no-stdlib.workspace = true
+derive_more = { workspace = true, features = ["full"] }
 
 # `serde` feature dependencies
 serde = { workspace = true, optional = true, features = ["derive"] }

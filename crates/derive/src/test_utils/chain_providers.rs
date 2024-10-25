@@ -73,24 +73,26 @@ impl TestChainProvider {
 }
 
 /// An error for the [TestChainProvider] and [TestL2ChainProvider].
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, derive_more::Display)]
 pub enum TestProviderError {
     /// The block was not found.
-    #[error("Block not found")]
+    #[display("Block not found")]
     BlockNotFound,
     /// The header was not found.
-    #[error("Header not found")]
+    #[display("Header not found")]
     HeaderNotFound,
     /// The receipts were not found.
-    #[error("Receipts not found")]
+    #[display("Receipts not found")]
     ReceiptsNotFound,
     /// The L2 block was not found.
-    #[error("L2 Block not found")]
+    #[display("L2 Block not found")]
     L2BlockNotFound,
     /// The system config was not found.
-    #[error("System config not found")]
+    #[display("System config not found")]
     SystemConfigNotFound(u64),
 }
+
+impl core::error::Error for TestProviderError {}
 
 #[async_trait]
 impl ChainProvider for TestChainProvider {

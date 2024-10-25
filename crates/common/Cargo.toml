@@ -13,5 +13,5 @@ workspace = true
 
 [dependencies]
 cfg-if.workspace = true
-thiserror.workspace = true
+derive_more = { workspace = true, features = ["full"] }
 linked_list_allocator.workspace = true

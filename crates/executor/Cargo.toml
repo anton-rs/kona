@@ -30,7 +30,7 @@ op-alloy-rpc-types-engine.workspace = true
 revm = { workspace = true, features = ["optimism"] }
 
 # General
-thiserror.workspace = true
+derive_more = { workspace = true, features = ["full"] }
 tracing.workspace = true
 
 [dev-dependencies]
