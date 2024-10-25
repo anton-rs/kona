@@ -259,6 +259,14 @@ where
                     match e {
                         PipelineErrorKind::Temporary(_) => { /* continue */ }
                         PipelineErrorKind::Reset(e) => {
+                            let system_config = self
+                                .pipeline
+                                .l2_chain_provider
+                                .system_config_by_number(
+                                    self.l2_safe_head.block_info.number,
+                                    self.pipeline.rollup_config.clone(),
+                                )
+                                .await?;
                             if matches!(e, ResetError::HoloceneActivation) {
                                 self.pipeline
                                     .signal(
@@ -268,7 +276,7 @@ where
                                                 .pipeline
                                                 .origin()
                                                 .ok_or_else(|| anyhow!("Missing L1 origin"))?,
-                                            system_config: None,
+                                            system_config: Some(system_config),
                                         }
                                         .signal(),
                                     )
@@ -284,7 +292,7 @@ where
                                                 .pipeline
                                                 .origin()
                                                 .ok_or_else(|| anyhow!("Missing L1 origin"))?,
-                                            system_config: None,
+                                            system_config: Some(system_config),
                                         }
                                         .signal(),
                                     )
