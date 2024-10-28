@@ -18,7 +18,7 @@ use kona_preimage::{PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::trace;
+use tracing::{error, trace, warn};
 
 mod precompiles;
 
@@ -77,7 +77,12 @@ where
         // Use a loop to keep retrying the prefetch as long as the key is not found
         while preimage.is_none() && self.last_hint.is_some() {
             let hint = self.last_hint.as_ref().expect("Cannot be None");
-            self.prefetch(hint).await?;
+
+            if let Err(e) = self.prefetch(hint).await {
+                error!(target: "fetcher", "Failed to prefetch hint: {e}");
+                warn!(target: "fetcher", "Retrying hint fetch: {hint}");
+                continue;
+            }
 
             let kv_lock = self.kv_store.read().await;
             preimage = kv_lock.get(key);
