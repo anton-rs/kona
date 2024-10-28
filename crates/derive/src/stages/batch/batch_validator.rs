@@ -326,7 +326,7 @@ mod test {
     use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::{BlockInfo, L2BlockInfo};
     use tracing::Level;
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::layer::SubscriberExt;
 
     #[tokio::test]
     async fn test_batch_validator_origin_behind_eof() {
@@ -546,7 +546,8 @@ mod test {
     async fn test_batch_validator_next_batch_sequence_window_expired() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let cfg = Arc::new(RollupConfig { seq_window_size: 5, ..Default::default() });
         let mut mock = TestNextBatchProvider::new(vec![]);
@@ -584,7 +585,8 @@ mod test {
     async fn test_batch_validator_next_batch_sequence_window_expired_advance_epoch() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let cfg = Arc::new(RollupConfig { seq_window_size: 5, ..Default::default() });
         let mut mock = TestNextBatchProvider::new(vec![]);

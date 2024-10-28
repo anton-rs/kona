@@ -277,7 +277,7 @@ mod tests {
     use alloc::vec;
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
     use tracing::Level;
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::layer::SubscriberExt;
 
     #[test]
     fn test_try_read_channel_at_index_missing_channel() {
@@ -447,7 +447,8 @@ mod tests {
     fn test_ingest_invalid_frame() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let mock = TestNextFrameProvider::new(vec![]);
         let mut channel_bank = ChannelBank::new(Arc::new(RollupConfig::default()), mock);
@@ -531,7 +532,8 @@ mod tests {
     async fn test_channel_timeout() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         const ROLLUP_CONFIGS: [RollupConfig; 2] = [OP_MAINNET_CONFIG, BASE_MAINNET_CONFIG];
 
