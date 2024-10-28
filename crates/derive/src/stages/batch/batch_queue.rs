@@ -486,7 +486,7 @@ mod tests {
     use op_alloy_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
     use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::layer::SubscriberExt;
 
     fn new_batch_reader() -> BatchReader {
         let file_contents =
@@ -836,7 +836,8 @@ mod tests {
     async fn test_holocene_derive_next_batch_future() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         // Construct a future single batch.
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
@@ -958,7 +959,8 @@ mod tests {
     async fn test_next_batch_missing_origin() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let mut reader = new_batch_reader();
         let payload_block_hash =

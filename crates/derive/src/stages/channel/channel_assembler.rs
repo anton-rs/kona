@@ -204,13 +204,14 @@ mod test {
     };
     use op_alloy_protocol::BlockInfo;
     use tracing::Level;
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::layer::SubscriberExt;
 
     #[tokio::test]
     async fn test_assembler_channel_timeout() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let frames = [
             crate::frame!(0xFF, 0, vec![0xDD; 50], false),
@@ -272,7 +273,8 @@ mod test {
     async fn test_assembler_already_built() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let frames = [
             crate::frame!(0xFF, 0, vec![0xDD; 50], false),
@@ -310,7 +312,8 @@ mod test {
     async fn test_assembler_size_limit_exceeded_bedrock() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let mut frames = [
             crate::frame!(0xFF, 0, vec![0xDD; 50], false),
@@ -344,7 +347,8 @@ mod test {
     async fn test_assembler_size_limit_exceeded_fjord() {
         let trace_store: TraceStorage = Default::default();
         let layer = CollectingLayer::new(trace_store.clone());
-        tracing_subscriber::Registry::default().with(layer).init();
+        let subscriber = tracing_subscriber::Registry::default().with(layer);
+        let _guard = tracing::subscriber::set_default(subscriber);
 
         let mut frames = [
             crate::frame!(0xFF, 0, vec![0xDD; 50], false),
