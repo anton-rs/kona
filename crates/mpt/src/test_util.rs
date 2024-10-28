@@ -21,13 +21,13 @@ pub(crate) async fn get_live_derivable_receipts_list(
     let block = provider
         .get_block(block_number.into(), BlockTransactionsKind::Full)
         .await
-        .map_err(|e| anyhow!(e))?
-        .ok_or(anyhow!("Missing block"))?;
+        .map_err(anyhow::Error::from)?
+        .ok_or_else(|| anyhow!("Missing block"))?;
     let receipts = provider
         .get_block_receipts(block_number.into())
         .await
-        .map_err(|e| anyhow!(e))?
-        .ok_or(anyhow!("Missing receipts"))?;
+        .map_err(anyhow::Error::from)?
+        .ok_or_else(|| anyhow!("Missing receipts"))?;
 
     let consensus_receipts = receipts
         .into_iter()
@@ -59,7 +59,9 @@ pub(crate) async fn get_live_derivable_receipts_list(
 
     // Compute the derivable list
     let mut list =
-        ordered_trie_with_encoder(consensus_receipts.as_ref(), |rlp, buf| rlp.encode_2718(buf));
+        ordered_trie_with_encoder(consensus_receipts.as_ref(), |rlp: &ReceiptEnvelope, buf| {
+            rlp.encode_2718(buf)
+        });
     let root = list.root();
 
     // Sanity check receipts root is correct
@@ -87,20 +89,21 @@ pub(crate) async fn get_live_derivable_transactions_list(
     let block = provider
         .get_block(block_number.into(), BlockTransactionsKind::Full)
         .await
-        .map_err(|e| anyhow!(e))?
-        .ok_or(anyhow!("Missing block"))?;
+        .map_err(anyhow::Error::from)?
+        .ok_or_else(|| anyhow!("Missing block"))?;
 
     let BlockTransactions::Full(txs) = block.transactions else {
         anyhow::bail!("Did not fetch full block");
     };
     let consensus_txs = txs
         .into_iter()
-        .map(|tx| TxEnvelope::try_from(tx).map_err(|e| anyhow!(e)))
+        .map(|tx| TxEnvelope::try_from(tx).map_err(anyhow::Error::from))
         .collect::<Result<Vec<_>>>()?;
 
     // Compute the derivable list
-    let mut list =
-        ordered_trie_with_encoder(consensus_txs.as_ref(), |rlp, buf| rlp.encode_2718(buf));
+    let mut list = ordered_trie_with_encoder(consensus_txs.as_ref(), |rlp: &TxEnvelope, buf| {
+        rlp.encode_2718(buf)
+    });
     let root = list.root();
 
     // Sanity check transaction root is correct
