@@ -65,8 +65,6 @@ where
 
     /// Get the preimage for the given key.
     pub async fn get_preimage(&self, key: B256) -> Result<Vec<u8>> {
-        const MAX_RETRIES: usize = 32;
-
         trace!(target: "fetcher", "Pre-image requested. Key: {key}");
 
         // Acquire a read lock on the key-value store.
@@ -77,20 +75,12 @@ where
         drop(kv_lock);
 
         // Use a loop to keep retrying the prefetch as long as the key is not found
-        let mut retries = 0;
         while preimage.is_none() && self.last_hint.is_some() {
-            if retries >= MAX_RETRIES {
-                tracing::error!(target: "fetcher", "Max retries exceeded.");
-                anyhow::bail!("Max retries exceeded.");
-            }
-
             let hint = self.last_hint.as_ref().expect("Cannot be None");
             self.prefetch(hint).await?;
 
             let kv_lock = self.kv_store.read().await;
             preimage = kv_lock.get(key);
-
-            retries += 1;
         }
 
         preimage.ok_or_else(|| anyhow!("Preimage not found."))
