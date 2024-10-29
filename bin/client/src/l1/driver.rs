@@ -213,8 +213,7 @@ where
                         });
 
                         // Retry the execution.
-                        let mut executor =
-                            self.new_executor(cfg, provider, hinter, handle_register);
+                        executor = self.new_executor(cfg, provider, hinter, handle_register);
                         match executor.execute_payload(attributes) {
                             Ok(Header { number, .. }) => *number,
                             Err(e) => {
