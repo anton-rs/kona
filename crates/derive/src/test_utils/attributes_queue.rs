@@ -14,11 +14,17 @@ use async_trait::async_trait;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
+/// An error returned by the [`TestAttributesBuilder`].
+#[derive(derive_more::Display, Debug, PartialEq, Eq)]
+pub enum TestAttributesBuilderError {}
+
+impl core::error::Error for TestAttributesBuilderError {}
+
 /// A mock implementation of the [`AttributesBuilder`] for testing.
 #[derive(Debug, Default)]
 pub struct TestAttributesBuilder {
     /// The attributes to return.
-    pub attributes: Vec<anyhow::Result<OpPayloadAttributes>>,
+    pub attributes: Vec<Result<OpPayloadAttributes, TestAttributesBuilderError>>,
 }
 
 #[async_trait]
