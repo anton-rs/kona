@@ -37,10 +37,6 @@ async-trait.workspace = true
 # Workspace
 kona-derive = { workspace = true, features = ["serde"] }
 
-# `metrics` feature dependencies
-lazy_static = { workspace = true, optional = true }
-prometheus = { workspace = true, optional = true, features = ["process"] }
-
 # `test-utils` feature dependencies
 derive_more = { workspace = true, features = ["full"], optional = true }
 alloy-rpc-client = { workspace = true, optional = true }
@@ -58,7 +54,6 @@ kona-derive = { workspace = true, features = ["serde", "test-utils"] }
 
 [features]
 default = []
-metrics = ["dep:prometheus", "dep:lazy_static"]
 test-utils = [
   "dep:derive_more",
   "dep:alloy-rpc-client",

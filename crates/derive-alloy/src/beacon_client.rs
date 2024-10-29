@@ -103,45 +103,13 @@ impl BeaconClient for OnlineBeaconClient {
     type Error = reqwest::Error;
 
     async fn config_spec(&self) -> Result<APIConfigResponse, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["beacon_client", "config_spec"]);
-        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["beacon_client", "config_spec"], timer);
-        let first = match self.inner.get(format!("{}/{}", self.base, SPEC_METHOD)).send().await {
-            Ok(response) => response,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "config_spec", "request"]);
-                return Err(e);
-            }
-        };
-        match first.json::<APIConfigResponse>().await {
-            Ok(response) => Ok(response),
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "config_spec", "decode"]);
-                Err(e)
-            }
-        }
+        let first = self.inner.get(format!("{}/{}", self.base, SPEC_METHOD)).send().await?;
+        first.json::<APIConfigResponse>().await
     }
 
     async fn beacon_genesis(&self) -> Result<APIGenesisResponse, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["beacon_client", "beacon_genesis"]);
-        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["beacon_client", "beacon_genesis"], timer);
-        let first = match self.inner.get(format!("{}/{}", self.base, GENESIS_METHOD)).send().await {
-            Ok(response) => response,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_genesis", "request"]);
-                return Err(e);
-            }
-        };
-        match first.json::<APIGenesisResponse>().await {
-            Ok(response) => Ok(response),
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_genesis", "decode"]);
-                Err(e)
-            }
-        }
+        let first = self.inner.get(format!("{}/{}", self.base, GENESIS_METHOD)).send().await?;
+        first.json::<APIGenesisResponse>().await
     }
 
     async fn beacon_blob_side_cars(
@@ -149,41 +117,15 @@ impl BeaconClient for OnlineBeaconClient {
         slot: u64,
         hashes: &[IndexedBlobHash],
     ) -> Result<Vec<BlobData>, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["beacon_client", "beacon_blob_side_cars"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["beacon_client", "beacon_blob_side_cars"],
-            timer
-        );
-        let raw_response = match self
+        let raw_response = self
             .inner
             .get(format!("{}/{}/{}", self.base, SIDECARS_METHOD_PREFIX, slot))
             .send()
-            .await
-        {
-            Ok(response) => response,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["beacon_client", "beacon_blob_side_cars", "request"]
-                );
-                return Err(e);
-            }
-        };
-        let raw_response = match raw_response.json::<BeaconBlobBundle>().await {
-            Ok(response) => response,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["beacon_client", "beacon_blob_side_cars", "decode"]);
-                return Err(e);
-            }
-        };
-
-        let mut sidecars = Vec::with_capacity(hashes.len());
+            .await?;
+        let raw_response = raw_response.json::<BeaconBlobBundle>().await?;
 
         // Filter the sidecars by the hashes, in-order.
+        let mut sidecars = Vec::with_capacity(hashes.len());
         hashes.iter().for_each(|hash| {
             if let Some(sidecar) =
                 raw_response.data.iter().find(|sidecar| sidecar.index == hash.index as u64)
