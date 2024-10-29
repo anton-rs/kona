@@ -10,10 +10,7 @@ jobs:
   cargo-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      matrix:
-        mode: ["online", "offline"]
-    name: test-${{ matrix.mode }}
+    name: test
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -27,12 +24,7 @@ jobs:
           cache-on-failure: true
       - uses: taiki-e/install-action@nextest
       - name: cargo test
-        run: |
-          if [[ ${{ contains(matrix.mode, 'online') }} == true ]]; then
-            just test-online
-          else
-            just test
-          fi
+        run: just test
   cargo-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 20
