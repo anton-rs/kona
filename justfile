@@ -23,7 +23,7 @@ test-online:
   just test "-E 'test(test_online)'"
 
 # Run action tests for the client program on the native target
-action-tests test_name='Test_ProgramAction':
+action-tests test_name='Test_ProgramAction' *args='':
   #!/bin/bash
 
   just monorepo
@@ -42,7 +42,7 @@ action-tests test_name='Test_ProgramAction':
   export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
 
   cd monorepo/op-e2e/actions/proofs && \
-    go test -run "{{test_name}}" -v -count=1 ./...
+    go test -run "{{test_name}}" {{args}} -count=1 ./...
 
 # Clean the action tests directory
 clean-actions:
