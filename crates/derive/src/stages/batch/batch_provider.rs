@@ -182,9 +182,9 @@ mod test {
         test_utils::{TestL2ChainProvider, TestNextBatchProvider},
         traits::{OriginProvider, ResetSignal, SignalReceiver},
     };
+    use alloc::{sync::Arc, vec};
     use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::BlockInfo;
-    use std::sync::Arc;
 
     #[test]
     fn test_batch_provider_validator_active() {

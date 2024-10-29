@@ -178,7 +178,7 @@ mod tests {
         test_utils::{TestL2ChainProvider, *},
         traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
     };
-    use alloc::sync::Arc;
+    use alloc::{string::ToString, sync::Arc};
     use alloy_rpc_types_engine::PayloadAttributes;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
     use op_alloy_protocol::L2BlockInfo;

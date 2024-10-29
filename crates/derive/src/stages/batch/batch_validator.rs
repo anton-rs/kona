@@ -300,7 +300,6 @@ where
                 // During normal resets we will later throw out this block.
                 self.l1_blocks.clear();
                 self.l1_blocks.push(l1_origin);
-                crate::inc!(STAGE_RESETS, &["batch-validator"]);
             }
             s @ Signal::Activation(_) | s @ Signal::FlushChannel => {
                 self.prev.signal(s).await?;
@@ -312,15 +311,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::BatchValidator;
     use crate::{
         batch::{Batch, SingleBatch, SpanBatch},
         errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
-        stages::NextBatchProvider,
+        stages::{BatchValidator, NextBatchProvider},
         test_utils::{CollectingLayer, TestNextBatchProvider, TraceStorage},
         traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal, SignalReceiver},
     };
-    use alloc::sync::Arc;
+    use alloc::{sync::Arc, vec, vec::Vec};
     use alloy_eips::{BlockNumHash, NumHash};
     use alloy_primitives::B256;
     use op_alloy_genesis::RollupConfig;
@@ -614,7 +612,6 @@ mod test {
         assert_eq!(bv.next_batch(mock_parent).await.unwrap_err(), PipelineError::Eof.temp());
 
         let trace_lock = trace_store.lock();
-        dbg!(&trace_lock);
         assert_eq!(trace_lock.iter().filter(|(l, _)| matches!(l, &Level::DEBUG)).count(), 2);
         assert!(trace_lock[0].1.contains("Advancing batch validator origin"));
         assert!(trace_lock[1].1.contains("Advancing batch validator epoch"));

@@ -4,7 +4,7 @@
     html_favicon_url = "https://raw.githubusercontent.com/anton-rs/kona/main/assets/favicon.ico"
 )]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-#![cfg_attr(not(any(test, feature = "metrics")), no_std)]
+#![cfg_attr(test, no_std)]
 #![cfg_attr(not(any(test, feature = "test-utils")), warn(unused_crate_dependencies))]
 
 extern crate alloc;
@@ -27,11 +27,6 @@ pub mod pipeline;
 pub mod sources;
 pub mod stages;
 pub mod traits;
-
-mod macros;
-
-#[cfg(feature = "metrics")]
-pub mod metrics;
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

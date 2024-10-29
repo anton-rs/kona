@@ -64,8 +64,7 @@ where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["channel-reader"]);
+    pub const fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
         Self { prev, next_batch: None, cfg }
     }
 
@@ -122,11 +121,9 @@ where
     }
 
     async fn next_batch(&mut self) -> PipelineResult<Batch> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_reader"], timer);
         if let Err(e) = self.set_batch_reader().await {
             debug!(target: "channel-reader", "Failed to set batch reader: {:?}", e);
             self.next_channel();
-            crate::timer!(DISCARD, timer);
             return Err(e);
         }
         match self
@@ -139,7 +136,6 @@ where
             Ok(batch) => Ok(batch),
             Err(e) => {
                 self.next_channel();
-                crate::timer!(DISCARD, timer);
                 Err(e)
             }
         }
@@ -170,7 +166,6 @@ where
             s => {
                 self.prev.signal(s).await?;
                 self.next_channel();
-                crate::inc!(STAGE_RESETS, &["channel-reader"]);
             }
         }
         Ok(())
@@ -212,19 +207,11 @@ impl BatchReader {
         // If the data is not already decompressed, decompress it.
         let mut brotli_used = false;
 
-        #[cfg(feature = "metrics")]
-        let mut raw_len = 0;
-
         if let Some(data) = self.data.take() {
             // Peek at the data to determine the compression type.
             if data.is_empty() {
                 warn!(target: "batch-reader", "Data is too short to determine compression type, skipping batch");
                 return None;
-            }
-
-            #[cfg(feature = "metrics")]
-            {
-                raw_len = data.len();
             }
 
             let compression_type = data[0];
@@ -243,7 +230,6 @@ impl BatchReader {
                     decompress_brotli(&data[1..], self.max_rlp_bytes_per_channel).ok()?;
             } else {
                 error!(target: "batch-reader", "Unsupported compression type: {:x}, skipping batch", compression_type);
-                crate::inc!(BATCH_READER_ERRORS, &["unsupported_compression_type"]);
                 return None;
             }
         }
@@ -251,17 +237,14 @@ impl BatchReader {
         // Decompress and RLP decode the batch data, before finally decoding the batch itself.
         let decompressed_reader = &mut self.decompressed.as_slice()[self.cursor..].as_ref();
         let bytes = Bytes::decode(decompressed_reader).ok()?;
-        crate::set!(BATCH_COMPRESSION_RATIO, (raw_len as i64) * 100 / bytes.len() as i64);
         let Ok(batch) = Batch::decode(&mut bytes.as_ref(), cfg) else {
             error!(target: "batch-reader", "Failed to decode batch, skipping batch");
-            crate::inc!(BATCH_READER_ERRORS, &["failed_to_decode_batch"]);
             return None;
         };
 
         // Confirm that brotli decompression was performed *after* the Fjord hardfork.
         if brotli_used && !cfg.is_fjord_active(batch.timestamp()) {
             warn!(target: "batch-reader", "Brotli compression used before Fjord hardfork, skipping batch");
-            crate::inc!(BATCH_READER_ERRORS, &["brotli_used_before_fjord"]);
             return None;
         }
 
