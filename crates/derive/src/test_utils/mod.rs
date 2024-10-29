@@ -21,7 +21,8 @@ pub use batch_provider::TestNextBatchProvider;
 
 mod attributes_queue;
 pub use attributes_queue::{
-    new_test_attributes_provider, TestAttributesBuilder, TestAttributesProvider,
+    new_test_attributes_provider, TestAttributesBuilder, TestAttributesBuilderError,
+    TestAttributesProvider,
 };
 
 mod batch_stream;
@@ -40,7 +41,7 @@ mod tracing;
 pub use tracing::{CollectingLayer, TraceStorage};
 
 mod sys_config_fetcher;
-pub use sys_config_fetcher::TestSystemConfigL2Fetcher;
+pub use sys_config_fetcher::{TestSystemConfigL2Fetcher, TestSystemConfigL2FetcherError};
 
 mod frames;
 pub use frames::{FrameQueueAsserter, FrameQueueBuilder};

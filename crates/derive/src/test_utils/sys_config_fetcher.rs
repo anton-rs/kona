@@ -3,7 +3,6 @@
 use crate::traits::L2ChainProvider;
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::map::HashMap;
-use anyhow::Result;
 use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -28,26 +27,36 @@ impl TestSystemConfigL2Fetcher {
     }
 }
 
+/// An error returned by the [TestSystemConfigL2Fetcher].
+#[derive(derive_more::Display, Debug, PartialEq, Eq)]
+pub enum TestSystemConfigL2FetcherError {
+    /// The system config was not found.
+    #[display("system config not found: {_0}")]
+    NotFound(u64),
+}
+
+impl core::error::Error for TestSystemConfigL2FetcherError {}
+
 #[async_trait]
 impl L2ChainProvider for TestSystemConfigL2Fetcher {
-    type Error = anyhow::Error;
+    type Error = TestSystemConfigL2FetcherError;
 
     async fn system_config_by_number(
         &mut self,
         number: u64,
         _: Arc<RollupConfig>,
-    ) -> Result<SystemConfig> {
+    ) -> Result<SystemConfig, Self::Error> {
         self.system_configs
             .get(&number)
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("system config not found: {number}"))
+            .ok_or_else(|| TestSystemConfigL2FetcherError::NotFound(number))
     }
 
-    async fn l2_block_info_by_number(&mut self, _: u64) -> Result<L2BlockInfo> {
+    async fn l2_block_info_by_number(&mut self, _: u64) -> Result<L2BlockInfo, Self::Error> {
         unimplemented!()
     }
 
-    async fn block_by_number(&mut self, _: u64) -> Result<OpBlock> {
+    async fn block_by_number(&mut self, _: u64) -> Result<OpBlock, Self::Error> {
         unimplemented!()
     }
 }

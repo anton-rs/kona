@@ -39,20 +39,12 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 
 # `test-utils` feature dependencies
 spin = { workspace = true, optional = true }
-anyhow = { workspace = true, optional = true }
-alloy-rpc-client = { workspace = true, optional = true }
-alloy-node-bindings = { workspace = true, optional = true }
-alloy-transport-http = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 
 [dev-dependencies]
 spin.workspace = true
-anyhow.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
-alloy-rpc-client.workspace = true
-alloy-node-bindings.workspace = true
-alloy-transport-http.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
@@ -70,10 +62,5 @@ serde = [
 ]
 test-utils = [
   "dep:spin",
-  "dep:anyhow",
-  "dep:alloy-transport-http",
-  "dep:alloy-node-bindings",
   "dep:tracing-subscriber",
-  "dep:alloy-rpc-client",
-  "alloy-transport-http/reqwest"
 ]
