@@ -6,13 +6,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-mod macros;
-
-#[cfg(feature = "metrics")]
-pub mod metrics;
-#[cfg(feature = "metrics")]
-pub use metrics::*;
-
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
 #[cfg(any(test, feature = "test-utils"))]

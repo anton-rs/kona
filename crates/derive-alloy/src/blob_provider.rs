@@ -72,8 +72,14 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
     }
 
     /// Computes the slot for the given timestamp.
-    pub fn slot(genesis: u64, slot_time: u64, timestamp: u64) -> Result<u64, BlobProviderError> {
-        crate::ensure!(timestamp >= genesis, BlobProviderError::SlotDerivation);
+    pub const fn slot(
+        genesis: u64,
+        slot_time: u64,
+        timestamp: u64,
+    ) -> Result<u64, BlobProviderError> {
+        if timestamp < genesis {
+            return Err(BlobProviderError::SlotDerivation);
+        }
         Ok((timestamp - genesis) / slot_time)
     }
 
@@ -136,31 +142,15 @@ where
         block_ref: &BlockInfo,
         blob_hashes: &[IndexedBlobHash],
     ) -> Result<Vec<Box<Blob>>, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["blob_provider", "get_blobs"]);
-        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["blob_provider", "get_blobs"], timer);
         // Fetches the genesis timestamp and slot interval from the
         // [BeaconGenesis] and [ConfigSpec] if not previously loaded.
-        if let Err(e) = self.load_configs().await {
-            crate::timer!(DISCARD, timer);
-            crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "load_configs"]);
-            return Err(e);
-        }
+        self.load_configs().await?;
 
         // Fetch the blob sidecars for the given block reference and blob hashes.
-        let sidecars = match self.fetch_filtered_sidecars(block_ref, blob_hashes).await {
-            Ok(sidecars) => sidecars,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["blob_provider", "get_blobs", "fetch_filtered_sidecars"]
-                );
-                return Err(e);
-            }
-        };
+        let sidecars = self.fetch_filtered_sidecars(block_ref, blob_hashes).await?;
 
         // Validate the blob sidecars straight away with the num hashes.
-        let blobs = match sidecars
+        let blobs = sidecars
             .into_iter()
             .enumerate()
             .map(|(i, sidecar)| {
@@ -176,15 +166,7 @@ where
                 }
             })
             .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
-        {
-            Ok(blobs) => blobs,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "verify_blob"]);
-                return Err(BlobProviderError::Backend(e.to_string()));
-            }
-        };
-
+            .map_err(|e| BlobProviderError::Backend(e.to_string()))?;
         Ok(blobs)
     }
 }
@@ -311,7 +293,6 @@ where
         match self.primary.get_blobs(block_ref, blob_hashes).await {
             Ok(blobs) => Ok(blobs),
             Err(primary_err) => {
-                crate::inc!(PROVIDER_ERRORS, &["blob_provider", "get_blobs", "primary"]);
                 warn!(target: "blob_provider", "Primary provider failed: {:?}", primary_err);
 
                 // Fetch the blob sidecars for the given block reference and blob hashes.
@@ -320,16 +301,12 @@ where
                         Ok(sidecars) => sidecars,
                         Err(e) => {
                             warn!(target: "blob_provider", "Fallback provider failed: {:?}", e);
-                            crate::inc!(
-                                PROVIDER_ERRORS,
-                                &["blob_provider", "get_blobs", "fallback_fetch_filtered_sidecars"]
-                            );
                             return Err(e);
                         }
                     };
 
                 // Validate the blob sidecars straight away with the num hashes.
-                let blobs = match sidecars
+                let blobs = sidecars
                     .into_iter()
                     .enumerate()
                     .map(|(i, sidecar)| {
@@ -344,18 +321,7 @@ where
                             Err(e) => Err(BlobProviderError::Backend(e.to_string())),
                         }
                     })
-                    .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
-                {
-                    Ok(blobs) => blobs,
-                    Err(e) => {
-                        crate::inc!(
-                            PROVIDER_ERRORS,
-                            &["blob_provider", "get_blobs", "fallback_verify_blob"]
-                        );
-                        return Err(e);
-                    }
-                };
-
+                    .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()?;
                 Ok(blobs)
             }
         }

@@ -4,7 +4,7 @@ use alloy_consensus::{Block, Header, Receipt, ReceiptWithBloom, TxEnvelope, TxTy
 use alloy_primitives::{Bytes, B256, U64};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Buf, Decodable};
-use alloy_transport::{RpcError, TransportErrorKind, TransportResult};
+use alloy_transport::{RpcError, TransportErrorKind};
 use async_trait::async_trait;
 use kona_derive::traits::{ChainProvider, L2ChainProvider};
 use lru::LruCache;
@@ -71,71 +71,29 @@ impl ChainProvider for AlloyChainProvider {
     type Error = RpcError<TransportErrorKind>;
 
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["chain_provider", "header_by_hash"]);
-        crate::timer!(START, PROVIDER_RESPONSE_TIME, &["chain_provider", "header_by_hash"], timer);
         if let Some(header) = self.header_by_hash_cache.get(&hash) {
             return Ok(header.clone());
         }
 
-        let raw_header: TransportResult<Bytes> =
-            self.inner.raw_request("debug_getRawHeader".into(), [hash]).await;
-        let raw_header: Bytes = match raw_header {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["chain_provider", "header_by_hash", "debug_getRawHeader"]
-                );
-                return Err(e);
-            }
-        };
+        let raw_header: Bytes = self.inner.raw_request("debug_getRawHeader".into(), [hash]).await?;
         match Header::decode(&mut raw_header.as_ref()) {
             Ok(header) => {
                 self.header_by_hash_cache.put(hash, header.clone());
                 Ok(header)
             }
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "header_by_hash", "decode"]);
-                Err(RpcError::LocalUsageError(Box::new(e)))
-            }
+            Err(e) => Err(RpcError::LocalUsageError(Box::new(e))),
         }
     }
 
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["chain_provider", "block_info_by_number"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["chain_provider", "block_info_by_number"],
-            timer
-        );
         if let Some(block_info) = self.block_info_by_number_cache.get(&number) {
             return Ok(*block_info);
         }
 
-        let raw_header: TransportResult<Bytes> =
-            self.inner.raw_request("debug_getRawHeader".into(), [U64::from(number)]).await;
-        let raw_header: Bytes = match raw_header {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["chain_provider", "block_info_by_number", "debug_getRawHeader"]
-                );
-                return Err(e);
-            }
-        };
-        let header = match Header::decode(&mut raw_header.as_ref()) {
-            Ok(h) => h,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "block_info_by_number", "decode"]);
-                return Err(RpcError::LocalUsageError(Box::new(e)));
-            }
-        };
+        let raw_header: Bytes =
+            self.inner.raw_request("debug_getRawHeader".into(), [U64::from(number)]).await?;
+        let header = Header::decode(&mut raw_header.as_ref())
+            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
 
         let block_info = BlockInfo {
             hash: header.hash_slow(),
@@ -148,32 +106,13 @@ impl ChainProvider for AlloyChainProvider {
     }
 
     async fn receipts_by_hash(&mut self, hash: B256) -> Result<Vec<Receipt>, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["chain_provider", "receipts_by_hash"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["chain_provider", "receipts_by_hash"],
-            timer
-        );
         if let Some(receipts) = self.receipts_by_hash_cache.get(&hash) {
             return Ok(receipts.clone());
         }
 
-        let raw_receipts: TransportResult<Vec<Bytes>> =
-            self.inner.raw_request("debug_getRawReceipts".into(), [hash]).await;
-        let raw_receipts: Vec<Bytes> = match raw_receipts {
-            Ok(r) => r,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["chain_provider", "receipts_by_hash", "debug_getRawReceipts"]
-                );
-                return Err(e);
-            }
-        };
-
-        let receipts = match raw_receipts
+        let raw_receipts: Vec<Bytes> =
+            self.inner.raw_request("debug_getRawReceipts".into(), [hash]).await?;
+        let receipts = raw_receipts
             .iter()
             .map(|r| {
                 let r = &mut r.as_ref();
@@ -187,15 +126,7 @@ impl ChainProvider for AlloyChainProvider {
                     .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?
                     .receipt)
             })
-            .collect::<Result<Vec<_>, Self::Error>>()
-        {
-            Ok(r) => r,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["chain_provider", "receipts_by_hash", "decode"]);
-                return Err(e);
-            }
-        };
+            .collect::<Result<Vec<_>, Self::Error>>()?;
         self.receipts_by_hash_cache.put(hash, receipts.clone());
         Ok(receipts)
     }
@@ -204,42 +135,14 @@ impl ChainProvider for AlloyChainProvider {
         &mut self,
         hash: B256,
     ) -> Result<(BlockInfo, Vec<TxEnvelope>), Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["chain_provider", "block_info_and_transactions_by_hash"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["chain_provider", "block_info_and_transactions_by_hash"],
-            timer
-        );
         if let Some(block_info_and_txs) = self.block_info_and_transactions_by_hash_cache.get(&hash)
         {
             return Ok(block_info_and_txs.clone());
         }
 
-        let raw_block: TransportResult<Bytes> =
-            self.inner.raw_request("debug_getRawBlock".into(), [hash]).await;
-        let raw_block: Bytes = match raw_block {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["chain_provider", "block_info_and_transactions_by_hash", "debug_getRawBlock"]
-                );
-                return Err(e);
-            }
-        };
-        let block = match Block::decode(&mut raw_block.as_ref()) {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["chain_provider", "block_info_and_transactions_by_hash", "decode"]
-                );
-                return Err(RpcError::LocalUsageError(Box::new(e)));
-            }
-        };
+        let raw_block: Bytes = self.inner.raw_request("debug_getRawBlock".into(), [hash]).await?;
+        let block = Block::decode(&mut raw_block.as_ref())
+            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
 
         let block_info = BlockInfo {
             hash: block.header.hash_slow(),
@@ -307,77 +210,27 @@ impl L2ChainProvider for AlloyL2ChainProvider {
     type Error = RpcError<TransportErrorKind>;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["l2_chain_provider", "l2_block_info_by_number"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["l2_chain_provider", "l2_block_info_by_number"],
-            timer
-        );
         if let Some(l2_block_info) = self.l2_block_info_by_number_cache.get(&number) {
             return Ok(*l2_block_info);
         }
 
-        let block = match self.block_by_number(number).await {
-            Ok(p) => p,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["l2_chain_provider", "l2_block_info_by_number", "block_by_number"]
-                );
-                return Err(e);
-            }
-        };
+        let block = self.block_by_number(number).await?;
         let l2_block_info =
-            match L2BlockInfo::from_block_and_genesis(&block, &self.rollup_config.genesis) {
-                Ok(b) => b,
-                Err(e) => {
-                    crate::timer!(DISCARD, timer);
-                    crate::inc!(
-                        PROVIDER_ERRORS,
-                        &["l2_chain_provider", "l2_block_info_by_number", "from_block_and_genesis"]
-                    );
-                    return Err(RpcError::LocalUsageError(Box::new(e)));
-                }
-            };
+            L2BlockInfo::from_block_and_genesis(&block, &self.rollup_config.genesis)
+                .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
         self.l2_block_info_by_number_cache.put(number, l2_block_info);
         Ok(l2_block_info)
     }
 
     async fn block_by_number(&mut self, number: u64) -> Result<OpBlock, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["l2_chain_provider", "block_by_number"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["l2_chain_provider", "block_by_number"],
-            timer
-        );
         if let Some(block) = self.block_by_number_cache.get(&number) {
             return Ok(block.clone());
         }
 
-        let raw_block: TransportResult<Bytes> =
-            self.inner.raw_request("debug_getRawBlock".into(), [U64::from(number)]).await;
-        let raw_block: Bytes = match raw_block {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["l2_chain_provider", "block_by_number", "debug_getRawBlock"]
-                );
-                return Err(e);
-            }
-        };
-        let block = match OpBlock::decode(&mut raw_block.as_ref()) {
-            Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(PROVIDER_ERRORS, &["l2_chain_provider", "block_by_number", "decode"]);
-                return Err(RpcError::LocalUsageError(Box::new(e)));
-            }
-        };
+        let raw_block: Bytes =
+            self.inner.raw_request("debug_getRawBlock".into(), [U64::from(number)]).await?;
+        let block = OpBlock::decode(&mut raw_block.as_ref())
+            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
         self.block_by_number_cache.put(number, block.clone());
         Ok(block)
     }
@@ -387,39 +240,13 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         number: u64,
         rollup_config: Arc<RollupConfig>,
     ) -> Result<SystemConfig, Self::Error> {
-        crate::inc!(PROVIDER_CALLS, &["l2_chain_provider", "system_config_by_number"]);
-        crate::timer!(
-            START,
-            PROVIDER_RESPONSE_TIME,
-            &["l2_chain_provider", "system_config_by_number"],
-            timer
-        );
         if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
             return Ok(*system_config);
         }
 
-        let block = match self.block_by_number(number).await {
-            Ok(e) => e,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["l2_chain_provider", "system_config_by_number", "block_by_number"]
-                );
-                return Err(e);
-            }
-        };
-        let sys_config = match to_system_config(&block, &rollup_config) {
-            Ok(s) => s,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                crate::inc!(
-                    PROVIDER_ERRORS,
-                    &["l2_chain_provider", "system_config_by_number", "to_system_config"]
-                );
-                return Err(RpcError::LocalUsageError(Box::new(e)));
-            }
-        };
+        let block = self.block_by_number(number).await?;
+        let sys_config = to_system_config(&block, &rollup_config)
+            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
         self.system_config_by_number_cache.put(number, sys_config);
         Ok(sys_config)
     }
