@@ -65,15 +65,15 @@ where
     BF: L2ChainProvider + Debug,
 {
     /// Creates a new [BatchQueue] stage.
+    #[allow(clippy::missing_const_for_fn)]
     pub fn new(cfg: Arc<RollupConfig>, prev: P, fetcher: BF) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["batch-queue"]);
         Self {
             cfg,
             prev,
             origin: None,
-            l1_blocks: Vec::new(),
-            batches: Vec::new(),
-            next_spans: Vec::new(),
+            l1_blocks: Default::default(),
+            batches: Default::default(),
+            next_spans: Default::default(),
             fetcher,
         }
     }
@@ -281,12 +281,10 @@ where
     /// Returns the next valid batch upon the given safe head.
     /// Also returns the boolean that indicates if the batch is the last block in the batch.
     async fn next_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["batch_queue"], timer);
         if !self.next_spans.is_empty() {
             // There are cached singular batches derived from the span batch.
             // Check if the next cached batch matches the given parent block.
             if self.next_spans[0].timestamp == parent.block_info.timestamp + self.cfg.block_time {
-                crate::timer!(DISCARD, timer);
                 return self.pop_next_batch(parent).ok_or(PipelineError::BatchQueueEmpty.crit());
             }
             // Parent block does not match the next batch.
@@ -332,7 +330,6 @@ where
                 let origin = match self.origin.as_ref().ok_or(PipelineError::MissingOrigin.crit()) {
                     Ok(o) => o,
                     Err(e) => {
-                        crate::timer!(DISCARD, timer);
                         return Err(e);
                     }
                 };
@@ -361,7 +358,6 @@ where
                 if let PipelineErrorKind::Temporary(PipelineError::Eof) = e {
                     out_of_data = true;
                 } else {
-                    crate::timer!(DISCARD, timer);
                     return Err(e);
                 }
             }
@@ -370,7 +366,6 @@ where
         // Skip adding the data unless up to date with the origin,
         // but still fully empty the previous stages.
         if origin_behind {
-            crate::timer!(DISCARD, timer);
             if out_of_data {
                 return Err(PipelineError::Eof.temp());
             }
@@ -380,18 +375,15 @@ where
         // Attempt to derive more batches.
         let batch = match self.derive_next_batch(out_of_data, parent).await {
             Ok(b) => b,
-            Err(e) => {
-                crate::timer!(DISCARD, timer);
-                match e {
-                    PipelineErrorKind::Temporary(PipelineError::Eof) => {
-                        if out_of_data {
-                            return Err(PipelineError::Eof.temp());
-                        }
-                        return Err(PipelineError::NotEnoughData.temp());
+            Err(e) => match e {
+                PipelineErrorKind::Temporary(PipelineError::Eof) => {
+                    if out_of_data {
+                        return Err(PipelineError::Eof.temp());
                     }
-                    _ => return Err(e),
+                    return Err(PipelineError::NotEnoughData.temp());
                 }
-            }
+                _ => return Err(e),
+            },
         };
 
         // If the next batch is derived from the span batch, it's the last batch of the span.
@@ -404,7 +396,6 @@ where
                 }) {
                     Ok(b) => b,
                     Err(e) => {
-                        crate::timer!(DISCARD, timer);
                         return Err(e);
                     }
                 };
@@ -415,7 +406,6 @@ where
                 {
                     Ok(b) => b,
                     Err(e) => {
-                        crate::timer!(DISCARD, timer);
                         return Err(e);
                     }
                 };
@@ -458,7 +448,6 @@ where
                 self.l1_blocks.clear();
                 self.l1_blocks.push(l1_origin);
                 self.next_spans.clear();
-                crate::inc!(STAGE_RESETS, &["batch-queue"]);
             }
             s @ Signal::Activation(_) | s @ Signal::FlushChannel => {
                 self.prev.signal(s).await?;

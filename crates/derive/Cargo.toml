@@ -37,10 +37,6 @@ derive_more = { workspace = true, features = ["full"] }
 # `serde` feature dependencies
 serde = { workspace = true, optional = true, features = ["derive"] }
 
-# `metrics` feature dependencies
-lazy_static = { workspace = true, optional = true }
-prometheus = { workspace = true, optional = true, features = ["process"] }
-
 # `test-utils` feature dependencies
 spin = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
@@ -55,10 +51,6 @@ alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitr
 
 [features]
 default = ["serde"]
-metrics = [
-  "dep:prometheus",
-  "dep:lazy_static",
-]
 serde = [
   "dep:serde",
   "alloy-primitives/serde",

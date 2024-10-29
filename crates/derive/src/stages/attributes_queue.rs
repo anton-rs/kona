@@ -53,8 +53,7 @@ where
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["attributes-queue"]);
+    pub const fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
         Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 
@@ -73,11 +72,9 @@ where
         &mut self,
         parent: L2BlockInfo,
     ) -> PipelineResult<OpAttributesWithParent> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["attributes_queue"], timer);
         let batch = match self.load_batch(parent).await {
             Ok(batch) => batch,
             Err(e) => {
-                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -86,7 +83,6 @@ where
         let attributes = match self.create_next_attributes(batch, parent).await {
             Ok(attributes) => attributes,
             Err(e) => {
-                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
@@ -187,7 +183,6 @@ where
                 self.prev.signal(s).await?;
                 self.batch = None;
                 self.is_last_in_span = false;
-                crate::inc!(STAGE_RESETS, &["attributes-queue"]);
             }
             s @ Signal::FlushChannel => {
                 self.batch = None;

@@ -212,7 +212,6 @@ where
         self.prev.signal(signal).await?;
         self.buffer.clear();
         self.span.take();
-        crate::inc!(STAGE_RESETS, &["batch-span"]);
         Ok(())
     }
 }
@@ -225,6 +224,7 @@ mod test {
         test_utils::{CollectingLayer, TestBatchStreamProvider, TestL2ChainProvider, TraceStorage},
         traits::ResetSignal,
     };
+    use alloc::vec;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]

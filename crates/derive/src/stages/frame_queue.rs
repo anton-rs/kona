@@ -49,8 +49,7 @@ where
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     ///
     /// [L1Retrieval]: crate::stages::L1Retrieval
-    pub fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["frame-queue"]);
+    pub const fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
         Self { prev, queue: VecDeque::new(), rollup_config: cfg }
     }
 
@@ -125,7 +124,6 @@ where
         };
 
         let Ok(frames) = Frame::parse_frames(&data.into()) else {
-            crate::inc!(DERIVED_FRAMES_COUNT, &["failed"]);
             // There may be more frames in the queue for the
             // pipeline to advance, so don't return an error here.
             error!(target: "frame-queue", "Failed to parse frames from data.");
@@ -138,8 +136,6 @@ where
         // Prune frames if Holocene is active.
         let origin = self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
         self.prune(origin);
-
-        crate::inc!(DERIVED_FRAMES_COUNT, self.queue.len() as f64, &["success"]);
 
         Ok(())
     }
@@ -190,7 +186,6 @@ where
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         self.prev.signal(signal).await?;
         self.queue = VecDeque::default();
-        crate::inc!(STAGE_RESETS, &["frame-queue"]);
         Ok(())
     }
 }

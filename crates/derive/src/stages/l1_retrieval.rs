@@ -60,8 +60,7 @@ where
     /// [DataAvailabilityProvider].
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
-    pub fn new(prev: P, provider: DAP) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["l1-retrieval"]);
+    pub const fn new(prev: P, provider: DAP) -> Self {
         Self { prev, provider, data: None }
     }
 }
@@ -129,7 +128,6 @@ where
             Signal::Reset(ResetSignal { l1_origin, .. }) |
             Signal::Activation(ActivationSignal { l1_origin, .. }) => {
                 self.data = Some(self.provider.open_data(&l1_origin).await?);
-                crate::inc!(STAGE_RESETS, &["l1-retrieval"]);
             }
             _ => {}
         }

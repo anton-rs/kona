@@ -55,7 +55,6 @@ impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
 impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
     pub fn new(data_source: F, cfg: Arc<RollupConfig>) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["l1-traversal"]);
         Self {
             block: Some(BlockInfo::default()),
             data_source,
@@ -105,8 +104,6 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
             return Err(PipelineError::SystemConfigUpdate(e).crit());
         }
 
-        crate::set!(ORIGIN_GAUGE, next_l1_origin.number as i64);
-
         let prev_block_holocene = self.rollup_config.is_holocene_active(block.timestamp);
         let next_block_holocene = self.rollup_config.is_holocene_active(next_l1_origin.timestamp);
 
@@ -139,7 +136,6 @@ impl<F: ChainProvider + Send> SignalReceiver for L1Traversal<F> {
                 self.block = Some(l1_origin);
                 self.done = false;
                 self.system_config = system_config.expect("System config must be provided.");
-                crate::inc!(STAGE_RESETS, &["l1-traversal"]);
             }
             _ => {}
         }
