@@ -1,7 +1,6 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    batch::SingleBatch,
     errors::{PipelineError, PipelineResult, ResetError},
     traits::{
         AttributesBuilder, AttributesProvider, NextAttributes, OriginAdvancer, OriginProvider,
@@ -12,7 +11,7 @@ use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo, SingleBatch};
 use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
 use tracing::info;
 

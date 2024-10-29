@@ -2,7 +2,6 @@
 
 use super::NextBatchProvider;
 use crate::{
-    batch::{Batch, BatchValidity, SingleBatch},
     errors::ResetError,
     pipeline::{OriginAdvancer, PipelineResult, Signal, SignalReceiver},
     prelude::{OriginProvider, PipelineError, PipelineErrorKind},
@@ -12,7 +11,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{Batch, BatchValidity, BlockInfo, L2BlockInfo, SingleBatch};
 use tracing::{debug, error, info, warn};
 
 /// The [BatchValidator] stage is responsible for validating the [SingleBatch]es from
@@ -312,7 +311,6 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        batch::{Batch, SingleBatch, SpanBatch},
         errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
         stages::{BatchValidator, NextBatchProvider},
         test_utils::{CollectingLayer, TestNextBatchProvider, TraceStorage},
@@ -322,7 +320,7 @@ mod test {
     use alloy_eips::{BlockNumHash, NumHash};
     use alloy_primitives::B256;
     use op_alloy_genesis::RollupConfig;
-    use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+    use op_alloy_protocol::{Batch, BlockInfo, L2BlockInfo, SingleBatch, SpanBatch};
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
 

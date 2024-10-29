@@ -29,7 +29,7 @@ use kona_mpt::{TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use tracing::{error, info, warn};
 

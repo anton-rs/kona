@@ -3,14 +3,13 @@
 //! [`BatchStream`]: crate::stages::BatchStream
 
 use crate::{
-    batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::BatchStreamProvider,
     traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_protocol::BlockInfo;
+use op_alloy_protocol::{Batch, BlockInfo};
 
 /// A mock provider for the [`BatchStream`] stage.
 ///

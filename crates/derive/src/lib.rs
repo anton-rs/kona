@@ -21,7 +21,6 @@ pub mod prelude {
 }
 
 pub mod attributes;
-pub mod batch;
 pub mod errors;
 pub mod pipeline;
 pub mod sources;

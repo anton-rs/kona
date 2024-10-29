@@ -1,11 +1,10 @@
 //! This module contains derivation errors thrown within the pipeline.
 
-use crate::batch::{SpanBatchError, MAX_SPAN_BATCH_ELEMENTS};
 use alloc::string::String;
 use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
 use op_alloy_genesis::system::SystemConfigUpdateError;
-use op_alloy_protocol::DepositError;
+use op_alloy_protocol::{DepositError, SpanBatchError, MAX_SPAN_BATCH_ELEMENTS};
 
 /// Blob Decuding Error
 #[derive(derive_more::Display, Debug, PartialEq, Eq)]

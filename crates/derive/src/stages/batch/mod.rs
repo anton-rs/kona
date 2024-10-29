@@ -5,16 +5,16 @@
 //! for streaming [SingleBatch]es from [SpanBatch]es, while the [BatchProvider] stage is responsible
 //! for ordering and validating the [Batch]es for the [AttributesQueue] stage.
 //!
-//! [Batch]: crate::batch::Batch
-//! [SingleBatch]: crate::batch::SingleBatch
-//! [SpanBatch]: crate::batch::SpanBatch
+//! [Batch]: op_alloy_protocol::Batch
+//! [SingleBatch]: op_alloy_protocol::SingleBatch
+//! [SpanBatch]: op_alloy_protocol::SpanBatch
 //! [ChannelReader]: crate::stages::channel::ChannelReader
 //! [AttributesQueue]: crate::stages::attributes_queue::AttributesQueue
 
-use crate::{batch::Batch, pipeline::PipelineResult};
+use crate::pipeline::PipelineResult;
 use alloc::boxed::Box;
 use async_trait::async_trait;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{Batch, BlockInfo, L2BlockInfo};
 
 mod batch_stream;
 pub use batch_stream::{BatchStream, BatchStreamProvider};
@@ -47,8 +47,8 @@ pub trait NextBatchProvider {
     /// Returns the number of [SingleBatch]es that are currently buffered in the [BatchStream]
     /// from a [SpanBatch].
     ///
-    /// [SpanBatch]: crate::batch::SpanBatch
-    /// [SingleBatch]: crate::batch::SingleBatch
+    /// [SpanBatch]: op_alloy_protocol::SpanBatch
+    /// [SingleBatch]: op_alloy_protocol::SingleBatch
     fn span_buffer_size(&self) -> usize;
 
     /// Allows the stage to flush the buffer in the [crate::stages::BatchStream]

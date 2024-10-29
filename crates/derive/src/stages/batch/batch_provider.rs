@@ -2,7 +2,6 @@
 
 use super::NextBatchProvider;
 use crate::{
-    batch::SingleBatch,
     errors::{PipelineError, PipelineResult},
     stages::{BatchQueue, BatchValidator},
     traits::{
@@ -13,7 +12,7 @@ use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo, SingleBatch};
 
 /// The [BatchProvider] stage is a mux between the [BatchQueue] and [BatchValidator] stages.
 ///

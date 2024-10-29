@@ -1,7 +1,6 @@
 //! This module contains the `ChannelReader` struct.
 
 use crate::{
-    batch::Batch,
     errors::{PipelineError, PipelineResult},
     stages::{decompress_brotli, BatchStreamProvider},
     traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
@@ -15,7 +14,7 @@ use miniz_oxide::inflate::decompress_to_vec_zlib;
 use op_alloy_genesis::{
     RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
 };
-use op_alloy_protocol::BlockInfo;
+use op_alloy_protocol::{Batch, BlockInfo};
 use tracing::{debug, error, warn};
 
 /// ZLIB Deflate Compression Method.

@@ -30,7 +30,6 @@ brotli.workspace = true
 tracing.workspace = true
 miniz_oxide.workspace = true
 async-trait.workspace = true
-unsigned-varint.workspace = true
 alloc-no-stdlib.workspace = true
 derive_more = { workspace = true, features = ["full"] }
 
