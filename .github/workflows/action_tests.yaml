@@ -27,6 +27,10 @@ jobs:
           go-version: "1.22.7"
           cache-dependency-path: |
             monorepo/go.sum
+      - name: Setup gotestsum
+        uses: autero1/action-gotestsum@v2.0.0
+        with:
+          gotestsum_version: 1.12.0
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
       - name: Run Actions Tests
