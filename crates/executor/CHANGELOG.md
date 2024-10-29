@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.3...kona-executor-v0.0.4) - 2024-10-29
+
+### Other
+
+- updated the following local packages: kona-mpt
+
 ## [0.0.3](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.2...kona-executor-v0.0.3) - 2024-10-25
 
 ### Added

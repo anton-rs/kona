@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.4...kona-derive-v0.0.5) - 2024-10-29
+
+### Added
+
+- *(derive)* Remove metrics ([#743](https://github.com/anton-rs/kona/pull/743))
+- *(derive)* sys config accessor ([#722](https://github.com/anton-rs/kona/pull/722))
+
+### Fixed
+
+- tracing_subscriber problem in `kona-derive` tests ([#741](https://github.com/anton-rs/kona/pull/741))
+- *(derive)* Holocene action tests / fixes ([#733](https://github.com/anton-rs/kona/pull/733))
+
+### Other
+
+- *(derive)* import hygiene ([#744](https://github.com/anton-rs/kona/pull/744))
+
 ## [0.0.4](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.3...kona-derive-v0.0.4) - 2024-10-25
 
 ### Added
