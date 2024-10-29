@@ -7,7 +7,7 @@
 //!
 //! [Frame]: op_alloy_protocol::Frame
 //! [Channel]: op_alloy_protocol::Channel
-//! [Batch]: crate::batch::Batch
+//! [Batch]: op_alloy_protocol::Batch
 //! [FrameQueue]: crate::stages::FrameQueue
 //! [BatchQueue]: crate::stages::BatchQueue
 

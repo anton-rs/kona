@@ -5,9 +5,8 @@ use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use async_trait::async_trait;
 use core::fmt::Display;
-use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{BatchValidationProvider, BlockInfo};
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]
@@ -35,18 +34,7 @@ pub trait ChainProvider {
 
 /// Describes the functionality of a data source that fetches safe blocks.
 #[async_trait]
-pub trait L2ChainProvider {
-    /// The error type for the [L2ChainProvider].
-    type Error: Display + ToString;
-
-    /// Returns the L2 block info given a block number.
-    /// Errors if the block does not exist.
-    async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error>;
-
-    /// Returns the block for a given number.
-    /// Errors if no block is available for the given block number.
-    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock, Self::Error>;
-
+pub trait L2ChainProvider: BatchValidationProvider {
     /// Returns the [SystemConfig] by L2 number.
     async fn system_config_by_number(
         &mut self,

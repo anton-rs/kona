@@ -13,7 +13,7 @@ use kona_mpt::{OrderedListWalker, TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{to_system_config, L2BlockInfo};
+use op_alloy_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]
@@ -71,7 +71,7 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
 }
 
 #[async_trait]
-impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> {
+impl<T: CommsClient + Send + Sync> BatchValidationProvider for OracleL2ChainProvider<T> {
     type Error = anyhow::Error;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo> {
@@ -116,7 +116,10 @@ impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> 
         };
         Ok(optimism_block)
     }
+}
 
+#[async_trait]
+impl<T: CommsClient + Send + Sync> L2ChainProvider for OracleL2ChainProvider<T> {
     async fn system_config_by_number(
         &mut self,
         number: u64,

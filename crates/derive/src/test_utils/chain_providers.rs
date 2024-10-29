@@ -7,7 +7,7 @@ use alloy_primitives::{map::HashMap, B256};
 use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 
 /// A mock chain provider for testing.
 #[derive(Debug, Clone, Default)]
@@ -167,7 +167,7 @@ impl TestL2ChainProvider {
 }
 
 #[async_trait]
-impl L2ChainProvider for TestL2ChainProvider {
+impl BatchValidationProvider for TestL2ChainProvider {
     type Error = TestProviderError;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
@@ -188,7 +188,10 @@ impl L2ChainProvider for TestL2ChainProvider {
             .cloned()
             .ok_or_else(|| TestProviderError::L2BlockNotFound)
     }
+}
 
+#[async_trait]
+impl L2ChainProvider for TestL2ChainProvider {
     async fn system_config_by_number(
         &mut self,
         number: u64,

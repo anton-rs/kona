@@ -10,7 +10,7 @@ use kona_derive::traits::{ChainProvider, L2ChainProvider};
 use lru::LruCache;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{to_system_config, BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{to_system_config, BatchValidationProvider, BlockInfo, L2BlockInfo};
 use std::{boxed::Box, num::NonZeroUsize, sync::Arc, vec::Vec};
 
 const CACHE_SIZE: usize = 16;
@@ -206,7 +206,7 @@ impl AlloyL2ChainProvider {
 }
 
 #[async_trait]
-impl L2ChainProvider for AlloyL2ChainProvider {
+impl BatchValidationProvider for AlloyL2ChainProvider {
     type Error = RpcError<TransportErrorKind>;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
@@ -234,7 +234,10 @@ impl L2ChainProvider for AlloyL2ChainProvider {
         self.block_by_number_cache.put(number, block.clone());
         Ok(block)
     }
+}
 
+#[async_trait]
+impl L2ChainProvider for AlloyL2ChainProvider {
     async fn system_config_by_number(
         &mut self,
         number: u64,

@@ -2,7 +2,6 @@
 
 use super::NextBatchProvider;
 use crate::{
-    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     traits::{
         AttributesProvider, L2ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal,
@@ -13,7 +12,9 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{
+    Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch,
+};
 use tracing::{error, info, warn};
 
 /// [BatchQueue] is responsible for o rdering unordered batches
@@ -53,7 +54,7 @@ where
     pub(crate) batches: Vec<BatchWithInclusionBlock>,
     /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
     ///
-    /// [SpanBatch]: crate::batch::SpanBatch
+    /// [SpanBatch]: op_alloy_protocol::SpanBatch
     pub(crate) next_spans: Vec<SingleBatch>,
     /// Used to validate the batches.
     pub(crate) fetcher: BF,

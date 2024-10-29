@@ -1,7 +1,6 @@
 //! This module contains the `BatchStream` stage.
 
 use crate::{
-    batch::{Batch, BatchValidity, BatchWithInclusionBlock, SingleBatch, SpanBatch},
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
     stages::NextBatchProvider,
     traits::{L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
@@ -10,7 +9,9 @@ use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{
+    Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch, SpanBatch,
+};
 use tracing::{error, trace};
 
 /// Provides [Batch]es for the [BatchStream] stage.
@@ -220,11 +221,11 @@ where
 mod test {
     use super::*;
     use crate::{
-        batch::{SingleBatch, SpanBatchElement},
         test_utils::{CollectingLayer, TestBatchStreamProvider, TestL2ChainProvider, TraceStorage},
         traits::ResetSignal,
     };
     use alloc::vec;
+    use op_alloy_protocol::{SingleBatch, SpanBatchElement};
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]

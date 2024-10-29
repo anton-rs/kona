@@ -6,7 +6,7 @@ use alloy_primitives::map::HashMap;
 use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::L2BlockInfo;
+use op_alloy_protocol::{BatchValidationProvider, L2BlockInfo};
 
 /// A mock implementation of the `SystemConfigL2Fetcher` for testing.
 #[derive(Debug, Default)]
@@ -38,9 +38,20 @@ pub enum TestSystemConfigL2FetcherError {
 impl core::error::Error for TestSystemConfigL2FetcherError {}
 
 #[async_trait]
-impl L2ChainProvider for TestSystemConfigL2Fetcher {
+impl BatchValidationProvider for TestSystemConfigL2Fetcher {
     type Error = TestSystemConfigL2FetcherError;
 
+    async fn block_by_number(&mut self, _: u64) -> Result<OpBlock, Self::Error> {
+        unimplemented!()
+    }
+
+    async fn l2_block_info_by_number(&mut self, _: u64) -> Result<L2BlockInfo, Self::Error> {
+        unimplemented!()
+    }
+}
+
+#[async_trait]
+impl L2ChainProvider for TestSystemConfigL2Fetcher {
     async fn system_config_by_number(
         &mut self,
         number: u64,
@@ -50,13 +61,5 @@ impl L2ChainProvider for TestSystemConfigL2Fetcher {
             .get(&number)
             .cloned()
             .ok_or_else(|| TestSystemConfigL2FetcherError::NotFound(number))
-    }
-
-    async fn l2_block_info_by_number(&mut self, _: u64) -> Result<L2BlockInfo, Self::Error> {
-        unimplemented!()
-    }
-
-    async fn block_by_number(&mut self, _: u64) -> Result<OpBlock, Self::Error> {
-        unimplemented!()
     }
 }

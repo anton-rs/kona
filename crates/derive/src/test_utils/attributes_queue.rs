@@ -1,7 +1,6 @@
 //! Testing utilities for the attributes queue stage.
 
 use crate::{
-    batch::SingleBatch,
     errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
     traits::{
         AttributesBuilder, AttributesProvider, OriginAdvancer, OriginProvider, Signal,
@@ -11,7 +10,7 @@ use crate::{
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+use op_alloy_protocol::{BlockInfo, L2BlockInfo, SingleBatch};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// An error returned by the [`TestAttributesBuilder`].
