@@ -77,6 +77,8 @@ getting started with building your own programs, and a reference for the librari
 `kona` is inspired by the work of several teams, namely [OP Labs][op-labs] and other contributors' work on the
 [`op-program`][op-program] and [BadBoiLabs][bad-boi-labs]'s work on [Cannon-rs][badboi-cannon-rs].
 
+[alloy]: https://github.com/alloy-rs/alloy
+[op-alloy]: https://github.com/alloy-rs/op-alloy
 [op-stack]: https://github.com/ethereum-optimism/optimism
 [op-program]: https://github.com/ethereum-optimism/optimism/tree/develop/op-program
 [cannon]: https://github.com/ethereum-optimism/optimism/tree/develop/cannon
