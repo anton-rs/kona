@@ -39,8 +39,7 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Creates a new [ChannelAssembler] stage with the given configuration and previous stage.
-    pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["channel-assembly"]);
+    pub const fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
         Self { cfg, prev, channel: None }
     }
 
@@ -70,12 +69,6 @@ where
         // Time out the channel if it has timed out.
         if let Some(channel) = self.channel.as_ref() {
             if self.is_timed_out()? {
-                #[cfg(feature = "metrics")]
-                {
-                    let open_block_number =
-                        self.channel.as_ref().map(|c| c.open_block_number()).unwrap_or_default();
-                    crate::observe!(CHANNEL_TIMEOUTS, (origin.number - open_block_number) as f64);
-                }
                 warn!(
                     target: "channel-assembler",
                     "Channel (ID: {}) timed out at L1 origin #{}, open block #{}. Discarding channel.",
@@ -185,7 +178,6 @@ where
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         self.prev.signal(signal).await?;
         self.channel = None;
-        crate::inc!(STAGE_RESETS, &["channel-assembly"]);
         Ok(())
     }
 }
@@ -198,7 +190,7 @@ mod test {
         stages::ChannelReaderProvider,
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
     };
-    use alloc::sync::Arc;
+    use alloc::{sync::Arc, vec};
     use op_alloy_genesis::{
         RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
     };

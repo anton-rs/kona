@@ -160,7 +160,7 @@ mod test {
         test_utils::TestNextFrameProvider,
         traits::{ResetSignal, SignalReceiver},
     };
-    use alloc::sync::Arc;
+    use alloc::{sync::Arc, vec};
     use op_alloy_genesis::RollupConfig;
     use op_alloy_protocol::BlockInfo;
 

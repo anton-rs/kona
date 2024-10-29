@@ -52,7 +52,6 @@ where
 {
     /// Create a new [ChannelBank] stage.
     pub fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
-        crate::set!(STAGE_RESETS, 0, &["channel-bank"]);
         Self { cfg, channels: HashMap::default(), channel_queue: VecDeque::new(), prev }
     }
 
@@ -112,18 +111,6 @@ where
             warn!(target: "channel-bank", "Failed to add frame to channel: {:?}", frame_id);
             return Ok(());
         }
-        // Only increment the channel frames if the channel is current.
-        if self.channel_queue.front().map_or(false, |id| *id == current_channel.id()) {
-            crate::inc!(CURRENT_CHANNEL_FRAMES);
-        }
-        #[cfg(feature = "metrics")]
-        {
-            // For each channel, get the number of frames and record it in the CHANNEL_FRAME_COUNT
-            // histogram metric.
-            for channel in self.channels.values() {
-                crate::observe!(CHANNEL_FRAME_COUNT, channel.len() as f64);
-            }
-        }
 
         self.prune()
     }
@@ -150,17 +137,8 @@ where
                 target: "channel-bank",
                 "Channel (ID: {}) timed out", hex::encode(first)
             );
-            crate::observe!(CHANNEL_TIMEOUTS, (origin.number - channel.open_block_number()) as f64);
             self.channels.remove(&first);
             self.channel_queue.pop_front();
-            crate::set!(
-                CURRENT_CHANNEL_FRAMES,
-                self.channel_queue.front().map_or(0, |id| self
-                    .channels
-                    .get(id)
-                    .map_or(0, |c| c.len())
-                    as i64)
-            );
             return Ok(None);
         }
 
@@ -218,11 +196,9 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Send + Debug,
 {
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
-        crate::timer!(START, STAGE_ADVANCE_RESPONSE_TIME, &["channel_bank"], timer);
         match self.read() {
             Err(e) => {
                 if !matches!(e, PipelineErrorKind::Temporary(PipelineError::Eof)) {
-                    crate::timer!(DISCARD, timer);
                     return Err(PipelineError::ChannelProviderEmpty.crit());
                 }
             }
@@ -233,12 +209,10 @@ where
         let frame = match self.prev.next_frame().await {
             Ok(f) => f,
             Err(e) => {
-                crate::timer!(DISCARD, timer);
                 return Err(e);
             }
         };
         let res = self.ingest_frame(frame);
-        crate::timer!(DISCARD, timer);
         res?;
         Err(PipelineError::NotEnoughData.temp())
     }
@@ -262,7 +236,6 @@ where
         self.prev.signal(signal).await?;
         self.channels.clear();
         self.channel_queue = VecDeque::with_capacity(10);
-        crate::inc!(STAGE_RESETS, &["channel-bank"]);
         Ok(())
     }
 }
@@ -274,7 +247,7 @@ mod tests {
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
         traits::ResetSignal,
     };
-    use alloc::vec;
+    use alloc::{vec, vec::Vec};
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
