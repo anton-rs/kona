@@ -2,10 +2,9 @@
 
 use super::NextBatchProvider;
 use crate::{
-    errors::ResetError,
-    pipeline::{OriginAdvancer, PipelineResult, Signal, SignalReceiver},
+    errors::{PipelineResult, ResetError},
     prelude::{OriginProvider, PipelineError, PipelineErrorKind},
-    traits::{AttributesProvider, ResetSignal},
+    traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;

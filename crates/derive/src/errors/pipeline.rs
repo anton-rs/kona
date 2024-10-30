@@ -1,29 +1,10 @@
 //! This module contains derivation errors thrown within the pipeline.
 
+use crate::errors::BuilderError;
 use alloc::string::String;
-use alloy_eips::BlockNumHash;
 use alloy_primitives::B256;
 use op_alloy_genesis::system::SystemConfigUpdateError;
-use op_alloy_protocol::{DepositError, SpanBatchError, MAX_SPAN_BATCH_ELEMENTS};
-
-/// Blob Decuding Error
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
-pub enum BlobDecodingError {
-    /// Invalid field element
-    #[display("Invalid field element")]
-    InvalidFieldElement,
-    /// Invalid encoding version
-    #[display("Invalid encoding version")]
-    InvalidEncodingVersion,
-    /// Invalid length
-    #[display("Invalid length")]
-    InvalidLength,
-    /// Missing Data
-    #[display("Missing data")]
-    MissingData,
-}
-
-impl core::error::Error for BlobDecodingError {}
+use op_alloy_protocol::{DepositError, SpanBatchError};
 
 /// A result type for the derivation pipeline stages.
 pub type PipelineResult<T> = Result<T, PipelineErrorKind>;
@@ -157,12 +138,12 @@ impl core::error::Error for PipelineError {
 }
 
 impl PipelineError {
-    /// Wrap [self] as a [PipelineErrorKind::Critical].
+    /// Wrap [PipelineError] as a [PipelineErrorKind::Critical].
     pub const fn crit(self) -> PipelineErrorKind {
         PipelineErrorKind::Critical(self)
     }
 
-    /// Wrap [self] as a [PipelineErrorKind::Temporary].
+    /// Wrap [PipelineError] as a [PipelineErrorKind::Temporary].
     pub const fn temp(self) -> PipelineErrorKind {
         PipelineErrorKind::Temporary(self)
     }
@@ -206,7 +187,7 @@ impl From<BuilderError> for ResetError {
 impl core::error::Error for ResetError {}
 
 impl ResetError {
-    /// Wrap [self] as a [PipelineErrorKind::Reset].
+    /// Wrap [ResetError] as a [PipelineErrorKind::Reset].
     pub const fn reset(self) -> PipelineErrorKind {
         PipelineErrorKind::Reset(self)
     }
@@ -250,70 +231,6 @@ impl From<DepositError> for PipelineEncodingError {
         Self::DepositError(err)
     }
 }
-
-/// A frame decompression error.
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
-pub enum BatchDecompressionError {
-    /// The buffer exceeds the [MAX_SPAN_BATCH_ELEMENTS] protocol parameter.
-    #[display("The batch exceeds the maximum number of elements: {max_size}", max_size = MAX_SPAN_BATCH_ELEMENTS)]
-    BatchTooLarge,
-}
-
-impl core::error::Error for BatchDecompressionError {}
-
-/// An [AttributesBuilder] Error.
-///
-/// [AttributesBuilder]: crate::traits::AttributesBuilder
-#[derive(derive_more::Display, Clone, Debug, PartialEq, Eq)]
-pub enum BuilderError {
-    /// Mismatched blocks.
-    #[display("Block mismatch. Expected {_0:?}, got {_1:?}")]
-    BlockMismatch(BlockNumHash, BlockNumHash),
-    /// Mismatched blocks for the start of an Epoch.
-    #[display("Block mismatch on epoch reset. Expected {_0:?}, got {_1:?}")]
-    BlockMismatchEpochReset(BlockNumHash, BlockNumHash, B256),
-    /// [SystemConfig] update failed.
-    ///
-    /// [SystemConfig]: op_alloy_genesis::SystemConfig
-    #[display("System config update failed")]
-    SystemConfigUpdate,
-    /// Broken time invariant between L2 and L1.
-    #[display("Time invariant broken. L1 origin: {_0:?} | Next L2 time: {_1} | L1 block: {_2:?} | L1 timestamp {_3:?}")]
-    BrokenTimeInvariant(BlockNumHash, u64, BlockNumHash, u64),
-    /// Attributes unavailable.
-    #[display("Attributes unavailable")]
-    AttributesUnavailable,
-    /// A custom error.
-    #[display("Error in attributes builder: {_0}")]
-    Custom(String),
-}
-
-impl core::error::Error for BuilderError {}
-
-/// An error returned by the [BlobProviderError].
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
-pub enum BlobProviderError {
-    /// The number of specified blob hashes did not match the number of returned sidecars.
-    #[display("Blob sidecar length mismatch: expected {_0}, got {_1}")]
-    SidecarLengthMismatch(usize, usize),
-    /// Slot derivation error.
-    #[display("Failed to derive slot")]
-    SlotDerivation,
-    /// Blob decoding error.
-    #[display("Blob decoding error: {_0}")]
-    BlobDecoding(BlobDecodingError),
-    /// Error pertaining to the backend transport.
-    #[display("{_0}")]
-    Backend(String),
-}
-
-impl From<BlobDecodingError> for BlobProviderError {
-    fn from(err: BlobDecodingError) -> Self {
-        Self::BlobDecoding(err)
-    }
-}
-
-impl core::error::Error for BlobProviderError {}
 
 #[cfg(test)]
 mod tests {
