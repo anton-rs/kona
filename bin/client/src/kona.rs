@@ -17,6 +17,7 @@ use kona_common_proc::client_entry;
 
 pub(crate) mod fault;
 use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
+use kona_derive::metrics::PipelineMetrics;
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
@@ -42,6 +43,7 @@ fn main() -> Result<()> {
         let l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
         let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
         let beacon = OracleBlobProvider::new(oracle.clone());
+        let metrics = PipelineMetrics::no_op();
 
         ////////////////////////////////////////////////////////////////
         //                   DERIVATION & EXECUTION                   //
@@ -54,6 +56,7 @@ fn main() -> Result<()> {
             beacon,
             l1_provider,
             l2_provider.clone(),
+            metrics,
         )
         .await?;
 

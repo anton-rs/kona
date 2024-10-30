@@ -1,7 +1,11 @@
 //! Helper to construct a [DerivationPipeline] using online types.
 
+use crate::{
+    AlloyChainProvider, AlloyL2ChainProvider, OnlineBeaconClient, OnlineBlobProviderWithFallback,
+};
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
+    metrics::PipelineMetrics,
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
@@ -13,13 +17,12 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 
-use crate::{
-    AlloyChainProvider, AlloyL2ChainProvider, OnlineBeaconClient, OnlineBlobProviderWithFallback,
-};
-
 /// An online derivation pipeline.
-pub type OnlinePipeline =
-    DerivationPipeline<OnlineAttributesQueue<OnlineDataProvider>, AlloyL2ChainProvider>;
+pub type OnlinePipeline = DerivationPipeline<
+    OnlineAttributesQueue<OnlineDataProvider>,
+    AlloyL2ChainProvider,
+    PipelineMetrics,
+>;
 
 /// An `online` Ethereum data source.
 pub type OnlineDataProvider = EthereumDataSource<
@@ -63,6 +66,7 @@ pub fn new_online_pipeline(
         .chain_provider(chain_provider)
         .builder(builder)
         .origin(origin)
+        .metrics(PipelineMetrics::no_op())
         .build()
 }
 

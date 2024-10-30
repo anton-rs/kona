@@ -13,6 +13,7 @@ use op_alloy_rpc_types_engine::OpAttributesWithParent;
 // Re-export these types used internally to the test pipeline.
 use crate::{
     errors::PipelineError,
+    metrics::PipelineMetrics,
     pipeline::{DerivationPipeline, PipelineBuilder, PipelineResult},
     stages::{
         AttributesQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue, L1Retrieval,
@@ -86,7 +87,8 @@ pub type TestBatchProvider = BatchProvider<TestBatchStream, TestL2ChainProvider>
 pub type TestAttributesQueue = AttributesQueue<TestBatchProvider, TestAttributesBuilder>;
 
 /// A [DerivationPipeline] using test providers and sources.
-pub type TestPipeline = DerivationPipeline<TestAttributesQueue, TestL2ChainProvider>;
+pub type TestPipeline =
+    DerivationPipeline<TestAttributesQueue, TestL2ChainProvider, PipelineMetrics>;
 
 /// Constructs a [DerivationPipeline] using test providers and sources.
 pub fn new_test_pipeline() -> TestPipeline {
@@ -97,5 +99,6 @@ pub fn new_test_pipeline() -> TestPipeline {
         .builder(TestAttributesBuilder::default())
         .chain_provider(TestChainProvider::default())
         .l2_chain_provider(TestL2ChainProvider::default())
+        .metrics(PipelineMetrics::no_op())
         .build()
 }

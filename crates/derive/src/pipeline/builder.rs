@@ -2,6 +2,7 @@
 
 use super::{AttributesBuilder, DataAvailabilityProvider, DerivationPipeline};
 use crate::{
+    metrics::PipelineMetrics,
     stages::{
         AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
@@ -37,6 +38,7 @@ where
     builder: Option<B>,
     origin: Option<BlockInfo>,
     rollup_config: Option<Arc<RollupConfig>>,
+    metrics: Option<PipelineMetrics>,
 }
 
 impl<B, P, T, D> Default for PipelineBuilder<B, P, T, D>
@@ -54,6 +56,7 @@ where
             builder: None,
             origin: None,
             rollup_config: None,
+            metrics: None,
         }
     }
 }
@@ -106,14 +109,20 @@ where
         self
     }
 
+    /// Sets the metrics implementation for the pipeline.
+    pub fn metrics(mut self, metrics: PipelineMetrics) -> Self {
+        self.metrics = Some(metrics);
+        self
+    }
+
     /// Builds the pipeline.
-    pub fn build(self) -> DerivationPipeline<AttributesQueueStage<D, P, T, B>, T> {
+    pub fn build(self) -> DerivationPipeline<AttributesQueueStage<D, P, T, B>, T, PipelineMetrics> {
         self.into()
     }
 }
 
 impl<B, P, T, D> From<PipelineBuilder<B, P, T, D>>
-    for DerivationPipeline<AttributesQueueStage<D, P, T, B>, T>
+    for DerivationPipeline<AttributesQueueStage<D, P, T, B>, T, PipelineMetrics>
 where
     B: AttributesBuilder + Send + Debug,
     P: ChainProvider + Send + Sync + Debug,
@@ -127,7 +136,9 @@ where
         let l2_chain_provider = builder.l2_chain_provider.expect("chain_provider must be set");
         let dap_source = builder.dap_source.expect("dap_source must be set");
         let attributes_builder = builder.builder.expect("builder must be set");
+        let metrics = builder.metrics.expect("metrics must be set");
 
+        // todo: add metrics to the stages
         // Compose the stage stack.
         let mut l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
         l1_traversal.block = Some(builder.origin.expect("origin must be set"));
@@ -143,6 +154,6 @@ where
             AttributesQueue::new(rollup_config.clone(), batch_provider, attributes_builder);
 
         // Create the pipeline.
-        Self::new(attributes, rollup_config, l2_chain_provider)
+        Self::new(attributes, rollup_config, l2_chain_provider, metrics)
     }
 }

@@ -22,6 +22,7 @@ pub mod prelude {
 
 pub mod attributes;
 pub mod errors;
+pub mod metrics;
 pub mod pipeline;
 pub mod sources;
 pub mod stages;
