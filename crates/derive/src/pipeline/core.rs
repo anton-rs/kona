@@ -194,7 +194,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        metrics::{PipelineMetrics},
+        metrics::PipelineMetrics,
         pipeline::{DerivationPipeline, PipelineError, StepResult},
         test_utils::{TestL2ChainProvider, *},
         traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
