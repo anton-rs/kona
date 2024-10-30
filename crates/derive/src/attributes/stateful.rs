@@ -19,8 +19,7 @@ use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVEN
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// The sequencer fee vault address.
-pub const SEQUENCER_FEE_VAULT_ADDRESS: Address =
-    address!("4200000000000000000000000000000000000011");
+const SEQUENCER_FEE_VAULT_ADDRESS: Address = address!("4200000000000000000000000000000000000011");
 
 /// A stateful implementation of the [AttributesBuilder].
 #[derive(Debug, Default)]
