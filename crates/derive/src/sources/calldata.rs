@@ -1,7 +1,7 @@
 //! CallData Source
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    pipeline::{PipelineError, PipelineResult},
     traits::{AsyncIterator, ChainProvider},
 };
 use alloc::{boxed::Box, collections::VecDeque, format};
@@ -103,7 +103,7 @@ impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{errors::PipelineErrorKind, test_utils::TestChainProvider};
+    use crate::{pipeline::PipelineErrorKind, test_utils::TestChainProvider};
     use alloc::{vec, vec::Vec};
     use alloy_consensus::{Signed, TxEip2930, TxEip4844, TxEip4844Variant, TxLegacy};
     use alloy_primitives::{address, Address, Signature, TxKind};

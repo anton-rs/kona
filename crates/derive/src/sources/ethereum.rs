@@ -2,7 +2,7 @@
 //! [DataAvailabilityProvider] trait for the Ethereum protocol.
 
 use crate::{
-    errors::PipelineResult,
+    pipeline::PipelineResult,
     sources::{BlobSource, CalldataSource, EthereumDataSourceVariant},
     traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
 };

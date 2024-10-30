@@ -15,6 +15,9 @@
 //! 8. Payload Attributes Derivation
 //! 9. (Omitted) Engine Queue
 
+mod errors;
+pub use errors::BatchDecompressionError;
+
 mod l1_traversal;
 pub use l1_traversal::L1Traversal;
 

@@ -9,19 +9,16 @@
 
 extern crate alloc;
 
-/// Re-export commonly used types and traits.
+/// Exports all types required to work with the derivation pipeline.
 pub mod prelude {
-    pub use crate::{
-        attributes::StatefulAttributesBuilder,
-        errors::{PipelineError, PipelineErrorKind},
-        pipeline::{DerivationPipeline, PipelineBuilder},
-        sources::EthereumDataSource,
-        traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
-    };
+    pub use crate::pipeline::*;
+    pub use crate::attributes::*;
+    pub use crate::sources::*;
+    pub use crate::stages::*;
+    pub use crate::traits::*;
 }
 
 pub mod attributes;
-pub mod errors;
 pub mod pipeline;
 pub mod sources;
 pub mod stages;

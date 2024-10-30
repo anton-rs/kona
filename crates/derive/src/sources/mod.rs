@@ -1,5 +1,8 @@
 //! This module contains data source impelmentations.
 
+mod errors;
+pub use errors::{BlobDecodingError, BlobProviderError};
+
 mod ethereum;
 pub use ethereum::EthereumDataSource;
 

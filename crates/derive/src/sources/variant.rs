@@ -1,7 +1,7 @@
 //! Data source
 
 use crate::{
-    errors::PipelineResult,
+    pipeline::PipelineResult,
     sources::{BlobSource, CalldataSource},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
 };

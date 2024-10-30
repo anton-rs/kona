@@ -1,7 +1,8 @@
 //! Blob Data Source
 
 use crate::{
-    errors::{BlobDecodingError, BlobProviderError, PipelineError, PipelineResult},
+    sources::{BlobDecodingError, BlobProviderError},
+    pipeline::{PipelineError, PipelineResult},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
 };
 use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
@@ -391,7 +392,7 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        errors::PipelineErrorKind,
+        pipeline::PipelineErrorKind,
         test_utils::{TestBlobProvider, TestChainProvider},
     };
     use alloy_rlp::Decodable;
