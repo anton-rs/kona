@@ -287,10 +287,10 @@ where
                                         .signal(),
                                     )
                                     .await?;
-                            } else if matches!(e, ResetError::ReorgDetected(_, _)) {
-                                self.caching_oracle.as_ref().flush();
-                                self.pipeline.signal(Signal::FlushChannel).await?;
                             } else {
+                                if matches!(e, ResetError::ReorgDetected(_, _)) {
+                                    self.caching_oracle.as_ref().flush();
+                                }
                                 // Reset the pipeline to the initial L2 safe head and L1 origin,
                                 // and try again.
                                 self.pipeline

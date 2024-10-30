@@ -51,11 +51,6 @@ where
             hint_writer,
         }
     }
-
-    /// Flushes the cache, removing all entries.
-    pub fn flush(&self) {
-        self.cache.lock().clear();
-    }
 }
 
 /// A trait that provides a method to flush a cache.
