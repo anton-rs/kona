@@ -1,12 +1,12 @@
 //! Contains the `PipelineBuilder` object that is used to build a `DerivationPipeline`.
 
-use super::{AttributesBuilder, DataAvailabilityProvider, DerivationPipeline};
 use crate::{
+    pipeline::DerivationPipeline,
     stages::{
         AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
-    traits::{ChainProvider, L2ChainProvider},
+    traits::{AttributesBuilder, ChainProvider, DataAvailabilityProvider, L2ChainProvider},
 };
 use alloc::sync::Arc;
 use core::fmt::Debug;

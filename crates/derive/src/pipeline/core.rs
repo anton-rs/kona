@@ -1,12 +1,11 @@
 //! Contains the core derivation pipeline.
 
-use super::{
-    NextAttributes, OriginAdvancer, OriginProvider, Pipeline, PipelineError, PipelineResult,
-    StepResult,
-};
 use crate::{
-    errors::PipelineErrorKind,
-    traits::{ActivationSignal, L2ChainProvider, ResetSignal, Signal, SignalReceiver},
+    errors::{PipelineError, PipelineErrorKind, PipelineResult},
+    traits::{
+        ActivationSignal, L2ChainProvider, NextAttributes, OriginAdvancer, OriginProvider,
+        Pipeline, ResetSignal, Signal, SignalReceiver, StepResult,
+    },
 };
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
@@ -174,9 +173,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        pipeline::{DerivationPipeline, PipelineError, StepResult},
-        test_utils::{TestL2ChainProvider, *},
-        traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
+        errors::PipelineError,
+        pipeline::DerivationPipeline,
+        test_utils::*,
+        traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver, StepResult},
     };
     use alloc::{string::ToString, sync::Arc};
     use alloy_rpc_types_engine::PayloadAttributes;

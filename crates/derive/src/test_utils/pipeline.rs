@@ -12,8 +12,8 @@ use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 // Re-export these types used internally to the test pipeline.
 use crate::{
-    errors::PipelineError,
-    pipeline::{DerivationPipeline, PipelineBuilder, PipelineResult},
+    errors::{PipelineError, PipelineResult},
+    pipeline::{DerivationPipeline, PipelineBuilder},
     stages::{
         AttributesQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal,

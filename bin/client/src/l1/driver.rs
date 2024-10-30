@@ -13,15 +13,15 @@ use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
     errors::{PipelineErrorKind, ResetError},
-    pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
+    pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
     traits::{
-        ActivationSignal, BlobProvider, ChainProvider, L2ChainProvider, OriginProvider,
-        ResetSignal, Signal, SignalReceiver,
+        ActivationSignal, BlobProvider, ChainProvider, L2ChainProvider, OriginProvider, Pipeline,
+        ResetSignal, Signal, SignalReceiver, StepResult,
     },
 };
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};

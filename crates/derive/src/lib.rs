@@ -11,13 +11,7 @@ extern crate alloc;
 
 /// Required types and traits for kona's derivation pipeline.
 pub mod prelude {
-    pub use crate::{
-        attributes::*,
-        errors::{PipelineError, PipelineErrorKind, PipelineResult},
-        pipeline::{DerivationPipeline, PipelineBuilder},
-        sources::*,
-        traits::*,
-    };
+    pub use crate::{attributes::*, errors::*, pipeline::*, sources::*, stages::*, traits::*};
 }
 
 pub mod attributes;
