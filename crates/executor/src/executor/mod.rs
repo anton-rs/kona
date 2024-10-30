@@ -10,7 +10,7 @@ use crate::{
 use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Transaction, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
-use alloy_primitives::{keccak256, logs_bloom, Bytes, B256, U256};
+use alloy_primitives::{keccak256, logs_bloom, Bytes, Log, B256, U256};
 use kona_mpt::{ordered_trie_with_encoder, TrieHinter, TrieProvider};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
@@ -28,7 +28,7 @@ pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
 mod env;
 
 mod util;
-use util::{encode_holocene_eip_1559_params, receipt_envelope_from_parts};
+use util::encode_holocene_eip_1559_params;
 
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
@@ -205,7 +205,7 @@ where
             cumulative_gas_used += result.gas_used();
 
             // Create receipt envelope.
-            let receipt = receipt_envelope_from_parts(
+            let receipt = OpReceiptEnvelope::<Log>::from_parts(
                 result.is_success(),
                 cumulative_gas_used as u128,
                 result.logs(),
@@ -222,6 +222,10 @@ where
                     })
                     .flatten(),
             );
+            // Ensure the receipt is not an EIP-7702 receipt.
+            if matches!(receipt, OpReceiptEnvelope::Eip7702(_)) {
+                panic!("EIP-7702 receipts are not supported by the fault proof program");
+            }
             receipts.push(receipt);
         }
 
