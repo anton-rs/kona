@@ -9,14 +9,14 @@
 
 extern crate alloc;
 
-/// Re-export commonly used types and traits.
+/// Required types and traits for kona's derivation pipeline.
 pub mod prelude {
     pub use crate::{
-        attributes::StatefulAttributesBuilder,
-        errors::{PipelineError, PipelineErrorKind},
+        attributes::*,
+        sources::*,
+        traits::*,
+        errors::{PipelineError, PipelineResult, PipelineErrorKind},
         pipeline::{DerivationPipeline, PipelineBuilder},
-        sources::EthereumDataSource,
-        traits::{ChainProvider, L2ChainProvider, OriginProvider, Pipeline, StepResult},
     };
 }
 
