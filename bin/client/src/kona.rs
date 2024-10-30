@@ -48,14 +48,9 @@ fn main() -> Result<()> {
         ////////////////////////////////////////////////////////////////
 
         // Create a new derivation driver with the given boot information and oracle.
-        let mut driver = DerivationDriver::new(
-            boot.as_ref(),
-            oracle.as_ref(),
-            beacon,
-            l1_provider,
-            l2_provider.clone(),
-        )
-        .await?;
+        let mut driver =
+            DerivationDriver::new(boot.as_ref(), &oracle, beacon, l1_provider, l2_provider.clone())
+                .await?;
 
         // Run the derivation pipeline until we are able to produce the output root of the claimed
         // L2 block.
