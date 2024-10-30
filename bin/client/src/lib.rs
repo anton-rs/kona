@@ -7,8 +7,10 @@
 extern crate alloc;
 
 pub mod l1;
+pub use l1::OracleL1ChainProvider;
 
 pub mod l2;
+pub use l2::OracleL2ChainProvider;
 
 mod hint;
 pub use hint::HintType;

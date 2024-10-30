@@ -3,35 +3,24 @@
 //!
 //! [OpPayloadAttributes]: op_alloy_rpc_types_engine::OpPayloadAttributes
 
-use super::OracleL1ChainProvider;
-use crate::{l2::OracleL2ChainProvider, BootInfo, FlushableCache, HintType};
 use alloc::{sync::Arc, vec::Vec};
-use alloy_consensus::{Header, Sealed};
-use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
-use kona_derive::{
-    attributes::StatefulAttributesBuilder,
-    errors::{PipelineErrorKind, ResetError},
-    pipeline::{DerivationPipeline, PipelineBuilder},
-    sources::EthereumDataSource,
-    stages::{
-        AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
-        L1Retrieval, L1Traversal,
-    },
-    traits::{
-        ActivationSignal, BlobProvider, ChainProvider, L2ChainProvider, OriginProvider, Pipeline,
-        ResetSignal, Signal, SignalReceiver, StepResult,
-    },
-};
-use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
-use kona_mpt::{TrieHinter, TrieProvider};
-use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use tracing::{error, info, warn};
+
+use alloy_consensus::{Header, Sealed};
+use alloy_primitives::B256;
 use op_alloy_consensus::OpTxType;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
-use tracing::{error, info, warn};
+
+use kona_derive::prelude::*;
+use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
+use kona_mpt::{TrieHinter, TrieProvider};
+use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+
+use crate::{BootInfo, HintType, OracleL1ChainProvider, OracleL2ChainProvider};
 
 /// An oracle-backed derivation pipeline.
 pub type OraclePipeline<O, B> = DerivationPipeline<
