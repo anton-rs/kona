@@ -13,10 +13,10 @@ extern crate alloc;
 pub mod prelude {
     pub use crate::{
         attributes::*,
-        errors::{PipelineError, PipelineErrorKind, PipelineResult},
-        pipeline::{DerivationPipeline, PipelineBuilder},
         sources::*,
         traits::*,
+        errors::{PipelineError, PipelineResult, PipelineErrorKind},
+        pipeline::{DerivationPipeline, PipelineBuilder},
     };
 }
 
