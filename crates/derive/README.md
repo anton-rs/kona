@@ -1,8 +1,9 @@
 # `kona-derive`
 
-  <a href="https://github.com/anton-rs/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/anton-rs/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
-    <a href="https://crates.io/crates/kona-derive"><img src="https://img.shields.io/crates/v/kona-derive.svg?label=kona-derive&labelColor=2a2f35" alt="Kona Derive"></a>
-  <img src="https://img.shields.io/badge/License-MIT-green.svg?label=license&labelColor=2a2f35" alt="License">
+<a href="https://github.com/anton-rs/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/anton-rs/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
+<a href="https://crates.io/crates/kona-derive"><img src="https://img.shields.io/crates/v/kona-derive.svg?label=kona-derive&labelColor=2a2f35" alt="Kona Derive"></a>
+<a href="https://github.com/anton-rs/kona/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-d1d1f6.svg?label=license&labelColor=2a2f35" alt="License"></a>
+<a href="https://img.shields.io/codecov/c/github/anton-rs/kona"><img src="https://img.shields.io/codecov/c/github/anton-rs/kona" alt="Codecov"></a>
 
 A `no_std` compatible implementation of the OP Stack's [derivation pipeline][derive].
 
@@ -17,12 +18,12 @@ use std::sync::Arc;
 use op_alloy_genesis::RollupConfig;
 use kona_derive::sources::EthereumDataSource;
 use kona_derive::pipeline::PipelineBuilder;
-use kona_derive::stages::{StatefulAttributesBuilder};
+use kona_derive::attributes::StatefulAttributesBuilder;
 
-let chain_provider = ...;
-let l2_chain_provider = ...;
-let blob_provider = ...;
-let l1_origin = ...;
+let chain_provider = todo!();
+let l2_chain_provider = todo!();
+let blob_provider = todo!();
+let l1_origin = todo!();
 
 let cfg = Arc::new(RollupConfig::default());
 let attributes = StatefulAttributesBuilder::new(
@@ -57,8 +58,6 @@ The most up-to-date feature list will be available on the [docs.rs `Feature Flag
 
 Some features include the following.
 - `serde`: Serialization and Deserialization support for `kona-derive` types.
-- `metrics`: Enables prometheus metric collection. _Note: This requires an `std` environment._
-- `online`: Exposes an [alloy-provider][ap] powered data source using "online" HTTP requests.
 - `test-utils`: Test utilities for downstream libraries.
 
 By default, `kona-derive` enables the `serde` feature.
