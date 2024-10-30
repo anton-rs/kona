@@ -13,6 +13,7 @@ use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
     errors::{PipelineErrorKind, ResetError},
+    metrics::PipelineMetrics,
     pipeline::{DerivationPipeline, Pipeline, PipelineBuilder, StepResult},
     sources::EthereumDataSource,
     stages::{
@@ -37,6 +38,7 @@ use tracing::{error, info, warn};
 pub type OraclePipeline<O, B> = DerivationPipeline<
     OracleAttributesQueue<OracleDataProvider<O, B>, O>,
     OracleL2ChainProvider<O>,
+    PipelineMetrics,
 >;
 
 /// An oracle-backed Ethereum data source.
@@ -121,6 +123,7 @@ where
         blob_provider: B,
         mut chain_provider: OracleL1ChainProvider<O>,
         mut l2_chain_provider: OracleL2ChainProvider<O>,
+        metrics: PipelineMetrics,
     ) -> Result<Self> {
         let cfg = Arc::new(boot_info.rollup_config.clone());
 
@@ -158,6 +161,7 @@ where
             .chain_provider(chain_provider)
             .builder(attributes)
             .origin(l1_origin)
+            .metrics(metrics)
             .build();
 
         Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })

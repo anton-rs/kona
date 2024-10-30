@@ -101,6 +101,18 @@ pub trait Pipeline: OriginProvider + Iterator<Item = OpAttributesWithParent> {
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult;
 }
 
+/// Metrics trait for `DerivationPipeline`.
+pub trait DerivationPipelineMetrics {
+    /// Records the result of a step in the pipeline.
+    fn record_step_result(&self, result: &StepResult);
+
+    /// Increments the count of reset signals received.
+    fn inc_reset_signals(&self);
+
+    /// Increments the count of flush channel signals received.
+    fn inc_flush_channel_signals(&self);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

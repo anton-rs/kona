@@ -6,7 +6,10 @@ use super::{
 };
 use crate::{
     errors::PipelineErrorKind,
-    traits::{ActivationSignal, L2ChainProvider, ResetSignal, Signal, SignalReceiver},
+    traits::{
+        ActivationSignal, DerivationPipelineMetrics, L2ChainProvider, ResetSignal, Signal,
+        SignalReceiver,
+    },
 };
 use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
 use async_trait::async_trait;
@@ -18,10 +21,11 @@ use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
-pub struct DerivationPipeline<S, P>
+pub struct DerivationPipeline<S, P, M>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
+    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// A handle to the next attributes.
     pub attributes: S,
@@ -33,37 +37,43 @@ where
     pub rollup_config: Arc<RollupConfig>,
     /// The L2 Chain Provider used to fetch the system config on reset.
     pub l2_chain_provider: P,
+    /// Metrics collector.
+    pub metrics: M,
 }
 
-impl<S, P> DerivationPipeline<S, P>
+impl<S, P, M> DerivationPipeline<S, P, M>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
+    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// Creates a new instance of the [DerivationPipeline].
     pub const fn new(
         attributes: S,
         rollup_config: Arc<RollupConfig>,
         l2_chain_provider: P,
+        metrics: M,
     ) -> Self {
-        Self { attributes, prepared: VecDeque::new(), rollup_config, l2_chain_provider }
+        Self { attributes, prepared: VecDeque::new(), rollup_config, l2_chain_provider, metrics }
     }
 }
 
-impl<S, P> OriginProvider for DerivationPipeline<S, P>
+impl<S, P, M> OriginProvider for DerivationPipeline<S, P, M>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
+    M: DerivationPipelineMetrics + Send + Sync,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.attributes.origin()
     }
 }
 
-impl<S, P> Iterator for DerivationPipeline<S, P>
+impl<S, P, M> Iterator for DerivationPipeline<S, P, M>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
+    M: DerivationPipelineMetrics + Send + Sync,
 {
     type Item = OpAttributesWithParent;
 
@@ -73,10 +83,11 @@ where
 }
 
 #[async_trait]
-impl<S, P> SignalReceiver for DerivationPipeline<S, P>
+impl<S, P, M> SignalReceiver for DerivationPipeline<S, P, M>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
+    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// Signals the pipeline by calling the [`SignalReceiver::signal`] method.
     ///
@@ -95,6 +106,8 @@ where
         match signal {
             s @ Signal::Reset(ResetSignal { l2_safe_head, .. }) |
             s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
+                self.metrics.inc_reset_signals();
+
                 let system_config = self
                     .l2_chain_provider
                     .system_config_by_number(
@@ -117,6 +130,8 @@ where
                 }
             }
             Signal::FlushChannel => {
+                self.metrics.inc_flush_channel_signals();
+
                 self.attributes.signal(signal).await?;
             }
         }
@@ -125,10 +140,11 @@ where
 }
 
 #[async_trait]
-impl<S, P> Pipeline for DerivationPipeline<S, P>
+impl<S, P, M> Pipeline for DerivationPipeline<S, P, M>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
+    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// Peeks at the next prepared [OpAttributesWithParent] from the pipeline.
     fn peek(&self) -> Option<&OpAttributesWithParent> {
@@ -148,7 +164,7 @@ where
     ///
     /// [PipelineError]: crate::errors::PipelineError
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
-        match self.attributes.next_attributes(cursor).await {
+        let result = match self.attributes.next_attributes(cursor).await {
             Ok(a) => {
                 trace!(target: "pipeline", "Prepared L2 attributes: {:?}", a);
                 self.prepared.push_back(a);
@@ -167,13 +183,18 @@ where
                     StepResult::StepFailed(err)
                 }
             },
-        }
+        };
+
+        self.metrics.record_step_result(&result);
+
+        result
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
+        metrics::{NoopDerivationPipelineMetrics, PipelineMetrics},
         pipeline::{DerivationPipeline, PipelineError, StepResult},
         test_utils::{TestL2ChainProvider, *},
         traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
@@ -243,7 +264,9 @@ mod tests {
         let l2_chain_provider = TestL2ChainProvider::default();
         let expected = default_test_payload_attributes();
         let attributes = TestNextAttributes { next_attributes: Some(expected) };
-        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+        let metrics = PipelineMetrics::no_op();
+        let mut pipeline =
+            DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
         // Step on the pipeline and expect the result.
         let cursor = L2BlockInfo::default();
@@ -256,7 +279,9 @@ mod tests {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
         let attributes = TestNextAttributes::default();
-        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+        let metrics = NoopDerivationPipelineMetrics;
+        let mut pipeline =
+            DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
         // Step on the pipeline and expect the result.
         let cursor = L2BlockInfo::default();
@@ -270,7 +295,9 @@ mod tests {
         let mut l2_chain_provider = TestL2ChainProvider::default();
         l2_chain_provider.system_configs.insert(0, SystemConfig::default());
         let attributes = TestNextAttributes::default();
-        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+        let metrics = NoopDerivationPipelineMetrics;
+        let mut pipeline =
+            DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
         // Signal the pipeline to reset.
         let result = pipeline.signal(ActivationSignal::default().signal()).await;
@@ -282,7 +309,9 @@ mod tests {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
         let attributes = TestNextAttributes::default();
-        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+        let metrics = NoopDerivationPipelineMetrics;
+        let mut pipeline =
+            DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
         // Signal the pipeline to reset.
         let result = pipeline.signal(Signal::FlushChannel).await;
@@ -294,7 +323,9 @@ mod tests {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
         let attributes = TestNextAttributes::default();
-        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+        let metrics = NoopDerivationPipelineMetrics;
+        let mut pipeline =
+            DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
         // Signal the pipeline to reset.
         let result = pipeline.signal(ResetSignal::default().signal()).await.unwrap_err();
@@ -307,7 +338,9 @@ mod tests {
         let mut l2_chain_provider = TestL2ChainProvider::default();
         l2_chain_provider.system_configs.insert(0, SystemConfig::default());
         let attributes = TestNextAttributes::default();
-        let mut pipeline = DerivationPipeline::new(attributes, rollup_config, l2_chain_provider);
+        let metrics = NoopDerivationPipelineMetrics;
+        let mut pipeline =
+            DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
         // Signal the pipeline to reset.
         let result = pipeline.signal(ResetSignal::default().signal()).await;

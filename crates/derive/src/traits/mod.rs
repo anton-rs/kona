@@ -2,7 +2,9 @@
 //! pipeline.
 
 mod pipeline;
-pub use pipeline::{ActivationSignal, Pipeline, ResetSignal, Signal, StepResult};
+pub use pipeline::{
+    ActivationSignal, DerivationPipelineMetrics, Pipeline, ResetSignal, Signal, StepResult,
+};
 
 mod providers;
 pub use providers::{ChainProvider, L2ChainProvider};
