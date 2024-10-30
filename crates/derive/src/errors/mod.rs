@@ -1,4 +1,4 @@
-//! Error types for kona's derivation pipeline.
+//! Error types for the kona derivation pipeline.
 
 mod attributes;
 pub use attributes::BuilderError;
