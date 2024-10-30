@@ -17,4 +17,4 @@ pub mod boot;
 pub use boot::BootInfo;
 
 mod caching_oracle;
-pub use caching_oracle::CachingOracle;
+pub use caching_oracle::{CachingOracle, FlushableCache};

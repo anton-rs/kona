@@ -51,6 +51,28 @@ where
             hint_writer,
         }
     }
+
+    /// Flushes the cache, removing all entries.
+    pub fn flush(&self) {
+        self.cache.lock().clear();
+    }
+}
+
+/// A trait that provides a method to flush a cache.
+pub trait FlushableCache {
+    /// Flushes the cache, removing all entries.
+    fn flush(&self);
+}
+
+impl<OR, HW> FlushableCache for CachingOracle<OR, HW>
+where
+    OR: PreimageOracleClient,
+    HW: HintWriterClient,
+{
+    /// Flushes the cache, removing all entries.
+    fn flush(&self) {
+        self.cache.lock().clear();
+    }
 }
 
 #[async_trait]

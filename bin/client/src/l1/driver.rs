@@ -4,7 +4,7 @@
 //! [OpPayloadAttributes]: op_alloy_rpc_types_engine::OpPayloadAttributes
 
 use super::OracleL1ChainProvider;
-use crate::{l2::OracleL2ChainProvider, BootInfo, HintType};
+use crate::{l2::OracleL2ChainProvider, BootInfo, FlushableCache, HintType};
 use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
@@ -82,11 +82,13 @@ where
     l2_safe_head_header: Sealed<Header>,
     /// The inner pipeline.
     pipeline: OraclePipeline<O, B>,
+    /// The caching oracle.
+    caching_oracle: Arc<O>,
 }
 
 impl<O, B> DerivationDriver<O, B>
 where
-    O: CommsClient + Send + Sync + Debug,
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
     B: BlobProvider + Send + Sync + Debug + Clone,
 {
     /// Returns the current L2 safe head [L2BlockInfo].
@@ -117,7 +119,7 @@ where
     /// - A new [DerivationDriver] instance.
     pub async fn new(
         boot_info: &BootInfo,
-        caching_oracle: &O,
+        caching_oracle: &Arc<O>,
         blob_provider: B,
         mut chain_provider: OracleL1ChainProvider<O>,
         mut l2_chain_provider: OracleL2ChainProvider<O>,
@@ -160,7 +162,12 @@ where
             .origin(l1_origin)
             .build();
 
-        Ok(Self { l2_safe_head, l2_safe_head_header, pipeline })
+        Ok(Self {
+            l2_safe_head,
+            l2_safe_head_header,
+            pipeline,
+            caching_oracle: caching_oracle.clone(),
+        })
     }
 
     /// Produces the output root of the next L2 block.
@@ -280,6 +287,9 @@ where
                                         .signal(),
                                     )
                                     .await?;
+                            } else if matches!(e, ResetError::ReorgDetected(_, _)) {
+                                self.caching_oracle.as_ref().flush();
+                                self.pipeline.signal(Signal::FlushChannel).await?;
                             } else {
                                 // Reset the pipeline to the initial L2 safe head and L1 origin,
                                 // and try again.
