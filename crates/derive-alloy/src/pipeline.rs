@@ -66,6 +66,7 @@ pub fn new_online_pipeline(
         .chain_provider(chain_provider)
         .builder(builder)
         .origin(origin)
+        .metrics(PipelineMetrics::no_op())
         .build()
 }
 

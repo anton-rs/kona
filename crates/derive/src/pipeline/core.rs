@@ -194,7 +194,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        metrics::{NoopDerivationPipelineMetrics, PipelineMetrics},
+        metrics::{PipelineMetrics},
         pipeline::{DerivationPipeline, PipelineError, StepResult},
         test_utils::{TestL2ChainProvider, *},
         traits::{ActivationSignal, Pipeline, ResetSignal, Signal, SignalReceiver},
@@ -279,7 +279,7 @@ mod tests {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
         let attributes = TestNextAttributes::default();
-        let metrics = NoopDerivationPipelineMetrics;
+        let metrics = PipelineMetrics::no_op();
         let mut pipeline =
             DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
@@ -295,7 +295,7 @@ mod tests {
         let mut l2_chain_provider = TestL2ChainProvider::default();
         l2_chain_provider.system_configs.insert(0, SystemConfig::default());
         let attributes = TestNextAttributes::default();
-        let metrics = NoopDerivationPipelineMetrics;
+        let metrics = PipelineMetrics::no_op();
         let mut pipeline =
             DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
@@ -309,7 +309,7 @@ mod tests {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
         let attributes = TestNextAttributes::default();
-        let metrics = NoopDerivationPipelineMetrics;
+        let metrics = PipelineMetrics::no_op();
         let mut pipeline =
             DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
@@ -323,7 +323,7 @@ mod tests {
         let rollup_config = Arc::new(RollupConfig::default());
         let l2_chain_provider = TestL2ChainProvider::default();
         let attributes = TestNextAttributes::default();
-        let metrics = NoopDerivationPipelineMetrics;
+        let metrics = PipelineMetrics::no_op();
         let mut pipeline =
             DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 
@@ -338,7 +338,7 @@ mod tests {
         let mut l2_chain_provider = TestL2ChainProvider::default();
         l2_chain_provider.system_configs.insert(0, SystemConfig::default());
         let attributes = TestNextAttributes::default();
-        let metrics = NoopDerivationPipelineMetrics;
+        let metrics = PipelineMetrics::no_op();
         let mut pipeline =
             DerivationPipeline::new(attributes, rollup_config, l2_chain_provider, metrics);
 

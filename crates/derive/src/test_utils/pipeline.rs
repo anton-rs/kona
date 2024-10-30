@@ -99,5 +99,6 @@ pub fn new_test_pipeline() -> TestPipeline {
         .builder(TestAttributesBuilder::default())
         .chain_provider(TestChainProvider::default())
         .l2_chain_provider(TestL2ChainProvider::default())
+        .metrics(PipelineMetrics::no_op())
         .build()
 }
