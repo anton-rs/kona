@@ -170,8 +170,8 @@ impl BlobData {
         blobs: &[Box<Blob>],
         index: usize,
     ) -> Result<(), BlobDecodingError> {
-        // Do not fill if there is no calldata to fill
-        if self.calldata.as_ref().map_or(false, |data| data.is_empty()) {
+        // Do not fill if there is calldata here
+        if self.calldata.as_ref().map_or(false, |data| !data.is_empty()) {
             return Ok(());
         }
 
