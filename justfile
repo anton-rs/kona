@@ -158,3 +158,8 @@ monorepo:
 update-monorepo:
   [ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo
   cd monorepo && git rev-parse HEAD > ../.monorepo
+
+# Force pushes an empty commit to the git branch to trigger CI
+trigger:
+  git commit --amend --no-edit
+  git push --force-with-lease
