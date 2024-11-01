@@ -169,10 +169,10 @@ impl BlobData {
         &mut self,
         blobs: &[Box<Blob>],
         index: usize,
-    ) -> Result<(), BlobDecodingError> {
-        // Do not fill if there is no calldata to fill
-        if self.calldata.as_ref().map_or(false, |data| data.is_empty()) {
-            return Ok(());
+    ) -> Result<bool, BlobDecodingError> {
+        // Do not fill if there is calldata here
+        if self.calldata.is_some() {
+            return Ok(false);
         }
 
         if index >= blobs.len() {
@@ -184,7 +184,7 @@ impl BlobData {
         }
 
         self.data = Some(Bytes::from(*blobs[index]));
-        Ok(())
+        Ok(true)
     }
 }
 
@@ -326,8 +326,10 @@ where
         let mut blob_index = 0;
         for blob in data.iter_mut() {
             match blob.fill(&blobs, blob_index) {
-                Ok(_) => {
-                    blob_index += 1;
+                Ok(should_increment) => {
+                    if should_increment {
+                        blob_index += 1;
+                    }
                 }
                 Err(e) => {
                     return Err(e.into());
@@ -431,7 +433,7 @@ pub(crate) mod tests {
     fn test_cannot_fill_empty_calldata() {
         let mut blob_data = BlobData { calldata: Some(Bytes::new()), ..Default::default() };
         let blobs = vec![Box::new(Blob::with_last_byte(1u8))];
-        assert_eq!(blob_data.fill(&blobs, 0), Ok(()));
+        assert_eq!(blob_data.fill(&blobs, 0), Ok(false));
     }
 
     #[test]
@@ -453,7 +455,7 @@ pub(crate) mod tests {
     fn test_fill_blob() {
         let mut blob_data = BlobData::default();
         let blobs = vec![Box::new(Blob::with_last_byte(1u8))];
-        assert_eq!(blob_data.fill(&blobs, 0), Ok(()));
+        assert_eq!(blob_data.fill(&blobs, 0), Ok(true));
         let expected = Bytes::from([&[0u8; 131071][..], &[1u8]].concat());
         assert_eq!(blob_data.data, Some(expected));
     }
