@@ -9,3 +9,6 @@ monorepo/
 
 # Environment Variables
 .env
+
+# JetBrains
+**/.idea/
