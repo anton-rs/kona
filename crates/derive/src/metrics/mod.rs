@@ -4,7 +4,7 @@ mod noop;
 
 use alloc::sync::Arc;
 use core::fmt::Debug;
-
+use crate::pipeline::Signal;
 use crate::traits::{DerivationPipelineMetrics, StepResult};
 
 /// Composite metrics struct containing metrics for all stages.
@@ -24,11 +24,7 @@ impl DerivationPipelineMetrics for PipelineMetrics {
         self.derivation_pipeline_metrics.record_step_result(result)
     }
 
-    fn inc_reset_signals(&self) {
-        self.derivation_pipeline_metrics.inc_reset_signals()
-    }
-
-    fn inc_flush_channel_signals(&self) {
-        self.derivation_pipeline_metrics.inc_flush_channel_signals()
+    fn record_signal(&self, signal: &Signal) {
+        self.derivation_pipeline_metrics.record_signal(signal)
     }
 }

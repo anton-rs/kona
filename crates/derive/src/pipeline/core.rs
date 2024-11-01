@@ -106,7 +106,7 @@ where
         match signal {
             s @ Signal::Reset(ResetSignal { l2_safe_head, .. }) |
             s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
-                self.metrics.inc_reset_signals();
+                self.metrics.record_signal(&s);
 
                 let system_config = self
                     .l2_chain_provider
@@ -130,7 +130,7 @@ where
                 }
             }
             Signal::FlushChannel => {
-                self.metrics.inc_flush_channel_signals();
+                self.metrics.record_signal(&signal);
 
                 self.attributes.signal(signal).await?;
             }

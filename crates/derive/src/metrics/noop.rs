@@ -1,5 +1,6 @@
 use crate::{metrics::PipelineMetrics, pipeline::StepResult, traits::DerivationPipelineMetrics};
 use alloc::sync::Arc;
+use crate::pipeline::Signal;
 
 impl PipelineMetrics {
     /// No-op implementation for `PipelineMetrics`.
@@ -19,10 +20,8 @@ impl DerivationPipelineMetrics for NoopDerivationPipelineMetrics {
     fn record_step_result(&self, _result: &StepResult) {
         // No-op
     }
-    fn inc_reset_signals(&self) {
-        // No-op
-    }
-    fn inc_flush_channel_signals(&self) {
+
+    fn record_signal(&self, _signal: &Signal) {
         // No-op
     }
 }
