@@ -116,13 +116,13 @@ where
     }
 
     /// Builds the pipeline.
-    pub fn build(self) -> DerivationPipeline<AttributesQueueStage<D, P, T, B>, T, PipelineMetrics> {
+    pub fn build(self) -> DerivationPipeline<AttributesQueueStage<D, P, T, B>, T> {
         self.into()
     }
 }
 
 impl<B, P, T, D> From<PipelineBuilder<B, P, T, D>>
-    for DerivationPipeline<AttributesQueueStage<D, P, T, B>, T, PipelineMetrics>
+    for DerivationPipeline<AttributesQueueStage<D, P, T, B>, T>
 where
     B: AttributesBuilder + Send + Debug,
     P: ChainProvider + Send + Sync + Debug,

@@ -18,14 +18,14 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use tracing::{error, trace, warn};
+use crate::metrics::PipelineMetrics;
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]
-pub struct DerivationPipeline<S, P, M>
+pub struct DerivationPipeline<S, P>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
-    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// A handle to the next attributes.
     pub attributes: S,
@@ -38,42 +38,39 @@ where
     /// The L2 Chain Provider used to fetch the system config on reset.
     pub l2_chain_provider: P,
     /// Metrics collector.
-    pub metrics: M,
+    pub metrics: PipelineMetrics
 }
 
-impl<S, P, M> DerivationPipeline<S, P, M>
+impl<S, P> DerivationPipeline<S, P>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
-    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// Creates a new instance of the [DerivationPipeline].
     pub const fn new(
         attributes: S,
         rollup_config: Arc<RollupConfig>,
         l2_chain_provider: P,
-        metrics: M,
+        metrics: PipelineMetrics,
     ) -> Self {
         Self { attributes, prepared: VecDeque::new(), rollup_config, l2_chain_provider, metrics }
     }
 }
 
-impl<S, P, M> OriginProvider for DerivationPipeline<S, P, M>
+impl<S, P> OriginProvider for DerivationPipeline<S, P>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send,
     P: L2ChainProvider + Send + Sync + Debug,
-    M: DerivationPipelineMetrics + Send + Sync,
 {
     fn origin(&self) -> Option<BlockInfo> {
         self.attributes.origin()
     }
 }
 
-impl<S, P, M> Iterator for DerivationPipeline<S, P, M>
+impl<S, P> Iterator for DerivationPipeline<S, P>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
-    M: DerivationPipelineMetrics + Send + Sync,
 {
     type Item = OpAttributesWithParent;
 
@@ -83,11 +80,10 @@ where
 }
 
 #[async_trait]
-impl<S, P, M> SignalReceiver for DerivationPipeline<S, P, M>
+impl<S, P> SignalReceiver for DerivationPipeline<S, P>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
-    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// Signals the pipeline by calling the [`SignalReceiver::signal`] method.
     ///
@@ -140,11 +136,10 @@ where
 }
 
 #[async_trait]
-impl<S, P, M> Pipeline for DerivationPipeline<S, P, M>
+impl<S, P> Pipeline for DerivationPipeline<S, P>
 where
     S: NextAttributes + SignalReceiver + OriginProvider + OriginAdvancer + Debug + Send + Sync,
     P: L2ChainProvider + Send + Sync + Debug,
-    M: DerivationPipelineMetrics + Send + Sync,
 {
     /// Peeks at the next prepared [OpAttributesWithParent] from the pipeline.
     fn peek(&self) -> Option<&OpAttributesWithParent> {
