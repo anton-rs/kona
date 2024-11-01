@@ -10,7 +10,9 @@ mod providers;
 pub use providers::{ChainProvider, L2ChainProvider};
 
 mod attributes;
-pub use attributes::{AttributesBuilder, AttributesProvider, NextAttributes};
+pub use attributes::{
+    AttributesBuilder, AttributesProvider, AttributesQueueMetrics, NextAttributes,
+};
 
 mod data_sources;
 pub use data_sources::{AsyncIterator, BlobProvider, DataAvailabilityProvider};

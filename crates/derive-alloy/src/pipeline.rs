@@ -18,11 +18,8 @@ use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 
 /// An online derivation pipeline.
-pub type OnlinePipeline = DerivationPipeline<
-    OnlineAttributesQueue<OnlineDataProvider>,
-    AlloyL2ChainProvider,
-    PipelineMetrics,
->;
+pub type OnlinePipeline =
+    DerivationPipeline<OnlineAttributesQueue<OnlineDataProvider>, AlloyL2ChainProvider>;
 
 /// An `online` Ethereum data source.
 pub type OnlineDataProvider = EthereumDataSource<

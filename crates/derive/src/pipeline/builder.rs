@@ -150,8 +150,12 @@ where
             BatchStream::new(channel_reader, rollup_config.clone(), l2_chain_provider.clone());
         let batch_provider =
             BatchProvider::new(rollup_config.clone(), batch_stream, l2_chain_provider.clone());
-        let attributes =
-            AttributesQueue::new(rollup_config.clone(), batch_provider, attributes_builder);
+        let attributes = AttributesQueue::new(
+            rollup_config.clone(),
+            batch_provider,
+            attributes_builder,
+            metrics.clone(),
+        );
 
         // Create the pipeline.
         Self::new(attributes, rollup_config, l2_chain_provider, metrics)

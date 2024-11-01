@@ -47,3 +47,9 @@ pub trait AttributesBuilder {
         epoch: BlockNumHash,
     ) -> PipelineResult<OpPayloadAttributes>;
 }
+
+/// Metrics trait for `AttributesQueue` stage.
+pub trait AttributesQueueMetrics {
+    /// Records something.
+    fn record_some_metric(&self);
+}

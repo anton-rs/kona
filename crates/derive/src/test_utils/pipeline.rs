@@ -87,8 +87,7 @@ pub type TestBatchProvider = BatchProvider<TestBatchStream, TestL2ChainProvider>
 pub type TestAttributesQueue = AttributesQueue<TestBatchProvider, TestAttributesBuilder>;
 
 /// A [DerivationPipeline] using test providers and sources.
-pub type TestPipeline =
-    DerivationPipeline<TestAttributesQueue, TestL2ChainProvider, PipelineMetrics>;
+pub type TestPipeline = DerivationPipeline<TestAttributesQueue, TestL2ChainProvider>;
 
 /// Constructs a [DerivationPipeline] using test providers and sources.
 pub fn new_test_pipeline() -> TestPipeline {

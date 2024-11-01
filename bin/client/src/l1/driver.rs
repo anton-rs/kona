@@ -38,7 +38,6 @@ use tracing::{error, info, warn};
 pub type OraclePipeline<O, B> = DerivationPipeline<
     OracleAttributesQueue<OracleDataProvider<O, B>, O>,
     OracleL2ChainProvider<O>,
-    PipelineMetrics,
 >;
 
 /// An oracle-backed Ethereum data source.
