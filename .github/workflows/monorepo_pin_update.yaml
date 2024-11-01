@@ -14,16 +14,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }} 
+          token: ${{ secrets.PAT_TOKEN }}
       - uses: taiki-e/install-action@just
       - uses: dtolnay/rust-toolchain@stable
-      - name: Update Monorepo Commit 
+      - name: Update Monorepo Commit
         run: just update-monorepo
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           commit-message: Update Monorepo Commit
           signoff: false
           branch: bot/update-monorepo
@@ -32,7 +32,7 @@ jobs:
           title: '[BOT] Update Monorepo'
           body: |
             ### Description
-            
+
             Automated PR to update the monorepo commit.
           labels: |
             A-ci
