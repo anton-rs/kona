@@ -145,11 +145,117 @@ assert_eq!(pipeline.origin(), Some(origin));
 
 ## Producing Payload Attributes
 
-...
+Since the [`Pipeline`][p] trait extends the [`Iterator`][iterator] trait,
+producing [`OpAttributesWithParent`][attributes] is as simple as as calling
+[`Iterator::next()`][next] method on the [`DerivationPipeline`][dp].
+
+Extending the example from above, producing the attributes is shown below.
+
+```rust
+// Import the iterator trait to show where `.next` is sourced.
+use core::iter::Iterator;
+
+// ...
+// example from above constructing the pipeline
+// ...
+
+let attributes = pipeline.next();
+
+// Since we haven't stepped on the pipeline,
+// there shouldn't be any payload attributes prepared.
+assert!(attributes.is_none());
+```
+
+As demonstrated, the pipeline won't have any payload attributes
+without having been "stepped" on. Naively, we can continuously
+step on the pipeline until attributes are ready, and then consume them.
+
+```rust
+// Import the iterator trait to show where `.next` is sourced.
+use core::iter::Iterator;
+
+// ...
+// example from constructing the pipeline
+// ...
+
+// Continuously step on the pipeline until attributes are prepared.
+let l2_safe_head = L2BlockInfo::default();
+loop {
+   if matches!(pipeline.step(l2_safe_head).await, StepResult::PreparedAttributes) {
+      // The pipeline has succesfully prepared payload attributes, break the loop.
+      break;
+   }
+}
+
+// Since the loop is only broken once attributes are prepared,
+// this must be `Option::Some`.
+let attributes = pipeline.next().expect("Must contain payload attributes");
+
+// The parent of the prepared payload attributes should be
+// the l2 safe head that we "stepped on".
+assert_eq!(attributes.parent, l2_safe_head);
+```
+
+Importantly, the above is not sufficient logic to produce payload attributes and drive
+the derivation pipeline. There are multiple different `StepResult`s to handle when
+stepping on the pipeline, including advancing the origin, re-orgs, and pipeline resets.
+In the next section, pipeline resets are outlined.
+
+For an up-to-date driver that runs the derivation pipeline as part of the fault proof
+program, reference kona's [client driver][driver].
+
 
 ## Resets
 
-...
+When stepping on the [`DerivationPipeline`][dp] produces a reset error, the driver
+of the pipeline must perform a reset on the pipeline. This is done by sending a "signal"
+through the [`DerivationPipeline`][dp]. Below demonstrates this.
+
+```rust
+// Import the iterator trait to show where `.next` is sourced.
+use core::iter::Iterator;
+
+// ...
+// example from constructing the pipeline
+// ...
+
+// Continuously step on the pipeline until attributes are prepared.
+let l2_safe_head = L2BlockInfo::default();
+loop {
+   match pipeline.step(l2_safe_head).await {
+      StepResult::StepFailed(e) | StepResult::OriginAdvanceErr(e) => {
+         match e {
+            PipelineErrorKind::Reset(e) => {
+               // Get the system config from the provider.
+               let system_config = l2_chain_provider
+                  .system_config_by_number(
+                     l2_safe_head.block_info.number,
+                     rollup_config.clone(),
+                  )
+                  .await?;
+               // Reset the pipeline to the initial L2 safe head and L1 origin.
+               self.pipeline
+                  .signal(
+                      ResetSignal {
+                          l2_safe_head: l2_safe_head,
+                          l1_origin: pipeline
+                              .origin()
+                              .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                          system_config: Some(system_config),
+                      }
+                      .signal(),
+                  )
+                  .await?;
+               // ...
+            }
+            _ => { /* Handling left to the driver */ }
+         }
+      }
+      _ => { /* Handling left to the driver */ }
+   }
+}
+```
+
 
 ## Learn More
 
@@ -179,6 +285,8 @@ So, [@clabby][clabby] and [@refcell][refcell] stood up [kona][kona] in a few mon
 
 <!-- Links -->
 
+[driver]: https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74
+[next]: https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#tymethod.next
 [builder]: https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html
 [alloy]: https://github.com/alloy-rs/alloy
 [ethers-rs]: https://github.com/gakonst/ethers-rs
