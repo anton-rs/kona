@@ -1,13 +1,12 @@
 //! Contains an online implementation of the `BlobProvider` trait.
 
+use crate::{BeaconClient, OnlineBeaconClient};
 use alloy_eips::eip4844::{Blob, BlobTransactionSidecarItem};
 use alloy_rpc_types_beacon::sidecar::BlobData;
 use async_trait::async_trait;
 use kona_derive::{errors::BlobProviderError, sources::IndexedBlobHash, traits::BlobProvider};
 use op_alloy_protocol::BlockInfo;
 use tracing::warn;
-
-use crate::{BeaconClient, OnlineBeaconClient};
 
 /// An online implementation of the [BlobProvider] trait.
 #[derive(Debug, Clone)]

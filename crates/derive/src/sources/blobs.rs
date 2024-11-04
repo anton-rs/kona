@@ -4,7 +4,7 @@ use crate::{
     errors::{BlobDecodingError, BlobProviderError, PipelineError, PipelineResult},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
 };
-use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
+use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_eips::eip4844::{Blob, BYTES_PER_BLOB, VERSIONED_HASH_VERSION_KZG};
 use alloy_primitives::{Address, Bytes, B256};
