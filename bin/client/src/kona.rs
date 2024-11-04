@@ -18,6 +18,7 @@ use kona_common_proc::client_entry;
 
 pub(crate) mod fault;
 use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
+use tracing::{error, info, warn};
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
@@ -44,6 +45,17 @@ fn main() -> Result<()> {
         let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
         let beacon = OracleBlobProvider::new(oracle.clone());
 
+        // If the genesis block is claimed, we can exit early.
+        // The agreed upon prestate is consented to by all parties, and there is no state
+        // transition, so the claim is valid if the claimed output root matches the agreed
+        // upon output root.
+        if boot.claimed_l2_block_number == 0 {
+            warn!("Genesis block claimed. Exiting early.");
+            let exit_code =
+                if boot.agreed_l2_output_root == boot.claimed_l2_output_root { 0 } else { 1 };
+            io::exit(exit_code);
+        }
+
         ////////////////////////////////////////////////////////////////
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
@@ -69,7 +81,7 @@ fn main() -> Result<()> {
         ////////////////////////////////////////////////////////////////
 
         if output_root != boot.claimed_l2_output_root {
-            tracing::error!(
+            error!(
                 target: "client",
                 "Failed to validate L2 block #{number} with output root {output_root}",
                 number = number,
@@ -83,7 +95,7 @@ fn main() -> Result<()> {
             io::exit(1);
         }
 
-        tracing::info!(
+        info!(
             target: "client",
             "Successfully validated L2 block #{number} with output root {output_root}",
             number = number,

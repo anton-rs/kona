@@ -273,8 +273,11 @@ where
                         .transactions
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()))
-                        .collect::<alloy_rlp::Result<Vec<OpTxEnvelope>>>()?,
+                        .map(|tx| {
+                            OpTxEnvelope::decode(&mut tx.as_ref())
+                                .map_err(|e| anyhow!("Failed to decode transaction: {}", e))
+                        })
+                        .collect::<Result<Vec<OpTxEnvelope>>>()?,
                     ommers: Vec::new(),
                     withdrawals: None,
                 },

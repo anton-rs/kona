@@ -1,14 +1,14 @@
 //! Error types for the client program.
 
 use alloc::string::ToString;
-use derive_more::{derive::Display, Error};
+use derive_more::derive::Display;
 use kona_derive::errors::{PipelineError, PipelineErrorKind};
 use kona_mpt::OrderedListWalkerError;
 use kona_preimage::errors::PreimageOracleError;
 use op_alloy_protocol::{FromBlockError, OpBlockConversionError};
 
 /// Error from an oracle-backed provider.
-#[derive(Error, Display, Debug)]
+#[derive(Display, Debug)]
 pub enum OracleProviderError {
     /// Requested block number is past the chain head.
     #[display("Block number ({_0}) past chain head ({_1})")]
@@ -32,6 +32,8 @@ pub enum OracleProviderError {
     #[display("Slice conversion error: {_0}")]
     SliceConversion(core::array::TryFromSliceError),
 }
+
+impl core::error::Error for OracleProviderError {}
 
 impl From<OracleProviderError> for PipelineErrorKind {
     fn from(val: OracleProviderError) -> Self {
