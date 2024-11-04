@@ -5,14 +5,15 @@
 
 use super::OracleL1ChainProvider;
 use crate::{l2::OracleL2ChainProvider, BootInfo, FlushableCache, HintType};
-use alloc::{sync::Arc, vec::Vec};
-use alloy_consensus::{Header, Sealed};
+use alloc::{string::ToString, sync::Arc, vec::Vec};
+use alloy_consensus::{BlockBody, Header, Sealable, Sealed};
 use alloy_primitives::B256;
+use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
-    errors::{PipelineErrorKind, ResetError},
+    errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
@@ -27,7 +28,7 @@ use kona_derive::{
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
 use kona_mpt::{TrieHinter, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use op_alloy_consensus::OpTxType;
+use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
@@ -80,6 +81,10 @@ where
     l2_safe_head: L2BlockInfo,
     /// The header of the L2 safe head.
     l2_safe_head_header: Sealed<Header>,
+    /// The output root of the L2 safe head.
+    l2_safe_head_output_root: B256,
+    /// The target L2 block number.
+    target_block_number: u64,
     /// The inner pipeline.
     pipeline: OraclePipeline<O, B>,
     /// The caching oracle.
@@ -127,21 +132,13 @@ where
         let cfg = Arc::new(boot_info.rollup_config.clone());
 
         // Fetch the startup information.
-        let (l1_origin, l2_safe_head, l2_safe_head_header) = Self::find_startup_info(
+        let (l1_origin, l2_safe_head, l2_safe_head_header) = Self::sync_start(
             caching_oracle,
             boot_info,
             &mut chain_provider,
             &mut l2_chain_provider,
         )
         .await?;
-
-        // Construct the pipeline.
-        let attributes = StatefulAttributesBuilder::new(
-            cfg.clone(),
-            l2_chain_provider.clone(),
-            chain_provider.clone(),
-        );
-        let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider, &cfg);
 
         // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
         // captured.
@@ -152,6 +149,14 @@ where
             l1_origin_number = boot_info.rollup_config.genesis.l1.number;
         }
         let l1_origin = chain_provider.block_info_by_number(l1_origin_number).await?;
+
+        // Construct the pipeline.
+        let attributes = StatefulAttributesBuilder::new(
+            cfg.clone(),
+            l2_chain_provider.clone(),
+            chain_provider.clone(),
+        );
+        let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider, &cfg);
 
         let pipeline = PipelineBuilder::new()
             .rollup_config(cfg)
@@ -165,12 +170,14 @@ where
         Ok(Self {
             l2_safe_head,
             l2_safe_head_header,
+            l2_safe_head_output_root: boot_info.agreed_l2_output_root,
+            target_block_number: boot_info.claimed_l2_block_number,
             pipeline,
             caching_oracle: caching_oracle.clone(),
         })
     }
 
-    /// Produces the output root of the next L2 block.
+    /// Advances the derivation pipeline to L2 block # [Self::target_block_number].
     ///
     /// ## Takes
     /// - `cfg`: The rollup configuration.
@@ -182,7 +189,7 @@ where
     /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
     ///   output root.
     /// - `Err(e)` - An error if the block could not be produced.
-    pub async fn produce_output<P, H>(
+    pub async fn advance_to_target<P, H>(
         &mut self,
         cfg: &RollupConfig,
         provider: &P,
@@ -194,11 +201,31 @@ where
         H: TrieHinter + Send + Sync + Clone,
     {
         loop {
-            let OpAttributesWithParent { mut attributes, .. } = self.produce_payload().await?;
+            // Check if we have reached the target block number.
+            if self.l2_safe_head().block_info.number >= self.target_block_number {
+                info!(target: "client", "Derivation complete, reached L2 safe head.");
+                return Ok((self.l2_safe_head.block_info.number, self.l2_safe_head_output_root));
+            }
+
+            let OpAttributesWithParent { mut attributes, .. } = match self.produce_payload().await {
+                Ok(attrs) => attrs,
+                Err(PipelineErrorKind::Critical(PipelineError::EndOfSource)) => {
+                    warn!(target: "client", "Exhausted data source; Halting derivation and using current safe head.");
+
+                    // Adjust the target block number to the current safe head, as no more blocks can
+                    // be produced.
+                    self.target_block_number = self.l2_safe_head.block_info.number;
+                    continue;
+                }
+                Err(e) => {
+                    error!(target: "client", "Failed to produce payload: {:?}", e);
+                    return Err(e.into());
+                }
+            };
 
             let mut executor = self.new_executor(cfg, provider, hinter, handle_register);
-            let number = match executor.execute_payload(attributes.clone()) {
-                Ok(Header { number, .. }) => *number,
+            let header = match executor.execute_payload(attributes.clone()) {
+                Ok(header) => header,
                 Err(e) => {
                     error!(target: "client", "Failed to execute L2 block: {}", e);
 
@@ -221,8 +248,8 @@ where
 
                         // Retry the execution.
                         executor = self.new_executor(cfg, provider, hinter, handle_register);
-                        match executor.execute_payload(attributes) {
-                            Ok(Header { number, .. }) => *number,
+                        match executor.execute_payload(attributes.clone()) {
+                            Ok(header) => header,
                             Err(e) => {
                                 error!(
                                     target: "client",
@@ -232,19 +259,38 @@ where
                             }
                         }
                     } else {
+                        // Pre-Holocene, discard the block if execution fails.
                         continue;
                     }
                 }
             };
-            let output_root = executor.compute_output_root()?;
 
-            return Ok((number, output_root));
+            // Construct the block.
+            let block = OpBlock {
+                header: header.clone(),
+                body: BlockBody {
+                    transactions: attributes
+                        .transactions
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()))
+                        .collect::<alloy_rlp::Result<Vec<OpTxEnvelope>>>()?,
+                    ommers: Vec::new(),
+                    withdrawals: None,
+                },
+            };
+
+            // Update the safe head.
+            self.l2_safe_head =
+                L2BlockInfo::from_block_and_genesis(&block, &self.pipeline.rollup_config.genesis)?;
+            self.l2_safe_head_header = header.clone().seal_slow();
+            self.l2_safe_head_output_root = executor.compute_output_root()?;
         }
     }
 
     /// Produces the disputed [OpAttributesWithParent] payload, directly after the starting L2
     /// output root passed through the [BootInfo].
-    async fn produce_payload(&mut self) -> Result<OpAttributesWithParent> {
+    async fn produce_payload(&mut self) -> PipelineResult<OpAttributesWithParent> {
         // As we start the safe head at the disputed block's parent, we step the pipeline until the
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.
@@ -263,7 +309,7 @@ where
                     // complete the current step. In this case, we retry the step to see if other
                     // stages can make progress.
                     match e {
-                        PipelineErrorKind::Temporary(_) => { /* continue */ }
+                        PipelineErrorKind::Temporary(_) => continue,
                         PipelineErrorKind::Reset(e) => {
                             let system_config = self
                                 .pipeline
@@ -272,7 +318,9 @@ where
                                     self.l2_safe_head.block_info.number,
                                     self.pipeline.rollup_config.clone(),
                                 )
-                                .await?;
+                                .await
+                                .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
+
                             if matches!(e, ResetError::HoloceneActivation) {
                                 self.pipeline
                                     .signal(
@@ -281,16 +329,18 @@ where
                                             l1_origin: self
                                                 .pipeline
                                                 .origin()
-                                                .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                                .ok_or(PipelineError::MissingOrigin.crit())?,
                                             system_config: Some(system_config),
                                         }
                                         .signal(),
                                     )
                                     .await?;
                             } else {
+                                // Flush the caching oracle if a reorg is detected.
                                 if matches!(e, ResetError::ReorgDetected(_, _)) {
                                     self.caching_oracle.as_ref().flush();
                                 }
+
                                 // Reset the pipeline to the initial L2 safe head and L1 origin,
                                 // and try again.
                                 self.pipeline
@@ -300,7 +350,7 @@ where
                                             l1_origin: self
                                                 .pipeline
                                                 .origin()
-                                                .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                                                .ok_or(PipelineError::MissingOrigin.crit())?,
                                             system_config: Some(system_config),
                                         }
                                         .signal(),
@@ -308,7 +358,7 @@ where
                                     .await?;
                             }
                         }
-                        PipelineErrorKind::Critical(_) => return Err(e.into()),
+                        PipelineErrorKind::Critical(_) => return Err(e),
                     }
                 }
             }
@@ -329,7 +379,7 @@ where
     ///
     /// ## Returns
     /// - A tuple containing the L1 origin block information and the L2 safe head information.
-    async fn find_startup_info(
+    async fn sync_start(
         caching_oracle: &O,
         boot_info: &BootInfo,
         chain_provider: &mut OracleL1ChainProvider<O>,

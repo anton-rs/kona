@@ -7,7 +7,7 @@ use crate::{
         Pipeline, ResetSignal, Signal, SignalReceiver, StepResult,
     },
 };
-use alloc::{boxed::Box, collections::VecDeque, string::ToString, sync::Arc};
+use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;

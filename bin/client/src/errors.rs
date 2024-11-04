@@ -35,6 +35,9 @@ pub enum OracleProviderError {
 
 impl Into<PipelineErrorKind> for OracleProviderError {
     fn into(self) -> PipelineErrorKind {
-        PipelineError::Provider(self.to_string()).crit()
+        match self {
+            Self::BlockNumberPastHead(_, _) => PipelineError::EndOfSource.crit(),
+            _ => PipelineError::Provider(self.to_string()).crit(),
+        }
     }
 }
