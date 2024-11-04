@@ -1,5 +1,6 @@
 //! Chain providers for the derivation pipeline.
 
+use crate::errors::PipelineErrorKind;
 use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
@@ -12,7 +13,7 @@ use op_alloy_protocol::{BatchValidationProvider, BlockInfo};
 #[async_trait]
 pub trait ChainProvider {
     /// The error type for the [ChainProvider].
-    type Error: Display + ToString;
+    type Error: Display + ToString + Into<PipelineErrorKind>;
 
     /// Fetch the L1 [Header] for the given [B256] hash.
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error>;
@@ -34,11 +35,27 @@ pub trait ChainProvider {
 
 /// Describes the functionality of a data source that fetches safe blocks.
 #[async_trait]
-pub trait L2ChainProvider: BatchValidationProvider {
+pub trait L2ChainProvider: BatchValidationProviderDerive {
+    /// The error type for the [L2ChainProvider].
+    type Error: Display + ToString + Into<PipelineErrorKind>;
+
     /// Returns the [SystemConfig] by L2 number.
     async fn system_config_by_number(
         &mut self,
         number: u64,
         rollup_config: Arc<RollupConfig>,
-    ) -> Result<SystemConfig, Self::Error>;
+    ) -> Result<SystemConfig, <Self as L2ChainProvider>::Error>;
+}
+
+/// A super-trait for [BatchValidationProvider] that binds `Self::Error` to have a conversion into
+/// [PipelineErrorKind].
+pub trait BatchValidationProviderDerive: BatchValidationProvider {}
+
+// Auto-implement the [BatchValidationProviderDerive] trait for all types that implement
+// [BatchValidationProvider] where the error can be converted into [PipelineErrorKind].
+impl<T> BatchValidationProviderDerive for T
+where
+    T: BatchValidationProvider,
+    <T as BatchValidationProvider>::Error: Into<PipelineErrorKind>,
+{
 }

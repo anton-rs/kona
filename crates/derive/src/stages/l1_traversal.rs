@@ -8,7 +8,7 @@ use crate::{
         SignalReceiver,
     },
 };
-use alloc::{boxed::Box, string::ToString, sync::Arc};
+use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
@@ -80,10 +80,8 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
                 return Err(PipelineError::Eof.temp());
             }
         };
-        let next_l1_origin = match self.data_source.block_info_by_number(block.number + 1).await {
-            Ok(block) => block,
-            Err(e) => return Err(PipelineError::Provider(e.to_string()).temp()),
-        };
+        let next_l1_origin =
+            self.data_source.block_info_by_number(block.number + 1).await.map_err(Into::into)?;
 
         // Check block hashes for reorgs.
         if block.hash != next_l1_origin.parent_hash {
@@ -91,10 +89,8 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         }
 
         // Fetch receipts for the next l1 block and update the system config.
-        let receipts = match self.data_source.receipts_by_hash(next_l1_origin.hash).await {
-            Ok(receipts) => receipts,
-            Err(e) => return Err(PipelineError::Provider(e.to_string()).temp()),
-        };
+        let receipts =
+            self.data_source.receipts_by_hash(next_l1_origin.hash).await.map_err(Into::into)?;
 
         if let Err(e) = self.system_config.update_with_receipts(
             receipts.as_slice(),

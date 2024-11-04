@@ -110,6 +110,9 @@ pub enum PipelineError {
     /// [PipelineEncodingError] variant.
     #[display("Decode error: {_0}")]
     BadEncoding(PipelineEncodingError),
+    /// The data source can no longer provide any more data.
+    #[display("Data source exhausted")]
+    EndOfSource,
     /// Provider error variant.
     #[display("Blob provider error: {_0}")]
     Provider(String),
