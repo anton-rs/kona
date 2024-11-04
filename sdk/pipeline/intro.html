@@ -1,0 +1,525 @@
+<!DOCTYPE HTML>
+<html lang="en" class="ferra" dir="ltr">
+
+<head>
+    <!-- Book generated using mdBook -->
+    <meta charset="UTF-8">
+    <title>kona-derive Pipeline - The Kona Book</title>
+
+
+    <!-- Custom HTML head -->
+    
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="icon" href="../../favicon.svg">
+    <link rel="shortcut icon" href="../../favicon.png">
+    <link rel="stylesheet" href="../../css/variables.css">
+    <link rel="stylesheet" href="../../css/general.css">
+    <link rel="stylesheet" href="../../css/chrome.css">
+    <link rel="stylesheet" href="../../css/print.css" media="print">
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+    <link rel="stylesheet" href="../../fonts/fonts.css">
+
+    <!-- Highlight.js Stylesheets -->
+    <link rel="stylesheet" href="../../highlight.css">
+    <link rel="stylesheet" href="../../tomorrow-night.css">
+    <link rel="stylesheet" href="../../ayu-highlight.css">
+
+    <!-- Custom theme stylesheets -->
+    <link rel="stylesheet" href="../../custom.css">
+
+</head>
+
+<body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ferra" : "ferra";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('ferra')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch (e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/intro.html" class="active"><strong aria-hidden="true">3.4.</strong> kona-derive Pipeline</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../sdk/pipeline/providers.html"><strong aria-hidden="true">3.4.1.</strong> Custom Providers</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/stages.html"><strong aria-hidden="true">3.4.2.</strong> Stage Swapping</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/signaling.html"><strong aria-hidden="true">3.4.3.</strong> Signaling</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function (e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor"
+                            title="Toggle Table of Contents" aria-label="Toggle Table of Contents"
+                            aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme"
+                            aria-label="Change theme" aria-haspopup="true" aria-expanded="false"
+                            aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ferra">Ferra</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)"
+                            aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S"
+                            aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Kona Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/pipeline/intro.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..."
+                            aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function (link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="the-kona-derive-derivation-pipeline"><a class="header" href="#the-kona-derive-derivation-pipeline">The <code>kona-derive</code> Derivation Pipeline</a></h1>
+<p><a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a> defines an entirely trait-abstracted, <code>no_std</code> derivation
+pipeline for the OP Stack. It can be used through the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.Pipeline.html"><code>Pipeline</code></a> trait,
+which is implemented for the concrete <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a> object.</p>
+<p>This document dives into the inner workings of the derivation pipeline, its
+stages, and how to build and interface with Kona's pipeline. Other documents
+in this section will provide a comprehensive overview of Derivation Pipeline
+extensibility including trait-abstracted providers, custom stages, signaling,
+and hardfork activation including multiplexed stages.</p>
+<ul>
+<li><a href="./stages.html">Swapping out a stage</a></li>
+<li><a href="./providers.html">Defining a custom Provider</a></li>
+<li><a href="./signals.html">Extending Pipeline Signals</a></li>
+<li><a href="./hardforks.html">Implementing Hardfork Activations</a></li>
+</ul>
+<h2 id="what-is-a-derivation-pipeline"><a class="header" href="#what-is-a-derivation-pipeline">What is a Derivation Pipeline?</a></h2>
+<p>Simply put, an OP Stack Derivation Pipeline transforms data on L1 into L2
+payload attributes that can be executed to produce the canonical L2 block.</p>
+<p>Within a pipeline, there are a set of stages that break up this transformation
+further. When composed, these stages operate over the input data, sequentially
+producing payload attributes.</p>
+<p>In <a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a>, stages are architected using composition - each sequential
+stage owns the previous one, forming a stack. For example, let's define stage A
+as the first stage, accepting raw L1 input data, and stage C produces the pipeline
+output - payload attributes. Stage B "owns" stage A, and stage C then owns stage B.
+Using this example, the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a> type in <a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a> only
+holds stage C, since ownership of the other stages is nested within stage C.</p>
+<blockquote>
+<p>[!NOTE]</p>
+<p>In a future architecture of the derivation pipeline, stages could be made
+standalone such that communication between stages happens through channels.
+In a multi-threaded, non-fault-proof environment, these stages can then
+run in parallel since stage ownership is decoupled.</p>
+</blockquote>
+<h2 id="konas-derivation-pipeline"><a class="header" href="#konas-derivation-pipeline">Kona's Derivation Pipeline</a></h2>
+<p>The top-level stage in <a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a> that produces
+<a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpAttributesWithParent.html"><code>OpAttributesWithParent</code></a> is the <a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.AttributesQueue.html"><code>AttributesQueue</code></a>.</p>
+<p>Post-Holocene (the Holocene hardfork), the following stages are composed by
+the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>.</p>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.AttributesQueue.html"><code>AttributesQueue</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.BatchProvider.html"><code>BatchProvider</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.BatchStream.html"><code>BatchStream</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.ChannelReader.html"><code>ChannelReader</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.ChannelProvider.html"><code>ChannelProvider</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.FrameQueue.html"><code>FrameQueue</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.L1Retrieval.html"><code>L1Retrieval</code></a>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.L1Traversal.html"><code>L1Traversal</code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Notice, from top to bottom, each stage owns the stage nested below it.
+Where the <a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.L1Traversal.html"><code>L1Traversal</code></a> stage iterates over L1 data, the
+<a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.AttributesQueue.html"><code>AttributesQueue</code></a> stage produces
+<a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpAttributesWithParent.html"><code>OpAttributesWithParent</code></a>, creating a function that transforms
+L1 data into payload attributes.</p>
+<h2 id="the-pipeline-interface"><a class="header" href="#the-pipeline-interface">The <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.Pipeline.html"><code>Pipeline</code></a> interface</a></h2>
+<p>Now that we've broken down the stages inside the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>
+type, let's move up another level to break down how the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>
+type functions itself. At the highest level, <a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a> defines the
+interface for working with the pipeline through the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.Pipeline.html"><code>Pipeline</code></a> trait.</p>
+<p><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.Pipeline.html"><code>Pipeline</code></a> provides two core methods.</p>
+<ul>
+<li><code>peek() -&gt; Option&lt;&amp;OpAttributesWithParent&gt;</code></li>
+<li><code>async step() -&gt; StepResult</code></li>
+</ul>
+<p>Functionally, a pipeline can be "stepped" on, which attempts to derive
+payload attributes from input data. Steps do not guarantee that payload attributes
+are produced, they only attempt to advance the stages within the pipeline.</p>
+<p>The <code>peek()</code> method provides a way to check if attributes are prepared.
+Beyond <code>peek()</code> returning <code>Option::Some(&amp;OpAttributesWithParent)</code>, the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.Pipeline.html"><code>Pipeline</code></a>
+extends the <a href="https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html">Iterator</a> trait, providing a way to consume the generated payload
+attributes.</p>
+<h2 id="constructing-a-derivation-pipeline"><a class="header" href="#constructing-a-derivation-pipeline">Constructing a Derivation Pipeline</a></h2>
+<p><a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a> provides a <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html"><code>PipelineBuilder</code></a> to abstract the complexity
+of generics away from the downstream consumers. Below we provide an example for using
+the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html"><code>PipelineBuilder</code></a> to instantiate a <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Imports
+use std::sync::Arc;
+use op_alloy_protocol::BlockInfo;
+use op_alloy_genesis::RollupConfig;
+use kona_derive_alloy::prelude::*;
+
+// Use a default rollup config.
+let rollup_config = Arc::new(RollupConfig::default());
+
+// Providers are instantiated to with localhost urls (`127.0.0.1`)
+let chain_provider =
+    AlloyChainProvider::new_http("http://127.0.0.1:8545".try_into().unwrap());
+let l2_chain_provider = AlloyL2ChainProvider::new_http(
+    "http://127.0.0.1:9545".try_into().unwrap(),
+    rollup_config.clone(),
+);
+let beacon_client = OnlineBeaconClient::new_http("http://127.0.0.1:5555".into());
+let blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
+let blob_provider = OnlineBlobProviderWithFallback::new(blob_provider, None);
+let dap_source =
+    EthereumDataSource::new(chain_provider.clone(), blob_provider, &amp;rollup_config);
+let builder = StatefulAttributesBuilder::new(
+    rollup_config.clone(),
+    l2_chain_provider.clone(),
+    chain_provider.clone(),
+);
+
+// This is the starting L1 block for the pipeline.
+//
+// To get the starting L1 block for a given L2 block,
+// use the `AlloyL2ChainProvider::l2_block_info_by_number`
+// method to get the `L2BlockInfo.l1_origin`. This l1_origin
+// is the origin that can be passed here.
+let origin = BlockInfo::default();
+
+// Build the pipeline using the `PipelineBuilder`.
+// Alternatively, use the `new_online_pipeline` helper
+// method provided by the `kona-derive-alloy` crate.
+let pipeline = PipelineBuilder::new()
+   .rollup_config(rollup_config.clone())
+   .dap_source(dap_source)
+   .l2_chain_provider(l2_chain_provider)
+   .chain_provider(chain_provider)
+   .builder(builder)
+   .origin(origin)
+   .build();
+
+assert_eq!(pipeline.rollup_config, rollup_config);
+assert_eq!(pipeline.origin(), Some(origin));
+<span class="boring">}</span></code></pre></pre>
+<h2 id="producing-payload-attributes"><a class="header" href="#producing-payload-attributes">Producing Payload Attributes</a></h2>
+<p>Since the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.Pipeline.html"><code>Pipeline</code></a> trait extends the <a href="https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html"><code>Iterator</code></a> trait,
+producing <a href="https://docs.rs/op-alloy-rpc-types-engine/latest/op_alloy_rpc_types_engine/struct.OpAttributesWithParent.html"><code>OpAttributesWithParent</code></a> is as simple as as calling
+<a href="https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#tymethod.next"><code>Iterator::next()</code></a> method on the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>.</p>
+<p>Extending the example from above, producing the attributes is shown below.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Import the iterator trait to show where `.next` is sourced.
+use core::iter::Iterator;
+
+// ...
+// example from above constructing the pipeline
+// ...
+
+let attributes = pipeline.next();
+
+// Since we haven't stepped on the pipeline,
+// there shouldn't be any payload attributes prepared.
+assert!(attributes.is_none());
+<span class="boring">}</span></code></pre></pre>
+<p>As demonstrated, the pipeline won't have any payload attributes
+without having been "stepped" on. Naively, we can continuously
+step on the pipeline until attributes are ready, and then consume them.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Import the iterator trait to show where `.next` is sourced.
+use core::iter::Iterator;
+
+// ...
+// example from constructing the pipeline
+// ...
+
+// Continuously step on the pipeline until attributes are prepared.
+let l2_safe_head = L2BlockInfo::default();
+loop {
+   if matches!(pipeline.step(l2_safe_head).await, StepResult::PreparedAttributes) {
+      // The pipeline has succesfully prepared payload attributes, break the loop.
+      break;
+   }
+}
+
+// Since the loop is only broken once attributes are prepared,
+// this must be `Option::Some`.
+let attributes = pipeline.next().expect("Must contain payload attributes");
+
+// The parent of the prepared payload attributes should be
+// the l2 safe head that we "stepped on".
+assert_eq!(attributes.parent, l2_safe_head);
+<span class="boring">}</span></code></pre></pre>
+<p>Importantly, the above is not sufficient logic to produce payload attributes and drive
+the derivation pipeline. There are multiple different <code>StepResult</code>s to handle when
+stepping on the pipeline, including advancing the origin, re-orgs, and pipeline resets.
+In the next section, pipeline resets are outlined.</p>
+<p>For an up-to-date driver that runs the derivation pipeline as part of the fault proof
+program, reference kona's <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74">client driver</a>.</p>
+<h2 id="resets"><a class="header" href="#resets">Resets</a></h2>
+<p>When stepping on the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a> produces a reset error, the driver
+of the pipeline must perform a reset on the pipeline. This is done by sending a "signal"
+through the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>. Below demonstrates this.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Import the iterator trait to show where `.next` is sourced.
+use core::iter::Iterator;
+
+// ...
+// example from constructing the pipeline
+// ...
+
+// Continuously step on the pipeline until attributes are prepared.
+let l2_safe_head = L2BlockInfo::default();
+loop {
+   match pipeline.step(l2_safe_head).await {
+      StepResult::StepFailed(e) | StepResult::OriginAdvanceErr(e) =&gt; {
+         match e {
+            PipelineErrorKind::Reset(e) =&gt; {
+               // Get the system config from the provider.
+               let system_config = l2_chain_provider
+                  .system_config_by_number(
+                     l2_safe_head.block_info.number,
+                     rollup_config.clone(),
+                  )
+                  .await?;
+               // Reset the pipeline to the initial L2 safe head and L1 origin.
+               self.pipeline
+                  .signal(
+                      ResetSignal {
+                          l2_safe_head: l2_safe_head,
+                          l1_origin: pipeline
+                              .origin()
+                              .ok_or_else(|| anyhow!("Missing L1 origin"))?,
+                          system_config: Some(system_config),
+                      }
+                      .signal(),
+                  )
+                  .await?;
+               // ...
+            }
+            _ =&gt; { /* Handling left to the driver */ }
+         }
+      }
+      _ =&gt; { /* Handling left to the driver */ }
+   }
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="learn-more"><a class="header" href="#learn-more">Learn More</a></h2>
+<p><a href="https://crates.io/crates/kona-derive"><code>kona-derive</code></a> is one implementation of the OP Stack derivation pipeline.</p>
+<p>To learn more, it is highly encouraged to read the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-node/rollup/derive">"first" derivation pipeline</a>
+written in <a href="https://go.dev/">golang</a>. It is often colloquially referred to as the "reference"
+implementation and provides the basis for how much of Kona's derivation pipeline
+was built.</p>
+<h2 id="provenance"><a class="header" href="#provenance">Provenance</a></h2>
+<blockquote>
+<p>The lore do be bountiful.</p>
+<ul>
+<li>Bard XVIII of the Logic Gates</li>
+</ul>
+</blockquote>
+<p>The kona project spawned out of the need to build a secondary fault proof for the OP Stack.
+Initially, we sought to re-use <a href="https://github.com/a16z/magi">magi</a>'s derivation pipeline, but the ethereum-rust
+ecosystem moves quickly and <a href="https://github.com/a16z/magi">magi</a> was behind by a generation of types - using
+<a href="https://github.com/gakonst/ethers-rs">ethers-rs</a> instead of new <a href="https://github.com/alloy-rs/alloy">alloy</a> types. Additionally, <a href="https://github.com/a16z/magi">magi</a>'s derivation
+pipeline was not <code>no_std</code> compatible - a hard requirement for running a rust fault proof
+program on top of the RISCV or MIPS ISAs.</p>
+<p>So, <a href="https://github.com/clabby">@clabby</a> and <a href="https://github.com/refcell">@refcell</a> stood up <a href="https://github.com/anton-rs/kona">kona</a> in a few months.</p>
+<!-- Links -->
+<!-- Pipeline Stages -->
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        <a rel="prev" href="../../sdk/exec-ext.html" class="mobile-nav-chapters previous"
+                            title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <i class="fa fa-angle-left"></i>
+                        </a>
+
+                        <a rel="next prefetch" href="../../sdk/pipeline/providers.html" class="mobile-nav-chapters next"
+                            title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                <a rel="prev" href="../../sdk/exec-ext.html" class="nav-chapters previous" title="Previous chapter"
+                    aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+
+                <a rel="next prefetch" href="../../sdk/pipeline/providers.html" class="nav-chapters next" title="Next chapter"
+                    aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+</body>
+
+</html>

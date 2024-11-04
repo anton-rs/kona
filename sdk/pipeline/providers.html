@@ -4,7 +4,7 @@
 <head>
     <!-- Book generated using mdBook -->
     <meta charset="UTF-8">
-    <title>Environment - The Kona Book</title>
+    <title>Custom Providers - The Kona Book</title>
 
 
     <!-- Custom HTML head -->
@@ -13,24 +13,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
 
-    <link rel="icon" href="../favicon.svg">
-    <link rel="shortcut icon" href="../favicon.png">
-    <link rel="stylesheet" href="../css/variables.css">
-    <link rel="stylesheet" href="../css/general.css">
-    <link rel="stylesheet" href="../css/chrome.css">
-    <link rel="stylesheet" href="../css/print.css" media="print">
+    <link rel="icon" href="../../favicon.svg">
+    <link rel="shortcut icon" href="../../favicon.png">
+    <link rel="stylesheet" href="../../css/variables.css">
+    <link rel="stylesheet" href="../../css/general.css">
+    <link rel="stylesheet" href="../../css/chrome.css">
+    <link rel="stylesheet" href="../../css/print.css" media="print">
 
     <!-- Fonts -->
-    <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
-    <link rel="stylesheet" href="../fonts/fonts.css">
+    <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+    <link rel="stylesheet" href="../../fonts/fonts.css">
 
     <!-- Highlight.js Stylesheets -->
-    <link rel="stylesheet" href="../highlight.css">
-    <link rel="stylesheet" href="../tomorrow-night.css">
-    <link rel="stylesheet" href="../ayu-highlight.css">
+    <link rel="stylesheet" href="../../highlight.css">
+    <link rel="stylesheet" href="../../tomorrow-night.css">
+    <link rel="stylesheet" href="../../ayu-highlight.css">
 
     <!-- Custom theme stylesheets -->
-    <link rel="stylesheet" href="../custom.css">
+    <link rel="stylesheet" href="../../custom.css">
 
 </head>
 
@@ -38,7 +38,7 @@
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
-            var path_to_root = "../";
+            var path_to_root = "../../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ferra" : "ferra";
         </script>
 
@@ -91,7 +91,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/env.html" class="active"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li><li class="chapter-item expanded "><a href="../sdk/pipeline/intro.html"><strong aria-hidden="true">3.4.</strong> kona-derive Pipeline</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../sdk/pipeline/providers.html"><strong aria-hidden="true">3.4.1.</strong> Custom Providers</a></li><li class="chapter-item expanded "><a href="../sdk/pipeline/stages.html"><strong aria-hidden="true">3.4.2.</strong> Stage Swapping</a></li><li class="chapter-item expanded "><a href="../sdk/pipeline/signaling.html"><strong aria-hidden="true">3.4.3.</strong> Signaling</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/intro.html"><strong aria-hidden="true">3.4.</strong> kona-derive Pipeline</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../sdk/pipeline/providers.html" class="active"><strong aria-hidden="true">3.4.1.</strong> Custom Providers</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/stages.html"><strong aria-hidden="true">3.4.2.</strong> Stage Swapping</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/signaling.html"><strong aria-hidden="true">3.4.3.</strong> Signaling</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -154,13 +154,13 @@
                     <h1 class="menu-title">The Kona Book</h1>
 
                     <div class="right-buttons">
-                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
                         <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/fpp-dev/env.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/pipeline/providers.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -190,67 +190,114 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="environment"><a class="header" href="#environment">Environment</a></h1>
-<p>Before kicking off the development of your own <a href="../glossary.html#fault-proof-program">Fault Proof Program</a>
-,
-it's important to understand the environment that your program will be running in.</p>
-<p>The FPP runs on top of a custom FPVM target, which is typically a VM with a modified subset of an existing reduced instruction set architecture and a subset of Linux syscalls. The FPVM is designed to
-execute verifiable programs, and commonly modifies the instruction set it is derived from as well as the internal representation of memory to support verifiable memory access, <code>client</code> (program)
-communication with the <code>host</code> (the FPVM), and other implementation-specific features.</p>
-<h2 id="host---client-communication"><a class="header" href="#host---client-communication">Host &lt;-&gt; Client Communication</a></h2>
-<p>While the program is running on top of the FPVM, it is considered to be in the <code>client</code> role, while the VM is in the <code>host</code> role. The only way for the <code>client</code> and <code>host</code>
-to communicate with one another is synchronously through the <a href="../glossary.html#preimage-abi">Preimage ABI</a>
-(<a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">specification</a>).</p>
-<p>In order for the <code>client</code> to read from the <code>host</code>, the <code>read</code> and <code>write</code> syscalls are modified within the FPVM to allow the <code>client</code> to request preparation of and read foreign data.</p>
-<h3 id="reading"><a class="header" href="#reading">Reading</a></h3>
-<p>When the <code>client</code> wants to read data from the <code>host</code>, it must first send a "hint" to the <code>host</code> through the hint file descriptor, which signals a request for the <code>host</code> to prepare the data for reading. The <code>host</code> will then
-prepare the data, and send a hint acknowledgement back to the <code>client</code>. The <code>client</code> can then read the data from the host through the designated file descriptor.</p>
-<p>The preparation step ("hinting") is an optimization that allows the <code>host</code> to know ahead of time the intents of the <code>client</code> and the data it requires for execution. This can allow
-for lazy loading of data, and also prevent the need for unnecessary allocations within the <code>host</code>'s memory. This step is a no-op on-chain, and is only ran locally
-when the <code>host</code> is the native implementation of the FPVM.</p>
-<center>
-<pre class="mermaid">sequenceDiagram
-    Client-&gt;&gt;+Host: Hint preimage (no-op on-chain / read-only mode)
-    Host--&gt;&gt;-Client: Hint acknowledgement
-    Client--&gt;&gt;+Host: Preimage Request
-    Host--&gt;&gt;Host: Prepare Preimage
-    Host--&gt;&gt;-Client: Preimage Data
-</pre>
-</center>
-<h2 id="full-example"><a class="header" href="#full-example">Full Example</a></h2>
-<p>Below, we have a full architecture diagram of the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> (source: <a href="https://specs.optimism.io/experimental/fault-proof/index.html">fault proof specs</a>), the reference implementation for the OP Stack's Fault Proof Program,
-which has the objective of verifying claims about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
-<p><img src="../assets/op-program-fpp.svg" alt="op-program-architecture" /></p>
-<p>In this program, execution and derivation of the L2 chain is performed within it, and ultimately the claimed state of the L2 chain is verified in the <a href="./prologue.html">prologue</a> stage.</p>
-<p>It communicates with the <code>host</code> for two reasons:</p>
-<ol>
-<li>To request preparation of L1 and L2 state data preimages.</li>
-<li>To read the L1 and L2 state data preimages that were prepared after the above requests.</li>
-</ol>
-<p>The <code>host</code> is responsible for:</p>
-<ol>
-<li>Preparing and maintaining a store of the L1 and L2 state data preimages, as well as localized bootstrap k/v pairs.</li>
-<li>Providing the L1 and L2 state data preimages to the <code>client</code> for reading.</li>
-</ol>
-<p>Other programs (<code>clients</code>) may have different requirements for communication with the <code>host</code>, but the above is a common pattern for programs built on top of a FPVMs. In general:</p>
-<ol>
-<li>The <code>client</code> program is a state machine that is responsible for bootstrapping itself from the inputs, executing the program logic, and verifying the outcome.</li>
-<li>The <code>host</code> is responsible for providing the <code>client</code> with data it wasn't bootstrapped with, and for executing the program itself.</li>
-</ol>
-<!-- External -->
-<!-- Kona links -->
-<!-- People -->
+                        <h1 id="trait-abstracted-providers"><a class="header" href="#trait-abstracted-providers">Trait-abstracted Providers</a></h1>
+<p>Kona's derivation pipeline pulls in data from sources that are trait
+abstracted so the pipeline can be generic over various data sources.
+Note, "data sources" is used interchangeably with "trait-abstracted
+providers" for the purpose of this document.</p>
+<p>The key traits required for the pipeline are the following.</p>
+<ul>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.ChainProvider.html"><code>ChainProvider</code></a></li>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.L2ChainProvider.html"><code>L2ChainProvider</code></a></li>
+<li><a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html"><code>DataAvailabilityProvider</code></a></li>
+</ul>
+<p>The <a href="https://crates.io/crates/kona-derive-alloy"><code>kona-derive-alloy</code></a> crate provides <code>std</code> implementations
+of these traits using <a href="https://github.com/alloy-rs/alloy">Alloy</a>'s <code>reqwest</code>-backed providers.</p>
+<h2 id="provider-usage"><a class="header" href="#provider-usage">Provider Usage</a></h2>
+<p>Although trait-abstracted Providers are used throughout the pipeline and
+its stages, the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html"><code>PipelineBuilder</code></a> makes constructing the pipeline
+generic over the providers. An example is shown below, where the three
+required trait implementations are the providers stubbed with <code>todo!()</code>.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::sync::Arc;
+use op_alloy_genesis::RollupConfig;
+use kona_derive::pipeline::PipelineBuilder;
+use kona_derive::attributes::StatefulAttributesBuilder;
+
+// The rollup config for your chain.
+let cfg = Arc::new(RollupConfig::default());
+
+// Must implement the `ChainProvider` trait.
+let chain_provider = todo!("your chain provider");
+
+// Must implement the `L2ChainProvider` trait.
+let l2_chain_provider = todo!("your l2 chain provider");
+
+// Must implement the `DataAvailabilityProvider` trait.
+let dap = todo!("your data availability provider");
+
+// Generic over the providers.
+let attributes = StatefulAttributesBuilder::new(
+   cfg.clone(),
+   l2_chain_provider.clone(),
+   chain_provider.clone(),
+);
+
+// Construct a new derivation pipeline.
+let pipeline = PipelineBuilder::new()
+   .rollup_config(cfg)
+   .dap_source(dap)
+   .l2_chain_provider(l2_chain_provider)
+   .chain_provider(chain_provider)
+   .builder(attributes)
+   .origin(BlockInfo::default())
+   .build();
+<span class="boring">}</span></code></pre></pre>
+<h2 id="implementing-a-custom-data-availability-provider"><a class="header" href="#implementing-a-custom-data-availability-provider">Implementing a Custom Data Availability Provider</a></h2>
+<blockquote>
+<p>Notice</p>
+<p>The only required method for the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html"><code>DataAvailabilityProvider</code></a>
+trait is the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html#tymethod.open_data"><code>open_data</code></a> method.</p>
+</blockquote>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use async_trait::async_trait;
+use alloy_primitives::Bytes;
+use op_alloy_protocol::BlockInfo;
+use kona_derive::traits::DataAvailabilityProvider;
+use kona_derive::errors::PipelineResult;
+
+/// ExampleAvail
+///
+/// An example implementation of the `DataAvailabilityProvider` trait.
+#[derive(Debug)]
+pub struct ExampleAvail {
+   // Place your data in here
+}
+
+#[async_trait]
+impl AsyncIterator for ExampleDataIterator {
+    type Item = Bytes;
+
+    async fn next(&amp;mut self) -&gt; PipelineResult&lt;Self::Item&gt; {
+      todo!("return the next bytes")
+    }
+}
+
+
+#[async_trait]
+impl DataAvailabilityProvider for ExampleAvail {
+   type Item = Bytes;
+   type DataIter = ExampleDataIterator;
+
+   async fn open_data(&amp;self, block_ref: &amp;BlockInfo) -&gt; PipelineResult&lt;Self::DataIter&gt; {
+      todo!("return an AsyncIterator implementation here")
+   }
+}
+<span class="boring">}</span></code></pre></pre>
+<!-- Links -->
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        <a rel="prev" href="../fpp-dev/intro.html" class="mobile-nav-chapters previous"
+                        <a rel="prev" href="../../sdk/pipeline/intro.html" class="mobile-nav-chapters previous"
                             title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                             <i class="fa fa-angle-left"></i>
                         </a>
 
-                        <a rel="next prefetch" href="../fpp-dev/targets.html" class="mobile-nav-chapters next"
+                        <a rel="next prefetch" href="../../sdk/pipeline/stages.html" class="mobile-nav-chapters next"
                             title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                             <i class="fa fa-angle-right"></i>
                         </a>
@@ -261,12 +308,12 @@ which has the objective of verifying claims about the state of an <a href="https
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                <a rel="prev" href="../fpp-dev/intro.html" class="nav-chapters previous" title="Previous chapter"
+                <a rel="prev" href="../../sdk/pipeline/intro.html" class="nav-chapters previous" title="Previous chapter"
                     aria-label="Previous chapter" aria-keyshortcuts="Left">
                     <i class="fa fa-angle-left"></i>
                 </a>
 
-                <a rel="next prefetch" href="../fpp-dev/targets.html" class="nav-chapters next" title="Next chapter"
+                <a rel="next prefetch" href="../../sdk/pipeline/stages.html" class="nav-chapters next" title="Next chapter"
                     aria-label="Next chapter" aria-keyshortcuts="Right">
                     <i class="fa fa-angle-right"></i>
                 </a>
@@ -282,17 +329,17 @@ which has the objective of verifying claims about the state of an <a href="https
         </script>
 
 
-        <script src="../elasticlunr.min.js"></script>
-        <script src="../mark.min.js"></script>
-        <script src="../searcher.js"></script>
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
 
-        <script src="../clipboard.min.js"></script>
-        <script src="../highlight.js"></script>
-        <script src="../book.js"></script>
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
 
         <!-- Custom JS scripts -->
-        <script src="../mermaid.min.js"></script>
-        <script src="../mermaid-init.js"></script>
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
 
 
     </div>

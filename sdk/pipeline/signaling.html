@@ -1,0 +1,377 @@
+<!DOCTYPE HTML>
+<html lang="en" class="ferra" dir="ltr">
+
+<head>
+    <!-- Book generated using mdBook -->
+    <meta charset="UTF-8">
+    <title>Signaling - The Kona Book</title>
+
+
+    <!-- Custom HTML head -->
+    
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="icon" href="../../favicon.svg">
+    <link rel="shortcut icon" href="../../favicon.png">
+    <link rel="stylesheet" href="../../css/variables.css">
+    <link rel="stylesheet" href="../../css/general.css">
+    <link rel="stylesheet" href="../../css/chrome.css">
+    <link rel="stylesheet" href="../../css/print.css" media="print">
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+    <link rel="stylesheet" href="../../fonts/fonts.css">
+
+    <!-- Highlight.js Stylesheets -->
+    <link rel="stylesheet" href="../../highlight.css">
+    <link rel="stylesheet" href="../../tomorrow-night.css">
+    <link rel="stylesheet" href="../../ayu-highlight.css">
+
+    <!-- Custom theme stylesheets -->
+    <link rel="stylesheet" href="../../custom.css">
+
+</head>
+
+<body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ferra" : "ferra";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('ferra')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch (e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/intro.html"><strong aria-hidden="true">2.</strong> Fault Proof Program Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../fpp-dev/env.html"><strong aria-hidden="true">2.1.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../fpp-dev/targets.html"><strong aria-hidden="true">2.1.1.</strong> Supported Targets</a></li></ol></li><li class="chapter-item expanded "><a href="../../fpp-dev/prologue.html"><strong aria-hidden="true">2.2.</strong> Prologue</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/execution.html"><strong aria-hidden="true">2.3.</strong> Execution</a></li><li class="chapter-item expanded "><a href="../../fpp-dev/epilogue.html"><strong aria-hidden="true">2.4.</strong> Epilogue</a></li></ol></li><li class="chapter-item expanded "><a href="../../sdk/intro.html"><strong aria-hidden="true">3.</strong> Kona SDK</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../sdk/fpvm-backend.html"><strong aria-hidden="true">3.1.</strong> FPVM Backend</a></li><li class="chapter-item expanded "><a href="../../sdk/custom-backend.html"><strong aria-hidden="true">3.2.</strong> Custom Backend</a></li><li class="chapter-item expanded "><a href="../../sdk/exec-ext.html"><strong aria-hidden="true">3.3.</strong> kona-executor Extensions</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/intro.html"><strong aria-hidden="true">3.4.</strong> kona-derive Pipeline</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../sdk/pipeline/providers.html"><strong aria-hidden="true">3.4.1.</strong> Custom Providers</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/stages.html"><strong aria-hidden="true">3.4.2.</strong> Stage Swapping</a></li><li class="chapter-item expanded "><a href="../../sdk/pipeline/signaling.html" class="active"><strong aria-hidden="true">3.4.3.</strong> Signaling</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../../glossary.html"><strong aria-hidden="true">4.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../../CONTRIBUTING.html"><strong aria-hidden="true">5.</strong> Contributing</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function (e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor"
+                            title="Toggle Table of Contents" aria-label="Toggle Table of Contents"
+                            aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme"
+                            aria-label="Change theme" aria-haspopup="true" aria-expanded="false"
+                            aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ferra">Ferra</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)"
+                            aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S"
+                            aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Kona Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/pipeline/signaling.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..."
+                            aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function (link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="signals"><a class="header" href="#signals">Signals</a></h1>
+<p>Understanding signals first require a more in-depth review of the result
+returned by stepping on the derivation pipeline.</p>
+<h2 id="the-stepresult"><a class="header" href="#the-stepresult">The <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.StepResult.html"><code>StepResult</code></a></a></h2>
+<p>As briefly outlined in the <a href="./intro.html">intro</a>, stepping on the derivation
+pipeline returns a <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.StepResult.html"><code>StepResult</code></a>. Step results provide a
+an extensible way for pipeline stages to signal different results to the
+pipeline driver. The variants of <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.StepResult.html"><code>StepResult</code></a> and what they
+signal include the following.</p>
+<ul>
+<li><code>StepResult::PreparedAttributes</code> - signals that payload attributes are
+ready to be be consumed by the pipeline driver.</li>
+<li><code>StepResult::AdvancedOrigin</code> - signals that the pipeline has derived all
+payload attributes for the given L1 block, and the origin of the pipeline
+was advanced to the next canonical L1 block.</li>
+<li><code>StepResult::OriginAdvanceErr(_)</code> - The driver failed to advance the
+origin of pipeline.</li>
+<li><code>StepResult::StepFailed(_)</code> - The step failed.</li>
+</ul>
+<p>No action is needed when the prepared attributes step result is received.
+The pipeline driver may chose to consume the payload attributes how it
+wishes. Likewise, <code>StepResult::AdvancedOrigin</code> simply notifies the driver
+that the pipeline advanced its origin - the driver may continue stepping
+on the pipeline. Now, it becomes more involved with the remaining two
+variants of <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.StepResult.html"><code>StepResult</code></a>.</p>
+<p>When either <code>StepResult::OriginAdvanceErr(_)</code> or <code>StepResult::StepFailed(_)</code>
+are received, the pipeline driver needs to introspect the error within these
+variants. Depending on the <a href="https://docs.rs/kona-derive/latest/kona_derive/errors/enum.PipelineErrorKind.html"><code>PipelineErrorKind</code></a>, the driver may
+need to send a "signal" down through the pipeline.</p>
+<p>The next section goes over pipeline signals by looking at the variants of
+the <a href="https://docs.rs/kona-derive/latest/kona_derive/errors/enum.PipelineErrorKind.html"><code>PipelineErrorKind</code></a> and the driver's response.</p>
+<h2 id="pipelineerrorkind"><a class="header" href="#pipelineerrorkind"><a href="https://docs.rs/kona-derive/latest/kona_derive/errors/enum.PipelineErrorKind.html"><code>PipelineErrorKind</code></a></a></h2>
+<p>There are three variants of the <a href="https://docs.rs/kona-derive/latest/kona_derive/errors/enum.PipelineErrorKind.html"><code>PipelineErrorKind</code></a>, each
+groups the inner error based on severity (or how they should be handled).</p>
+<ul>
+<li><code>PipelineErrorKind::Temporary</code> - This is an error that's expected, and
+is temporary. For example, not all channel data has been posted to L1
+so the pipeline doesn't have enough data yet to continue deriving
+payload attributes.</li>
+<li><code>PipelineErrorKind::Critical</code> - This is an unexpected error that breaks
+the derivation pipeline. It should cause the driver to error since this
+is behavior that is breaking the derivation of payload attributes.</li>
+<li><code>PipelineErrorKind::Reset</code> - When this is received, it effectively
+requests that the driver perform some action on the pipeline. Kona
+uses message passing so the driver can send a <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> down
+the pipeline with whatever action that needs to be performed. By
+allowing both the driver and individual pipeline stages to define their
+own behaviour around signals, they become very extensible. More on this
+in <a href="#extending-the-signal-type">a later section</a>.</li>
+</ul>
+<h2 id="the-signal-type"><a class="header" href="#the-signal-type">The <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> Type</a></h2>
+<p>Continuing from the <a href="https://docs.rs/kona-derive/latest/kona_derive/errors/enum.PipelineErrorKind.html"><code>PipelineErrorKind</code></a>, when the driver
+receives a <code>PipelineErrorKind::Reset</code>, it needs to send a signal down
+through the pipeline.</p>
+<p>Prior to the Holocene hardfork, the pipeline only needed to be reset
+when the reset pipeline error was received. Holocene activation rules
+changed this to require Holocene-specific activation logic internal to
+the pipeline stages. The way kona's driver handles this activation is
+by sending a new <code>ActivationSignal</code> if the <code>PipelineErrorKind::Reset</code>
+type is a <code>ResetError::HoloceneActivation</code>. Otherwise, it will send the
+<code>ResetSignal</code>.</p>
+<p>The last of the three <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> variants is the <code>FlushChannel</code>
+signal. Similar to <code>ActivationSignal</code>, the flush channel signal is logic
+introduced post-Holocene. When the driver fails to execute payload
+attributes and Holocene is active, a <code>FlushChannel</code> signal needs to
+forwards invalidate the associated batch and channel, and the block
+is replaced with a deposit-only block.</p>
+<h2 id="extending-the-signal-type"><a class="header" href="#extending-the-signal-type">Extending the Signal Type</a></h2>
+<p>To extend the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> type, all that is needed is to introduce
+a new variant to the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> enum.</p>
+<p>Once the variant is added, the segments where signals are handled need to
+be updated. Anywhere the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.SignalReceiver.html"><code>SignalReceiver</code></a> trait is
+implemented, handling needs to be updated for the new signal variant. Most
+notably, this is on the top-level <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a> type, as well
+as all <a href="https://docs.rs/kona-derive/latest/kona_derive/stages/index.html">the pipeline stages</a>.</p>
+<h4 id="an-example"><a class="header" href="#an-example">An Example</a></h4>
+<p>Let's create a new <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> variant that updates the <code>RollupConfig</code>
+in the <a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.L1Traversal.html"><code>L1Traversal</code></a> stage. Let's call it <code>SetConfig</code>.
+The <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>signal</code></a> type would look like the following with this new
+variant.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A signal to send to the pipeline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
+pub enum Signal {
+    /// Reset the pipeline.
+    Reset(ResetSignal),
+    /// Hardfork Activation.
+    Activation(ActivationSignal),
+    /// Flush the currently active channel.
+    FlushChannel,
+    /// Updates the rollup config in the L1Traversal stage.
+    UpdateConfig(ConfigUpdateSignal),
+}
+
+/// A signal that updates the `RollupConfig`.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ConfigUpdateSignal(Arc&lt;RollupConfig&gt;);
+<span class="boring">}</span></code></pre></pre>
+<p>Next, all handling of the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/enum.Signal.html"><code>Signal</code></a> type needs to be updated for
+the new <code>UpdateConfig</code> variant. For the sake of this example, we'll just
+focus on updating the <a href="https://docs.rs/kona-derive/latest/kona_derive/stages/struct.L1Traversal.html"><code>L1Traversal</code></a> stage.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[async_trait]
+impl&lt;F: ChainProvider + Send&gt; SignalReceiver for L1Traversal&lt;F&gt; {
+    async fn signal(&amp;mut self, signal: Signal) -&gt; PipelineResult&lt;()&gt; {
+        match signal {
+            Signal::Reset(ResetSignal { l1_origin, system_config, .. }) |
+            Signal::Activation(ActivationSignal { l1_origin, system_config, .. }) =&gt; {
+                self.block = Some(l1_origin);
+                self.done = false;
+                self.system_config = system_config.expect("System config must be provided.");
+            }
+            Signal::UpdateConfig(inner) =&gt; {
+               self.rollup_config = Arc::clone(&amp;inner.0);
+            }
+            _ =&gt; {}
+        }
+
+        Ok(())
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<!-- Links -->
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        <a rel="prev" href="../../sdk/pipeline/stages.html" class="mobile-nav-chapters previous"
+                            title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <i class="fa fa-angle-left"></i>
+                        </a>
+
+                        <a rel="next prefetch" href="../../glossary.html" class="mobile-nav-chapters next"
+                            title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                <a rel="prev" href="../../sdk/pipeline/stages.html" class="nav-chapters previous" title="Previous chapter"
+                    aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+
+                <a rel="next prefetch" href="../../glossary.html" class="nav-chapters next" title="Next chapter"
+                    aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+</body>
+
+</html>
