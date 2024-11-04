@@ -92,8 +92,8 @@ where
     /// The `signal` is contains the signal variant with any necessary parameters.
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         match signal {
-            s @ Signal::Reset(ResetSignal { l2_safe_head, .. }) |
-            s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
+            mut s @ Signal::Reset(ResetSignal { l2_safe_head, .. }) |
+            mut s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
                 let system_config = self
                     .l2_chain_provider
                     .system_config_by_number(
@@ -102,7 +102,7 @@ where
                     )
                     .await
                     .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
-                s.with_system_config(system_config);
+                s = s.with_system_config(system_config);
                 match self.attributes.signal(s).await {
                     Ok(()) => trace!(target: "pipeline", "Stages reset"),
                     Err(err) => {
