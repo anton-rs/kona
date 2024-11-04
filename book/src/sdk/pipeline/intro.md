@@ -271,7 +271,7 @@ was built.
 
 > The lore do be bountiful.
 >
-> - Bard XVIII of the Gates of Logic
+> - Bard XVIII of the Logic Gates
 
 The kona project spawned out of the need to build a secondary fault proof for the OP Stack.
 Initially, we sought to re-use [magi][magi]'s derivation pipeline, but the ethereum-rust

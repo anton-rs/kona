@@ -31,13 +31,13 @@ use kona_derive::attributes::StatefulAttributesBuilder;
 let cfg = Arc::new(RollupConfig::default());
 
 // Must implement the `ChainProvider` trait.
-let chain_provider = todo!();
+let chain_provider = todo!("your chain provider");
 
 // Must implement the `L2ChainProvider` trait.
-let l2_chain_provider = todo!();
+let l2_chain_provider = todo!("your l2 chain provider");
 
 // Must implement the `DataAvailabilityProvider` trait.
-let dap = todo!();
+let dap = todo!("your data availability provider");
 
 // Generic over the providers.
 let attributes = StatefulAttributesBuilder::new(
@@ -59,13 +59,52 @@ let pipeline = PipelineBuilder::new()
 
 ## Implementing a Custom Data Availability Provider
 
+> Notice
+>
+> The only required method for the [`DataAvailabilityProvider`][dap]
+> trait is the [`open_data`][open-data] method.
+
 ```rust
-todo!("All this needs to demonstrate is implementing the DataAvailabilityProvider trait");
+use async_trait::async_trait;
+use alloy_primitives::Bytes;
+use op_alloy_protocol::BlockInfo;
+use kona_derive::traits::DataAvailabilityProvider;
+use kona_derive::errors::PipelineResult;
+
+/// ExampleAvail
+///
+/// An example implementation of the `DataAvailabilityProvider` trait.
+#[derive(Debug)]
+pub struct ExampleAvail {
+   // Place your data in here
+}
+
+#[async_trait]
+impl AsyncIterator for ExampleDataIterator {
+    type Item = Bytes;
+
+    async fn next(&mut self) -> PipelineResult<Self::Item> {
+      todo!("return the next bytes")
+    }
+}
+
+
+#[async_trait]
+impl DataAvailabilityProvider for ExampleAvail {
+   type Item = Bytes;
+   type DataIter = ExampleDataIterator;
+
+   async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::DataIter> {
+      todo!("return an AsyncIterator implementation here")
+   }
+}
 ```
 
 
 <!-- Links -->
 
+[dap]: https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html
+[open-data]: https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html#tymethod.open_data
 [builder]: https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html
 [alloy]: https://github.com/alloy-rs/alloy
 [kda]: https://crates.io/crates/kona-derive-alloy
