@@ -3,9 +3,11 @@
 use crate::fault::{HINT_WRITER, ORACLE_READER};
 use alloc::{string::ToString, vec::Vec};
 use alloy_primitives::{keccak256, Address, Bytes};
-use anyhow::ensure;
-use kona_client::HintType;
-use kona_preimage::{HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient};
+use kona_client::{errors::OracleProviderError, HintType};
+use kona_preimage::{
+    errors::PreimageOracleError, HintWriterClient, PreimageKey, PreimageKeyType,
+    PreimageOracleClient,
+};
 use revm::{
     precompile::{u64_to_address, Error as PrecompileError, PrecompileWithAddress},
     primitives::{Precompile, PrecompileOutput, PrecompileResult},
@@ -27,21 +29,34 @@ fn fpvm_ecrecover(input: &Bytes, gas_limit: u64) -> PrecompileResult {
     let result_data = kona_common::block_on(async move {
         // Write the hint for the ecrecover precompile run.
         let hint_data = &[ECRECOVER_ADDRESS.as_ref(), input.as_ref()];
-        HINT_WRITER.write(&HintType::L1Precompile.encode_with(hint_data)).await?;
+        HINT_WRITER
+            .write(&HintType::L1Precompile.encode_with(hint_data))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         // Construct the key hash for the ecrecover precompile run.
         let raw_key_data = hint_data.iter().copied().flatten().copied().collect::<Vec<u8>>();
         let key_hash = keccak256(&raw_key_data);
 
         // Fetch the result of the ecrecover precompile run from the host.
-        let result_data =
-            ORACLE_READER.get(PreimageKey::new(*key_hash, PreimageKeyType::Precompile)).await?;
+        let result_data = ORACLE_READER
+            .get(PreimageKey::new(*key_hash, PreimageKeyType::Precompile))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         // Ensure we've received valid result data.
-        ensure!(!result_data.is_empty(), "Invalid result data");
+        if result_data.is_empty() {
+            return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+                "Invalid result data".to_string(),
+            )));
+        }
 
         // Ensure we've not received an error from the host.
-        ensure!(result_data[0] != 0, "Error executing ecrecover precompile in host");
+        if result_data[0] == 0 {
+            return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+                "Error executing ecrecover precompile in host".to_string(),
+            )));
+        }
 
         // Return the result data.
         Ok(result_data[1..].to_vec())

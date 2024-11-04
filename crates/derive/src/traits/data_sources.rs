@@ -2,7 +2,7 @@
 //! pipeline's stages.
 
 use crate::{errors::PipelineResult, sources::IndexedBlobHash};
-use alloc::{boxed::Box, fmt::Debug, vec::Vec};
+use alloc::{boxed::Box, fmt::Debug, string::ToString, vec::Vec};
 use alloy_eips::eip4844::Blob;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
@@ -13,7 +13,7 @@ use op_alloy_protocol::BlockInfo;
 #[async_trait]
 pub trait BlobProvider {
     /// The error type for the [BlobProvider].
-    type Error: Display;
+    type Error: Display + ToString;
 
     /// Fetches blobs for a given block ref and the blob hashes.
     async fn get_blobs(

@@ -2189,7 +2189,6 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-rpc-types-engine",
- "anyhow",
  "async-trait",
  "cfg-if",
  "derive_more",

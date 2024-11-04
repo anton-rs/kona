@@ -1,8 +1,8 @@
 //! This module contains the prologue phase of the client program, pulling in the boot information
 //! through the `PreimageOracle` ABI as local keys.
 
+use crate::errors::OracleProviderError;
 use alloy_primitives::{B256, U256};
-use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use op_alloy_genesis::RollupConfig;
 use serde::{Deserialize, Serialize};
@@ -62,34 +62,45 @@ impl BootInfo {
     /// ## Returns
     /// - `Ok(BootInfo)`: The boot information.
     /// - `Err(_)`: Failed to load the boot information.
-    pub async fn load<O>(oracle: &O) -> Result<Self>
+    pub async fn load<O>(oracle: &O) -> Result<Self, OracleProviderError>
     where
         O: PreimageOracleClient + Send,
     {
         let mut l1_head: B256 = B256::ZERO;
-        oracle.get_exact(PreimageKey::new_local(L1_HEAD_KEY.to()), l1_head.as_mut()).await?;
+        oracle
+            .get_exact(PreimageKey::new_local(L1_HEAD_KEY.to()), l1_head.as_mut())
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         let mut l2_output_root: B256 = B256::ZERO;
         oracle
             .get_exact(PreimageKey::new_local(L2_OUTPUT_ROOT_KEY.to()), l2_output_root.as_mut())
-            .await?;
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         let mut l2_claim: B256 = B256::ZERO;
-        oracle.get_exact(PreimageKey::new_local(L2_CLAIM_KEY.to()), l2_claim.as_mut()).await?;
+        oracle
+            .get_exact(PreimageKey::new_local(L2_CLAIM_KEY.to()), l2_claim.as_mut())
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         let l2_claim_block = u64::from_be_bytes(
             oracle
                 .get(PreimageKey::new_local(L2_CLAIM_BLOCK_NUMBER_KEY.to()))
-                .await?
+                .await
+                .map_err(OracleProviderError::Preimage)?
+                .as_slice()
                 .try_into()
-                .map_err(|_| anyhow!("Failed to convert L2 claim block number to u64"))?,
+                .map_err(OracleProviderError::SliceConversion)?,
         );
         let chain_id = u64::from_be_bytes(
             oracle
                 .get(PreimageKey::new_local(L2_CHAIN_ID_KEY.to()))
-                .await?
+                .await
+                .map_err(OracleProviderError::Preimage)?
+                .as_slice()
                 .try_into()
-                .map_err(|_| anyhow!("Failed to convert L2 chain ID to u64"))?,
+                .map_err(OracleProviderError::SliceConversion)?,
         );
 
         // Attempt to load the rollup config from the chain ID. If there is no config for the chain,
@@ -102,9 +113,11 @@ impl BootInfo {
                 "No rollup config found for chain ID {}, falling back to preimage oracle. This is insecure in production without additional validation!",
                 chain_id
             );
-            let ser_cfg = oracle.get(PreimageKey::new_local(L2_ROLLUP_CONFIG_KEY.to())).await?;
-            serde_json::from_slice(&ser_cfg)
-                .map_err(|e| anyhow!("Failed to deserialize rollup config: {}", e))?
+            let ser_cfg = oracle
+                .get(PreimageKey::new_local(L2_ROLLUP_CONFIG_KEY.to()))
+                .await
+                .map_err(OracleProviderError::Preimage)?;
+            serde_json::from_slice(&ser_cfg).map_err(OracleProviderError::Serde)?
         };
 
         Ok(Self {

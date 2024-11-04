@@ -7,8 +7,9 @@
 
 extern crate alloc;
 
-use alloc::sync::Arc;
+use alloc::{string::String, sync::Arc};
 use kona_client::{
+    errors::DriverError,
     l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
     l2::OracleL2ChainProvider,
     BootInfo, CachingOracle,
@@ -24,14 +25,14 @@ use tracing::{error, info, warn};
 const ORACLE_LRU_SIZE: usize = 1024;
 
 #[client_entry(100_000_000)]
-fn main() -> Result<()> {
+fn main() -> Result<(), String> {
     #[cfg(feature = "tracing-subscriber")]
     {
-        use anyhow::anyhow;
         use tracing::Level;
 
         let subscriber = tracing_subscriber::fmt().with_max_level(Level::DEBUG).finish();
-        tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e))?;
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
     }
 
     kona_common::block_on(async move {
@@ -107,6 +108,6 @@ fn main() -> Result<()> {
             output_root
         ));
 
-        Ok::<_, anyhow::Error>(())
+        Ok::<_, DriverError>(())
     })
 }
