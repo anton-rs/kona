@@ -1,7 +1,7 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use crate::traits::L2ChainProvider;
-use alloc::{boxed::Box, sync::Arc};
+use crate::{errors::{PipelineError, PipelineErrorKind}, traits::L2ChainProvider};
+use alloc::{boxed::Box, sync::Arc, string::ToString};
 use alloy_primitives::map::HashMap;
 use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
@@ -35,6 +35,12 @@ pub enum TestSystemConfigL2FetcherError {
     NotFound(u64),
 }
 
+impl Into<PipelineErrorKind> for TestSystemConfigL2FetcherError {
+    fn into(self) -> PipelineErrorKind {
+        PipelineError::Provider(self.to_string()).temp()
+    }
+}
+
 impl core::error::Error for TestSystemConfigL2FetcherError {}
 
 #[async_trait]
@@ -52,11 +58,13 @@ impl BatchValidationProvider for TestSystemConfigL2Fetcher {
 
 #[async_trait]
 impl L2ChainProvider for TestSystemConfigL2Fetcher {
+    type Error = TestSystemConfigL2FetcherError;
+
     async fn system_config_by_number(
         &mut self,
         number: u64,
         _: Arc<RollupConfig>,
-    ) -> Result<SystemConfig, Self::Error> {
+    ) -> Result<SystemConfig, <Self as L2ChainProvider>::Error> {
         self.system_configs
             .get(&number)
             .cloned()

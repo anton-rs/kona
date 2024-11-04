@@ -13,6 +13,7 @@ use kona_client::{
     l2::OracleL2ChainProvider,
     BootInfo, CachingOracle,
 };
+use kona_common::io;
 use kona_common_proc::client_entry;
 
 pub(crate) mod fault;
@@ -43,6 +44,10 @@ fn main() -> Result<()> {
         let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
         let beacon = OracleBlobProvider::new(oracle.clone());
 
+        if boot.claimed_l2_output_root == boot.agreed_l2_output_root {
+            io::exit(0);
+        }
+
         ////////////////////////////////////////////////////////////////
         //                   DERIVATION & EXECUTION                   //
         ////////////////////////////////////////////////////////////////
@@ -69,13 +74,12 @@ fn main() -> Result<()> {
                 number = number,
                 output_root = output_root
             );
-            kona_common::io::print(&alloc::format!(
+            io::print(&alloc::format!(
                 "Failed to validate L2 block #{} with output root {}\n",
                 number,
                 output_root
             ));
-
-            kona_common::io::exit(1);
+            io::exit(1);
         }
 
         tracing::info!(
@@ -84,8 +88,7 @@ fn main() -> Result<()> {
             number = number,
             output_root = output_root
         );
-
-        kona_common::io::print(&alloc::format!(
+        io::print(&alloc::format!(
             "Successfully validated L2 block #{} with output root {}\n",
             number,
             output_root

@@ -1,7 +1,10 @@
 //! Test Utilities for chain provider traits
 
-use crate::traits::{ChainProvider, L2ChainProvider};
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use crate::{
+    errors::{PipelineError, PipelineErrorKind},
+    traits::{ChainProvider, L2ChainProvider},
+};
+use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{map::HashMap, B256};
 use async_trait::async_trait;
@@ -90,6 +93,12 @@ pub enum TestProviderError {
     /// The system config was not found.
     #[display("System config not found")]
     SystemConfigNotFound(u64),
+}
+
+impl Into<PipelineErrorKind> for TestProviderError {
+    fn into(self) -> PipelineErrorKind {
+        PipelineError::Provider(self.to_string()).temp()
+    }
 }
 
 impl core::error::Error for TestProviderError {}
@@ -192,11 +201,13 @@ impl BatchValidationProvider for TestL2ChainProvider {
 
 #[async_trait]
 impl L2ChainProvider for TestL2ChainProvider {
+    type Error = TestProviderError;
+
     async fn system_config_by_number(
         &mut self,
         number: u64,
         _: Arc<RollupConfig>,
-    ) -> Result<SystemConfig, Self::Error> {
+    ) -> Result<SystemConfig, <Self as L2ChainProvider>::Error> {
         self.system_configs
             .get(&number)
             .ok_or_else(|| TestProviderError::SystemConfigNotFound(number))

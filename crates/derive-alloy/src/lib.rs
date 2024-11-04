@@ -35,5 +35,8 @@ pub use blob_provider::{
     OnlineBlobProviderWithFallback,
 };
 
+pub mod errors;
+pub use errors::AlloyProviderError;
+
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

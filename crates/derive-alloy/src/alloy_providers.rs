@@ -13,6 +13,8 @@ use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{to_system_config, BatchValidationProvider, BlockInfo, L2BlockInfo};
 use std::{boxed::Box, num::NonZeroUsize, sync::Arc, vec::Vec};
 
+use crate::AlloyProviderError;
+
 const CACHE_SIZE: usize = 16;
 
 /// The [AlloyChainProvider] is a concrete implementation of the [ChainProvider] trait, providing
@@ -68,21 +70,22 @@ impl AlloyChainProvider {
 
 #[async_trait]
 impl ChainProvider for AlloyChainProvider {
-    type Error = RpcError<TransportErrorKind>;
+    type Error = AlloyProviderError;
 
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error> {
         if let Some(header) = self.header_by_hash_cache.get(&hash) {
             return Ok(header.clone());
         }
 
-        let raw_header: Bytes = self.inner.raw_request("debug_getRawHeader".into(), [hash]).await?;
-        match Header::decode(&mut raw_header.as_ref()) {
-            Ok(header) => {
-                self.header_by_hash_cache.put(hash, header.clone());
-                Ok(header)
-            }
-            Err(e) => Err(RpcError::LocalUsageError(Box::new(e))),
-        }
+        let raw_header: Bytes = self
+            .inner
+            .raw_request("debug_getRawHeader".into(), [hash])
+            .await
+            .map_err(AlloyProviderError::Rpc)?;
+        let header = Header::decode(&mut raw_header.as_ref()).map_err(AlloyProviderError::Rlp)?;
+
+        self.header_by_hash_cache.put(hash, header.clone());
+        Ok(header)
     }
 
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo, Self::Error> {
@@ -90,10 +93,12 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(*block_info);
         }
 
-        let raw_header: Bytes =
-            self.inner.raw_request("debug_getRawHeader".into(), [U64::from(number)]).await?;
-        let header = Header::decode(&mut raw_header.as_ref())
-            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
+        let raw_header: Bytes = self
+            .inner
+            .raw_request("debug_getRawHeader".into(), [U64::from(number)])
+            .await
+            .map_err(AlloyProviderError::Rpc)?;
+        let header = Header::decode(&mut raw_header.as_ref()).map_err(AlloyProviderError::Rlp)?;
 
         let block_info = BlockInfo {
             hash: header.hash_slow(),
@@ -110,8 +115,11 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(receipts.clone());
         }
 
-        let raw_receipts: Vec<Bytes> =
-            self.inner.raw_request("debug_getRawReceipts".into(), [hash]).await?;
+        let raw_receipts: Vec<Bytes> = self
+            .inner
+            .raw_request("debug_getRawReceipts".into(), [hash])
+            .await
+            .map_err(AlloyProviderError::Rpc)?;
         let receipts = raw_receipts
             .iter()
             .map(|r| {
@@ -122,9 +130,7 @@ impl ChainProvider for AlloyChainProvider {
                     r.advance(1);
                 }
 
-                Ok(ReceiptWithBloom::decode(r)
-                    .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?
-                    .receipt)
+                Ok(ReceiptWithBloom::decode(r).map_err(AlloyProviderError::Rlp)?.receipt)
             })
             .collect::<Result<Vec<_>, Self::Error>>()?;
         self.receipts_by_hash_cache.put(hash, receipts.clone());
@@ -140,9 +146,12 @@ impl ChainProvider for AlloyChainProvider {
             return Ok(block_info_and_txs.clone());
         }
 
-        let raw_block: Bytes = self.inner.raw_request("debug_getRawBlock".into(), [hash]).await?;
-        let block = Block::decode(&mut raw_block.as_ref())
-            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
+        let raw_block: Bytes = self
+            .inner
+            .raw_request("debug_getRawBlock".into(), [hash])
+            .await
+            .map_err(AlloyProviderError::Rpc)?;
+        let block = Block::decode(&mut raw_block.as_ref()).map_err(AlloyProviderError::Rlp)?;
 
         let block_info = BlockInfo {
             hash: block.header.hash_slow(),
@@ -207,7 +216,7 @@ impl AlloyL2ChainProvider {
 
 #[async_trait]
 impl BatchValidationProvider for AlloyL2ChainProvider {
-    type Error = RpcError<TransportErrorKind>;
+    type Error = AlloyProviderError;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
         if let Some(l2_block_info) = self.l2_block_info_by_number_cache.get(&number) {
@@ -217,7 +226,7 @@ impl BatchValidationProvider for AlloyL2ChainProvider {
         let block = self.block_by_number(number).await?;
         let l2_block_info =
             L2BlockInfo::from_block_and_genesis(&block, &self.rollup_config.genesis)
-                .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
+                .map_err(AlloyProviderError::BlockInfo)?;
         self.l2_block_info_by_number_cache.put(number, l2_block_info);
         Ok(l2_block_info)
     }
@@ -227,10 +236,12 @@ impl BatchValidationProvider for AlloyL2ChainProvider {
             return Ok(block.clone());
         }
 
-        let raw_block: Bytes =
-            self.inner.raw_request("debug_getRawBlock".into(), [U64::from(number)]).await?;
-        let block = OpBlock::decode(&mut raw_block.as_ref())
-            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
+        let raw_block: Bytes = self
+            .inner
+            .raw_request("debug_getRawBlock".into(), [U64::from(number)])
+            .await
+            .map_err(AlloyProviderError::Rpc)?;
+        let block = OpBlock::decode(&mut raw_block.as_ref()).map_err(AlloyProviderError::Rlp)?;
         self.block_by_number_cache.put(number, block.clone());
         Ok(block)
     }
@@ -238,18 +249,20 @@ impl BatchValidationProvider for AlloyL2ChainProvider {
 
 #[async_trait]
 impl L2ChainProvider for AlloyL2ChainProvider {
+    type Error = AlloyProviderError;
+
     async fn system_config_by_number(
         &mut self,
         number: u64,
         rollup_config: Arc<RollupConfig>,
-    ) -> Result<SystemConfig, Self::Error> {
+    ) -> Result<SystemConfig, <Self as L2ChainProvider>::Error> {
         if let Some(system_config) = self.system_config_by_number_cache.get(&number) {
             return Ok(*system_config);
         }
 
         let block = self.block_by_number(number).await?;
         let sys_config = to_system_config(&block, &rollup_config)
-            .map_err(|e| RpcError::LocalUsageError(Box::new(e)))?;
+            .map_err(AlloyProviderError::OpBlockConversion)?;
         self.system_config_by_number_cache.put(number, sys_config);
         Ok(sys_config)
     }

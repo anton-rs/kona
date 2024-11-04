@@ -4,7 +4,7 @@ use crate::{
     errors::{PipelineError, PipelineResult},
     traits::{AsyncIterator, ChainProvider},
 };
-use alloc::{boxed::Box, collections::VecDeque, format};
+use alloc::{boxed::Box, collections::VecDeque};
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
@@ -89,13 +89,7 @@ impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
     type Item = Bytes;
 
     async fn next(&mut self) -> PipelineResult<Self::Item> {
-        if self.load_calldata().await.is_err() {
-            return Err(PipelineError::Provider(format!(
-                "Failed to load calldata for block {}",
-                self.block_ref.hash
-            ))
-            .temp());
-        }
+        self.load_calldata().await.map_err(Into::into)?;
         self.calldata.pop_front().ok_or(PipelineError::Eof.temp())
     }
 }

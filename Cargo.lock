@@ -2192,6 +2192,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cfg-if",
+ "derive_more",
  "kona-common",
  "kona-common-proc",
  "kona-derive",

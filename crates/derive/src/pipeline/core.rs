@@ -92,8 +92,8 @@ where
     /// The `signal` is contains the signal variant with any necessary parameters.
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         match signal {
-            mut s @ Signal::Reset(ResetSignal { l2_safe_head, .. }) |
-            mut s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
+            mut s @ Signal::Reset(ResetSignal { l2_safe_head, .. })
+            | mut s @ Signal::Activation(ActivationSignal { l2_safe_head, .. }) => {
                 let system_config = self
                     .l2_chain_provider
                     .system_config_by_number(
@@ -101,7 +101,7 @@ where
                         Arc::clone(&self.rollup_config),
                     )
                     .await
-                    .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
+                    .map_err(Into::into)?;
                 s = s.with_system_config(system_config);
                 match self.attributes.signal(s).await {
                     Ok(()) => trace!(target: "pipeline", "Stages reset"),

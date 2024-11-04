@@ -33,12 +33,12 @@ reqwest.workspace = true
 tracing.workspace = true
 alloy-serde.workspace = true
 async-trait.workspace = true
+derive_more = { workspace = true, features = ["full"] }
 
 # Workspace
 kona-derive = { workspace = true, features = ["serde"] }
 
 # `test-utils` feature dependencies
-derive_more = { workspace = true, features = ["full"], optional = true }
 alloy-rpc-client = { workspace = true, optional = true }
 alloy-node-bindings = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true, features = ["reqwest"] }
@@ -55,7 +55,6 @@ kona-derive = { workspace = true, features = ["serde", "test-utils"] }
 [features]
 default = []
 test-utils = [
-  "dep:derive_more",
   "dep:alloy-rpc-client",
   "dep:alloy-node-bindings",
   "dep:alloy-transport-http",
