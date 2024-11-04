@@ -33,11 +33,11 @@ pub enum OracleProviderError {
     SliceConversion(core::array::TryFromSliceError),
 }
 
-impl Into<PipelineErrorKind> for OracleProviderError {
-    fn into(self) -> PipelineErrorKind {
-        match self {
-            Self::BlockNumberPastHead(_, _) => PipelineError::EndOfSource.crit(),
-            _ => PipelineError::Provider(self.to_string()).crit(),
+impl From<OracleProviderError> for PipelineErrorKind {
+    fn from(val: OracleProviderError) -> Self {
+        match val {
+            OracleProviderError::BlockNumberPastHead(_, _) => PipelineError::EndOfSource.crit(),
+            _ => PipelineError::Provider(val.to_string()).crit(),
         }
     }
 }

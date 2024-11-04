@@ -71,11 +71,8 @@ where
         // In this case we need to fetch all transaction receipts from the L1 origin block so
         // we can scan for user deposits.
         let sequence_number = if l2_parent.l1_origin.number != epoch.number {
-            let header = self
-                .receipts_fetcher
-                .header_by_hash(epoch.hash)
-                .await
-                .map_err(Into::into)?;
+            let header =
+                self.receipts_fetcher.header_by_hash(epoch.hash).await.map_err(Into::into)?;
             if l2_parent.l1_origin.hash != header.parent_hash {
                 return Err(PipelineErrorKind::Reset(
                     BuilderError::BlockMismatchEpochReset(
@@ -86,11 +83,8 @@ where
                     .into(),
                 ));
             }
-            let receipts = self
-                .receipts_fetcher
-                .receipts_by_hash(epoch.hash)
-                .await
-                .map_err(Into::into)?;
+            let receipts =
+                self.receipts_fetcher.receipts_by_hash(epoch.hash).await.map_err(Into::into)?;
             let deposits =
                 derive_deposits(epoch.hash, &receipts, self.rollup_cfg.deposit_contract_address)
                     .await
@@ -113,11 +107,8 @@ where
                 ));
             }
 
-            let header = self
-                .receipts_fetcher
-                .header_by_hash(epoch.hash)
-                .await
-                .map_err(Into::into)?;
+            let header =
+                self.receipts_fetcher.header_by_hash(epoch.hash).await.map_err(Into::into)?;
             l1_header = header;
             deposit_transactions = vec![];
             l2_parent.seq_num + 1

@@ -1,12 +1,9 @@
 //! Errors for the alloy-backed derivation providers.
 
-use alloy_transport::RpcError;
-use alloy_transport::TransportErrorKind;
+use alloy_transport::{RpcError, TransportErrorKind};
 use derive_more::{Display, Error};
-use kona_derive::errors::PipelineError;
-use kona_derive::errors::PipelineErrorKind;
-use op_alloy_protocol::FromBlockError;
-use op_alloy_protocol::OpBlockConversionError;
+use kona_derive::errors::{PipelineError, PipelineErrorKind};
+use op_alloy_protocol::{FromBlockError, OpBlockConversionError};
 
 /// Error from an alloy-backed provider.
 #[derive(Error, Display, Debug)]
@@ -25,13 +22,15 @@ pub enum AlloyProviderError {
     OpBlockConversion(OpBlockConversionError),
 }
 
-impl Into<PipelineErrorKind> for AlloyProviderError {
-    fn into(self) -> PipelineErrorKind {
-        match self {
-            Self::Rlp(e) => PipelineError::Provider(e.to_string()).crit(),
-            Self::BlockInfo(e) => PipelineError::Provider(e.to_string()).crit(),
-            Self::OpBlockConversion(e) => PipelineError::Provider(e.to_string()).crit(),
-            Self::Rpc(e) => PipelineError::Provider(e.to_string()).temp(),
+impl From<AlloyProviderError> for PipelineErrorKind {
+    fn from(val: AlloyProviderError) -> Self {
+        match val {
+            AlloyProviderError::Rlp(e) => PipelineError::Provider(e.to_string()).crit(),
+            AlloyProviderError::BlockInfo(e) => PipelineError::Provider(e.to_string()).crit(),
+            AlloyProviderError::OpBlockConversion(e) => {
+                PipelineError::Provider(e.to_string()).crit()
+            }
+            AlloyProviderError::Rpc(e) => PipelineError::Provider(e.to_string()).temp(),
         }
     }
 }

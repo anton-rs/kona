@@ -95,9 +95,9 @@ pub enum TestProviderError {
     SystemConfigNotFound(u64),
 }
 
-impl Into<PipelineErrorKind> for TestProviderError {
-    fn into(self) -> PipelineErrorKind {
-        PipelineError::Provider(self.to_string()).temp()
+impl From<TestProviderError> for PipelineErrorKind {
+    fn from(val: TestProviderError) -> Self {
+        PipelineError::Provider(val.to_string()).temp()
     }
 }
 

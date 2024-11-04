@@ -177,7 +177,7 @@ where
         })
     }
 
-    /// Advances the derivation pipeline to L2 block # [Self::target_block_number].
+    /// Advances the derivation pipeline to the target block number.
     ///
     /// ## Takes
     /// - `cfg`: The rollup configuration.
@@ -212,8 +212,8 @@ where
                 Err(PipelineErrorKind::Critical(PipelineError::EndOfSource)) => {
                     warn!(target: "client", "Exhausted data source; Halting derivation and using current safe head.");
 
-                    // Adjust the target block number to the current safe head, as no more blocks can
-                    // be produced.
+                    // Adjust the target block number to the current safe head, as no more blocks
+                    // can be produced.
                     self.target_block_number = self.l2_safe_head.block_info.number;
                     continue;
                 }

@@ -56,7 +56,12 @@ fn main() -> Result<()> {
         // Run the derivation pipeline until we are able to produce the output root of the claimed
         // L2 block.
         let (number, output_root) = driver
-            .advance_to_target(&boot.rollup_config, &l2_provider, &l2_provider, fpvm_handle_register)
+            .advance_to_target(
+                &boot.rollup_config,
+                &l2_provider,
+                &l2_provider,
+                fpvm_handle_register,
+            )
             .await?;
 
         ////////////////////////////////////////////////////////////////

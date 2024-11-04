@@ -1,5 +1,6 @@
 //! Providers that use alloy provider types on the backend.
 
+use crate::AlloyProviderError;
 use alloy_consensus::{Block, Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{Bytes, B256, U64};
 use alloy_provider::{Provider, ReqwestProvider};
@@ -12,8 +13,6 @@ use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{to_system_config, BatchValidationProvider, BlockInfo, L2BlockInfo};
 use std::{boxed::Box, num::NonZeroUsize, sync::Arc, vec::Vec};
-
-use crate::AlloyProviderError;
 
 const CACHE_SIZE: usize = 16;
 

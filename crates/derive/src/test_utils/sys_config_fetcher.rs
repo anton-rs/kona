@@ -1,7 +1,10 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use crate::{errors::{PipelineError, PipelineErrorKind}, traits::L2ChainProvider};
-use alloc::{boxed::Box, sync::Arc, string::ToString};
+use crate::{
+    errors::{PipelineError, PipelineErrorKind},
+    traits::L2ChainProvider,
+};
+use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::map::HashMap;
 use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
@@ -35,9 +38,9 @@ pub enum TestSystemConfigL2FetcherError {
     NotFound(u64),
 }
 
-impl Into<PipelineErrorKind> for TestSystemConfigL2FetcherError {
-    fn into(self) -> PipelineErrorKind {
-        PipelineError::Provider(self.to_string()).temp()
+impl From<TestSystemConfigL2FetcherError> for PipelineErrorKind {
+    fn from(val: TestSystemConfigL2FetcherError) -> Self {
+        PipelineError::Provider(val.to_string()).temp()
     }
 }
 

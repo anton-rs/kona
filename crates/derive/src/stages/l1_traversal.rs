@@ -127,8 +127,8 @@ impl<F: ChainProvider> OriginProvider for L1Traversal<F> {
 impl<F: ChainProvider + Send> SignalReceiver for L1Traversal<F> {
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         match signal {
-            Signal::Reset(ResetSignal { l1_origin, system_config, .. })
-            | Signal::Activation(ActivationSignal { l1_origin, system_config, .. }) => {
+            Signal::Reset(ResetSignal { l1_origin, system_config, .. }) |
+            Signal::Activation(ActivationSignal { l1_origin, system_config, .. }) => {
                 self.block = Some(l1_origin);
                 self.done = false;
                 self.system_config = system_config.expect("System config must be provided.");
