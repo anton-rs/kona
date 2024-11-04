@@ -1,12 +1,11 @@
 //! An implementation of the [BlobProvider] trait for tests.
 
+use crate::{errors::BlobProviderError, sources::IndexedBlobHash, traits::BlobProvider};
 use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4844::Blob;
 use alloy_primitives::{map::HashMap, B256};
 use async_trait::async_trait;
 use op_alloy_protocol::BlockInfo;
-
-use crate::{errors::BlobProviderError, sources::IndexedBlobHash, traits::BlobProvider};
 
 /// A mock blob provider for testing.
 #[derive(Debug, Clone, Default)]

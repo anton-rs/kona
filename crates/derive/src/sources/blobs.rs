@@ -361,13 +361,7 @@ where
     type Item = Bytes;
 
     async fn next(&mut self) -> PipelineResult<Self::Item> {
-        if self.load_blobs().await.is_err() {
-            return Err(PipelineError::Provider(format!(
-                "Failed to load blobs from stream: {}",
-                self.block_ref.hash
-            ))
-            .temp());
-        }
+        self.load_blobs().await?;
 
         let next_data = match self.next_data() {
             Ok(d) => d,

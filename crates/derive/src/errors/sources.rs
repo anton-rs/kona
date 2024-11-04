@@ -1,6 +1,7 @@
 //! Error types for sources.
 
-use alloc::string::String;
+use alloc::string::{String, ToString};
+use super::{PipelineError, PipelineErrorKind};
 
 /// Blob Decoding Error
 #[derive(derive_more::Display, Debug, PartialEq, Eq)]
@@ -36,6 +37,17 @@ pub enum BlobProviderError {
     /// Error pertaining to the backend transport.
     #[display("{_0}")]
     Backend(String),
+}
+
+impl From<BlobProviderError> for PipelineErrorKind {
+    fn from(val: BlobProviderError) -> Self {
+        match val {
+            BlobProviderError::SidecarLengthMismatch(_, _) => PipelineError::Provider(val.to_string()).crit(),
+            BlobProviderError::SlotDerivation => PipelineError::Provider(val.to_string()).crit(),
+            BlobProviderError::BlobDecoding(_) => PipelineError::Provider(val.to_string()).crit(),
+            BlobProviderError::Backend(_) => PipelineError::Provider(val.to_string()).temp(),
+        }
+    }
 }
 
 impl From<BlobDecodingError> for BlobProviderError {

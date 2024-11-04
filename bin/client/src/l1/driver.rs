@@ -322,8 +322,7 @@ where
                                     self.l2_safe_head.block_info.number,
                                     self.pipeline.rollup_config.clone(),
                                 )
-                                .await
-                                .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
+                                .await?;
 
                             if matches!(e, ResetError::HoloceneActivation) {
                                 self.pipeline

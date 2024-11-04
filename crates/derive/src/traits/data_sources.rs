@@ -1,7 +1,7 @@
 //! Contains traits that describe the functionality of various data sources used in the derivation
 //! pipeline's stages.
 
-use crate::{errors::PipelineResult, sources::IndexedBlobHash};
+use crate::{errors::{PipelineErrorKind, PipelineResult}, sources::IndexedBlobHash};
 use alloc::{boxed::Box, fmt::Debug, string::ToString, vec::Vec};
 use alloy_eips::eip4844::Blob;
 use alloy_primitives::Bytes;
@@ -13,7 +13,7 @@ use op_alloy_protocol::BlockInfo;
 #[async_trait]
 pub trait BlobProvider {
     /// The error type for the [BlobProvider].
-    type Error: Display + ToString;
+    type Error: Display + ToString + Into<PipelineErrorKind>;
 
     /// Fetches blobs for a given block ref and the blob hashes.
     async fn get_blobs(
