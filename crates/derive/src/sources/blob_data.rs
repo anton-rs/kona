@@ -242,4 +242,46 @@ mod tests {
         let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
         assert_eq!(blob_data.decode(), Ok(Bytes::from(vec![0u8; 1])));
     }
+
+    #[test]
+    fn test_blob_data_decode_invalid_field_element() {
+        let mut data = vec![0u8; alloy_eips::eip4844::BYTES_PER_BLOB + 10];
+        data[VERSIONED_HASH_VERSION_KZG as usize] = BLOB_ENCODING_VERSION;
+        data[2] = 0x00;
+        data[3] = 0x00;
+        data[4] = 0x01;
+        data[33] = 0x01;
+        let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
+        assert_eq!(blob_data.decode(), Err(BlobDecodingError::InvalidFieldElement));
+    }
+
+    #[test]
+    fn test_decode_field_element_missing_data() {
+        let blob_data = BlobData::default();
+        assert_eq!(
+            blob_data.decode_field_element(0, 0, &mut []),
+            Err(BlobDecodingError::MissingData)
+        );
+    }
+
+    #[test]
+    fn test_decode_field_element_invalid_field_element() {
+        let mut data = vec![0u8; 32];
+        data[0] = 0b1100_0000;
+        let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
+        assert_eq!(
+            blob_data.decode_field_element(0, 0, &mut []),
+            Err(BlobDecodingError::InvalidFieldElement)
+        );
+    }
+
+    #[test]
+    fn test_decode_field_element() {
+        let mut data = vec![0u8; 32];
+        data[1..32].copy_from_slice(&[1u8; 31]);
+        let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
+        let mut output = vec![0u8; 31];
+        assert_eq!(blob_data.decode_field_element(0, 0, &mut output), Ok((0, 32, 32)));
+        assert_eq!(output, vec![1u8; 31]);
+    }
 }
