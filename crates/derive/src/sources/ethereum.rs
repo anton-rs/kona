@@ -80,12 +80,58 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{TestBlobProvider, TestChainProvider};
+    use crate::{
+        sources::BlobData,
+        test_utils::{TestBlobProvider, TestChainProvider},
+    };
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
-    use alloy_primitives::address;
+    use alloy_primitives::{address, Address};
     use op_alloy_genesis::{RollupConfig, SystemConfig};
     use op_alloy_protocol::BlockInfo;
+
+    fn default_test_blob_source() -> BlobSource<TestChainProvider, TestBlobProvider> {
+        let chain_provider = TestChainProvider::default();
+        let blob_fetcher = TestBlobProvider::default();
+        let batcher_address = Address::default();
+        let signer = Address::default();
+        BlobSource::new(chain_provider, blob_fetcher, batcher_address, signer)
+    }
+
+    #[tokio::test]
+    async fn test_clear_ethereum_data_source() {
+        let chain = TestChainProvider::default();
+        let blob = TestBlobProvider::default();
+        let cfg = RollupConfig::default();
+        let mut calldata = CalldataSource::new(chain.clone(), Address::ZERO, Address::ZERO);
+        calldata.calldata.insert(0, Default::default());
+        calldata.open = true;
+        let mut blob = BlobSource::new(chain, blob, Address::ZERO, Address::ZERO);
+        blob.data = vec![Default::default()];
+        blob.open = true;
+        let mut data_source = EthereumDataSource::new(blob, calldata, &cfg);
+
+        data_source.clear();
+        assert!(data_source.blob_source.data.is_empty());
+        assert!(!data_source.blob_source.open);
+        assert!(data_source.calldata_source.calldata.is_empty());
+        assert!(!data_source.calldata_source.open);
+    }
+
+    #[tokio::test]
+    async fn test_open_blob_source() {
+        let chain = TestChainProvider::default();
+        let mut blob = default_test_blob_source();
+        blob.open = true;
+        blob.data.push(BlobData { data: None, calldata: Some(Bytes::default()) });
+        let calldata = CalldataSource::new(chain.clone(), Address::ZERO, Address::ZERO);
+        let cfg = RollupConfig { ecotone_time: Some(0), ..Default::default() };
+
+        // Should successfully retrieve a blob batch from the block
+        let mut data_source = EthereumDataSource::new(blob, calldata, &cfg);
+        let data = data_source.next(&BlockInfo::default()).await.unwrap();
+        assert_eq!(data, Bytes::default());
+    }
 
     #[tokio::test]
     async fn test_open_ethereum_calldata_source_pre_ecotone() {

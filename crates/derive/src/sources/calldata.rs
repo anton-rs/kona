@@ -126,6 +126,16 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_clear_calldata() {
+        let mut source = default_test_calldata_source();
+        source.open = true;
+        source.calldata.push_back(Bytes::default());
+        source.clear();
+        assert!(source.calldata.is_empty());
+        assert!(!source.open);
+    }
+
+    #[tokio::test]
     async fn test_load_calldata_open() {
         let mut source = default_test_calldata_source();
         source.open = true;
