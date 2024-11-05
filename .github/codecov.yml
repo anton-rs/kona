@@ -14,19 +14,16 @@ coverage:
         target: auto
         # Avoid false negatives
         threshold: 1%
-        base: auto 
+        base: auto
         only_pulls: true
 
 ignore:
+  - "bin/"
   - "**/test_utils/*"
   - "**/test_utils*"
   - "**/test_util*"
   - "**/tests*"
-  - "bin/"
-  - "crates/derive/src/test_utils" # Ignore all files in test util directories
-  - "crates/providers-alloy/src/alloy_providers.rs"  # Flaky testing with online providers
-  - "crates/providers-alloy/src/beacon_client.rs"  # Flaky testing with online providers
-  - "crates/mpt/src/noop.rs" # Uncovered noop implementations used downstream and by tests
+  - "crates/mpt/src/noop.rs"
 
 # Make comments less noisy
 comment:
