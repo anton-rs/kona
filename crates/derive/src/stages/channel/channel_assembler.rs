@@ -2,9 +2,9 @@
 
 use super::{ChannelReaderProvider, NextFrameProvider};
 use crate::{
-    errors::PipelineResult,
     prelude::{OriginProvider, PipelineError},
-    traits::{OriginAdvancer, Signal, SignalReceiver},
+    traits::{OriginAdvancer, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::{hex, Bytes};

@@ -11,7 +11,7 @@
 //! [ChannelReader]: crate::stages::channel::ChannelReader
 //! [AttributesQueue]: crate::stages::attributes_queue::AttributesQueue
 
-use crate::errors::PipelineResult;
+use crate::types::PipelineResult;
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use op_alloy_protocol::{Batch, BlockInfo, L2BlockInfo};

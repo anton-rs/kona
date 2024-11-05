@@ -1,8 +1,9 @@
 //! Blob Data Source
 
 use crate::{
-    errors::{BlobDecodingError, BlobProviderError, PipelineError, PipelineResult},
+    errors::{BlobDecodingError, BlobProviderError, PipelineError},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
+    types::PipelineResult,
 };
 use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};

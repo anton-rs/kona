@@ -1,9 +1,9 @@
 //! Data source
 
 use crate::{
-    errors::PipelineResult,
     sources::{BlobSource, CalldataSource},
     traits::{AsyncIterator, BlobProvider, ChainProvider},
+    types::PipelineResult,
 };
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;

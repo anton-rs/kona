@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 use async_trait::async_trait;
 use op_alloy_protocol::BlockInfo;
 
-use crate::{errors::PipelineResult, traits::Signal};
+use crate::types::{PipelineResult, Signal};
 
 /// Providers a way for the pipeline to accept a signal from the driver.
 #[async_trait]

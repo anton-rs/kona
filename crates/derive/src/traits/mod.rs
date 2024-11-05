@@ -2,7 +2,7 @@
 //! pipeline.
 
 mod pipeline;
-pub use pipeline::{ActivationSignal, Pipeline, ResetSignal, Signal, StepResult};
+pub use pipeline::Pipeline;
 
 mod providers;
 pub use providers::{BatchValidationProviderDerive, ChainProvider, L2ChainProvider};

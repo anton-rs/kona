@@ -4,6 +4,7 @@
 use crate::{
     stages::BatchProvider,
     test_utils::{TestChainProvider, TestL2ChainProvider},
+    types::PipelineResult,
 };
 use alloc::{boxed::Box, sync::Arc};
 use op_alloy_genesis::RollupConfig;
@@ -12,14 +13,15 @@ use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 // Re-export these types used internally to the test pipeline.
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     pipeline::{DerivationPipeline, PipelineBuilder},
     stages::{
         AttributesQueue, BatchStream, ChannelProvider, ChannelReader, FrameQueue, L1Retrieval,
         L1Traversal,
     },
     test_utils::{TestAttributesBuilder, TestDAP},
-    traits::{NextAttributes, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{NextAttributes, OriginAdvancer, OriginProvider, SignalReceiver},
+    types::Signal,
 };
 
 /// A fully custom [NextAttributes].

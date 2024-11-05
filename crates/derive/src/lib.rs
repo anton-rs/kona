@@ -20,6 +20,7 @@ pub mod pipeline;
 pub mod sources;
 pub mod stages;
 pub mod traits;
+pub mod types;
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

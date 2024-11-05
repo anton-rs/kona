@@ -1,9 +1,10 @@
 //! This module contains the [FrameQueue] stage of the derivation pipeline.
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     stages::NextFrameProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::Bytes;
@@ -193,7 +194,7 @@ where
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::{test_utils::TestFrameQueueProvider, traits::ResetSignal};
+    use crate::{test_utils::TestFrameQueueProvider, types::ResetSignal};
     use alloc::vec;
 
     #[tokio::test]

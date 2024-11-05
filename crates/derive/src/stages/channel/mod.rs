@@ -11,7 +11,7 @@
 //! [FrameQueue]: crate::stages::FrameQueue
 //! [BatchQueue]: crate::stages::BatchQueue
 
-use crate::errors::PipelineResult;
+use crate::types::PipelineResult;
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use op_alloy_protocol::Frame;

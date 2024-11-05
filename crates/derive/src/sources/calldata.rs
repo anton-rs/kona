@@ -1,8 +1,9 @@
 //! CallData Source
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     traits::{AsyncIterator, ChainProvider},
+    types::PipelineResult,
 };
 use alloc::{boxed::Box, collections::VecDeque};
 use alloy_consensus::{Transaction, TxEnvelope};

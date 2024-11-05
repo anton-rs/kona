@@ -6,9 +6,6 @@ use alloy_primitives::B256;
 use op_alloy_genesis::system::SystemConfigUpdateError;
 use op_alloy_protocol::{DepositError, SpanBatchError};
 
-/// A result type for the derivation pipeline stages.
-pub type PipelineResult<T> = Result<T, PipelineErrorKind>;
-
 /// [crate::ensure] is a short-hand for bubbling up errors in the case of a condition not being met.
 #[macro_export]
 macro_rules! ensure {

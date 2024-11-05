@@ -2,8 +2,9 @@
 
 use super::{ChannelAssembler, ChannelBank, ChannelReaderProvider, NextFrameProvider};
 use crate::{
-    errors::{PipelineError, PipelineResult},
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    errors::PipelineError,
+    traits::{OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Bytes;
@@ -158,7 +159,8 @@ mod test {
         prelude::{OriginProvider, PipelineError},
         stages::ChannelReaderProvider,
         test_utils::TestNextFrameProvider,
-        traits::{ResetSignal, SignalReceiver},
+        traits::SignalReceiver,
+        types::ResetSignal,
     };
     use alloc::{sync::Arc, vec};
     use op_alloy_genesis::RollupConfig;

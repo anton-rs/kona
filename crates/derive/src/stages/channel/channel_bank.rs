@@ -2,9 +2,10 @@
 
 use super::NextFrameProvider;
 use crate::{
-    errors::{PipelineError, PipelineErrorKind, PipelineResult},
+    errors::{PipelineError, PipelineErrorKind},
     stages::ChannelReaderProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, map::HashMap, Bytes};
@@ -245,7 +246,7 @@ mod tests {
     use super::*;
     use crate::{
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
-        traits::ResetSignal,
+        types::ResetSignal,
     };
     use alloc::{vec, vec::Vec};
     use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};

@@ -1,9 +1,10 @@
 //! A mock implementation of the [`BatchQueue`] stage for testing.
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     stages::NextBatchProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;

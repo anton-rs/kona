@@ -1,6 +1,6 @@
 //! Contains traits for working with payload attributes and their providers.
 
-use crate::errors::PipelineResult;
+use crate::types::PipelineResult;
 use alloc::boxed::Box;
 use alloy_eips::BlockNumHash;
 use async_trait::async_trait;

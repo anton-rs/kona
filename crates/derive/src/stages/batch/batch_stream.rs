@@ -1,9 +1,10 @@
 //! This module contains the `BatchStream` stage.
 
 use crate::{
-    errors::{PipelineEncodingError, PipelineError, PipelineResult},
+    errors::{PipelineEncodingError, PipelineError},
     stages::NextBatchProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
@@ -222,7 +223,7 @@ mod test {
     use super::*;
     use crate::{
         test_utils::{CollectingLayer, TestBatchStreamProvider, TestL2ChainProvider, TraceStorage},
-        traits::ResetSignal,
+        types::ResetSignal,
     };
     use alloc::vec;
     use op_alloy_protocol::{SingleBatch, SpanBatchElement};

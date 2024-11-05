@@ -2,11 +2,10 @@
 
 use super::NextBatchProvider;
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     stages::{BatchQueue, BatchValidator},
-    traits::{
-        AttributesProvider, L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver,
-    },
+    traits::{AttributesProvider, L2ChainProvider, OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
@@ -179,7 +178,8 @@ mod test {
     use super::BatchProvider;
     use crate::{
         test_utils::{TestL2ChainProvider, TestNextBatchProvider},
-        traits::{OriginProvider, ResetSignal, SignalReceiver},
+        traits::{OriginProvider, SignalReceiver},
+        types::ResetSignal,
     };
     use alloc::{sync::Arc, vec};
     use op_alloy_genesis::RollupConfig;
