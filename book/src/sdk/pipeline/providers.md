@@ -80,21 +80,10 @@ pub struct ExampleAvail {
 }
 
 #[async_trait]
-impl AsyncIterator for ExampleDataIterator {
-    type Item = Bytes;
-
-    async fn next(&mut self) -> PipelineResult<Self::Item> {
-      todo!("return the next bytes")
-    }
-}
-
-
-#[async_trait]
 impl DataAvailabilityProvider for ExampleAvail {
    type Item = Bytes;
-   type DataIter = ExampleDataIterator;
 
-   async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::DataIter> {
+   async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::Item> {
       todo!("return an AsyncIterator implementation here")
    }
 }

@@ -2,7 +2,7 @@
 
 use crate::{
     errors::PipelineError,
-    traits::{AsyncIterator, ChainProvider},
+    traits::{ChainProvider, DataAvailabilityProvider},
     types::PipelineResult,
 };
 use alloc::{boxed::Box, collections::VecDeque};
@@ -21,8 +21,6 @@ where
     pub chain_provider: CP,
     /// The batch inbox address.
     pub batch_inbox_address: Address,
-    /// Block Ref
-    pub block_ref: BlockInfo,
     /// The L1 Signer.
     pub signer: Address,
     /// Current calldata.
@@ -33,30 +31,18 @@ where
 
 impl<CP: ChainProvider + Send> CalldataSource<CP> {
     /// Creates a new calldata source.
-    pub const fn new(
-        chain_provider: CP,
-        batch_inbox_address: Address,
-        block_ref: BlockInfo,
-        signer: Address,
-    ) -> Self {
-        Self {
-            chain_provider,
-            batch_inbox_address,
-            block_ref,
-            signer,
-            calldata: VecDeque::new(),
-            open: false,
-        }
+    pub const fn new(chain_provider: CP, batch_inbox_address: Address, signer: Address) -> Self {
+        Self { chain_provider, batch_inbox_address, signer, calldata: VecDeque::new(), open: false }
     }
 
     /// Loads the calldata into the source if it is not open.
-    async fn load_calldata(&mut self) -> Result<(), CP::Error> {
+    async fn load_calldata(&mut self, block_ref: &BlockInfo) -> Result<(), CP::Error> {
         if self.open {
             return Ok(());
         }
 
         let (_, txs) =
-            self.chain_provider.block_info_and_transactions_by_hash(self.block_ref.hash).await?;
+            self.chain_provider.block_info_and_transactions_by_hash(block_ref.hash).await?;
 
         self.calldata = txs
             .iter()
@@ -86,12 +72,17 @@ impl<CP: ChainProvider + Send> CalldataSource<CP> {
 }
 
 #[async_trait]
-impl<CP: ChainProvider + Send> AsyncIterator for CalldataSource<CP> {
+impl<CP: ChainProvider + Send> DataAvailabilityProvider for CalldataSource<CP> {
     type Item = Bytes;
 
-    async fn next(&mut self) -> PipelineResult<Self::Item> {
-        self.load_calldata().await.map_err(Into::into)?;
+    async fn next(&mut self, block_ref: &BlockInfo) -> PipelineResult<Self::Item> {
+        self.load_calldata(block_ref).await.map_err(Into::into)?;
         self.calldata.pop_front().ok_or(PipelineError::Eof.temp())
+    }
+
+    fn clear(&mut self) {
+        self.calldata.clear();
+        self.open = false;
     }
 }
 
@@ -131,25 +122,20 @@ mod tests {
     }
 
     pub(crate) fn default_test_calldata_source() -> CalldataSource<TestChainProvider> {
-        CalldataSource::new(
-            TestChainProvider::default(),
-            Default::default(),
-            BlockInfo::default(),
-            Default::default(),
-        )
+        CalldataSource::new(TestChainProvider::default(), Default::default(), Default::default())
     }
 
     #[tokio::test]
     async fn test_load_calldata_open() {
         let mut source = default_test_calldata_source();
         source.open = true;
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
     }
 
     #[tokio::test]
     async fn test_load_calldata_provider_err() {
         let mut source = default_test_calldata_source();
-        assert!(source.load_calldata().await.is_err());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_err());
     }
 
     #[tokio::test]
@@ -158,7 +144,7 @@ mod tests {
         let block_info = BlockInfo::default();
         source.chain_provider.insert_block_with_transactions(0, block_info, Vec::new());
         assert!(!source.open); // Source is not open by default.
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
         assert!(source.calldata.is_empty());
         assert!(source.open);
     }
@@ -171,7 +157,7 @@ mod tests {
         let tx = test_legacy_tx(batch_inbox_address);
         source.chain_provider.insert_block_with_transactions(0, block_info, vec![tx]);
         assert!(!source.open); // Source is not open by default.
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
         assert!(source.calldata.is_empty());
         assert!(source.open);
     }
@@ -185,7 +171,7 @@ mod tests {
         let tx = test_legacy_tx(batch_inbox_address);
         source.chain_provider.insert_block_with_transactions(0, block_info, vec![tx]);
         assert!(!source.open); // Source is not open by default.
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
         assert!(source.calldata.is_empty());
         assert!(source.open);
     }
@@ -200,7 +186,7 @@ mod tests {
         let block_info = BlockInfo::default();
         source.chain_provider.insert_block_with_transactions(0, block_info, vec![tx]);
         assert!(!source.open); // Source is not open by default.
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
         assert!(!source.calldata.is_empty()); // Calldata is NOT empty.
         assert!(source.open);
     }
@@ -215,7 +201,7 @@ mod tests {
         let block_info = BlockInfo::default();
         source.chain_provider.insert_block_with_transactions(0, block_info, vec![tx]);
         assert!(!source.open); // Source is not open by default.
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
         assert!(!source.calldata.is_empty()); // Calldata is NOT empty.
         assert!(source.open);
     }
@@ -230,7 +216,7 @@ mod tests {
         let block_info = BlockInfo::default();
         source.chain_provider.insert_block_with_transactions(0, block_info, vec![tx]);
         assert!(!source.open); // Source is not open by default.
-        assert!(source.load_calldata().await.is_ok());
+        assert!(source.load_calldata(&BlockInfo::default()).await.is_ok());
         assert!(source.calldata.is_empty());
         assert!(source.open);
     }
@@ -238,6 +224,9 @@ mod tests {
     #[tokio::test]
     async fn test_next_err_loading_calldata() {
         let mut source = default_test_calldata_source();
-        assert!(matches!(source.next().await, Err(PipelineErrorKind::Temporary(_))));
+        assert!(matches!(
+            source.next(&BlockInfo::default()).await,
+            Err(PipelineErrorKind::Temporary(_))
+        ));
     }
 }

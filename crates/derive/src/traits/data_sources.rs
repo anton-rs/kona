@@ -28,22 +28,11 @@ pub trait BlobProvider {
 pub trait DataAvailabilityProvider {
     /// The item type of the data iterator.
     type Item: Send + Sync + Debug + Into<Bytes>;
-    /// An iterator over returned bytes data.
-    type DataIter: AsyncIterator<Item = Self::Item> + Send + Debug;
 
-    /// Returns the data availability for the block with the given hash, or an error if the block
-    /// does not exist in the data source.
-    async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::DataIter>;
-}
+    /// Returns the next data for the given [BlockInfo].
+    /// Returns a `PipelineError::Eof` if there is no more data for the given block ref.
+    async fn next(&mut self, block_ref: &BlockInfo) -> PipelineResult<Self::Item>;
 
-/// A simple asynchronous iterator trait.
-/// This should be replaced with the `async-iterator` crate
-#[async_trait]
-pub trait AsyncIterator {
-    /// The item type of the iterator.
-    type Item: Send + Sync + Debug + Into<Bytes>;
-
-    /// Returns the next item in the iterator, or [crate::errors::PipelineError::Eof] if the
-    /// iterator is exhausted.
-    async fn next(&mut self) -> PipelineResult<Self::Item>;
+    /// Clears the data source for the next block ref.
+    fn clear(&mut self);
 }

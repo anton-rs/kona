@@ -31,7 +31,7 @@ let beacon_client = OnlineBeaconClient::new_http("http://127.0.0.1:5555".into())
 let blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
 let blob_provider = OnlineBlobProviderWithFallback::new(blob_provider, None);
 let dap_source =
-    EthereumDataSource::new(chain_provider.clone(), blob_provider, &rollup_config);
+    EthereumDataSource::new_from_parts(chain_provider.clone(), blob_provider, &rollup_config);
 let builder = StatefulAttributesBuilder::new(
     rollup_config.clone(),
     l2_chain_provider.clone(),
