@@ -58,4 +58,36 @@ impl From<BlobDecodingError> for BlobProviderError {
     }
 }
 
-impl core::error::Error for BlobProviderError {}
+impl core::error::Error for BlobProviderError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        match self {
+            Self::BlobDecoding(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::error::Error;
+
+    #[test]
+    fn test_blob_decoding_error_source() {
+        let err: BlobProviderError = BlobDecodingError::InvalidFieldElement.into();
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_from_blob_provider_error() {
+        let err: PipelineErrorKind = BlobProviderError::SlotDerivation.into();
+        assert!(matches!(err, PipelineErrorKind::Critical(_)));
+
+        let err: PipelineErrorKind = BlobProviderError::SidecarLengthMismatch(1, 2).into();
+        assert!(matches!(err, PipelineErrorKind::Critical(_)));
+
+        let err: PipelineErrorKind =
+            BlobProviderError::BlobDecoding(BlobDecodingError::InvalidFieldElement).into();
+        assert!(matches!(err, PipelineErrorKind::Critical(_)));
+    }
+}

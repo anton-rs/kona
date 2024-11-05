@@ -235,6 +235,51 @@ impl From<DepositError> for PipelineEncodingError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::error::Error;
+
+    #[test]
+    fn test_pipeline_error_kind_source() {
+        let err = PipelineErrorKind::Temporary(PipelineError::Eof);
+        assert!(err.source().is_some());
+
+        let err = PipelineErrorKind::Critical(PipelineError::Eof);
+        assert!(err.source().is_some());
+
+        let err = PipelineErrorKind::Reset(ResetError::BadParentHash(
+            Default::default(),
+            Default::default(),
+        ));
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_pipeline_error_source() {
+        let err = PipelineError::AttributesBuilder(BuilderError::BlockMismatch(
+            Default::default(),
+            Default::default(),
+        ));
+        assert!(err.source().is_some());
+
+        let encoding_err = PipelineEncodingError::EmptyBuffer;
+        let err: PipelineError = encoding_err.into();
+        assert!(err.source().is_some());
+
+        let err = PipelineError::Eof;
+        assert!(err.source().is_none());
+    }
+
+    #[test]
+    fn test_pipeline_encoding_error_source() {
+        let err = PipelineEncodingError::DepositError(DepositError::UnexpectedTopicsLen(0));
+        assert!(err.source().is_some());
+
+        let err = SpanBatchError::TooBigSpanBatchSize;
+        let err: PipelineEncodingError = err.into();
+        assert!(err.source().is_some());
+
+        let err = PipelineEncodingError::EmptyBuffer;
+        assert!(err.source().is_none());
+    }
 
     #[test]
     fn test_reset_error_kinds() {
