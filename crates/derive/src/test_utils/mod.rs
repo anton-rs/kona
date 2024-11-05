@@ -14,7 +14,7 @@ mod chain_providers;
 pub use chain_providers::{TestChainProvider, TestL2ChainProvider, TestProviderError};
 
 mod data_availability_provider;
-pub use data_availability_provider::{TestDAP, TestIter};
+pub use data_availability_provider::TestDAP;
 
 mod batch_provider;
 pub use batch_provider::TestNextBatchProvider;

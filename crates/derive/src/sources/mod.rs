@@ -7,14 +7,17 @@
 //! [DataAvailabilityProvider]: crate::traits::DataAvailabilityProvider
 //! [BlockInfo]: op_alloy_protocol::BlockInfo
 
+mod blob_hash;
+pub use blob_hash::IndexedBlobHash;
+
+mod blob_data;
+pub use blob_data::BlobData;
+
 mod ethereum;
 pub use ethereum::EthereumDataSource;
 
 mod blobs;
-pub use blobs::{BlobData, BlobSource, IndexedBlobHash};
+pub use blobs::BlobSource;
 
 mod calldata;
 pub use calldata::CalldataSource;
-
-mod variant;
-pub use variant::EthereumDataSourceVariant;

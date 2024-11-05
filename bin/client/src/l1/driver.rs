@@ -159,7 +159,7 @@ where
             l2_chain_provider.clone(),
             chain_provider.clone(),
         );
-        let dap = EthereumDataSource::new(chain_provider.clone(), blob_provider, &cfg);
+        let dap = EthereumDataSource::new_from_parts(chain_provider.clone(), blob_provider, &cfg);
 
         let pipeline = PipelineBuilder::new()
             .rollup_config(cfg)

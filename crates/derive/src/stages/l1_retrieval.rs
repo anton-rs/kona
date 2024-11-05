@@ -3,9 +3,7 @@
 use crate::{
     errors::{PipelineError, PipelineErrorKind},
     stages::FrameQueueProvider,
-    traits::{
-        AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider, SignalReceiver,
-    },
+    traits::{DataAvailabilityProvider, OriginAdvancer, OriginProvider, SignalReceiver},
     types::{ActivationSignal, PipelineResult, ResetSignal, Signal},
 };
 use alloc::boxed::Box;
@@ -32,11 +30,9 @@ pub trait L1RetrievalProvider {
 /// The [L1Retrieval] stage of the derivation pipeline.
 ///
 /// For each L1 [BlockInfo] pulled from the [L1Traversal] stage, [L1Retrieval] fetches the
-/// associated data from a specified [DataAvailabilityProvider]. This data is returned as a generic
-/// [DataIter] that can be iterated over.
+/// associated data from a specified [DataAvailabilityProvider].
 ///
 /// [L1Traversal]: crate::stages::L1Traversal
-/// [DataIter]: crate::traits::DataAvailabilityProvider::DataIter
 #[derive(Debug)]
 pub struct L1Retrieval<DAP, P>
 where
@@ -47,8 +43,8 @@ where
     pub prev: P,
     /// The data availability provider to use for the L1 retrieval stage.
     pub provider: DAP,
-    /// The current data iterator.
-    pub(crate) data: Option<DAP::DataIter>,
+    /// The current block ref.
+    pub next: Option<BlockInfo>,
 }
 
 impl<DAP, P> L1Retrieval<DAP, P>
@@ -61,7 +57,7 @@ where
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
     pub const fn new(prev: P, provider: DAP) -> Self {
-        Self { prev, provider, data: None }
+        Self { prev, provider, next: None }
     }
 }
 
@@ -85,20 +81,23 @@ where
     type Item = DAP::Item;
 
     async fn next_data(&mut self) -> PipelineResult<Self::Item> {
-        if self.data.is_none() {
-            let next = self
-                .prev
-                .next_l1_block()
-                .await? // SAFETY: This question mark bubbles up the Eof error.
-                .ok_or(PipelineError::MissingL1Data.temp())?;
-            self.data = Some(self.provider.open_data(&next).await?);
+        if self.next.is_none() {
+            self.next = Some(
+                self.prev
+                    .next_l1_block()
+                    .await? // SAFETY: This question mark bubbles up the Eof error.
+                    .ok_or(PipelineError::MissingL1Data.temp())?,
+            );
         }
+        // SAFETY: The above check ensures that `next` is not None.
+        let next = self.next.as_ref().expect("infallible");
 
-        match self.data.as_mut().expect("Cannot be None").next().await {
+        match self.provider.next(next).await {
             Ok(data) => Ok(data),
             Err(e) => {
                 if let PipelineErrorKind::Temporary(PipelineError::Eof) = e {
-                    self.data = None;
+                    self.next = None;
+                    self.provider.clear();
                 }
                 Err(e)
             }
@@ -127,7 +126,7 @@ where
         match signal {
             Signal::Reset(ResetSignal { l1_origin, .. }) |
             Signal::Activation(ActivationSignal { l1_origin, .. }) => {
-                self.data = Some(self.provider.open_data(&l1_origin).await?);
+                self.next = Some(l1_origin);
             }
             _ => {}
         }
@@ -138,34 +137,31 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        stages::l1_traversal::tests::*,
-        test_utils::{TestDAP, TestIter},
-    };
+    use crate::{stages::l1_traversal::tests::*, test_utils::TestDAP};
     use alloc::vec;
     use alloy_primitives::Bytes;
 
     #[tokio::test]
     async fn test_l1_retrieval_flush_channel() {
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let dap = TestDAP { results: vec![] };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
-        retrieval.data = None;
+        retrieval.next = None;
         retrieval.signal(Signal::FlushChannel).await.unwrap();
-        assert!(retrieval.data.is_none());
+        assert!(retrieval.next.is_none());
         assert!(retrieval.prev.block.is_none());
     }
 
     #[tokio::test]
     async fn test_l1_retrieval_activation_signal() {
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let dap = TestDAP { results: vec![] };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
-        retrieval.data = None;
+        retrieval.next = None;
         retrieval
             .signal(
                 ActivationSignal { system_config: Some(Default::default()), ..Default::default() }
@@ -173,18 +169,18 @@ mod tests {
             )
             .await
             .unwrap();
-        assert!(retrieval.data.is_some());
+        assert!(retrieval.next.is_some());
         assert_eq!(retrieval.prev.block, Some(BlockInfo::default()));
     }
 
     #[tokio::test]
     async fn test_l1_retrieval_reset_signal() {
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let dap = TestDAP { results: vec![] };
         let mut retrieval = L1Retrieval::new(traversal, dap);
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
-        retrieval.data = None;
+        retrieval.next = None;
         retrieval
             .signal(
                 ResetSignal { system_config: Some(Default::default()), ..Default::default() }
@@ -192,14 +188,14 @@ mod tests {
             )
             .await
             .unwrap();
-        assert!(retrieval.data.is_some());
+        assert!(retrieval.next.is_some());
         assert_eq!(retrieval.prev.block, Some(BlockInfo::default()));
     }
 
     #[tokio::test]
     async fn test_l1_retrieval_origin() {
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
+        let dap = TestDAP { results: vec![] };
         let retrieval = L1Retrieval::new(traversal, dap);
         let expected = BlockInfo::default();
         assert_eq!(retrieval.origin(), Some(expected));
@@ -209,52 +205,49 @@ mod tests {
     async fn test_l1_retrieval_next_data() {
         let traversal = new_populated_test_traversal();
         let results = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
-        let dap = TestDAP { results, batch_inbox_address: Address::default() };
+        let dap = TestDAP { results };
         let mut retrieval = L1Retrieval::new(traversal, dap);
-        assert_eq!(retrieval.data, None);
+        assert_eq!(retrieval.next, None);
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
-        assert!(retrieval.data.is_some());
-        let retrieval_data = retrieval.data.as_ref().unwrap();
-        assert_eq!(retrieval_data.open_data_calls.len(), 1);
-        assert_eq!(retrieval_data.open_data_calls[0].0, BlockInfo::default());
-        assert_eq!(retrieval_data.open_data_calls[0].1, Address::default());
-        // Data should be reset to none and the error should be bubbled up.
-        let data = retrieval.next_data().await.unwrap_err();
-        assert_eq!(data, PipelineError::Eof.temp());
-        assert!(retrieval.data.is_none());
     }
 
     #[tokio::test]
-    async fn test_l1_retrieval_existing_data_is_respected() {
-        let data = TestIter {
-            open_data_calls: vec![(BlockInfo::default(), Address::default())],
-            results: vec![Ok(Bytes::default())],
-        };
-        // Create a new traversal with no blocks or receipts.
-        // This would bubble up an error if the prev stage
-        // (traversal) is called in the retrieval stage.
-        let traversal = new_test_traversal(vec![], vec![]);
-        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
+    async fn test_l1_retrieval_next_data_respect_next() {
+        let mut traversal = new_populated_test_traversal();
+        traversal.done = true;
+        let results = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
+        let dap = TestDAP { results };
+        let mut retrieval = L1Retrieval::new(traversal, dap);
+        retrieval.next = Some(BlockInfo::default());
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
-        assert!(retrieval.data.is_some());
-        let retrieval_data = retrieval.data.as_ref().unwrap();
-        assert_eq!(retrieval_data.open_data_calls.len(), 1);
+        let err = retrieval.next_data().await.unwrap_err();
+        assert_eq!(err, PipelineError::Eof.temp());
+        assert!(retrieval.next.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_l1_retrieval_next_data_l1_block_errors() {
+        let mut traversal = new_populated_test_traversal();
+        traversal.done = true;
+        let results = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
+        let dap = TestDAP { results };
+        let mut retrieval = L1Retrieval::new(traversal, dap);
+        assert_eq!(retrieval.next, None);
+        let err = retrieval.next_data().await.unwrap_err();
+        assert_eq!(err, PipelineError::Eof.temp());
+        assert!(retrieval.next.is_none());
     }
 
     #[tokio::test]
     async fn test_l1_retrieval_existing_data_errors() {
-        let data = TestIter {
-            open_data_calls: vec![(BlockInfo::default(), Address::default())],
-            results: vec![Err(PipelineError::Eof.temp())],
-        };
         let traversal = new_populated_test_traversal();
-        let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
+        let dap = TestDAP { results: vec![Err(PipelineError::Eof.temp())] };
+        let mut retrieval =
+            L1Retrieval { prev: traversal, provider: dap, next: Some(BlockInfo::default()) };
         let data = retrieval.next_data().await.unwrap_err();
         assert_eq!(data, PipelineError::Eof.temp());
-        assert!(retrieval.data.is_none());
+        assert!(retrieval.next.is_none());
     }
 }
