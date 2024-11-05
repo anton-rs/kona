@@ -1,11 +1,10 @@
 //! Contains the concrete implementation of the [BlobProvider] trait for the client program.
 
-use crate::HintType;
+use crate::{errors::OracleProviderError, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Blob;
 use alloy_eips::eip4844::FIELD_ELEMENTS_PER_BLOB;
 use alloy_primitives::keccak256;
-use anyhow::Result;
 use async_trait::async_trait;
 use kona_derive::{sources::IndexedBlobHash, traits::BlobProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
@@ -32,20 +31,28 @@ impl<T: CommsClient> OracleBlobProvider<T> {
     /// ## Returns
     /// - `Ok(blob)`: The blob.
     /// - `Err(e)`: The blob could not be retrieved.
-    async fn get_blob(&self, block_ref: &BlockInfo, blob_hash: &IndexedBlobHash) -> Result<Blob> {
+    async fn get_blob(
+        &self,
+        block_ref: &BlockInfo,
+        blob_hash: &IndexedBlobHash,
+    ) -> Result<Blob, OracleProviderError> {
         let mut blob_req_meta = [0u8; 48];
         blob_req_meta[0..32].copy_from_slice(blob_hash.hash.as_ref());
         blob_req_meta[32..40].copy_from_slice((blob_hash.index).to_be_bytes().as_ref());
         blob_req_meta[40..48].copy_from_slice(block_ref.timestamp.to_be_bytes().as_ref());
 
         // Send a hint for the blob commitment and field elements.
-        self.oracle.write(&HintType::L1Blob.encode_with(&[blob_req_meta.as_ref()])).await?;
+        self.oracle
+            .write(&HintType::L1Blob.encode_with(&[blob_req_meta.as_ref()]))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         // Fetch the blob commitment.
         let mut commitment = [0u8; 48];
         self.oracle
             .get_exact(PreimageKey::new(*blob_hash.hash, PreimageKeyType::Sha256), &mut commitment)
-            .await?;
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         // Reconstruct the blob from the 4096 field elements.
         let mut blob = Blob::default();
@@ -60,7 +67,8 @@ impl<T: CommsClient> OracleBlobProvider<T> {
                     PreimageKey::new(*keccak256(field_element_key), PreimageKeyType::Blob),
                     &mut field_element,
                 )
-                .await?;
+                .await
+                .map_err(OracleProviderError::Preimage)?;
             blob[(i as usize) << 5..(i as usize + 1) << 5].copy_from_slice(field_element.as_ref());
         }
 
@@ -72,7 +80,7 @@ impl<T: CommsClient> OracleBlobProvider<T> {
 
 #[async_trait]
 impl<T: CommsClient + Sync + Send> BlobProvider for OracleBlobProvider<T> {
-    type Error = anyhow::Error;
+    type Error = OracleProviderError;
 
     async fn get_blobs(
         &mut self,

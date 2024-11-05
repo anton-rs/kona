@@ -38,7 +38,6 @@ lru.workspace = true
 spin.workspace = true
 serde.workspace = true
 cfg-if.workspace = true
-anyhow.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true

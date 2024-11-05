@@ -1,8 +1,13 @@
 //! This module contains the [HintType] enum.
 
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::hex;
 use core::fmt::Display;
+
+use crate::errors::HintParsingError;
 
 /// The [HintType] enum is used to specify the type of hint that was received.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -43,7 +48,7 @@ impl HintType {
 }
 
 impl TryFrom<&str> for HintType {
-    type Error = anyhow::Error;
+    type Error = HintParsingError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
@@ -59,7 +64,7 @@ impl TryFrom<&str> for HintType {
             "l2-state-node" => Ok(HintType::L2StateNode),
             "l2-account-proof" => Ok(HintType::L2AccountProof),
             "l2-account-storage-proof" => Ok(HintType::L2AccountStorageProof),
-            _ => anyhow::bail!("Invalid hint type: {value}"),
+            _ => Err(HintParsingError(value.to_string())),
         }
     }
 }

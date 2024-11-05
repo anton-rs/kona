@@ -30,9 +30,7 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
 
     let expanded = quote! {
-        use anyhow::Result as AnyhowResult;
-
-        fn #fn_name() -> AnyhowResult<()> {
+        fn #fn_name() -> Result<(), String> {
             match #fn_body {
                 Ok(_) => kona_common::io::exit(0),
                 Err(e) => {

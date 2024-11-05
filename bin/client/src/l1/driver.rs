@@ -4,12 +4,15 @@
 //! [OpPayloadAttributes]: op_alloy_rpc_types_engine::OpPayloadAttributes
 
 use super::OracleL1ChainProvider;
-use crate::{l2::OracleL2ChainProvider, BootInfo, FlushableCache, HintType};
+use crate::{
+    errors::{DriverError, DriverResult, OracleProviderError},
+    l2::OracleL2ChainProvider,
+    BootInfo, FlushableCache, HintType,
+};
 use alloc::{string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{BlockBody, Header, Sealable, Sealed};
 use alloy_primitives::B256;
 use alloy_rlp::Decodable;
-use anyhow::{anyhow, Result};
 use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
@@ -128,7 +131,7 @@ where
         blob_provider: B,
         mut chain_provider: OracleL1ChainProvider<O>,
         mut l2_chain_provider: OracleL2ChainProvider<O>,
-    ) -> Result<Self> {
+    ) -> DriverResult<Self> {
         let cfg = Arc::new(boot_info.rollup_config.clone());
 
         // Fetch the startup information.
@@ -195,7 +198,7 @@ where
         provider: &P,
         hinter: &H,
         handle_register: KonaHandleRegister<P, H>,
-    ) -> Result<(u64, B256)>
+    ) -> DriverResult<(u64, B256)>
     where
         P: TrieProvider + Send + Sync + Clone,
         H: TrieHinter + Send + Sync + Clone,
@@ -273,11 +276,8 @@ where
                         .transactions
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|tx| {
-                            OpTxEnvelope::decode(&mut tx.as_ref())
-                                .map_err(|e| anyhow!("Failed to decode transaction: {}", e))
-                        })
-                        .collect::<Result<Vec<OpTxEnvelope>>>()?,
+                        .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()).map_err(DriverError::Rlp))
+                        .collect::<DriverResult<Vec<OpTxEnvelope>>>()?,
                     ommers: Vec::new(),
                     withdrawals: None,
                 },
@@ -285,7 +285,8 @@ where
 
             // Update the safe head.
             self.l2_safe_head =
-                L2BlockInfo::from_block_and_genesis(&block, &self.pipeline.rollup_config.genesis)?;
+                L2BlockInfo::from_block_and_genesis(&block, &self.pipeline.rollup_config.genesis)
+                    .map_err(OracleProviderError::BlockInfo)?;
             self.l2_safe_head_header = header.clone().seal_slow();
             self.l2_safe_head_output_root = executor.compute_output_root()?;
         }
@@ -387,24 +388,26 @@ where
         boot_info: &BootInfo,
         chain_provider: &mut OracleL1ChainProvider<O>,
         l2_chain_provider: &mut OracleL2ChainProvider<O>,
-    ) -> Result<(BlockInfo, L2BlockInfo, Sealed<Header>)> {
+    ) -> DriverResult<(BlockInfo, L2BlockInfo, Sealed<Header>)> {
         // Find the initial safe head, based off of the starting L2 block number in the boot info.
         caching_oracle
             .write(
                 &HintType::StartingL2Output
                     .encode_with(&[boot_info.agreed_l2_output_root.as_ref()]),
             )
-            .await?;
+            .await
+            .map_err(OracleProviderError::Preimage)?;
         let mut output_preimage = [0u8; 128];
         caching_oracle
             .get_exact(
                 PreimageKey::new(*boot_info.agreed_l2_output_root, PreimageKeyType::Keccak256),
                 &mut output_preimage,
             )
-            .await?;
+            .await
+            .map_err(OracleProviderError::Preimage)?;
 
         let safe_hash =
-            output_preimage[96..128].try_into().map_err(|_| anyhow!("Invalid L2 output root"))?;
+            output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
         let safe_header = l2_chain_provider.header_by_hash(safe_hash)?;
         let safe_head_info = l2_chain_provider.l2_block_info_by_number(safe_header.number).await?;
 
