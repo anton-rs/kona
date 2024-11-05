@@ -23,6 +23,8 @@ ignore:
   - "**/test_utils*"
   - "**/test_util*"
   - "**/tests*"
+  - "crates/derive-alloy/src/alloy_providers.rs"
+  - "crates/derive-alloy/src/beacon_client.rs"
   - "crates/mpt/src/noop.rs"
 
 # Make comments less noisy
