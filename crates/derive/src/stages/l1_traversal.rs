@@ -1,12 +1,10 @@
 //! Contains the [L1Traversal] stage of the derivation pipeline.
 
 use crate::{
-    errors::{PipelineError, PipelineResult, ResetError},
+    errors::{PipelineError, ResetError},
     stages::L1RetrievalProvider,
-    traits::{
-        ActivationSignal, ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal,
-        SignalReceiver,
-    },
+    traits::{ChainProvider, OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{ActivationSignal, PipelineResult, ResetSignal, Signal},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;

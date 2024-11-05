@@ -1,11 +1,12 @@
 //! Contains the logic for the `AttributesQueue` stage.
 
 use crate::{
-    errors::{PipelineError, PipelineResult, ResetError},
+    errors::{PipelineError, ResetError},
     traits::{
         AttributesBuilder, AttributesProvider, NextAttributes, OriginAdvancer, OriginProvider,
-        Signal, SignalReceiver,
+        SignalReceiver,
     },
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
@@ -198,7 +199,7 @@ mod tests {
     use crate::{
         errors::{BuilderError, PipelineErrorKind},
         test_utils::{new_test_attributes_provider, TestAttributesBuilder, TestAttributesProvider},
-        traits::ResetSignal,
+        types::ResetSignal,
     };
     use alloc::{sync::Arc, vec, vec::Vec};
     use alloy_primitives::{b256, Address, Bytes, B256};

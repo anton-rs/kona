@@ -16,7 +16,7 @@ use alloy_rlp::Decodable;
 use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
-    errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
+    errors::{PipelineError, PipelineErrorKind, ResetError},
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
@@ -24,9 +24,9 @@ use kona_derive::{
         L1Retrieval, L1Traversal,
     },
     traits::{
-        ActivationSignal, BlobProvider, ChainProvider, L2ChainProvider, OriginProvider, Pipeline,
-        ResetSignal, Signal, SignalReceiver, StepResult,
+        BlobProvider, ChainProvider, L2ChainProvider, OriginProvider, Pipeline, SignalReceiver,
     },
+    types::{ActivationSignal, PipelineResult, ResetSignal, Signal, StepResult},
 };
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
 use kona_mpt::{TrieHinter, TrieProvider};

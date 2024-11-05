@@ -1,8 +1,9 @@
 //! An implementation of the [DataAvailabilityProvider] trait for tests.
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     traits::{AsyncIterator, DataAvailabilityProvider},
+    types::PipelineResult,
 };
 use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_primitives::{Address, Bytes};

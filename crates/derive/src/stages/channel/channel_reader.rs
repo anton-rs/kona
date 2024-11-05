@@ -1,9 +1,10 @@
 //! This module contains the `ChannelReader` struct.
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     stages::{decompress_brotli, BatchStreamProvider},
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
@@ -257,7 +258,7 @@ impl BatchReader {
 mod test {
     use super::*;
     use crate::{
-        errors::PipelineErrorKind, test_utils::TestChannelReaderProvider, traits::ResetSignal,
+        errors::PipelineErrorKind, test_utils::TestChannelReaderProvider, types::ResetSignal,
     };
     use alloc::vec;
 

@@ -2,9 +2,10 @@
 
 use super::NextBatchProvider;
 use crate::{
-    errors::{PipelineResult, ResetError},
+    errors::ResetError,
     prelude::{OriginProvider, PipelineError, PipelineErrorKind},
-    traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal, SignalReceiver},
+    traits::{AttributesProvider, OriginAdvancer, SignalReceiver},
+    types::{PipelineResult, ResetSignal, Signal},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
@@ -310,10 +311,11 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        errors::{PipelineError, PipelineErrorKind, PipelineResult, ResetError},
+        errors::{PipelineError, PipelineErrorKind, ResetError},
         stages::{BatchValidator, NextBatchProvider},
         test_utils::{CollectingLayer, TestNextBatchProvider, TraceStorage},
-        traits::{AttributesProvider, OriginAdvancer, ResetSignal, Signal, SignalReceiver},
+        traits::{AttributesProvider, OriginAdvancer, SignalReceiver},
+        types::{PipelineResult, ResetSignal, Signal},
     };
     use alloc::{sync::Arc, vec, vec::Vec};
     use alloy_eips::{BlockNumHash, NumHash};

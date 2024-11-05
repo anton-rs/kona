@@ -1,11 +1,11 @@
 //! Testing utilities for the attributes queue stage.
 
 use crate::{
-    errors::{BuilderError, PipelineError, PipelineErrorKind, PipelineResult},
+    errors::{BuilderError, PipelineError, PipelineErrorKind},
     traits::{
-        AttributesBuilder, AttributesProvider, OriginAdvancer, OriginProvider, Signal,
-        SignalReceiver,
+        AttributesBuilder, AttributesProvider, OriginAdvancer, OriginProvider, SignalReceiver,
     },
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_eips::BlockNumHash;

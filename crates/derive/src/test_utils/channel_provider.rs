@@ -3,9 +3,10 @@
 //! [ChannelBank]: crate::stages::ChannelBank
 
 use crate::{
-    errors::{PipelineError, PipelineResult},
+    errors::PipelineError,
     stages::NextFrameProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{OriginAdvancer, OriginProvider, SignalReceiver},
+    types::{PipelineResult, Signal},
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
