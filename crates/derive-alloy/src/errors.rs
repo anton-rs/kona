@@ -34,3 +34,27 @@ impl From<AlloyProviderError> for PipelineErrorKind {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_alloy_provider_error() {
+        let err: PipelineErrorKind = AlloyProviderError::Rlp(alloy_rlp::Error::Overflow).into();
+        assert!(matches!(err, PipelineErrorKind::Critical(_)));
+
+        let err: PipelineErrorKind =
+            AlloyProviderError::BlockInfo(FromBlockError::InvalidGenesisHash).into();
+        assert!(matches!(err, PipelineErrorKind::Critical(_)));
+
+        let err: PipelineErrorKind = AlloyProviderError::OpBlockConversion(
+            OpBlockConversionError::MissingSystemConfigGenesis,
+        )
+        .into();
+        assert!(matches!(err, PipelineErrorKind::Critical(_)));
+
+        let err: PipelineErrorKind = AlloyProviderError::Rpc(RpcError::NullResp).into();
+        assert!(matches!(err, PipelineErrorKind::Temporary(_)));
+    }
+}
