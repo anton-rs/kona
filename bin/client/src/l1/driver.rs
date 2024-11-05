@@ -9,7 +9,7 @@ use crate::{
     l2::OracleL2ChainProvider,
     BootInfo, FlushableCache, HintType,
 };
-use alloc::{string::ToString, sync::Arc, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::{BlockBody, Header, Sealable, Sealed};
 use alloy_primitives::B256;
 use alloy_rlp::Decodable;
@@ -322,8 +322,7 @@ where
                                     self.l2_safe_head.block_info.number,
                                     self.pipeline.rollup_config.clone(),
                                 )
-                                .await
-                                .map_err(|e| PipelineError::Provider(e.to_string()).temp())?;
+                                .await?;
 
                             if matches!(e, ResetError::HoloceneActivation) {
                                 self.pipeline
