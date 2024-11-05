@@ -156,7 +156,7 @@ impl BlobData {
             return Err(BlobDecodingError::InvalidLength);
         }
 
-        if blobs[index].is_empty() {
+        if blobs[index].is_empty() || blobs[index].is_zero() {
             return Err(BlobDecodingError::MissingData);
         }
 
@@ -194,8 +194,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_fill_empty_blob() {
+    fn test_fill_zero_blob() {
         let mut blob_data = BlobData::default();
         let blobs = vec![Box::new(Blob::ZERO)];
         assert_eq!(blob_data.fill(&blobs, 0), Err(BlobDecodingError::MissingData));
@@ -231,5 +230,16 @@ mod tests {
         data[4] = 0xFF;
         let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
         assert_eq!(blob_data.decode(), Err(BlobDecodingError::InvalidLength));
+    }
+
+    #[test]
+    fn test_blob_data_decode() {
+        let mut data = vec![0u8; alloy_eips::eip4844::BYTES_PER_BLOB];
+        data[VERSIONED_HASH_VERSION_KZG as usize] = BLOB_ENCODING_VERSION;
+        data[2] = 0x00;
+        data[3] = 0x00;
+        data[4] = 0x01;
+        let blob_data = BlobData { data: Some(Bytes::from(data)), ..Default::default() };
+        assert_eq!(blob_data.decode(), Ok(Bytes::from(vec![0u8; 1])));
     }
 }
