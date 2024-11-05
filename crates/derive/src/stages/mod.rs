@@ -19,10 +19,10 @@ mod l1_traversal;
 pub use l1_traversal::L1Traversal;
 
 mod l1_retrieval;
-pub use l1_retrieval::{L1Retrieval, L1RetrievalProvider};
+pub use l1_retrieval::L1Retrieval;
 
 mod frame_queue;
-pub use frame_queue::{FrameQueue, FrameQueueProvider};
+pub use frame_queue::FrameQueue;
 
 mod channel;
 pub use channel::{

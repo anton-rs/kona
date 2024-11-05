@@ -2,10 +2,10 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
-    stages::L1RetrievalProvider,
+    metrics::PipelineMetrics,
     traits::{
-        ActivationSignal, ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal,
-        SignalReceiver,
+        ActivationSignal, ChainProvider, L1RetrievalProvider, L1TraversalMetrics, OriginAdvancer,
+        OriginProvider, ResetSignal, Signal, SignalReceiver,
     },
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc};
@@ -34,6 +34,8 @@ pub struct L1Traversal<Provider: ChainProvider> {
     pub system_config: SystemConfig,
     /// A reference to the rollup config.
     pub rollup_config: Arc<RollupConfig>,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 #[async_trait]
@@ -54,13 +56,14 @@ impl<F: ChainProvider + Send> L1RetrievalProvider for L1Traversal<F> {
 
 impl<F: ChainProvider> L1Traversal<F> {
     /// Creates a new [L1Traversal] instance.
-    pub fn new(data_source: F, cfg: Arc<RollupConfig>) -> Self {
+    pub fn new(data_source: F, cfg: Arc<RollupConfig>, metrics: PipelineMetrics) -> Self {
         Self {
             block: Some(BlockInfo::default()),
             data_source,
             done: false,
             system_config: SystemConfig::default(),
             rollup_config: cfg,
+            metrics,
         }
     }
 }
@@ -76,24 +79,34 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         let block = match self.block {
             Some(block) => block,
             None => {
+                self.metrics.record_error(&PipelineError::Eof.temp());
                 warn!(target: "l1-traversal",  "Missing current block, can't advance origin with no reference.");
                 return Err(PipelineError::Eof.temp());
             }
         };
         let next_l1_origin = match self.data_source.block_info_by_number(block.number + 1).await {
             Ok(block) => block,
-            Err(e) => return Err(PipelineError::Provider(e.to_string()).temp()),
+            Err(e) => {
+                let error = PipelineError::Provider(e.to_string()).temp();
+                self.metrics.record_error(&error);
+                return Err(error);
+            }
         };
 
         // Check block hashes for reorgs.
         if block.hash != next_l1_origin.parent_hash {
+            self.metrics.record_reorg_detected();
             return Err(ResetError::ReorgDetected(block.hash, next_l1_origin.parent_hash).into());
         }
 
         // Fetch receipts for the next l1 block and update the system config.
         let receipts = match self.data_source.receipts_by_hash(next_l1_origin.hash).await {
             Ok(receipts) => receipts,
-            Err(e) => return Err(PipelineError::Provider(e.to_string()).temp()),
+            Err(e) => {
+                let error = PipelineError::Provider(e.to_string()).temp();
+                self.metrics.record_error(&error);
+                return Err(error);
+            }
         };
 
         if let Err(e) = self.system_config.update_with_receipts(
@@ -101,8 +114,12 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
             self.rollup_config.l1_system_config_address,
             self.rollup_config.is_ecotone_active(next_l1_origin.timestamp),
         ) {
-            return Err(PipelineError::SystemConfigUpdate(e).crit());
+            let error = PipelineError::SystemConfigUpdate(e).crit();
+            self.metrics.record_error(&error);
+            return Err(error);
         }
+
+        self.metrics.record_system_config_update();
 
         let prev_block_holocene = self.rollup_config.is_holocene_active(block.timestamp);
         let next_block_holocene = self.rollup_config.is_holocene_active(next_l1_origin.timestamp);
@@ -111,9 +128,12 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         self.block = Some(next_l1_origin);
         self.done = false;
 
+        self.metrics.record_block_processed(next_l1_origin.number);
+
         // If the prev block is not holocene, but the next is, we need to flag this
         // so the pipeline driver will reset the pipeline for holocene activation.
         if !prev_block_holocene && next_block_holocene {
+            self.metrics.record_holocene_activation();
             return Err(ResetError::HoloceneActivation.reset());
         }
 
@@ -198,7 +218,7 @@ pub(crate) mod tests {
             let hash = blocks.get(i).map(|b| b.hash).unwrap_or_default();
             provider.insert_receipts(hash, vec![receipt.clone()]);
         }
-        L1Traversal::new(provider, Arc::new(rollup_config))
+        L1Traversal::new(provider, Arc::new(rollup_config), PipelineMetrics::no_op())
     }
 
     pub(crate) fn new_populated_test_traversal() -> L1Traversal<TestChainProvider> {

@@ -2,10 +2,9 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
-    metrics::PipelineMetrics,
     traits::{
-        AttributesBuilder, AttributesProvider, AttributesQueueMetrics, NextAttributes,
-        OriginAdvancer, OriginProvider, Signal, SignalReceiver,
+        AttributesBuilder, AttributesProvider, NextAttributes, OriginAdvancer, OriginProvider,
+        Signal, SignalReceiver,
     },
 };
 use alloc::{boxed::Box, sync::Arc};
@@ -45,8 +44,6 @@ where
     batch: Option<SingleBatch>,
     /// The attributes builder.
     builder: AB,
-    /// Metrics collector.
-    metrics: PipelineMetrics,
 }
 
 impl<P, AB> AttributesQueue<P, AB>
@@ -55,18 +52,12 @@ where
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
-    pub const fn new(
-        cfg: Arc<RollupConfig>,
-        prev: P,
-        builder: AB,
-        metrics: PipelineMetrics,
-    ) -> Self {
-        Self { cfg, prev, is_last_in_span: false, batch: None, builder, metrics }
+    pub const fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
+        Self { cfg, prev, is_last_in_span: false, batch: None, builder }
     }
 
     /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
     pub async fn load_batch(&mut self, parent: L2BlockInfo) -> PipelineResult<SingleBatch> {
-        self.metrics.record_some_metric();
         if self.batch.is_none() {
             let batch = self.prev.next_batch(parent).await?;
             self.batch = Some(batch);
@@ -237,12 +228,7 @@ mod tests {
         let cfg = cfg.unwrap_or_default();
         let mock_batch_queue = new_test_attributes_provider(origin, batches);
         let mock_attributes_builder = TestAttributesBuilder::default();
-        AttributesQueue::new(
-            Arc::new(cfg),
-            mock_batch_queue,
-            mock_attributes_builder,
-            PipelineMetrics::no_op(),
-        )
+        AttributesQueue::new(Arc::new(cfg), mock_batch_queue, mock_attributes_builder)
     }
 
     #[tokio::test]
@@ -260,8 +246,7 @@ mod tests {
         let cfg = RollupConfig::default();
         let mock = new_test_attributes_provider(None, vec![]);
         let mock_builder = TestAttributesBuilder::default();
-        let mut aq =
-            AttributesQueue::new(Arc::new(cfg), mock, mock_builder, PipelineMetrics::no_op());
+        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         aq.batch = Some(SingleBatch::default());
         assert!(!aq.prev.reset);
         aq.signal(ResetSignal::default().signal()).await.unwrap();
@@ -355,8 +340,7 @@ mod tests {
         let mut payload_attributes = default_optimism_payload_attributes();
         let mock_builder =
             TestAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
-        let mut aq =
-            AttributesQueue::new(Arc::new(cfg), mock, mock_builder, PipelineMetrics::no_op());
+        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         let parent = L2BlockInfo::default();
         let txs = vec![Bytes::default(), Bytes::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
@@ -384,8 +368,7 @@ mod tests {
         let mock = new_test_attributes_provider(None, vec![Ok(Default::default())]);
         let mut pa = default_optimism_payload_attributes();
         let mock_builder = TestAttributesBuilder { attributes: vec![Ok(pa.clone())] };
-        let mut aq =
-            AttributesQueue::new(Arc::new(cfg), mock, mock_builder, PipelineMetrics::no_op());
+        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
         let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();

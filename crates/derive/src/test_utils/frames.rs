@@ -2,6 +2,7 @@
 
 use crate::{
     errors::{PipelineError, PipelineErrorKind},
+    metrics::PipelineMetrics,
     stages::{FrameQueue, NextFrameProvider},
     test_utils::TestFrameQueueProvider,
     traits::OriginProvider,
@@ -84,7 +85,11 @@ impl FrameQueueBuilder {
         let config = self.config.unwrap_or_default();
         let config = Arc::new(config);
         let err = self.expected_err.unwrap_or_else(|| PipelineError::Eof.temp());
-        FrameQueueAsserter::new(FrameQueue::new(mock, config), self.expected_frames, err)
+        FrameQueueAsserter::new(
+            FrameQueue::new(mock, config, PipelineMetrics::no_op()),
+            self.expected_frames,
+            err,
+        )
     }
 }
 

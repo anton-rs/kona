@@ -2,8 +2,7 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult},
-    stages::FrameQueueProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{FrameQueueProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;

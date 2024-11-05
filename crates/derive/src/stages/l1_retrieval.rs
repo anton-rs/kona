@@ -2,32 +2,16 @@
 
 use crate::{
     errors::{PipelineError, PipelineErrorKind, PipelineResult},
-    stages::FrameQueueProvider,
+    metrics::PipelineMetrics,
     traits::{
-        ActivationSignal, AsyncIterator, DataAvailabilityProvider, OriginAdvancer, OriginProvider,
-        ResetSignal, Signal, SignalReceiver,
+        ActivationSignal, AsyncIterator, DataAvailabilityProvider, FrameQueueProvider,
+        L1RetrievalMetrics, L1RetrievalProvider, OriginAdvancer, OriginProvider, ResetSignal,
+        Signal, SignalReceiver,
     },
 };
 use alloc::boxed::Box;
-use alloy_primitives::Address;
 use async_trait::async_trait;
 use op_alloy_protocol::BlockInfo;
-
-/// Provides L1 blocks for the [L1Retrieval] stage.
-/// This is the previous stage in the pipeline.
-#[async_trait]
-pub trait L1RetrievalProvider {
-    /// Returns the next L1 [BlockInfo] in the [L1Traversal] stage, if the stage is not complete.
-    /// This function can only be called once while the stage is in progress, and will return
-    /// [`None`] on subsequent calls unless the stage is reset or complete. If the stage is
-    /// complete and the [BlockInfo] has been consumed, an [PipelineError::Eof] error is returned.
-    ///
-    /// [L1Traversal]: crate::stages::L1Traversal
-    async fn next_l1_block(&mut self) -> PipelineResult<Option<BlockInfo>>;
-
-    /// Returns the batcher [Address] from the [op_alloy_genesis::SystemConfig].
-    fn batcher_addr(&self) -> Address;
-}
 
 /// The [L1Retrieval] stage of the derivation pipeline.
 ///
@@ -49,6 +33,8 @@ where
     pub provider: DAP,
     /// The current data iterator.
     pub(crate) data: Option<DAP::DataIter>,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<DAP, P> L1Retrieval<DAP, P>
@@ -60,8 +46,8 @@ where
     /// [DataAvailabilityProvider].
     ///
     /// [L1Traversal]: crate::stages::L1Traversal
-    pub const fn new(prev: P, provider: DAP) -> Self {
-        Self { prev, provider, data: None }
+    pub const fn new(prev: P, provider: DAP, metrics: PipelineMetrics) -> Self {
+        Self { prev, provider, data: None, metrics }
     }
 }
 
@@ -91,7 +77,9 @@ where
                 .next_l1_block()
                 .await? // SAFETY: This question mark bubbles up the Eof error.
                 .ok_or(PipelineError::MissingL1Data.temp())?;
+            self.metrics.record_data_fetch_attempt(next.number);
             self.data = Some(self.provider.open_data(&next).await?);
+            self.metrics.record_data_fetch_success(next.number);
         }
 
         match self.data.as_mut().expect("Cannot be None").next().await {
@@ -143,13 +131,13 @@ mod tests {
         test_utils::{TestDAP, TestIter},
     };
     use alloc::vec;
-    use alloy_primitives::Bytes;
+    use alloy_primitives::{Address, Bytes};
 
     #[tokio::test]
     async fn test_l1_retrieval_flush_channel() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval::new(traversal, dap);
+        let mut retrieval = L1Retrieval::new(traversal, dap, PipelineMetrics::no_op());
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
         retrieval.data = None;
@@ -162,7 +150,7 @@ mod tests {
     async fn test_l1_retrieval_activation_signal() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval::new(traversal, dap);
+        let mut retrieval = L1Retrieval::new(traversal, dap, PipelineMetrics::no_op());
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
         retrieval.data = None;
@@ -181,7 +169,7 @@ mod tests {
     async fn test_l1_retrieval_reset_signal() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval::new(traversal, dap);
+        let mut retrieval = L1Retrieval::new(traversal, dap, PipelineMetrics::no_op());
         retrieval.prev.block = None;
         assert!(retrieval.prev.block.is_none());
         retrieval.data = None;
@@ -200,7 +188,7 @@ mod tests {
     async fn test_l1_retrieval_origin() {
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let retrieval = L1Retrieval::new(traversal, dap);
+        let retrieval = L1Retrieval::new(traversal, dap, PipelineMetrics::no_op());
         let expected = BlockInfo::default();
         assert_eq!(retrieval.origin(), Some(expected));
     }
@@ -210,7 +198,7 @@ mod tests {
         let traversal = new_populated_test_traversal();
         let results = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
         let dap = TestDAP { results, batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval::new(traversal, dap);
+        let mut retrieval = L1Retrieval::new(traversal, dap, PipelineMetrics::no_op());
         assert_eq!(retrieval.data, None);
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
@@ -236,7 +224,12 @@ mod tests {
         // (traversal) is called in the retrieval stage.
         let traversal = new_test_traversal(vec![], vec![]);
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
+        let mut retrieval = L1Retrieval {
+            prev: traversal,
+            provider: dap,
+            data: Some(data),
+            metrics: PipelineMetrics::no_op(),
+        };
         let data = retrieval.next_data().await.unwrap();
         assert_eq!(data, Bytes::default());
         assert!(retrieval.data.is_some());
@@ -252,7 +245,12 @@ mod tests {
         };
         let traversal = new_populated_test_traversal();
         let dap = TestDAP { results: vec![], batch_inbox_address: Address::default() };
-        let mut retrieval = L1Retrieval { prev: traversal, provider: dap, data: Some(data) };
+        let mut retrieval = L1Retrieval {
+            prev: traversal,
+            provider: dap,
+            data: Some(data),
+            metrics: PipelineMetrics::no_op(),
+        };
         let data = retrieval.next_data().await.unwrap_err();
         assert_eq!(data, PipelineError::Eof.temp());
         assert!(retrieval.data.is_none());

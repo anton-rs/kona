@@ -10,9 +10,7 @@ mod providers;
 pub use providers::{ChainProvider, L2ChainProvider};
 
 mod attributes;
-pub use attributes::{
-    AttributesBuilder, AttributesProvider, AttributesQueueMetrics, NextAttributes,
-};
+pub use attributes::{AttributesBuilder, AttributesProvider, NextAttributes};
 
 mod data_sources;
 pub use data_sources::{AsyncIterator, BlobProvider, DataAvailabilityProvider};
@@ -22,3 +20,12 @@ pub use reset::ResetProvider;
 
 mod stages;
 pub use stages::{OriginAdvancer, OriginProvider, SignalReceiver};
+
+mod l1_traversal;
+pub use l1_traversal::L1TraversalMetrics;
+
+mod l1_retrieval;
+pub use l1_retrieval::{L1RetrievalMetrics, L1RetrievalProvider};
+
+mod frame_queue;
+pub use frame_queue::{FrameQueueMetrics, FrameQueueProvider};

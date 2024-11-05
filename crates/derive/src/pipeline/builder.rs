@@ -140,22 +140,20 @@ where
 
         // todo: add metrics to the stages
         // Compose the stage stack.
-        let mut l1_traversal = L1Traversal::new(chain_provider, Arc::clone(&rollup_config));
+        let mut l1_traversal =
+            L1Traversal::new(chain_provider, Arc::clone(&rollup_config), metrics.clone());
         l1_traversal.block = Some(builder.origin.expect("origin must be set"));
-        let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source);
-        let frame_queue = FrameQueue::new(l1_retrieval, Arc::clone(&rollup_config));
+        let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source, metrics.clone());
+        let frame_queue =
+            FrameQueue::new(l1_retrieval, Arc::clone(&rollup_config), metrics.clone());
         let channel_provider = ChannelProvider::new(Arc::clone(&rollup_config), frame_queue);
         let channel_reader = ChannelReader::new(channel_provider, Arc::clone(&rollup_config));
         let batch_stream =
             BatchStream::new(channel_reader, rollup_config.clone(), l2_chain_provider.clone());
         let batch_provider =
             BatchProvider::new(rollup_config.clone(), batch_stream, l2_chain_provider.clone());
-        let attributes = AttributesQueue::new(
-            rollup_config.clone(),
-            batch_provider,
-            attributes_builder,
-            metrics.clone(),
-        );
+        let attributes =
+            AttributesQueue::new(rollup_config.clone(), batch_provider, attributes_builder);
 
         // Create the pipeline.
         Self::new(attributes, rollup_config, l2_chain_provider, metrics)

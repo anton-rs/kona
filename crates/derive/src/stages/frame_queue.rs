@@ -2,28 +2,19 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult},
+    metrics::PipelineMetrics,
     stages::NextFrameProvider,
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{
+        FrameQueueMetrics, FrameQueueProvider, OriginAdvancer, OriginProvider, Signal,
+        SignalReceiver,
+    },
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Frame};
 use tracing::{debug, error, trace};
-
-/// Provides data frames for the [FrameQueue] stage.
-#[async_trait]
-pub trait FrameQueueProvider {
-    /// An item that can be converted into a byte array.
-    type Item: Into<Bytes>;
-
-    /// Retrieves the next data item from the L1 retrieval stage.
-    /// If there is data, it pushes it into the next stage.
-    /// If there is no data, it returns an error.
-    async fn next_data(&mut self) -> PipelineResult<Self::Item>;
-}
 
 /// The [FrameQueue] stage of the derivation pipeline.
 /// This stage takes the output of the [L1Retrieval] stage and parses it into frames.
@@ -40,6 +31,8 @@ where
     queue: VecDeque<Frame>,
     /// The rollup config.
     rollup_config: Arc<RollupConfig>,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P> FrameQueue<P>
@@ -49,8 +42,8 @@ where
     /// Create a new [FrameQueue] stage with the given previous [L1Retrieval] stage.
     ///
     /// [L1Retrieval]: crate::stages::L1Retrieval
-    pub const fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
-        Self { prev, queue: VecDeque::new(), rollup_config: cfg }
+    pub const fn new(prev: P, cfg: Arc<RollupConfig>, metrics: PipelineMetrics) -> Self {
+        Self { prev, queue: VecDeque::new(), rollup_config: cfg, metrics }
     }
 
     /// Returns if holocene is active.
@@ -63,6 +56,8 @@ where
         if !self.is_holocene_active(origin) {
             return;
         }
+
+        let initial_len = self.queue.len();
 
         let mut i = 0;
         while i < self.queue.len() - 1 {
@@ -105,6 +100,8 @@ where
 
             i += 1;
         }
+
+        self.metrics.record_frames_dropped(initial_len - self.queue.len());
     }
 
     /// Loads more frames into the [FrameQueue].
@@ -113,6 +110,8 @@ where
         if !self.queue.is_empty() {
             return Ok(());
         }
+
+        self.metrics.record_load_frames_attempt();
 
         let data = match self.prev.next_data().await {
             Ok(data) => data,
@@ -129,6 +128,8 @@ where
             error!(target: "frame-queue", "Failed to parse frames from data.");
             return Ok(());
         };
+
+        self.metrics.record_frames_decoded(frames.len());
 
         // Optimistically extend the queue with the new frames.
         self.queue.extend(frames);
@@ -195,11 +196,12 @@ pub(crate) mod tests {
     use super::*;
     use crate::{test_utils::TestFrameQueueProvider, traits::ResetSignal};
     use alloc::vec;
+    use alloy_primitives::Bytes;
 
     #[tokio::test]
     async fn test_frame_queue_reset() {
         let mock = TestFrameQueueProvider::new(vec![]);
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
+        let mut frame_queue = FrameQueue::new(mock, Default::default(), PipelineMetrics::no_op());
         assert!(!frame_queue.prev.reset);
         frame_queue.signal(ResetSignal::default().signal()).await.unwrap();
         assert_eq!(frame_queue.queue.len(), 0);
@@ -211,7 +213,7 @@ pub(crate) mod tests {
         let data = vec![Ok(Bytes::from(vec![0x00]))];
         let mut mock = TestFrameQueueProvider::new(data);
         mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
+        let mut frame_queue = FrameQueue::new(mock, Default::default(), PipelineMetrics::no_op());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
         let err = frame_queue.next_frame().await.unwrap_err();
         assert_eq!(err, PipelineError::NotEnoughData.temp());
@@ -222,7 +224,7 @@ pub(crate) mod tests {
         let data = vec![Err(PipelineError::Eof.temp()), Ok(Bytes::default())];
         let mut mock = TestFrameQueueProvider::new(data);
         mock.set_origin(BlockInfo::default());
-        let mut frame_queue = FrameQueue::new(mock, Default::default());
+        let mut frame_queue = FrameQueue::new(mock, Default::default(), PipelineMetrics::no_op());
         assert!(!frame_queue.is_holocene_active(BlockInfo::default()));
         let err = frame_queue.next_frame().await.unwrap_err();
         assert_eq!(err, PipelineError::NotEnoughData.temp());
