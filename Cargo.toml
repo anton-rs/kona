@@ -53,6 +53,12 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
+[patch.crates-io]
+op-alloy-genesis = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/feat/batch-reader" }
+op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/feat/batch-reader" }
+op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/feat/batch-reader" }
+op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/feat/batch-reader" }
+
 [workspace.dependencies]
 # Workspace
 kona-mpt = { path = "crates/mpt", version = "0.0.5", default-features = false }
