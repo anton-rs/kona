@@ -7,7 +7,7 @@ use crate::{
 };
 use alloc::{collections::VecDeque, string::ToString, vec};
 use alloy_primitives::{Bytes, B256};
-use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
+use alloy_rlp::EMPTY_STRING_CODE;
 use core::marker::PhantomData;
 
 /// A [OrderedListWalker] allows for traversing over a Merkle Patricia Trie containing a derivable
@@ -132,11 +132,9 @@ where
     where
         T: Into<B256>,
     {
-        let preimage = fetcher
-            .trie_node_preimage(hash.into())
-            .map_err(|e| TrieNodeError::Provider(e.to_string()))?;
-        TrieNode::decode(&mut preimage.as_ref())
-            .map_err(TrieNodeError::RLPError)
+        fetcher
+            .trie_node_by_hash(hash.into())
+            .map_err(|e| TrieNodeError::Provider(e.to_string()))
             .map_err(Into::into)
     }
 }
@@ -176,7 +174,7 @@ mod test {
     use alloy_consensus::{ReceiptEnvelope, TxEnvelope};
     use alloy_primitives::keccak256;
     use alloy_provider::network::eip2718::Decodable2718;
-    use alloy_rlp::Encodable;
+    use alloy_rlp::{Decodable, Encodable};
 
     #[tokio::test]
     async fn test_online_list_walker_receipts() {

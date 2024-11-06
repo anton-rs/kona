@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 # General
 derive_more = { workspace = true, features = ["full"] }
+serde = { workspace = true, optional = true, features = ["derive", "alloc"] }
 
 # Revm + Alloy
 alloy-rlp.workspace = true
@@ -37,6 +38,14 @@ tokio = { workspace = true, features = ["full"] }
 criterion = { workspace = true, features = ["html_reports"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 pprof = { workspace = true, features = ["criterion", "flamegraph", "frame-pointer"] }
+
+[features]
+default = ["serde"]
+serde = [
+    "dep:serde",
+    "alloy-primitives/serde",
+    "alloy-trie/serde"
+]
 
 [[bench]]
 name = "trie_node"

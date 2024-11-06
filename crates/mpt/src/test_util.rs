@@ -1,10 +1,11 @@
 //! Testing utilities for `kona-mpt`
 
-use crate::{ordered_trie_with_encoder, TrieProvider};
+use crate::{ordered_trie_with_encoder, TrieNode, TrieProvider};
 use alloc::{collections::BTreeMap, vec::Vec};
 use alloy_consensus::{Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{keccak256, Bytes, Log, B256};
 use alloy_provider::{network::eip2718::Encodable2718, Provider, ProviderBuilder};
+use alloy_rlp::Decodable;
 use alloy_rpc_types::{BlockTransactions, BlockTransactionsKind};
 use anyhow::{anyhow, Result};
 use reqwest::Url;
@@ -141,8 +142,16 @@ impl TrieNodeProvider {
 impl TrieProvider for TrieNodeProvider {
     type Error = anyhow::Error;
 
-    fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
-        self.preimages.get(&key).cloned().ok_or_else(|| anyhow!("Key not found"))
+    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode> {
+        TrieNode::decode(
+            &mut self
+                .preimages
+                .get(&key)
+                .cloned()
+                .ok_or_else(|| anyhow!("Key not found"))?
+                .as_ref(),
+        )
+        .map_err(Into::into)
     }
 
     fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes> {

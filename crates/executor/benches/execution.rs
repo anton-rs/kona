@@ -8,7 +8,7 @@ use alloy_rpc_types_engine::PayloadAttributes;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use kona_executor::StatelessL2BlockExecutor;
-use kona_mpt::{NoopTrieHinter, TrieProvider};
+use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
 use op_alloy_genesis::{RollupConfig, OP_MAINNET_BASE_FEE_PARAMS};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use pprof::criterion::{Output, PProfProfiler};
@@ -37,11 +37,16 @@ impl TestdataTrieProvider {
 impl TrieProvider for TestdataTrieProvider {
     type Error = anyhow::Error;
 
-    fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
-        self.preimages
-            .get(&key)
-            .cloned()
-            .ok_or_else(|| anyhow!("Preimage not found for key: {}", key))
+    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode> {
+        TrieNode::decode(
+            &mut self
+                .preimages
+                .get(&key)
+                .cloned()
+                .ok_or_else(|| anyhow!("Preimage not found for key: {}", key))?
+                .as_ref(),
+        )
+        .map_err(Into::into)
     }
 
     fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes> {

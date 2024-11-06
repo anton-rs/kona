@@ -1,6 +1,7 @@
 //! Contains the [TrieProvider] trait for fetching trie node preimages, contract bytecode, and
 //! headers.
 
+use crate::TrieNode;
 use alloc::string::ToString;
 use alloy_consensus::Header;
 use alloy_primitives::{Address, Bytes, B256, U256};
@@ -18,11 +19,11 @@ pub trait TrieProvider {
     /// - `key`: The key of the trie node to fetch.
     ///
     /// ## Returns
-    /// - Ok(Bytes): The trie node preimage.
+    /// - Ok(TrieNode): The trie node preimage.
     /// - Err(anyhow::Error): If the trie node preimage could not be fetched.
     ///
     /// [TrieDB]: crate::TrieDB
-    fn trie_node_preimage(&self, key: B256) -> Result<Bytes, Self::Error>;
+    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, Self::Error>;
 
     /// Fetches the preimage of the bytecode hash provided.
     ///

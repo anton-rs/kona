@@ -8,7 +8,7 @@ use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_derive::traits::ChainProvider;
-use kona_mpt::{OrderedListWalker, TrieProvider};
+use kona_mpt::{OrderedListWalker, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BlockInfo;
 
@@ -138,15 +138,19 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
     type Error = OracleProviderError;
 
-    fn trie_node_preimage(&self, key: B256) -> Result<Bytes, Self::Error> {
+    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, Self::Error> {
         // On L1, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
         kona_common::block_on(async move {
-            self.oracle
-                .get(PreimageKey::new(*key, PreimageKeyType::Keccak256))
-                .await
-                .map(Into::into)
-                .map_err(OracleProviderError::Preimage)
+            TrieNode::decode(
+                &mut self
+                    .oracle
+                    .get(PreimageKey::new(*key, PreimageKeyType::Keccak256))
+                    .await
+                    .map_err(OracleProviderError::Preimage)?
+                    .as_ref(),
+            )
+            .map_err(OracleProviderError::Rlp)
         })
     }
 
