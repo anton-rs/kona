@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.5...kona-mpt-v0.0.6) - 2024-11-06
+
+### Added
+
+- *(TrieProvider)* Abstract TrieNode retrieval ([#787](https://github.com/anton-rs/kona/pull/787))
+
+### Other
+
+- bump alloy deps ([#788](https://github.com/anton-rs/kona/pull/788))
+
 ## [0.0.5](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.4...kona-mpt-v0.0.5) - 2024-10-29
 
 ### Fixed

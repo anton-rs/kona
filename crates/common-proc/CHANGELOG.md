@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/anton-rs/kona/compare/kona-common-proc-v0.0.4...kona-common-proc-v0.0.5) - 2024-11-06
+
+### Added
+
+- *(client)* Remove `anyhow` ([#779](https://github.com/anton-rs/kona/pull/779))
+
 ## [0.0.4](https://github.com/anton-rs/kona/compare/kona-common-proc-v0.0.3...kona-common-proc-v0.0.4) - 2024-10-25
 
 ### Other
