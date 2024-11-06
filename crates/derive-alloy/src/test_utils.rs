@@ -1,13 +1,13 @@
 //! Test Utilities for Online Providers
 
 use crate::{APIConfigResponse, APIGenesisResponse};
+use alloy_eips::eip4844::IndexedBlobHash;
 use alloy_node_bindings::{Anvil, AnvilInstance};
 use alloy_provider::{network::Ethereum, ReqwestProvider};
 use alloy_rpc_client::RpcClient;
 use alloy_rpc_types_beacon::sidecar::{BeaconBlobBundle, BlobData};
 use alloy_transport_http::Http;
 use async_trait::async_trait;
-use kona_derive::sources::IndexedBlobHash;
 use reqwest::Client;
 
 /// Spawns an Anvil instance and returns a provider and the instance.

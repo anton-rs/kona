@@ -3,7 +3,11 @@
 
 use crate::{kv::KeyValueStore, util};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
-use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
+use alloy_eips::{
+    eip2718::Encodable2718,
+    eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
+    BlockId,
+};
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
@@ -12,7 +16,6 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
-use kona_derive::sources::IndexedBlobHash;
 use kona_derive_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BlockInfo;
@@ -182,7 +185,7 @@ where
                 let timestamp = u64::from_be_bytes(timestamp_data_bytes);
 
                 let partial_block_ref = BlockInfo { timestamp, ..Default::default() };
-                let indexed_hash = IndexedBlobHash { index: index as usize, hash };
+                let indexed_hash = IndexedBlobHash { index, hash };
 
                 // Fetch the blob sidecar from the blob provider.
                 let mut sidecars = self
@@ -516,11 +519,7 @@ where
                 let encoded_transactions = transactions
                     .into_iter()
                     .map(|tx| {
-                        let envelope: TxEnvelope = tx.try_into().map_err(|e| {
-                            anyhow!(
-                                "Failed to convert RPC transaction into consensus envelope: {e}"
-                            )
-                        })?;
+                        let envelope = TxEnvelope::from(tx);
 
                         Ok::<_, anyhow::Error>(envelope.encoded_2718())
                     })

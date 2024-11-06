@@ -150,7 +150,8 @@ impl ChainProvider for AlloyChainProvider {
             .raw_request("debug_getRawBlock".into(), [hash])
             .await
             .map_err(AlloyProviderError::Rpc)?;
-        let block = Block::decode(&mut raw_block.as_ref()).map_err(AlloyProviderError::Rlp)?;
+        let block: Block<TxEnvelope> =
+            Block::decode(&mut raw_block.as_ref()).map_err(AlloyProviderError::Rlp)?;
 
         let block_info = BlockInfo {
             hash: block.header.hash_slow(),
