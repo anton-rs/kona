@@ -1,7 +1,7 @@
 [package]
 name = "kona-derive-alloy"
 description = "An alloy-backed derivation pipeline for the OP Stack, built on `kona-derive`"
-version = "0.0.2"
+version = "0.0.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
