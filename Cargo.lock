@@ -514,6 +514,7 @@ dependencies = [
  "arrayvec",
  "derive_more",
  "nybbles",
+ "serde",
  "smallvec",
  "tracing",
 ]
@@ -729,6 +730,9 @@ name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "async-stream"
@@ -2508,6 +2512,7 @@ dependencies = [
  "proptest",
  "rand",
  "reqwest",
+ "serde",
  "tokio",
  "tracing-subscriber",
 ]
@@ -2889,6 +2894,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95f06be0417d97f81fe4e5c86d7d01b392655a9cac9c19a848aa033e18937b23"
 dependencies = [
  "const-hex",
+ "serde",
  "smallvec",
 ]
 
@@ -4128,6 +4134,9 @@ name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "socket2"

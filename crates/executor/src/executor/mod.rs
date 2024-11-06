@@ -456,7 +456,7 @@ mod test {
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
-    use kona_mpt::NoopTrieHinter;
+    use kona_mpt::{NoopTrieHinter, TrieNode};
     use op_alloy_genesis::OP_MAINNET_BASE_FEE_PARAMS;
     use serde::Deserialize;
     use std::collections::HashMap;
@@ -483,11 +483,16 @@ mod test {
     impl TrieProvider for TestdataTrieProvider {
         type Error = anyhow::Error;
 
-        fn trie_node_preimage(&self, key: B256) -> Result<Bytes> {
-            self.preimages
-                .get(&key)
-                .cloned()
-                .ok_or_else(|| anyhow!("Preimage not found for key: {}", key))
+        fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode> {
+            TrieNode::decode(
+                &mut self
+                    .preimages
+                    .get(&key)
+                    .cloned()
+                    .ok_or_else(|| anyhow!("Preimage not found for key: {}", key))?
+                    .as_ref(),
+            )
+            .map_err(Into::into)
         }
 
         fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes> {

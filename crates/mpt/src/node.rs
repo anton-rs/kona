@@ -62,6 +62,7 @@ const NIBBLE_WIDTH: usize = 4;
 /// to behave correctly if confronted with keys of varying lengths. Namely, this is because it does
 /// not support the `value` field in branch nodes, just like the Ethereum Merkle Patricia Trie.
 #[derive(Debug, Clone, Eq, PartialEq, Display)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TrieNode {
     /// An empty [TrieNode] is represented as an [EMPTY_STRING_CODE] (0x80).
     Empty,
@@ -141,10 +142,9 @@ impl TrieNode {
                 // reach out to the fetcher.
                 *self = Self::Empty;
             } else {
-                let rlp = fetcher
-                    .trie_node_preimage(*commitment)
+                *self = fetcher
+                    .trie_node_by_hash(*commitment)
                     .map_err(|e| TrieNodeError::Provider(e.to_string()))?;
-                *self = Self::decode(&mut rlp.as_ref()).map_err(TrieNodeError::RLPError)?;
             }
         }
         Ok(())
@@ -794,8 +794,7 @@ mod test {
         );
         let fetcher = TrieNodeProvider::new(preimages, Default::default(), Default::default());
 
-        let mut root_node =
-            TrieNode::decode(&mut fetcher.trie_node_preimage(root).unwrap().as_ref()).unwrap();
+        let mut root_node = fetcher.trie_node_by_hash(root).unwrap();
         for (i, value) in VALUES.iter().enumerate() {
             let path_nibbles = Nibbles::unpack([if i == 0 { EMPTY_STRING_CODE } else { i as u8 }]);
             let v = root_node.open(&path_nibbles, &fetcher).unwrap().unwrap();
