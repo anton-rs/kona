@@ -12,6 +12,8 @@ pub mod l2;
 
 pub mod errors;
 
+pub mod executor;
+
 mod hint;
 pub use hint::HintType;
 

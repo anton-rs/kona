@@ -2199,6 +2199,7 @@ dependencies = [
  "kona-common",
  "kona-common-proc",
  "kona-derive",
+ "kona-driver",
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
@@ -2289,6 +2290,23 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kona-driver"
+version = "0.0.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-primitives",
+ "alloy-rlp",
+ "async-trait",
+ "derive_more",
+ "kona-derive",
+ "op-alloy-consensus",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "op-alloy-rpc-types-engine",
  "tracing",
 ]
 
