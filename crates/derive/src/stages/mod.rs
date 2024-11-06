@@ -37,6 +37,3 @@ pub use batch::{
 
 mod attributes_queue;
 pub use attributes_queue::AttributesQueue;
-
-mod utils;
-pub use utils::decompress_brotli;

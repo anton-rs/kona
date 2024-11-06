@@ -26,11 +26,8 @@ op-alloy-rpc-types-engine.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 
 # General
-brotli.workspace = true
 tracing.workspace = true
-miniz_oxide.workspace = true
 async-trait.workspace = true
-alloc-no-stdlib.workspace = true
 derive_more = { workspace = true, features = ["full"] }
 
 # `test-utils` feature dependencies
