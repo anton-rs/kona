@@ -15,7 +15,6 @@ workspace = true
 # Workspace
 kona-mpt.workspace = true
 kona-client.workspace = true
-kona-derive.workspace = true
 kona-common.workspace = true
 kona-preimage.workspace = true
 kona-derive-alloy.workspace = true

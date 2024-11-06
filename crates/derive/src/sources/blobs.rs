@@ -2,12 +2,13 @@
 
 use crate::{
     errors::{BlobProviderError, PipelineError},
-    sources::{BlobData, IndexedBlobHash},
+    sources::BlobData,
     traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
     types::PipelineResult,
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
+use alloy_eips::eip4844::IndexedBlobHash;
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 use op_alloy_protocol::BlockInfo;
@@ -107,7 +108,7 @@ where
                 continue;
             };
             for blob in blob_hashes {
-                let indexed = IndexedBlobHash { hash: blob, index: number as usize };
+                let indexed = IndexedBlobHash { hash: blob, index: number };
                 hashes.push(indexed);
                 data.push(BlobData::default());
                 number += 1;
