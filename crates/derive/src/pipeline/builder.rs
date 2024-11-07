@@ -138,7 +138,6 @@ where
         let attributes_builder = builder.builder.expect("builder must be set");
         let metrics = builder.metrics.expect("metrics must be set");
 
-        // todo: add metrics to the stages
         // Compose the stage stack.
         let mut l1_traversal =
             L1Traversal::new(chain_provider, Arc::clone(&rollup_config), metrics.clone());
@@ -162,8 +161,12 @@ where
             l2_chain_provider.clone(),
             metrics.clone(),
         );
-        let attributes =
-            AttributesQueue::new(rollup_config.clone(), batch_provider, attributes_builder);
+        let attributes = AttributesQueue::new(
+            rollup_config.clone(),
+            batch_provider,
+            attributes_builder,
+            metrics.clone(),
+        );
 
         // Create the pipeline.
         Self::new(attributes, rollup_config, l2_chain_provider, metrics)

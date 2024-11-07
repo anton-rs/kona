@@ -47,3 +47,13 @@ pub trait AttributesBuilder {
         epoch: BlockNumHash,
     ) -> PipelineResult<OpPayloadAttributes>;
 }
+
+/// Metrics trait for `AttributesQueue`.
+pub trait AttributesQueueMetrics: Send + Sync {
+    /// Records the creation of a new batch of attributes.
+    fn record_attributes_created(&self);
+    /// Records the loading of a new batch of attributes.
+    fn record_batch_loaded(&self);
+    /// Records the creation of a new batch of attributes.
+    fn record_attributes_creation_failure(&self);
+}

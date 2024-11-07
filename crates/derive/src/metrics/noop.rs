@@ -3,8 +3,9 @@ use crate::{
     metrics::PipelineMetrics,
     pipeline::{Signal, StepResult},
     traits::{
-        BatchQueueMetrics, BatchStreamMetrics, ChannelProviderMetrics, ChannelReaderMetrics,
-        DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics, L1TraversalMetrics,
+        AttributesQueueMetrics, BatchQueueMetrics, BatchStreamMetrics, ChannelProviderMetrics,
+        ChannelReaderMetrics, DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics,
+        L1TraversalMetrics,
     },
 };
 use alloc::sync::Arc;
@@ -21,7 +22,7 @@ impl PipelineMetrics {
             channel_reader_metrics: Arc::new(NoopChannelReaderMetrics),
             batch_stream_metrics: Arc::new(NoopBatchStreamMetrics),
             batch_queue_metrics: Arc::new(NoopBatchQueueMetrics),
-            // todo: add more metrics here for each stage
+            atrirbutes_queue_metrics: Arc::new(NoopAttributesQueueMetrics),
         }
     }
 }
@@ -166,6 +167,23 @@ impl BatchQueueMetrics for NoopBatchQueueMetrics {
     }
 
     fn record_epoch_advanced(&self, _epoch: u64) {
+        // No-op
+    }
+}
+
+#[derive(Debug)]
+struct NoopAttributesQueueMetrics;
+
+impl AttributesQueueMetrics for NoopAttributesQueueMetrics {
+    fn record_attributes_created(&self) {
+        // No-op
+    }
+
+    fn record_batch_loaded(&self) {
+        // No-op
+    }
+
+    fn record_attributes_creation_failure(&self) {
         // No-op
     }
 }

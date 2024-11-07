@@ -2,9 +2,10 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult, ResetError},
+    metrics::PipelineMetrics,
     traits::{
-        AttributesBuilder, AttributesProvider, NextAttributes, OriginAdvancer, OriginProvider,
-        Signal, SignalReceiver,
+        AttributesBuilder, AttributesProvider, AttributesQueueMetrics, NextAttributes,
+        OriginAdvancer, OriginProvider, Signal, SignalReceiver,
     },
 };
 use alloc::{boxed::Box, sync::Arc};
@@ -44,6 +45,8 @@ where
     batch: Option<SingleBatch>,
     /// The attributes builder.
     builder: AB,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P, AB> AttributesQueue<P, AB>
@@ -52,8 +55,13 @@ where
     AB: AttributesBuilder + Debug,
 {
     /// Create a new [AttributesQueue] stage.
-    pub const fn new(cfg: Arc<RollupConfig>, prev: P, builder: AB) -> Self {
-        Self { cfg, prev, is_last_in_span: false, batch: None, builder }
+    pub const fn new(
+        cfg: Arc<RollupConfig>,
+        prev: P,
+        builder: AB,
+        metrics: PipelineMetrics,
+    ) -> Self {
+        Self { cfg, prev, is_last_in_span: false, batch: None, builder, metrics }
     }
 
     /// Loads a [SingleBatch] from the [AttributesProvider] if needed.
@@ -62,6 +70,7 @@ where
             let batch = self.prev.next_batch(parent).await?;
             self.batch = Some(batch);
             self.is_last_in_span = self.prev.is_last_in_span();
+            self.metrics.record_batch_loaded();
         }
         self.batch.as_ref().cloned().ok_or(PipelineError::Eof.temp())
     }
@@ -82,6 +91,7 @@ where
         let attributes = match self.create_next_attributes(batch, parent).await {
             Ok(attributes) => attributes,
             Err(e) => {
+                self.metrics.record_attributes_creation_failure();
                 return Err(e);
             }
         };
@@ -91,6 +101,10 @@ where
         // Clear out the local state once payload attributes are prepared.
         self.batch = None;
         self.is_last_in_span = false;
+
+        // Record that attributes were successfully created.
+        self.metrics.record_attributes_created();
+
         Ok(populated_attributes)
     }
 
@@ -228,7 +242,12 @@ mod tests {
         let cfg = cfg.unwrap_or_default();
         let mock_batch_queue = new_test_attributes_provider(origin, batches);
         let mock_attributes_builder = TestAttributesBuilder::default();
-        AttributesQueue::new(Arc::new(cfg), mock_batch_queue, mock_attributes_builder)
+        AttributesQueue::new(
+            Arc::new(cfg),
+            mock_batch_queue,
+            mock_attributes_builder,
+            PipelineMetrics::no_op(),
+        )
     }
 
     #[tokio::test]
@@ -246,7 +265,8 @@ mod tests {
         let cfg = RollupConfig::default();
         let mock = new_test_attributes_provider(None, vec![]);
         let mock_builder = TestAttributesBuilder::default();
-        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
+        let mut aq =
+            AttributesQueue::new(Arc::new(cfg), mock, mock_builder, PipelineMetrics::no_op());
         aq.batch = Some(SingleBatch::default());
         assert!(!aq.prev.reset);
         aq.signal(ResetSignal::default().signal()).await.unwrap();
@@ -340,7 +360,8 @@ mod tests {
         let mut payload_attributes = default_optimism_payload_attributes();
         let mock_builder =
             TestAttributesBuilder { attributes: vec![Ok(payload_attributes.clone())] };
-        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
+        let mut aq =
+            AttributesQueue::new(Arc::new(cfg), mock, mock_builder, PipelineMetrics::no_op());
         let parent = L2BlockInfo::default();
         let txs = vec![Bytes::default(), Bytes::default()];
         let batch = SingleBatch { transactions: txs.clone(), ..Default::default() };
@@ -368,7 +389,8 @@ mod tests {
         let mock = new_test_attributes_provider(None, vec![Ok(Default::default())]);
         let mut pa = default_optimism_payload_attributes();
         let mock_builder = TestAttributesBuilder { attributes: vec![Ok(pa.clone())] };
-        let mut aq = AttributesQueue::new(Arc::new(cfg), mock, mock_builder);
+        let mut aq =
+            AttributesQueue::new(Arc::new(cfg), mock, mock_builder, PipelineMetrics::no_op());
         // If we load the batch, we should get the last in span.
         // But it won't take it so it will be available in the next_attributes call.
         let _ = aq.load_batch(L2BlockInfo::default()).await.unwrap();

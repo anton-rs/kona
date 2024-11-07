@@ -6,9 +6,9 @@ use crate::{
     errors::PipelineErrorKind,
     pipeline::Signal,
     traits::{
-        BatchQueueMetrics, BatchStreamMetrics, ChannelProviderMetrics, ChannelReaderMetrics,
-        DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics, L1TraversalMetrics,
-        StepResult,
+        AttributesQueueMetrics, BatchQueueMetrics, BatchStreamMetrics, ChannelProviderMetrics,
+        ChannelReaderMetrics, DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics,
+        L1TraversalMetrics, StepResult,
     },
 };
 use alloc::sync::Arc;
@@ -25,7 +25,7 @@ pub struct PipelineMetrics {
     pub(crate) channel_reader_metrics: Arc<dyn ChannelReaderMetrics + Send + Sync>,
     pub(crate) batch_stream_metrics: Arc<dyn BatchStreamMetrics + Send + Sync>,
     pub(crate) batch_queue_metrics: Arc<dyn BatchQueueMetrics + Send + Sync>,
-    // todo: add more metrics here for each stage
+    pub(crate) atrirbutes_queue_metrics: Arc<dyn AttributesQueueMetrics + Send + Sync>,
 }
 
 impl Debug for PipelineMetrics {
@@ -147,5 +147,19 @@ impl BatchQueueMetrics for PipelineMetrics {
 
     fn record_epoch_advanced(&self, epoch: u64) {
         self.batch_queue_metrics.record_epoch_advanced(epoch)
+    }
+}
+
+impl AttributesQueueMetrics for PipelineMetrics {
+    fn record_attributes_created(&self) {
+        self.atrirbutes_queue_metrics.record_attributes_created()
+    }
+
+    fn record_batch_loaded(&self) {
+        self.atrirbutes_queue_metrics.record_batch_loaded()
+    }
+
+    fn record_attributes_creation_failure(&self) {
+        self.atrirbutes_queue_metrics.record_attributes_creation_failure()
     }
 }
