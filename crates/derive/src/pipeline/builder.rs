@@ -148,11 +148,20 @@ where
             FrameQueue::new(l1_retrieval, Arc::clone(&rollup_config), metrics.clone());
         let channel_provider =
             ChannelProvider::new(Arc::clone(&rollup_config), frame_queue, metrics.clone());
-        let channel_reader = ChannelReader::new(channel_provider, Arc::clone(&rollup_config));
-        let batch_stream =
-            BatchStream::new(channel_reader, rollup_config.clone(), l2_chain_provider.clone());
-        let batch_provider =
-            BatchProvider::new(rollup_config.clone(), batch_stream, l2_chain_provider.clone());
+        let channel_reader =
+            ChannelReader::new(channel_provider, Arc::clone(&rollup_config), metrics.clone());
+        let batch_stream = BatchStream::new(
+            channel_reader,
+            rollup_config.clone(),
+            l2_chain_provider.clone(),
+            metrics.clone(),
+        );
+        let batch_provider = BatchProvider::new(
+            rollup_config.clone(),
+            batch_stream,
+            l2_chain_provider.clone(),
+            metrics.clone(),
+        );
         let attributes =
             AttributesQueue::new(rollup_config.clone(), batch_provider, attributes_builder);
 

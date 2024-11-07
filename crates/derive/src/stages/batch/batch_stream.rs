@@ -2,8 +2,11 @@
 
 use crate::{
     errors::{PipelineEncodingError, PipelineError, PipelineResult},
+    metrics::PipelineMetrics,
     stages::NextBatchProvider,
-    traits::{L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{
+        BatchStreamMetrics, L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver,
+    },
 };
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
@@ -50,6 +53,8 @@ where
     config: Arc<RollupConfig>,
     /// Used to validate the batches.
     fetcher: BF,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P, BF> BatchStream<P, BF>
@@ -58,8 +63,13 @@ where
     BF: L2ChainProvider + Debug,
 {
     /// Create a new [BatchStream] stage.
-    pub const fn new(prev: P, config: Arc<RollupConfig>, fetcher: BF) -> Self {
-        Self { prev, span: None, buffer: VecDeque::new(), config, fetcher }
+    pub const fn new(
+        prev: P,
+        config: Arc<RollupConfig>,
+        fetcher: BF,
+        metrics: PipelineMetrics,
+    ) -> Self {
+        Self { prev, span: None, buffer: VecDeque::new(), config, fetcher, metrics }
     }
 
     /// Returns if the [BatchStream] stage is active based on the
@@ -154,8 +164,14 @@ where
                         .await;
 
                     match validity {
-                        BatchValidity::Accept => self.span = Some(b),
+                        BatchValidity::Accept => {
+                            self.metrics.record_span_batch_accepted();
+                            self.metrics.record_batch_processed();
+                            self.span = Some(b)
+                        }
                         BatchValidity::Drop => {
+                            self.metrics.record_span_batch_dropped();
+
                             // Flush the stage.
                             self.flush();
 
@@ -176,6 +192,9 @@ where
                 }
             }
         }
+
+        self.metrics.record_buffer_size(self.buffer.len());
+        self.metrics.record_batch_processed();
 
         // Attempt to pull a SingleBatch out of the SpanBatch.
         self.get_single_batch(parent, l1_origins).map(Batch::Single)
@@ -232,7 +251,12 @@ mod test {
     async fn test_batch_stream_flush() {
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(vec![]);
-        let mut stream = BatchStream::new(prev, config, TestL2ChainProvider::default());
+        let mut stream = BatchStream::new(
+            prev,
+            config,
+            TestL2ChainProvider::default(),
+            PipelineMetrics::no_op(),
+        );
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
         assert!(!stream.buffer.is_empty());
@@ -246,7 +270,12 @@ mod test {
     async fn test_batch_stream_reset() {
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(vec![]);
-        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        let mut stream = BatchStream::new(
+            prev,
+            config.clone(),
+            TestL2ChainProvider::default(),
+            PipelineMetrics::no_op(),
+        );
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
         assert!(!stream.prev.reset);
@@ -260,7 +289,12 @@ mod test {
     async fn test_batch_stream_flush_channel() {
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(vec![]);
-        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        let mut stream = BatchStream::new(
+            prev,
+            config.clone(),
+            TestL2ChainProvider::default(),
+            PipelineMetrics::no_op(),
+        );
         stream.buffer.push_back(SingleBatch::default());
         stream.span = Some(SpanBatch::default());
         assert!(!stream.prev.flushed);
@@ -279,7 +313,12 @@ mod test {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(100), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(data);
-        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        let mut stream = BatchStream::new(
+            prev,
+            config.clone(),
+            TestL2ChainProvider::default(),
+            PipelineMetrics::no_op(),
+        );
 
         // The stage should not be active.
         assert!(!stream.is_active().unwrap());
@@ -313,7 +352,7 @@ mod test {
         });
         let prev = TestBatchStreamProvider::new(data);
         let provider = TestL2ChainProvider::default();
-        let mut stream = BatchStream::new(prev, config.clone(), provider);
+        let mut stream = BatchStream::new(prev, config.clone(), provider, PipelineMetrics::no_op());
 
         // The stage should be active.
         assert!(stream.is_active().unwrap());
@@ -371,7 +410,12 @@ mod test {
         let data = vec![Ok(Batch::Single(SingleBatch::default()))];
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
         let prev = TestBatchStreamProvider::new(data);
-        let mut stream = BatchStream::new(prev, config.clone(), TestL2ChainProvider::default());
+        let mut stream = BatchStream::new(
+            prev,
+            config.clone(),
+            TestL2ChainProvider::default(),
+            PipelineMetrics::no_op(),
+        );
 
         // The stage should be active.
         assert!(stream.is_active().unwrap());

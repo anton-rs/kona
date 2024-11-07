@@ -6,8 +6,9 @@ use crate::{
     errors::PipelineErrorKind,
     pipeline::Signal,
     traits::{
-        ChannelProviderMetrics, DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics,
-        L1TraversalMetrics, StepResult,
+        BatchQueueMetrics, BatchStreamMetrics, ChannelProviderMetrics, ChannelReaderMetrics,
+        DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics, L1TraversalMetrics,
+        StepResult,
     },
 };
 use alloc::sync::Arc;
@@ -21,6 +22,9 @@ pub struct PipelineMetrics {
     pub(crate) l1_retrieval_metrics: Arc<dyn L1RetrievalMetrics + Send + Sync>,
     pub(crate) frame_queue_metrics: Arc<dyn FrameQueueMetrics + Send + Sync>,
     pub(crate) channel_provider_metrics: Arc<dyn ChannelProviderMetrics + Send + Sync>,
+    pub(crate) channel_reader_metrics: Arc<dyn ChannelReaderMetrics + Send + Sync>,
+    pub(crate) batch_stream_metrics: Arc<dyn BatchStreamMetrics + Send + Sync>,
+    pub(crate) batch_queue_metrics: Arc<dyn BatchQueueMetrics + Send + Sync>,
     // todo: add more metrics here for each stage
 }
 
@@ -101,5 +105,47 @@ impl ChannelProviderMetrics for PipelineMetrics {
 
     fn record_data_item_provided(&self) {
         self.channel_provider_metrics.record_data_item_provided()
+    }
+}
+
+impl ChannelReaderMetrics for PipelineMetrics {
+    fn record_batch_read(&self) {
+        self.channel_reader_metrics.record_batch_read()
+    }
+
+    fn record_channel_flushed(&self) {
+        self.channel_reader_metrics.record_channel_flushed()
+    }
+}
+
+impl BatchStreamMetrics for PipelineMetrics {
+    fn record_batch_processed(&self) {
+        self.batch_stream_metrics.record_batch_processed()
+    }
+
+    fn record_span_batch_accepted(&self) {
+        self.batch_stream_metrics.record_span_batch_accepted()
+    }
+
+    fn record_span_batch_dropped(&self) {
+        self.batch_stream_metrics.record_span_batch_dropped()
+    }
+
+    fn record_buffer_size(&self, size: usize) {
+        self.batch_stream_metrics.record_buffer_size(size)
+    }
+}
+
+impl BatchQueueMetrics for PipelineMetrics {
+    fn record_batches_queued(&self, count: usize) {
+        self.batch_queue_metrics.record_batches_queued(count)
+    }
+
+    fn record_batch_dropped(&self) {
+        self.batch_queue_metrics.record_batch_dropped()
+    }
+
+    fn record_epoch_advanced(&self, epoch: u64) {
+        self.batch_queue_metrics.record_epoch_advanced(epoch)
     }
 }

@@ -2,8 +2,9 @@
 
 use crate::{
     errors::{PipelineError, PipelineResult},
+    metrics::PipelineMetrics,
     stages::{decompress_brotli, BatchStreamProvider},
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    traits::{ChannelReaderMetrics, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_primitives::Bytes;
@@ -56,6 +57,8 @@ where
     next_batch: Option<BatchReader>,
     /// The rollup coonfiguration.
     cfg: Arc<RollupConfig>,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P> ChannelReader<P>
@@ -63,8 +66,8 @@ where
     P: ChannelReaderProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Create a new [ChannelReader] stage.
-    pub const fn new(prev: P, cfg: Arc<RollupConfig>) -> Self {
-        Self { prev, next_batch: None, cfg }
+    pub const fn new(prev: P, cfg: Arc<RollupConfig>, metrics: PipelineMetrics) -> Self {
+        Self { prev, next_batch: None, cfg, metrics }
     }
 
     /// Creates the batch reader from available channel data.
@@ -116,6 +119,7 @@ where
     /// SAFETY: Only called post-holocene activation.
     fn flush(&mut self) {
         debug!(target: "channel-reader", "[POST-HOLOCENE] Flushing channel");
+        self.metrics.record_channel_flushed();
         self.next_channel();
     }
 
@@ -132,7 +136,10 @@ where
             .next_batch(self.cfg.as_ref())
             .ok_or(PipelineError::NotEnoughData.temp())
         {
-            Ok(batch) => Ok(batch),
+            Ok(batch) => {
+                self.metrics.record_batch_read();
+                Ok(batch)
+            }
             Err(e) => {
                 self.next_channel();
                 Err(e)
@@ -272,7 +279,8 @@ mod test {
     #[tokio::test]
     async fn test_flush_channel_reader() {
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(new_compressed_batch_data()))]);
-        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        let mut reader =
+            ChannelReader::new(mock, Arc::new(RollupConfig::default()), PipelineMetrics::no_op());
         reader.next_batch = Some(BatchReader::new(
             new_compressed_batch_data(),
             MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize,
@@ -284,7 +292,8 @@ mod test {
     #[tokio::test]
     async fn test_reset_channel_reader() {
         let mock = TestChannelReaderProvider::new(vec![Ok(None)]);
-        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        let mut reader =
+            ChannelReader::new(mock, Arc::new(RollupConfig::default()), PipelineMetrics::no_op());
         reader.next_batch = Some(BatchReader::new(
             vec![0x00, 0x01, 0x02],
             MAX_RLP_BYTES_PER_CHANNEL_FJORD as usize,
@@ -298,7 +307,8 @@ mod test {
     #[tokio::test]
     async fn test_next_batch_batch_reader_set_fails() {
         let mock = TestChannelReaderProvider::new(vec![Err(PipelineError::Eof.temp())]);
-        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        let mut reader =
+            ChannelReader::new(mock, Arc::new(RollupConfig::default()), PipelineMetrics::no_op());
         assert_eq!(reader.next_batch().await, Err(PipelineError::Eof.temp()));
         assert!(reader.next_batch.is_none());
     }
@@ -306,7 +316,8 @@ mod test {
     #[tokio::test]
     async fn test_next_batch_batch_reader_no_data() {
         let mock = TestChannelReaderProvider::new(vec![Ok(None)]);
-        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        let mut reader =
+            ChannelReader::new(mock, Arc::new(RollupConfig::default()), PipelineMetrics::no_op());
         assert!(matches!(
             reader.next_batch().await.unwrap_err(),
             PipelineErrorKind::Temporary(PipelineError::ChannelReaderEmpty)
@@ -319,7 +330,8 @@ mod test {
         let mut first = new_compressed_batch_data();
         let second = first.split_to(first.len() / 2);
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(first)), Ok(Some(second))]);
-        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        let mut reader =
+            ChannelReader::new(mock, Arc::new(RollupConfig::default()), PipelineMetrics::no_op());
         assert_eq!(reader.next_batch().await, Err(PipelineError::NotEnoughData.temp()));
         assert!(reader.next_batch.is_none());
     }
@@ -328,7 +340,8 @@ mod test {
     async fn test_next_batch_succeeds() {
         let raw = new_compressed_batch_data();
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(raw))]);
-        let mut reader = ChannelReader::new(mock, Arc::new(RollupConfig::default()));
+        let mut reader =
+            ChannelReader::new(mock, Arc::new(RollupConfig::default()), PipelineMetrics::no_op());
         let res = reader.next_batch().await.unwrap();
         matches!(res, Batch::Span(_));
         assert!(reader.next_batch.is_some());
@@ -357,7 +370,7 @@ mod test {
         let raw = new_compressed_batch_data();
         let config = Arc::new(RollupConfig { holocene_time: Some(0), ..RollupConfig::default() });
         let mock = TestChannelReaderProvider::new(vec![Ok(Some(raw))]);
-        let mut reader = ChannelReader::new(mock, config);
+        let mut reader = ChannelReader::new(mock, config, PipelineMetrics::no_op());
         let res = reader.next_batch().await.unwrap();
         matches!(res, Batch::Span(_));
         assert!(reader.next_batch.is_some());

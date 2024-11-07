@@ -32,3 +32,12 @@ pub use frame_queue::{FrameQueueMetrics, FrameQueueProvider};
 
 mod channel_provider;
 pub use channel_provider::ChannelProviderMetrics;
+
+mod channel_reader;
+pub use channel_reader::ChannelReaderMetrics;
+
+mod batch_stream;
+pub use batch_stream::BatchStreamMetrics;
+
+mod batch_queue;
+pub use batch_queue::BatchQueueMetrics;

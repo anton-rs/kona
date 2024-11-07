@@ -3,6 +3,7 @@
 use super::NextBatchProvider;
 use crate::{
     errors::{PipelineError, PipelineResult},
+    metrics::PipelineMetrics,
     stages::{BatchQueue, BatchValidator},
     traits::{
         AttributesProvider, L2ChainProvider, OriginAdvancer, OriginProvider, Signal, SignalReceiver,
@@ -47,6 +48,8 @@ where
     ///
     /// Must be [None] if `prev` or `batch_queue` is [Some].
     batch_validator: Option<BatchValidator<P>>,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P, F> BatchProvider<P, F>
@@ -55,8 +58,13 @@ where
     F: L2ChainProvider + Clone + Debug,
 {
     /// Creates a new [BatchProvider] with the given configuration and previous stage.
-    pub const fn new(cfg: Arc<RollupConfig>, prev: P, provider: F) -> Self {
-        Self { cfg, provider, prev: Some(prev), batch_queue: None, batch_validator: None }
+    pub const fn new(
+        cfg: Arc<RollupConfig>,
+        prev: P,
+        provider: F,
+        metrics: PipelineMetrics,
+    ) -> Self {
+        Self { cfg, provider, prev: Some(prev), batch_queue: None, batch_validator: None, metrics }
     }
 
     /// Attempts to update the active stage of the mux.
@@ -68,8 +76,12 @@ where
             if self.cfg.is_holocene_active(origin.timestamp) {
                 self.batch_validator = Some(BatchValidator::new(self.cfg.clone(), prev));
             } else {
-                self.batch_queue =
-                    Some(BatchQueue::new(self.cfg.clone(), prev, self.provider.clone()));
+                self.batch_queue = Some(BatchQueue::new(
+                    self.cfg.clone(),
+                    prev,
+                    self.provider.clone(),
+                    self.metrics.clone(),
+                ));
             }
         } else if self.batch_queue.is_some() && self.cfg.is_holocene_active(origin.timestamp) {
             // If the batch queue is active and Holocene is also active, transition to the batch
@@ -83,8 +95,12 @@ where
             // reorg around Holocene activation. Transition back to the batch queue
             // until Holocene re-activates.
             let batch_validator = self.batch_validator.take().expect("Must have batch validator");
-            let mut bq =
-                BatchQueue::new(self.cfg.clone(), batch_validator.prev, self.provider.clone());
+            let mut bq = BatchQueue::new(
+                self.cfg.clone(),
+                batch_validator.prev,
+                self.provider.clone(),
+                self.metrics.clone(),
+            );
             bq.l1_blocks = batch_validator.l1_blocks;
             self.batch_queue = Some(bq);
         }
@@ -178,6 +194,7 @@ where
 mod test {
     use super::BatchProvider;
     use crate::{
+        metrics::PipelineMetrics,
         test_utils::{TestL2ChainProvider, TestNextBatchProvider},
         traits::{OriginProvider, ResetSignal, SignalReceiver},
     };
@@ -190,7 +207,8 @@ mod test {
         let provider = TestNextBatchProvider::new(vec![]);
         let l2_provider = TestL2ChainProvider::default();
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
-        let mut batch_provider = BatchProvider::new(cfg, provider, l2_provider);
+        let mut batch_provider =
+            BatchProvider::new(cfg, provider, l2_provider, PipelineMetrics::no_op());
 
         assert!(batch_provider.attempt_update().is_ok());
         assert!(batch_provider.prev.is_none());
@@ -203,7 +221,8 @@ mod test {
         let provider = TestNextBatchProvider::new(vec![]);
         let l2_provider = TestL2ChainProvider::default();
         let cfg = Arc::new(RollupConfig::default());
-        let mut batch_provider = BatchProvider::new(cfg, provider, l2_provider);
+        let mut batch_provider =
+            BatchProvider::new(cfg, provider, l2_provider, PipelineMetrics::no_op());
 
         assert!(batch_provider.attempt_update().is_ok());
         assert!(batch_provider.prev.is_none());
@@ -216,7 +235,8 @@ mod test {
         let provider = TestNextBatchProvider::new(vec![]);
         let l2_provider = TestL2ChainProvider::default();
         let cfg = Arc::new(RollupConfig { holocene_time: Some(2), ..Default::default() });
-        let mut batch_provider = BatchProvider::new(cfg, provider, l2_provider);
+        let mut batch_provider =
+            BatchProvider::new(cfg, provider, l2_provider, PipelineMetrics::no_op());
 
         batch_provider.attempt_update().unwrap();
 
@@ -239,7 +259,8 @@ mod test {
         let provider = TestNextBatchProvider::new(vec![]);
         let l2_provider = TestL2ChainProvider::default();
         let cfg = Arc::new(RollupConfig { holocene_time: Some(2), ..Default::default() });
-        let mut batch_provider = BatchProvider::new(cfg, provider, l2_provider);
+        let mut batch_provider =
+            BatchProvider::new(cfg, provider, l2_provider, PipelineMetrics::no_op());
 
         batch_provider.attempt_update().unwrap();
 
@@ -270,7 +291,8 @@ mod test {
         let provider = TestNextBatchProvider::new(vec![]);
         let l2_provider = TestL2ChainProvider::default();
         let cfg = Arc::new(RollupConfig::default());
-        let mut batch_provider = BatchProvider::new(cfg, provider, l2_provider);
+        let mut batch_provider =
+            BatchProvider::new(cfg, provider, l2_provider, PipelineMetrics::no_op());
 
         // Reset the batch provider.
         batch_provider.signal(ResetSignal::default().signal()).await.unwrap();
@@ -286,7 +308,8 @@ mod test {
         let provider = TestNextBatchProvider::new(vec![]);
         let l2_provider = TestL2ChainProvider::default();
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
-        let mut batch_provider = BatchProvider::new(cfg, provider, l2_provider);
+        let mut batch_provider =
+            BatchProvider::new(cfg, provider, l2_provider, PipelineMetrics::no_op());
 
         // Reset the batch provider.
         batch_provider.signal(ResetSignal::default().signal()).await.unwrap();

@@ -3,9 +3,10 @@
 use super::NextBatchProvider;
 use crate::{
     errors::{PipelineEncodingError, PipelineError, PipelineErrorKind, PipelineResult, ResetError},
+    metrics::PipelineMetrics,
     traits::{
-        AttributesProvider, L2ChainProvider, OriginAdvancer, OriginProvider, ResetSignal, Signal,
-        SignalReceiver,
+        AttributesProvider, BatchQueueMetrics, L2ChainProvider, OriginAdvancer, OriginProvider,
+        ResetSignal, Signal, SignalReceiver,
     },
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -58,6 +59,8 @@ where
     pub(crate) next_spans: Vec<SingleBatch>,
     /// Used to validate the batches.
     pub(crate) fetcher: BF,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P, BF> BatchQueue<P, BF>
@@ -67,7 +70,7 @@ where
 {
     /// Creates a new [BatchQueue] stage.
     #[allow(clippy::missing_const_for_fn)]
-    pub fn new(cfg: Arc<RollupConfig>, prev: P, fetcher: BF) -> Self {
+    pub fn new(cfg: Arc<RollupConfig>, prev: P, fetcher: BF, metrics: PipelineMetrics) -> Self {
         Self {
             cfg,
             prev,
@@ -76,6 +79,7 @@ where
             batches: Default::default(),
             next_spans: Default::default(),
             fetcher,
+            metrics,
         }
     }
 
@@ -232,6 +236,7 @@ where
             "Advancing to next epoch: {}, timestamp: {}, epoch timestamp: {}",
             next_epoch.number, next_timestamp, next_epoch.timestamp
         );
+        self.metrics.record_epoch_advanced(next_epoch.number);
         self.l1_blocks.remove(0);
         Err(PipelineError::Eof.temp())
     }
@@ -252,12 +257,14 @@ where
             (self.cfg.is_holocene_active(origin.timestamp) && validity.is_future());
         if drop {
             self.prev.flush();
+            self.metrics.record_batch_dropped();
             return Ok(());
         } else if validity.is_outdated() {
             // If the batch is outdated, we drop it without flushing the previous stage.
             return Ok(());
         }
         self.batches.push(data);
+        self.metrics.record_batches_queued(self.batches.len());
         Ok(())
     }
 }
@@ -492,7 +499,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let mock = TestNextBatchProvider::new(vec![]);
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let parent = L2BlockInfo::default();
         let sb = SingleBatch::default();
         bq.next_spans.push(sb.clone());
@@ -506,7 +513,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let mock = TestNextBatchProvider::new(vec![]);
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.l1_blocks.push(BlockInfo::default());
         bq.next_spans.push(SingleBatch::default());
         bq.batches.push(BatchWithInclusionBlock {
@@ -527,7 +534,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let mock = TestNextBatchProvider::new(vec![]);
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.l1_blocks.push(BlockInfo::default());
         bq.next_spans.push(SingleBatch::default());
         bq.batches.push(BatchWithInclusionBlock {
@@ -569,7 +576,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
 
         // Configure batch queue
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default()); // Set the origin
         bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
         bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
@@ -600,7 +607,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
 
         // Configure batch queue
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default()); // Set the origin
         bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
         bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
@@ -634,7 +641,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
 
         // Configure batch queue
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default()); // Set the origin
         bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
         bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
@@ -669,7 +676,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
 
         // Configure batch queue
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default()); // Set the origin
         bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
         bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
@@ -685,7 +692,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let mock = TestNextBatchProvider::new(data);
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let parent = L2BlockInfo::default();
         let result = bq.derive_next_batch(false, parent).await.unwrap_err();
         assert_eq!(result, PipelineError::MissingOrigin.crit());
@@ -702,7 +709,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let parent = L2BlockInfo {
             l1_origin: BlockNumHash { number: 10, ..Default::default() },
             ..Default::default()
@@ -723,7 +730,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default());
         bq.l1_blocks.push(BlockInfo::default());
 
@@ -747,7 +754,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default());
         bq.l1_blocks.push(BlockInfo::default());
 
@@ -771,7 +778,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default());
         bq.l1_blocks.push(BlockInfo::default());
         bq.l1_blocks.push(BlockInfo::default());
@@ -806,7 +813,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
 
         // Configure batch queue
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default()); // Set the origin
         bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
         bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
@@ -848,7 +855,7 @@ mod tests {
         let fetcher = TestL2ChainProvider::default();
 
         // Configure batch queue
-        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher);
+        let mut bq = BatchQueue::new(cfg.clone(), mock, fetcher, PipelineMetrics::no_op());
         bq.origin = Some(BlockInfo::default()); // Set the origin
         bq.l1_blocks.push(BlockInfo::default()); // Push the origin into the l1 blocks
         bq.l1_blocks.push(BlockInfo::default()); // Push the next origin into the bq
@@ -885,7 +892,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let sb = SingleBatch::default();
         bq.next_spans.push(sb.clone());
         let next = bq.next_batch(L2BlockInfo::default()).await.unwrap();
@@ -904,7 +911,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let sb = SingleBatch::default();
         bq.next_spans.push(sb.clone());
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
@@ -919,7 +926,7 @@ mod tests {
         let batch = reader.next_batch(cfg.as_ref()).unwrap();
         let mock = TestNextBatchProvider::new(vec![Ok(batch)]);
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let res = bq.next_batch(L2BlockInfo::default()).await.unwrap_err();
         assert_eq!(res, PipelineError::NotEnoughData.temp());
         assert!(bq.is_last_in_span());
@@ -936,7 +943,7 @@ mod tests {
         let mut mock = TestNextBatchProvider::new(batch_vec);
         mock.origin = Some(BlockInfo::default());
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let parent = L2BlockInfo {
             l1_origin: BlockNumHash { number: 10, ..Default::default() },
             ..Default::default()
@@ -1064,7 +1071,7 @@ mod tests {
             op_blocks: vec![block, second],
             ..Default::default()
         };
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let parent = L2BlockInfo {
             block_info: BlockInfo {
                 number: 9,
@@ -1093,7 +1100,7 @@ mod tests {
         let cfg = Arc::new(RollupConfig::default());
         let mock = TestNextBatchProvider::new(data);
         let fetcher = TestL2ChainProvider::default();
-        let mut bq = BatchQueue::new(cfg, mock, fetcher);
+        let mut bq = BatchQueue::new(cfg, mock, fetcher, PipelineMetrics::no_op());
         let parent = L2BlockInfo::default();
         let batch = bq.next_batch(parent).await.unwrap();
         assert_eq!(batch, SingleBatch::default());

@@ -3,8 +3,8 @@ use crate::{
     metrics::PipelineMetrics,
     pipeline::{Signal, StepResult},
     traits::{
-        ChannelProviderMetrics, DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics,
-        L1TraversalMetrics,
+        BatchQueueMetrics, BatchStreamMetrics, ChannelProviderMetrics, ChannelReaderMetrics,
+        DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics, L1TraversalMetrics,
     },
 };
 use alloc::sync::Arc;
@@ -18,6 +18,9 @@ impl PipelineMetrics {
             l1_retrieval_metrics: Arc::new(NoopL1RetrievalMetrics),
             frame_queue_metrics: Arc::new(NoopFrameQueueMetrics),
             channel_provider_metrics: Arc::new(NoopChannelProviderMetrics),
+            channel_reader_metrics: Arc::new(NoopChannelReaderMetrics),
+            batch_stream_metrics: Arc::new(NoopBatchStreamMetrics),
+            batch_queue_metrics: Arc::new(NoopBatchQueueMetrics),
             // todo: add more metrics here for each stage
         }
     }
@@ -112,6 +115,57 @@ impl ChannelProviderMetrics for NoopChannelProviderMetrics {
     }
 
     fn record_data_item_provided(&self) {
+        // No-op
+    }
+}
+
+#[derive(Debug)]
+struct NoopChannelReaderMetrics;
+
+impl ChannelReaderMetrics for NoopChannelReaderMetrics {
+    fn record_batch_read(&self) {
+        // No-op
+    }
+
+    fn record_channel_flushed(&self) {
+        // No-op
+    }
+}
+
+#[derive(Debug)]
+struct NoopBatchStreamMetrics;
+
+impl BatchStreamMetrics for NoopBatchStreamMetrics {
+    fn record_batch_processed(&self) {
+        // No-op
+    }
+
+    fn record_span_batch_accepted(&self) {
+        // No-op
+    }
+
+    fn record_span_batch_dropped(&self) {
+        // No-op
+    }
+
+    fn record_buffer_size(&self, _size: usize) {
+        // No-op
+    }
+}
+
+#[derive(Debug)]
+struct NoopBatchQueueMetrics;
+
+impl BatchQueueMetrics for NoopBatchQueueMetrics {
+    fn record_batches_queued(&self, _count: usize) {
+        // No-op
+    }
+
+    fn record_batch_dropped(&self) {
+        // No-op
+    }
+
+    fn record_epoch_advanced(&self, _epoch: u64) {
         // No-op
     }
 }
