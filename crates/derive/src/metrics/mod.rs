@@ -6,8 +6,8 @@ use crate::{
     errors::PipelineErrorKind,
     pipeline::Signal,
     traits::{
-        DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics, L1TraversalMetrics,
-        StepResult,
+        ChannelProviderMetrics, DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics,
+        L1TraversalMetrics, StepResult,
     },
 };
 use alloc::sync::Arc;
@@ -20,6 +20,7 @@ pub struct PipelineMetrics {
     pub(crate) l1_traversal_metrics: Arc<dyn L1TraversalMetrics + Send + Sync>,
     pub(crate) l1_retrieval_metrics: Arc<dyn L1RetrievalMetrics + Send + Sync>,
     pub(crate) frame_queue_metrics: Arc<dyn FrameQueueMetrics + Send + Sync>,
+    pub(crate) channel_provider_metrics: Arc<dyn ChannelProviderMetrics + Send + Sync>,
     // todo: add more metrics here for each stage
 }
 
@@ -55,10 +56,6 @@ impl L1TraversalMetrics for PipelineMetrics {
     fn record_holocene_activation(&self) {
         self.l1_traversal_metrics.record_holocene_activation()
     }
-
-    fn record_error(&self, error: &PipelineErrorKind) {
-        self.l1_traversal_metrics.record_error(error)
-    }
 }
 
 impl L1RetrievalMetrics for PipelineMetrics {
@@ -76,10 +73,6 @@ impl L1RetrievalMetrics for PipelineMetrics {
 
     fn record_block_processed(&self, block_number: u64) {
         self.l1_retrieval_metrics.record_block_processed(block_number)
-    }
-
-    fn record_error(&self, error: &PipelineErrorKind) {
-        self.l1_retrieval_metrics.record_error(error)
     }
 }
 
@@ -99,8 +92,14 @@ impl FrameQueueMetrics for PipelineMetrics {
     fn record_load_frames_attempt(&self) {
         self.frame_queue_metrics.record_load_frames_attempt()
     }
+}
 
-    fn record_error(&self, error: &PipelineErrorKind) {
-        self.frame_queue_metrics.record_error(error)
+impl ChannelProviderMetrics for PipelineMetrics {
+    fn record_stage_transition(&self, from: &str, to: &str) {
+        self.channel_provider_metrics.record_stage_transition(from, to)
+    }
+
+    fn record_data_item_provided(&self) {
+        self.channel_provider_metrics.record_data_item_provided()
     }
 }

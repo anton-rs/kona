@@ -1,5 +1,3 @@
-use crate::errors::PipelineErrorKind;
-
 /// Metrics trait for `L1Traversal`.
 pub trait L1TraversalMetrics: Send + Sync {
     /// Records the block number of the last processed block.
@@ -10,6 +8,4 @@ pub trait L1TraversalMetrics: Send + Sync {
     fn record_reorg_detected(&self);
     /// Records Holocene activation.
     fn record_holocene_activation(&self);
-    /// Records the block number of the last processed block.
-    fn record_error(&self, error: &PipelineErrorKind);
 }

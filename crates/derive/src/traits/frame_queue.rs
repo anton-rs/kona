@@ -1,4 +1,4 @@
-use crate::errors::{PipelineErrorKind, PipelineResult};
+use crate::errors::PipelineResult;
 use alloc::boxed::Box;
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
@@ -16,7 +16,7 @@ pub trait FrameQueueProvider {
 }
 
 /// Metrics trait for `FrameQueue`.
-pub trait FrameQueueMetrics {
+pub trait FrameQueueMetrics: Send + Sync {
     /// Records the number of frames decoded.
     fn record_frames_decoded(&self, count: usize);
     /// Records the number of frames dropped.
@@ -25,6 +25,4 @@ pub trait FrameQueueMetrics {
     fn record_frames_queued(&self, count: usize);
     /// Records the number of frames loaded.
     fn record_load_frames_attempt(&self);
-    /// Records error loading frames.
-    fn record_error(&self, error: &PipelineErrorKind);
 }

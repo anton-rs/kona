@@ -79,7 +79,6 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         let block = match self.block {
             Some(block) => block,
             None => {
-                self.metrics.record_error(&PipelineError::Eof.temp());
                 warn!(target: "l1-traversal",  "Missing current block, can't advance origin with no reference.");
                 return Err(PipelineError::Eof.temp());
             }
@@ -87,9 +86,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         let next_l1_origin = match self.data_source.block_info_by_number(block.number + 1).await {
             Ok(block) => block,
             Err(e) => {
-                let error = PipelineError::Provider(e.to_string()).temp();
-                self.metrics.record_error(&error);
-                return Err(error);
+                return Err(PipelineError::Provider(e.to_string()).temp());
             }
         };
 
@@ -103,9 +100,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
         let receipts = match self.data_source.receipts_by_hash(next_l1_origin.hash).await {
             Ok(receipts) => receipts,
             Err(e) => {
-                let error = PipelineError::Provider(e.to_string()).temp();
-                self.metrics.record_error(&error);
-                return Err(error);
+                return Err(PipelineError::Provider(e.to_string()).temp());
             }
         };
 
@@ -114,9 +109,7 @@ impl<F: ChainProvider + Send> OriginAdvancer for L1Traversal<F> {
             self.rollup_config.l1_system_config_address,
             self.rollup_config.is_ecotone_active(next_l1_origin.timestamp),
         ) {
-            let error = PipelineError::SystemConfigUpdate(e).crit();
-            self.metrics.record_error(&error);
-            return Err(error);
+            return Err(PipelineError::SystemConfigUpdate(e).crit());
         }
 
         self.metrics.record_system_config_update();

@@ -30,6 +30,4 @@ pub trait L1RetrievalMetrics: Send + Sync {
     fn record_data_fetch_failure(&self, block_number: u64, error: &PipelineErrorKind);
     /// Records the number of blocks processed.
     fn record_block_processed(&self, block_number: u64);
-    /// Records errors.
-    fn record_error(&self, error: &PipelineErrorKind);
 }

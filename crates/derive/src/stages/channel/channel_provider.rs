@@ -3,7 +3,8 @@
 use super::{ChannelAssembler, ChannelBank, ChannelReaderProvider, NextFrameProvider};
 use crate::{
     errors::{PipelineError, PipelineResult},
-    traits::{OriginAdvancer, OriginProvider, Signal, SignalReceiver},
+    metrics::PipelineMetrics,
+    traits::{ChannelProviderMetrics, OriginAdvancer, OriginProvider, Signal, SignalReceiver},
 };
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Bytes;
@@ -39,6 +40,8 @@ where
     ///
     /// Must be [None] if `prev` or `channel_bank` is [Some].
     channel_assembler: Option<ChannelAssembler<P>>,
+    /// Metrics collector.
+    metrics: PipelineMetrics,
 }
 
 impl<P> ChannelProvider<P>
@@ -46,8 +49,8 @@ where
     P: NextFrameProvider + OriginAdvancer + OriginProvider + SignalReceiver + Debug,
 {
     /// Creates a new [ChannelProvider] with the given configuration and previous stage.
-    pub const fn new(cfg: Arc<RollupConfig>, prev: P) -> Self {
-        Self { cfg, prev: Some(prev), channel_bank: None, channel_assembler: None }
+    pub const fn new(cfg: Arc<RollupConfig>, prev: P, metrics: PipelineMetrics) -> Self {
+        Self { cfg, prev: Some(prev), channel_bank: None, channel_assembler: None, metrics }
     }
 
     /// Attempts to update the active stage of the mux.
@@ -57,13 +60,16 @@ where
             // On the first call to `attempt_update`, we need to determine the active stage to
             // initialize the mux with.
             if self.cfg.is_holocene_active(origin.timestamp) {
+                self.metrics.record_stage_transition("ChannelProvider", "ChannelAssembler");
                 self.channel_assembler = Some(ChannelAssembler::new(self.cfg.clone(), prev));
             } else {
+                self.metrics.record_stage_transition("ChannelProvider", "ChannelBank");
                 self.channel_bank = Some(ChannelBank::new(self.cfg.clone(), prev));
             }
         } else if self.channel_bank.is_some() && self.cfg.is_holocene_active(origin.timestamp) {
             // If the channel bank is active and Holocene is also active, transition to the channel
             // assembler.
+            self.metrics.record_stage_transition("ChannelBank", "ChannelAssembler");
             let channel_bank = self.channel_bank.take().expect("Must have channel bank");
             self.channel_assembler =
                 Some(ChannelAssembler::new(self.cfg.clone(), channel_bank.prev));
@@ -72,6 +78,7 @@ where
             // If the channel assembler is active, and Holocene is not active, it indicates an L1
             // reorg around Holocene activation. Transition back to the channel bank
             // until Holocene re-activates.
+            self.metrics.record_stage_transition("ChannelAssembler", "ChannelBank");
             let channel_assembler =
                 self.channel_assembler.take().expect("Must have channel assembler");
             self.channel_bank = Some(ChannelBank::new(self.cfg.clone(), channel_assembler.prev));
@@ -141,13 +148,23 @@ where
     async fn next_data(&mut self) -> PipelineResult<Option<Bytes>> {
         self.attempt_update()?;
 
-        if let Some(channel_assembler) = self.channel_assembler.as_mut() {
-            channel_assembler.next_data().await
+        let data = if let Some(channel_assembler) = self.channel_assembler.as_mut() {
+            let data = channel_assembler.next_data().await?;
+            if data.is_some() {
+                self.metrics.record_data_item_provided();
+            }
+            data
         } else if let Some(channel_bank) = self.channel_bank.as_mut() {
-            channel_bank.next_data().await
+            let data = channel_bank.next_data().await?;
+            if data.is_some() {
+                self.metrics.record_data_item_provided();
+            }
+            data
         } else {
-            Err(PipelineError::NotEnoughData.temp())
-        }
+            return Err(PipelineError::NotEnoughData.temp());
+        };
+
+        Ok(data)
     }
 }
 
@@ -155,6 +172,7 @@ where
 mod test {
     use super::ChannelProvider;
     use crate::{
+        metrics::PipelineMetrics,
         prelude::{OriginProvider, PipelineError},
         stages::ChannelReaderProvider,
         test_utils::TestNextFrameProvider,
@@ -168,7 +186,7 @@ mod test {
     fn test_channel_provider_assembler_active() {
         let provider = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
-        let mut channel_provider = ChannelProvider::new(cfg, provider);
+        let mut channel_provider = ChannelProvider::new(cfg, provider, PipelineMetrics::no_op());
 
         assert!(channel_provider.attempt_update().is_ok());
         assert!(channel_provider.prev.is_none());
@@ -180,7 +198,7 @@ mod test {
     fn test_channel_provider_bank_active() {
         let provider = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
-        let mut channel_provider = ChannelProvider::new(cfg, provider);
+        let mut channel_provider = ChannelProvider::new(cfg, provider, PipelineMetrics::no_op());
 
         assert!(channel_provider.attempt_update().is_ok());
         assert!(channel_provider.prev.is_none());
@@ -192,7 +210,7 @@ mod test {
     fn test_channel_provider_retain_current_bank() {
         let provider = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig::default());
-        let mut channel_provider = ChannelProvider::new(cfg, provider);
+        let mut channel_provider = ChannelProvider::new(cfg, provider, PipelineMetrics::no_op());
 
         // Assert the multiplexer hasn't been initialized.
         assert!(channel_provider.channel_bank.is_none());
@@ -215,7 +233,7 @@ mod test {
     fn test_channel_provider_retain_current_assembler() {
         let provider = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
-        let mut channel_provider = ChannelProvider::new(cfg, provider);
+        let mut channel_provider = ChannelProvider::new(cfg, provider, PipelineMetrics::no_op());
 
         // Assert the multiplexer hasn't been initialized.
         assert!(channel_provider.channel_bank.is_none());
@@ -238,7 +256,7 @@ mod test {
     fn test_channel_provider_transition_stage() {
         let provider = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { holocene_time: Some(2), ..Default::default() });
-        let mut channel_provider = ChannelProvider::new(cfg, provider);
+        let mut channel_provider = ChannelProvider::new(cfg, provider, PipelineMetrics::no_op());
 
         channel_provider.attempt_update().unwrap();
 
@@ -260,7 +278,7 @@ mod test {
     fn test_channel_provider_transition_stage_backwards() {
         let provider = TestNextFrameProvider::new(vec![]);
         let cfg = Arc::new(RollupConfig { holocene_time: Some(2), ..Default::default() });
-        let mut channel_provider = ChannelProvider::new(cfg, provider);
+        let mut channel_provider = ChannelProvider::new(cfg, provider, PipelineMetrics::no_op());
 
         channel_provider.attempt_update().unwrap();
 
@@ -294,7 +312,8 @@ mod test {
         ];
         let provider = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig::default());
-        let mut channel_provider = ChannelProvider::new(cfg.clone(), provider);
+        let mut channel_provider =
+            ChannelProvider::new(cfg.clone(), provider, PipelineMetrics::no_op());
 
         // Load in the first frame.
         assert_eq!(
@@ -325,7 +344,8 @@ mod test {
         ];
         let provider = TestNextFrameProvider::new(frames.into_iter().rev().map(Ok).collect());
         let cfg = Arc::new(RollupConfig { holocene_time: Some(0), ..Default::default() });
-        let mut channel_provider = ChannelProvider::new(cfg.clone(), provider);
+        let mut channel_provider =
+            ChannelProvider::new(cfg.clone(), provider, PipelineMetrics::no_op());
 
         // Load in the first frame.
         assert_eq!(

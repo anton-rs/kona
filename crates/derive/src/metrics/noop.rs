@@ -3,7 +3,8 @@ use crate::{
     metrics::PipelineMetrics,
     pipeline::{Signal, StepResult},
     traits::{
-        DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics, L1TraversalMetrics,
+        ChannelProviderMetrics, DerivationPipelineMetrics, FrameQueueMetrics, L1RetrievalMetrics,
+        L1TraversalMetrics,
     },
 };
 use alloc::sync::Arc;
@@ -16,6 +17,7 @@ impl PipelineMetrics {
             l1_traversal_metrics: Arc::new(NoopL1TraversalMetrics),
             l1_retrieval_metrics: Arc::new(NoopL1RetrievalMetrics),
             frame_queue_metrics: Arc::new(NoopFrameQueueMetrics),
+            channel_provider_metrics: Arc::new(NoopChannelProviderMetrics),
             // todo: add more metrics here for each stage
         }
     }
@@ -55,10 +57,6 @@ impl L1TraversalMetrics for NoopL1TraversalMetrics {
     fn record_holocene_activation(&self) {
         // No-op
     }
-
-    fn record_error(&self, _error: &PipelineErrorKind) {
-        // No-op
-    }
 }
 
 /// No-op implementation of `L1RetrievalMetrics`.
@@ -79,10 +77,6 @@ impl L1RetrievalMetrics for NoopL1RetrievalMetrics {
     }
 
     fn record_block_processed(&self, _block_number: u64) {
-        // No-op
-    }
-
-    fn record_error(&self, _error: &PipelineErrorKind) {
         // No-op
     }
 }
@@ -107,8 +101,17 @@ impl FrameQueueMetrics for NoopFrameQueueMetrics {
     fn record_load_frames_attempt(&self) {
         // No-op
     }
+}
 
-    fn record_error(&self, _error: &PipelineErrorKind) {
+#[derive(Debug)]
+struct NoopChannelProviderMetrics;
+
+impl ChannelProviderMetrics for NoopChannelProviderMetrics {
+    fn record_stage_transition(&self, _from: &str, _to: &str) {
+        // No-op
+    }
+
+    fn record_data_item_provided(&self) {
         // No-op
     }
 }

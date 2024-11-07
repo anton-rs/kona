@@ -146,7 +146,8 @@ where
         let l1_retrieval = L1Retrieval::new(l1_traversal, dap_source, metrics.clone());
         let frame_queue =
             FrameQueue::new(l1_retrieval, Arc::clone(&rollup_config), metrics.clone());
-        let channel_provider = ChannelProvider::new(Arc::clone(&rollup_config), frame_queue);
+        let channel_provider =
+            ChannelProvider::new(Arc::clone(&rollup_config), frame_queue, metrics.clone());
         let channel_reader = ChannelReader::new(channel_provider, Arc::clone(&rollup_config));
         let batch_stream =
             BatchStream::new(channel_reader, rollup_config.clone(), l2_chain_provider.clone());

@@ -29,3 +29,6 @@ pub use l1_retrieval::{L1RetrievalMetrics, L1RetrievalProvider};
 
 mod frame_queue;
 pub use frame_queue::{FrameQueueMetrics, FrameQueueProvider};
+
+mod channel_provider;
+pub use channel_provider::ChannelProviderMetrics;
