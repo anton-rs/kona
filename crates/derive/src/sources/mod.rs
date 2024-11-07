@@ -7,6 +7,9 @@
 //! [DataAvailabilityProvider]: crate::traits::DataAvailabilityProvider
 //! [BlockInfo]: op_alloy_protocol::BlockInfo
 
+mod blob_hash;
+pub use blob_hash::IndexedBlobHash;
+
 mod blob_data;
 pub use blob_data::BlobData;
 

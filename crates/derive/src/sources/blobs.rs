@@ -2,13 +2,12 @@
 
 use crate::{
     errors::{BlobProviderError, PipelineError},
-    sources::BlobData,
+    sources::{BlobData, IndexedBlobHash},
     traits::{BlobProvider, ChainProvider, DataAvailabilityProvider},
     types::PipelineResult,
 };
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
-use alloy_eips::eip4844::IndexedBlobHash;
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 use op_alloy_protocol::BlockInfo;
@@ -58,7 +57,7 @@ where
     }
 
     fn extract_blob_data(&self, txs: Vec<TxEnvelope>) -> (Vec<BlobData>, Vec<IndexedBlobHash>) {
-        let mut index: u64 = 0;
+        let mut number: u64 = 0;
         let mut data = Vec::new();
         let mut hashes = Vec::new();
         for tx in txs {
@@ -80,11 +79,11 @@ where
             let Some(to) = tx_kind else { continue };
 
             if to != self.batcher_address {
-                index += blob_hashes.map_or(0, |h| h.len() as u64);
+                number += blob_hashes.map_or(0, |h| h.len() as u64);
                 continue;
             }
             if tx.recover_signer().unwrap_or_default() != self.signer {
-                index += blob_hashes.map_or(0, |h| h.len() as u64);
+                number += blob_hashes.map_or(0, |h| h.len() as u64);
                 continue;
             }
             if tx.tx_type() != TxType::Eip4844 {
@@ -107,11 +106,11 @@ where
             } else {
                 continue;
             };
-            for hash in blob_hashes {
-                let indexed = IndexedBlobHash { hash, index };
+            for blob in blob_hashes {
+                let indexed = IndexedBlobHash { hash: blob, index: number as usize };
                 hashes.push(indexed);
                 data.push(BlobData::default());
-                index += 1;
+                number += 1;
             }
         }
         (data, hashes)

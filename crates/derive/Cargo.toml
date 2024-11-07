@@ -33,6 +33,9 @@ async-trait.workspace = true
 alloc-no-stdlib.workspace = true
 derive_more = { workspace = true, features = ["full"] }
 
+# `serde` feature dependencies
+serde = { workspace = true, optional = true, features = ["derive"] }
+
 # `test-utils` feature dependencies
 spin = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
@@ -48,6 +51,7 @@ alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitr
 [features]
 default = ["serde"]
 serde = [
+  "dep:serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
   "op-alloy-consensus/serde",
