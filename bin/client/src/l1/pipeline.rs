@@ -181,7 +181,6 @@ where
     }
 }
 
-#[async_trait]
 impl<O, B> DriverPipeline<OracleDerivationPipeline<O, B>> for OraclePipeline<O, B>
 where
     O: CommsClient + FlushableCache + Send + Sync + Debug,
