@@ -12,7 +12,7 @@ use kona_client::{
     executor::KonaExecutorConstructor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
-    sync::SyncStart,
+    sync::new_pipeline_cursor,
     BootInfo, CachingOracle,
 };
 use kona_common::io;
@@ -72,7 +72,7 @@ fn main() -> Result<(), String> {
 
         // Create a new derivation driver with the given boot information and oracle.
 
-        let Ok(sync_start) = SyncStart::from(
+        let Ok(cursor) = new_pipeline_cursor(
             oracle.clone(),
             &boot,
             &mut l1_provider.clone(),
@@ -87,7 +87,7 @@ fn main() -> Result<(), String> {
         let cfg = Arc::new(boot.rollup_config.clone());
         let pipeline = OraclePipeline::new(
             cfg.clone(),
-            sync_start.clone(),
+            cursor.clone(),
             oracle.clone(),
             beacon,
             l1_provider.clone(),
@@ -99,7 +99,7 @@ fn main() -> Result<(), String> {
             l2_provider,
             fpvm_handle_register,
         );
-        let mut driver = Driver::new(sync_start.cursor, executor, pipeline);
+        let mut driver = Driver::new(cursor, executor, pipeline);
 
         // Run the derivation pipeline until we are able to produce the output root of the claimed
         // L2 block.

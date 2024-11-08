@@ -22,4 +22,7 @@ mod core;
 pub use core::Driver;
 
 mod cursor;
-pub use cursor::SyncCursor;
+pub use cursor::PipelineCursor;
+
+mod tip;
+pub use tip::TipCursor;
