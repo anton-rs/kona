@@ -1,12 +1,13 @@
 //! The driver of the Derivation Pipeline.
 
 use alloc::vec::Vec;
-use alloy_consensus::{BlockBody, Header, Sealable, Sealed};
+use alloy_consensus::{BlockBody, Sealable};
 use alloy_primitives::B256;
 use alloy_rlp::Decodable;
 use core::fmt::Debug;
 use kona_derive::{
     errors::{PipelineError, PipelineErrorKind},
+    traits::{Pipeline, SignalReceiver},
     types::Signal,
 };
 use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
@@ -15,50 +16,45 @@ use op_alloy_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use tracing::{error, info, warn};
 
-use crate::{DriverError, DriverResult, Executor, ExecutorConstructor, Pipeline, SyncCursor};
+use crate::{DriverError, DriverPipeline, DriverResult, Executor, ExecutorConstructor, SyncCursor};
 
 /// The Rollup Driver entrypoint.
 #[derive(Debug)]
-pub struct Driver<E, EC, P>
+pub struct Driver<E, EC, DP, P>
 where
     E: Executor + Send + Sync + Debug,
     EC: ExecutorConstructor<E> + Send + Sync + Debug,
-    P: Pipeline + Send + Sync + Debug,
+    DP: DriverPipeline<P> + Send + Sync + Debug,
+    P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
     /// Marker for the executor.
     _marker: core::marker::PhantomData<E>,
+    /// Marker for the pipeline.
+    _marker2: core::marker::PhantomData<P>,
     /// A pipeline abstraction.
-    pipeline: P,
+    pipeline: DP,
     /// Cursor to keep track of the L2 tip
     cursor: SyncCursor,
     /// Executor constructor.
     executor: EC,
 }
 
-impl<E, EC, P> Driver<E, EC, P>
+impl<E, EC, DP, P> Driver<E, EC, DP, P>
 where
     E: Executor + Send + Sync + Debug,
     EC: ExecutorConstructor<E> + Send + Sync + Debug,
-    P: Pipeline + Send + Sync + Debug,
+    DP: DriverPipeline<P> + Send + Sync + Debug,
+    P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
     /// Creates a new [Driver].
-    pub const fn new(cursor: SyncCursor, executor: EC, pipeline: P) -> Self {
-        Self { _marker: core::marker::PhantomData, cursor, executor, pipeline }
-    }
-
-    /// Returns the current L2 safe head.
-    pub const fn l2_safe_head(&self) -> &L2BlockInfo {
-        self.cursor.l2_safe_head()
-    }
-
-    /// Returns the header of the L2 safe head.
-    pub const fn l2_safe_head_header(&self) -> &Sealed<Header> {
-        self.cursor.l2_safe_head_header()
-    }
-
-    /// Returns the output root of the L2 safe head.
-    pub const fn l2_safe_head_output_root(&self) -> &B256 {
-        self.cursor.l2_safe_head_output_root()
+    pub const fn new(cursor: SyncCursor, executor: EC, pipeline: DP) -> Self {
+        Self {
+            _marker: core::marker::PhantomData,
+            _marker2: core::marker::PhantomData,
+            pipeline,
+            cursor,
+            executor,
+        }
     }
 
     /// Advances the derivation pipeline to the target block number.
@@ -78,17 +74,17 @@ where
     ) -> DriverResult<(u64, B256), E::Error> {
         loop {
             // Check if we have reached the target block number.
-            if self.l2_safe_head().block_info.number >= target {
+            if self.cursor.l2_safe_head().block_info.number >= target {
                 info!(target: "client", "Derivation complete, reached L2 safe head.");
                 return Ok((
-                    self.l2_safe_head().block_info.number,
-                    *self.l2_safe_head_output_root(),
+                    self.cursor.l2_safe_head().block_info.number,
+                    *self.cursor.l2_safe_head_output_root(),
                 ));
             }
 
             let OpAttributesWithParent { mut attributes, .. } = match self
                 .pipeline
-                .produce_payload(*self.l2_safe_head())
+                .produce_payload(*self.cursor.l2_safe_head())
                 .await
             {
                 Ok(attrs) => attrs,
@@ -97,7 +93,7 @@ where
 
                     // Adjust the target block number to the current safe head, as no more blocks
                     // can be produced.
-                    target = self.l2_safe_head().block_info.number;
+                    target = self.cursor.l2_safe_head().block_info.number;
                     continue;
                 }
                 Err(e) => {
@@ -106,7 +102,8 @@ where
                 }
             };
 
-            let mut executor = self.executor.new_executor(self.l2_safe_head_header().clone());
+            let mut executor =
+                self.executor.new_executor(self.cursor.l2_safe_head_header().clone());
             let header = match executor.execute_payload(attributes.clone()) {
                 Ok(header) => header,
                 Err(e) => {
@@ -120,7 +117,7 @@ where
                         // deposit-only block due to execution failure, the
                         // batch and channel it is contained in is forwards
                         // invalidated.
-                        self.pipeline.signal(Signal::FlushChannel).await?;
+                        self.pipeline.inner().signal(Signal::FlushChannel).await?;
 
                         // Strip out all transactions that are not deposits.
                         attributes.transactions = attributes.transactions.map(|txs| {
@@ -130,7 +127,8 @@ where
                         });
 
                         // Retry the execution.
-                        executor = self.executor.new_executor(self.l2_safe_head_header().clone());
+                        executor =
+                            self.executor.new_executor(self.cursor.l2_safe_head_header().clone());
                         match executor.execute_payload(attributes.clone()) {
                             Ok(header) => header,
                             Err(e) => {
@@ -166,7 +164,7 @@ where
             // Update the safe head.
             self.cursor.l2_safe_head = L2BlockInfo::from_block_and_genesis(
                 &block,
-                &self.pipeline.rollup_config().genesis,
+                &self.pipeline.inner().rollup_config().genesis,
             )?;
             self.cursor.l2_safe_head_header = header.clone().seal_slow();
             self.cursor.l2_safe_head_output_root =

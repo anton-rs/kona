@@ -13,7 +13,7 @@ mod errors;
 pub use errors::{DriverError, DriverResult};
 
 mod pipeline;
-pub use pipeline::Pipeline;
+pub use pipeline::DriverPipeline;
 
 mod executor;
 pub use executor::{Executor, ExecutorConstructor};
