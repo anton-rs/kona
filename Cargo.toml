@@ -59,17 +59,17 @@ op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc82
 op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc8247" }
 op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc8247" }
 
-alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-serde = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
-alloy-rpc-types-beacon = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-serde = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
+alloy-rpc-types-beacon = { git = "https://github.com/alloy-rs/alloy", rev = "ea5eb7d" }
 
 [workspace.dependencies]
 # Workspace
