@@ -5,7 +5,7 @@ use alloy_primitives::B256;
 use op_alloy_protocol::L2BlockInfo;
 
 /// A cursor that keeps track of the L2 tip block.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SyncCursor {
     /// The current L2 safe head.
     pub l2_safe_head: L2BlockInfo,
