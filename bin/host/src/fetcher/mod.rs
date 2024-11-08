@@ -1,7 +1,11 @@
 //! This module contains the [Fetcher] struct, which is responsible for fetching preimages from a
 //! remote source.
 
-use crate::{kv::KeyValueStore, util};
+use crate::{
+    kv::KeyValueStore,
+    providers::{OnlineBeaconClient, OnlineBlobProvider},
+    util,
+};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
 use alloy_primitives::{address, keccak256, Address, Bytes, B256};
@@ -13,7 +17,6 @@ use alloy_rpc_types::{
 use anyhow::{anyhow, Result};
 use kona_client::HintType;
 use kona_derive::sources::IndexedBlobHash;
-use kona_derive_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
