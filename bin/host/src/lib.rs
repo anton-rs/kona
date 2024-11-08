@@ -6,6 +6,7 @@ pub mod cli;
 pub mod fetcher;
 pub mod kv;
 pub mod preimage;
+pub mod providers;
 pub mod server;
 pub mod util;
 

@@ -90,12 +90,12 @@ attributes.
 of generics away from the downstream consumers. Below we provide an example for using
 the [`PipelineBuilder`][builder] to instantiate a [`DerivationPipeline`][dp].
 
-```rust
+```rust,ignore
 // Imports
 use std::sync::Arc;
 use op_alloy_protocol::BlockInfo;
 use op_alloy_genesis::RollupConfig;
-use kona_derive_alloy::prelude::*;
+use superchain_derive::*;
 
 // Use a default rollup config.
 let rollup_config = Arc::new(RollupConfig::default());

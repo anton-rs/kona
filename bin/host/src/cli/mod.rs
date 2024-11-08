@@ -5,6 +5,7 @@ use crate::{
         DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
         SplitKeyValueStore,
     },
+    providers::{OnlineBeaconClient, OnlineBlobProvider},
     util,
 };
 use alloy_primitives::B256;
@@ -14,7 +15,6 @@ use clap::{
     builder::styling::{AnsiColor, Color, Style},
     ArgAction, Parser,
 };
-use kona_derive_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use op_alloy_genesis::RollupConfig;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
