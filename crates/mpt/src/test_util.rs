@@ -96,10 +96,7 @@ pub(crate) async fn get_live_derivable_transactions_list(
     let BlockTransactions::Full(txs) = block.transactions else {
         anyhow::bail!("Did not fetch full block");
     };
-    let consensus_txs = txs
-        .into_iter()
-        .map(|tx| TxEnvelope::try_from(tx).map_err(anyhow::Error::from))
-        .collect::<Result<Vec<_>>>()?;
+    let consensus_txs = txs.into_iter().map(TxEnvelope::from).collect::<Vec<_>>();
 
     // Compute the derivable list
     let mut list = ordered_trie_with_encoder(consensus_txs.as_ref(), |rlp: &TxEnvelope, buf| {
