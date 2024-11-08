@@ -9,13 +9,14 @@ extern crate alloc;
 
 use alloc::{string::String, sync::Arc};
 use kona_client::{
-    errors::DriverError,
-    l1::{DerivationDriver, OracleBlobProvider, OracleL1ChainProvider},
+    executor::KonaExecutorConstructor,
+    l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
     BootInfo, CachingOracle,
 };
 use kona_common::io;
 use kona_common_proc::client_entry;
+use kona_driver::{Driver, DriverError};
 
 pub(crate) mod fault;
 use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
@@ -41,7 +42,14 @@ fn main() -> Result<(), String> {
         ////////////////////////////////////////////////////////////////
 
         let oracle = Arc::new(CachingOracle::new(ORACLE_LRU_SIZE, ORACLE_READER, HINT_WRITER));
-        let boot = Arc::new(BootInfo::load(oracle.as_ref()).await?);
+        let boot = match BootInfo::load(oracle.as_ref()).await {
+            Ok(boot) => Arc::new(boot),
+            Err(e) => {
+                error!(target: "client", "Failed to load boot info: {:?}", e);
+                io::print(&alloc::format!("Failed to load boot info: {:?}\n", e));
+                io::exit(1);
+            }
+        };
         let l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
         let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
         let beacon = OracleBlobProvider::new(oracle.clone());
@@ -62,20 +70,32 @@ fn main() -> Result<(), String> {
         ////////////////////////////////////////////////////////////////
 
         // Create a new derivation driver with the given boot information and oracle.
-        let mut driver =
-            DerivationDriver::new(boot.as_ref(), &oracle, beacon, l1_provider, l2_provider.clone())
-                .await?;
+        let Ok((pipeline, cursor)) = OraclePipeline::new(
+            &boot,
+            oracle.clone(),
+            beacon,
+            l1_provider.clone(),
+            l2_provider.clone(),
+        )
+        .await
+        else {
+            error!(target: "client", "Failed to create derivation pipeline");
+            io::print("Failed to create derivation pipeline\n");
+            io::exit(1);
+        };
+        let cfg = Arc::new(boot.rollup_config.clone());
+        let executor = KonaExecutorConstructor::new(
+            &cfg,
+            l2_provider.clone(),
+            l2_provider,
+            fpvm_handle_register,
+        );
+        let mut driver = Driver::new(cursor, executor, pipeline);
 
         // Run the derivation pipeline until we are able to produce the output root of the claimed
         // L2 block.
-        let (number, output_root) = driver
-            .advance_to_target(
-                &boot.rollup_config,
-                &l2_provider,
-                &l2_provider,
-                fpvm_handle_register,
-            )
-            .await?;
+        let (number, output_root) =
+            driver.advance_to_target(&boot.rollup_config, boot.claimed_l2_block_number).await?;
 
         ////////////////////////////////////////////////////////////////
         //                          EPILOGUE                          //
@@ -108,6 +128,6 @@ fn main() -> Result<(), String> {
             output_root
         ));
 
-        Ok::<_, DriverError>(())
+        Ok::<_, DriverError<kona_executor::ExecutorError>>(())
     })
 }

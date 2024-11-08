@@ -1,8 +1,8 @@
 //! Contains the L1 constructs of the client program.
 
-mod driver;
-pub use driver::{
-    DerivationDriver, OracleAttributesBuilder, OracleAttributesQueue, OracleDataProvider,
+mod pipeline;
+pub use pipeline::{
+    OracleAttributesBuilder, OracleAttributesQueue, OracleDataProvider, OracleDerivationPipeline,
     OraclePipeline,
 };
 
