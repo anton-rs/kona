@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.6...kona-derive-v0.0.7) - 2024-11-08
+
+### Other
+
+- Revert "chore: bump alloy deps ([#788](https://github.com/anton-rs/kona/pull/788))" ([#791](https://github.com/anton-rs/kona/pull/791))
+
 ## [0.0.6](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.5...kona-derive-v0.0.6) - 2024-11-06
 
 ### Added
