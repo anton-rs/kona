@@ -53,6 +53,24 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
+[patch.crates-io]
+op-alloy-genesis = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc8247" }
+op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc8247" }
+op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc8247" }
+op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", rev = "edc8247" }
+
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-serde = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+alloy-rpc-types-beacon = { git = "https://github.com/alloy-rs/alloy", rev = "ae1bef2" }
+
 [workspace.dependencies]
 # Workspace
 kona-mpt = { path = "crates/mpt", version = "0.0.6", default-features = false }
