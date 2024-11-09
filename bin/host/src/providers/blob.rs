@@ -156,9 +156,9 @@ where
                 let hash = blob_hashes
                     .get(i)
                     .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
-                match sidecar.verify_blob(&alloy_eips::NumHash {
+                match sidecar.verify_blob(&alloy_eips::eip4844::IndexedBlobHash {
                     hash: hash.hash,
-                    number: hash.index as u64,
+                    index: hash.index as u64,
                 }) {
                     Ok(_) => Ok(sidecar.blob),
                     Err(e) => Err(BlobProviderError::Backend(e.to_string())),
@@ -312,9 +312,9 @@ where
                         let hash = blob_hashes.get(i).ok_or(BlobProviderError::Backend(
                             "fallback: failed to get blob hash".to_string(),
                         ))?;
-                        match sidecar.verify_blob(&alloy_eips::NumHash {
+                        match sidecar.verify_blob(&alloy_eips::eip4844::IndexedBlobHash {
                             hash: hash.hash,
-                            number: hash.index as u64,
+                            index: hash.index as u64,
                         }) {
                             Ok(_) => Ok(sidecar.blob),
                             Err(e) => Err(BlobProviderError::Backend(e.to_string())),

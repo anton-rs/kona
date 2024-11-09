@@ -519,11 +519,7 @@ where
                 let encoded_transactions = transactions
                     .into_iter()
                     .map(|tx| {
-                        let envelope: TxEnvelope = tx.try_into().map_err(|e| {
-                            anyhow!(
-                                "Failed to convert RPC transaction into consensus envelope: {e}"
-                            )
-                        })?;
+                        let envelope: TxEnvelope = tx.into();
 
                         Ok::<_, anyhow::Error>(envelope.encoded_2718())
                     })
