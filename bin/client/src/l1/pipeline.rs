@@ -6,25 +6,22 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
-    errors::{PipelineError, PipelineErrorKind, ResetError},
+    errors::PipelineErrorKind,
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
-    traits::{
-        BlobProvider, ChainProvider, L2ChainProvider, OriginProvider, Pipeline, SignalReceiver,
-    },
-    types::{ActivationSignal, ResetSignal, Signal, StepResult},
+    traits::{BlobProvider, ChainProvider, OriginProvider, Pipeline, SignalReceiver},
+    types::{PipelineResult, Signal, StepResult},
 };
-use kona_driver::SyncCursor;
+use kona_driver::{DriverPipeline, SyncCursor};
 use kona_mpt::TrieProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
-use op_alloy_genesis::RollupConfig;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
-use tracing::{info, warn};
 
 use crate::{
     errors::OracleProviderError, l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo,
@@ -185,101 +182,78 @@ where
 }
 
 #[async_trait]
-impl<O, B> kona_driver::Pipeline for OraclePipeline<O, B>
+impl<O, B> DriverPipeline<OracleDerivationPipeline<O, B>> for OraclePipeline<O, B>
 where
     O: CommsClient + FlushableCache + Send + Sync + Debug,
     B: BlobProvider + Send + Sync + Debug + Clone,
 {
-    /// Produces the disputed [OpAttributesWithParent] payload, directly after the starting L2
-    /// output root passed through the [crate::BootInfo].
-    async fn produce_payload(
-        &mut self,
-        l2_safe_head: L2BlockInfo,
-    ) -> Result<OpAttributesWithParent, PipelineErrorKind> {
-        // As we start the safe head at the disputed block's parent, we step the pipeline until the
-        // first attributes are produced. All batches at and before the safe head will be
-        // dropped, so the first payload will always be the disputed one.
-        loop {
-            match self.pipeline.step(l2_safe_head).await {
-                StepResult::PreparedAttributes => {
-                    info!(target: "client_derivation_driver", "Stepped derivation pipeline")
-                }
-                StepResult::AdvancedOrigin => {
-                    info!(target: "client_derivation_driver", "Advanced origin")
-                }
-                StepResult::OriginAdvanceErr(e) | StepResult::StepFailed(e) => {
-                    warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e);
-
-                    // Break the loop unless the error signifies that there is not enough data to
-                    // complete the current step. In this case, we retry the step to see if other
-                    // stages can make progress.
-                    match e {
-                        PipelineErrorKind::Temporary(_) => continue,
-                        PipelineErrorKind::Reset(e) => {
-                            let system_config = self
-                                .pipeline
-                                .l2_chain_provider
-                                .system_config_by_number(
-                                    l2_safe_head.block_info.number,
-                                    self.pipeline.rollup_config.clone(),
-                                )
-                                .await?;
-
-                            if matches!(e, ResetError::HoloceneActivation) {
-                                self.pipeline
-                                    .signal(
-                                        ActivationSignal {
-                                            l2_safe_head,
-                                            l1_origin: self
-                                                .pipeline
-                                                .origin()
-                                                .ok_or(PipelineError::MissingOrigin.crit())?,
-                                            system_config: Some(system_config),
-                                        }
-                                        .signal(),
-                                    )
-                                    .await?;
-                            } else {
-                                // Flush the caching oracle if a reorg is detected.
-                                if matches!(e, ResetError::ReorgDetected(_, _)) {
-                                    self.caching_oracle.as_ref().flush();
-                                }
-
-                                // Reset the pipeline to the initial L2 safe head and L1 origin,
-                                // and try again.
-                                self.pipeline
-                                    .signal(
-                                        ResetSignal {
-                                            l2_safe_head,
-                                            l1_origin: self
-                                                .pipeline
-                                                .origin()
-                                                .ok_or(PipelineError::MissingOrigin.crit())?,
-                                            system_config: Some(system_config),
-                                        }
-                                        .signal(),
-                                    )
-                                    .await?;
-                            }
-                        }
-                        PipelineErrorKind::Critical(_) => return Err(e),
-                    }
-                }
-            }
-
-            if let Some(attrs) = self.pipeline.next() {
-                return Ok(attrs);
-            }
-        }
+    /// Flushes the cache on re-org.
+    fn flush(&self) {
+        self.caching_oracle.flush();
     }
+}
 
-    /// Signals the derivation pipeline.
-    async fn signal(&mut self, signal: Signal) -> Result<(), PipelineErrorKind> {
+#[async_trait]
+impl<O, B> SignalReceiver for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    /// Receives a signal from the driver.
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         self.pipeline.signal(signal).await
     }
+}
 
-    /// Returns the rollup configuration.
-    fn rollup_config(&self) -> Arc<RollupConfig> {
-        self.pipeline.rollup_config.clone()
+impl<O, B> OriginProvider for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    /// Returns the optional L1 [BlockInfo] origin.
+    fn origin(&self) -> Option<BlockInfo> {
+        self.pipeline.origin()
+    }
+}
+
+impl<O, B> Iterator for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    type Item = OpAttributesWithParent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pipeline.next()
+    }
+}
+
+#[async_trait]
+impl<O, B> Pipeline for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    /// Peeks at the next [OpAttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&OpAttributesWithParent> {
+        self.pipeline.peek()
+    }
+
+    /// Attempts to progress the pipeline.
+    async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
+        self.pipeline.step(cursor).await
+    }
+
+    /// Returns the rollup config.
+    fn rollup_config(&self) -> &RollupConfig {
+        self.pipeline.rollup_config()
+    }
+
+    /// Returns the [SystemConfig] by L2 number.
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+    ) -> Result<SystemConfig, PipelineErrorKind> {
+        self.pipeline.system_config_by_number(number).await
     }
 }

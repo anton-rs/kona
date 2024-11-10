@@ -1,12 +1,13 @@
 //! Defines the interface for the core derivation pipeline.
 
-use super::OriginProvider;
-use crate::types::StepResult;
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::iter::Iterator;
+use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
+
+use crate::{errors::PipelineErrorKind, traits::OriginProvider, types::StepResult};
 
 /// This trait defines the interface for interacting with the derivation pipeline.
 #[async_trait]
@@ -16,4 +17,13 @@ pub trait Pipeline: OriginProvider + Iterator<Item = OpAttributesWithParent> {
 
     /// Attempts to progress the pipeline.
     async fn step(&mut self, cursor: L2BlockInfo) -> StepResult;
+
+    /// Returns the rollup config.
+    fn rollup_config(&self) -> &RollupConfig;
+
+    /// Returns the [SystemConfig] by L2 number.
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+    ) -> Result<SystemConfig, PipelineErrorKind>;
 }
