@@ -117,7 +117,7 @@ where
                         // deposit-only block due to execution failure, the
                         // batch and channel it is contained in is forwards
                         // invalidated.
-                        self.pipeline.inner().signal(Signal::FlushChannel).await?;
+                        self.pipeline.signal(Signal::FlushChannel).await?;
 
                         // Strip out all transactions that are not deposits.
                         attributes.transactions = attributes.transactions.map(|txs| {
@@ -164,7 +164,7 @@ where
             // Update the safe head.
             self.cursor.l2_safe_head = L2BlockInfo::from_block_and_genesis(
                 &block,
-                &self.pipeline.inner().rollup_config().genesis,
+                &self.pipeline.rollup_config().genesis,
             )?;
             self.cursor.l2_safe_head_header = header.clone().seal_slow();
             self.cursor.l2_safe_head_output_root =

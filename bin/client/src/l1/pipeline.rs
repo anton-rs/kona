@@ -1,23 +1,27 @@
 //! Contains an oracle-backed pipeline for
 
-use alloc::sync::Arc;
+use alloc::{boxed::Box, sync::Arc};
 use alloy_consensus::Sealed;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use kona_derive::{
     attributes::StatefulAttributesBuilder,
+    errors::PipelineErrorKind,
     pipeline::{DerivationPipeline, PipelineBuilder},
     sources::EthereumDataSource,
     stages::{
         AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
         L1Retrieval, L1Traversal,
     },
-    traits::{BlobProvider, ChainProvider},
+    traits::{BlobProvider, ChainProvider, OriginProvider, Pipeline, SignalReceiver},
+    types::{PipelineResult, Signal, StepResult},
 };
-use kona_driver::SyncCursor;
+use kona_driver::{DriverPipeline, SyncCursor};
 use kona_mpt::TrieProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
+use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 use crate::{
     errors::OracleProviderError, l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo,
@@ -178,18 +182,78 @@ where
 }
 
 #[async_trait]
-impl<O, B> kona_driver::DriverPipeline<OracleDerivationPipeline<O, B>> for OraclePipeline<O, B>
+impl<O, B> DriverPipeline<OracleDerivationPipeline<O, B>> for OraclePipeline<O, B>
 where
     O: CommsClient + FlushableCache + Send + Sync + Debug,
     B: BlobProvider + Send + Sync + Debug + Clone,
 {
-    /// Returns the inner pipeline.
-    fn inner(&mut self) -> &mut OracleDerivationPipeline<O, B> {
-        &mut self.pipeline
-    }
-
     /// Flushes the cache on re-org.
     fn flush(&self) {
         self.caching_oracle.flush();
+    }
+}
+
+#[async_trait]
+impl<O, B> SignalReceiver for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    /// Receives a signal from the driver.
+    async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        self.pipeline.signal(signal).await
+    }
+}
+
+impl<O, B> OriginProvider for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    /// Returns the optional L1 [BlockInfo] origin.
+    fn origin(&self) -> Option<BlockInfo> {
+        self.pipeline.origin()
+    }
+}
+
+impl<O, B> Iterator for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    type Item = OpAttributesWithParent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pipeline.next()
+    }
+}
+
+#[async_trait]
+impl<O, B> Pipeline for OraclePipeline<O, B>
+where
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
+    B: BlobProvider + Send + Sync + Debug + Clone,
+{
+    /// Peeks at the next [OpAttributesWithParent] from the pipeline.
+    fn peek(&self) -> Option<&OpAttributesWithParent> {
+        self.pipeline.peek()
+    }
+
+    /// Attempts to progress the pipeline.
+    async fn step(&mut self, cursor: L2BlockInfo) -> StepResult {
+        self.pipeline.step(cursor).await
+    }
+
+    /// Returns the rollup config.
+    fn rollup_config(&self) -> &RollupConfig {
+        self.pipeline.rollup_config()
+    }
+
+    /// Returns the [SystemConfig] by L2 number.
+    async fn system_config_by_number(
+        &mut self,
+        number: u64,
+    ) -> Result<SystemConfig, PipelineErrorKind> {
+        self.pipeline.system_config_by_number(number).await
     }
 }

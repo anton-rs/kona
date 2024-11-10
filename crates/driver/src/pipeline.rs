@@ -16,13 +16,10 @@ use tracing::{info, warn};
 ///
 /// A high-level abstraction for the driver's derivation pipeline.
 #[async_trait]
-pub trait DriverPipeline<P>
+pub trait DriverPipeline<P>: Pipeline + SignalReceiver
 where
     P: Pipeline + SignalReceiver,
 {
-    /// Returns the inner Pipeline.
-    fn inner(&mut self) -> &mut P;
-
     /// Flushes any cache on re-org.
     fn flush(&self);
 
@@ -36,7 +33,7 @@ where
         // first attributes are produced. All batches at and before the safe head will be
         // dropped, so the first payload will always be the disputed one.
         loop {
-            match self.inner().step(l2_safe_head).await {
+            match self.step(l2_safe_head).await {
                 StepResult::PreparedAttributes => {
                     info!(target: "client_derivation_driver", "Stepped derivation pipeline")
                 }
@@ -53,25 +50,21 @@ where
                         PipelineErrorKind::Temporary(_) => continue,
                         PipelineErrorKind::Reset(e) => {
                             let system_config = self
-                                .inner()
                                 .system_config_by_number(l2_safe_head.block_info.number)
                                 .await?;
 
                             if matches!(e, ResetError::HoloceneActivation) {
-                                let l1_origin = self
-                                    .inner()
-                                    .origin()
-                                    .ok_or(PipelineError::MissingOrigin.crit())?;
-                                self.inner()
-                                    .signal(
-                                        ActivationSignal {
-                                            l2_safe_head,
-                                            l1_origin,
-                                            system_config: Some(system_config),
-                                        }
-                                        .signal(),
-                                    )
-                                    .await?;
+                                let l1_origin =
+                                    self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+                                self.signal(
+                                    ActivationSignal {
+                                        l2_safe_head,
+                                        l1_origin,
+                                        system_config: Some(system_config),
+                                    }
+                                    .signal(),
+                                )
+                                .await?;
                             } else {
                                 // Flushes cache if a reorg is detected.
                                 if matches!(e, ResetError::ReorgDetected(_, _)) {
@@ -80,20 +73,17 @@ where
 
                                 // Reset the pipeline to the initial L2 safe head and L1 origin,
                                 // and try again.
-                                let l1_origin = self
-                                    .inner()
-                                    .origin()
-                                    .ok_or(PipelineError::MissingOrigin.crit())?;
-                                self.inner()
-                                    .signal(
-                                        ResetSignal {
-                                            l2_safe_head,
-                                            l1_origin,
-                                            system_config: Some(system_config),
-                                        }
-                                        .signal(),
-                                    )
-                                    .await?;
+                                let l1_origin =
+                                    self.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+                                self.signal(
+                                    ResetSignal {
+                                        l2_safe_head,
+                                        l1_origin,
+                                        system_config: Some(system_config),
+                                    }
+                                    .signal(),
+                                )
+                                .await?;
                             }
                         }
                         PipelineErrorKind::Critical(_) => return Err(e),
@@ -101,7 +91,7 @@ where
                 }
             }
 
-            if let Some(attrs) = self.inner().next() {
+            if let Some(attrs) = self.next() {
                 return Ok(attrs);
             }
         }
