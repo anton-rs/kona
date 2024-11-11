@@ -1,4 +1,4 @@
-//! Contains an oracle-backed pipeline for
+//! Contains an oracle-backed pipeline.
 
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
