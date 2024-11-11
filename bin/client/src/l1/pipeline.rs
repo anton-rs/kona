@@ -15,15 +15,13 @@ use kona_derive::{
     traits::{BlobProvider, OriginProvider, Pipeline, SignalReceiver},
     types::{PipelineResult, Signal, StepResult},
 };
-use kona_driver::DriverPipeline;
+use kona_driver::{DriverPipeline, PipelineCursor};
 use kona_preimage::CommsClient;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
-use crate::{
-    l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, sync::SyncStart, FlushableCache,
-};
+use crate::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, FlushableCache};
 
 /// An oracle-backed derivation pipeline.
 pub type OracleDerivationPipeline<O, B> = DerivationPipeline<
@@ -76,7 +74,7 @@ where
     /// Constructs a new oracle-backed derivation pipeline.
     pub fn new(
         cfg: Arc<RollupConfig>,
-        sync_start: SyncStart,
+        sync_start: PipelineCursor,
         caching_oracle: Arc<O>,
         blob_provider: B,
         chain_provider: OracleL1ChainProvider<O>,
@@ -95,7 +93,7 @@ where
             .l2_chain_provider(l2_chain_provider)
             .chain_provider(chain_provider)
             .builder(attributes)
-            .origin(sync_start.origin)
+            .origin(sync_start.origin())
             .build();
         Self { pipeline, caching_oracle }
     }

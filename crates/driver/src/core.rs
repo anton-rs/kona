@@ -1,4 +1,4 @@
-//! The driver of the Derivation Pipeline.
+//! The driver of the kona derivation pipeline.
 
 use alloc::vec::Vec;
 use alloy_consensus::{BlockBody, Sealable};
@@ -16,7 +16,10 @@ use op_alloy_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use tracing::{error, info, warn};
 
-use crate::{DriverError, DriverPipeline, DriverResult, Executor, ExecutorConstructor, SyncCursor};
+use crate::{
+    DriverError, DriverPipeline, DriverResult, Executor, ExecutorConstructor, PipelineCursor,
+    TipCursor,
+};
 
 /// The Rollup Driver entrypoint.
 #[derive(Debug)]
@@ -34,7 +37,7 @@ where
     /// A pipeline abstraction.
     pipeline: DP,
     /// Cursor to keep track of the L2 tip
-    cursor: SyncCursor,
+    cursor: PipelineCursor,
     /// Executor constructor.
     executor: EC,
 }
@@ -47,7 +50,7 @@ where
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
     /// Creates a new [Driver].
-    pub const fn new(cursor: SyncCursor, executor: EC, pipeline: DP) -> Self {
+    pub const fn new(cursor: PipelineCursor, executor: EC, pipeline: DP) -> Self {
         Self {
             _marker: core::marker::PhantomData,
             _marker2: core::marker::PhantomData,
@@ -161,14 +164,18 @@ where
                 },
             };
 
-            // Update the safe head.
-            self.cursor.l2_safe_head = L2BlockInfo::from_block_and_genesis(
+            // Get the pipeline origin and update the cursor.
+            let origin = self.pipeline.origin().ok_or(PipelineError::MissingOrigin.crit())?;
+            let l2_info = L2BlockInfo::from_block_and_genesis(
                 &block,
                 &self.pipeline.rollup_config().genesis,
             )?;
-            self.cursor.l2_safe_head_header = header.clone().seal_slow();
-            self.cursor.l2_safe_head_output_root =
-                executor.compute_output_root().map_err(DriverError::Executor)?;
+            let cursor = TipCursor::new(
+                l2_info,
+                header.clone().seal_slow(),
+                executor.compute_output_root().map_err(DriverError::Executor)?,
+            );
+            self.cursor.advance(origin, cursor);
         }
     }
 }
