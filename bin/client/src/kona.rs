@@ -12,6 +12,7 @@ use kona_client::{
     executor::KonaExecutorConstructor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
+    sync::SyncStart,
     BootInfo, CachingOracle,
 };
 use kona_common::io;
@@ -70,27 +71,35 @@ fn main() -> Result<(), String> {
         ////////////////////////////////////////////////////////////////
 
         // Create a new derivation driver with the given boot information and oracle.
-        let Ok((pipeline, cursor)) = OraclePipeline::new(
+
+        let Ok(sync_start) = SyncStart::from(
+            oracle.clone(),
             &boot,
+            &mut l1_provider.clone(),
+            &mut l2_provider.clone(),
+        )
+        .await
+        else {
+            error!(target: "client", "Failed to find sync start");
+            io::print("Failed to find sync start\n");
+            io::exit(1);
+        };
+        let cfg = Arc::new(boot.rollup_config.clone());
+        let pipeline = OraclePipeline::new(
+            cfg.clone(),
+            sync_start.clone(),
             oracle.clone(),
             beacon,
             l1_provider.clone(),
             l2_provider.clone(),
-        )
-        .await
-        else {
-            error!(target: "client", "Failed to create derivation pipeline");
-            io::print("Failed to create derivation pipeline\n");
-            io::exit(1);
-        };
-        let cfg = Arc::new(boot.rollup_config.clone());
+        );
         let executor = KonaExecutorConstructor::new(
             &cfg,
             l2_provider.clone(),
             l2_provider,
             fpvm_handle_register,
         );
-        let mut driver = Driver::new(cursor, executor, pipeline);
+        let mut driver = Driver::new(sync_start.cursor, executor, pipeline);
 
         // Run the derivation pipeline until we are able to produce the output root of the claimed
         // L2 block.
