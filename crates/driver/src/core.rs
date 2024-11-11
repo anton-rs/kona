@@ -1,4 +1,4 @@
-//! The driver of the Derivation Pipeline.
+//! The driver of the kona derivation pipeline.
 
 use alloc::vec::Vec;
 use alloy_consensus::{BlockBody, Sealable};
