@@ -437,11 +437,10 @@ impl TrieNode {
                     // If the child node is empty, convert the extension into an empty node.
                     *self = Self::Empty;
                 }
-                Self::Blinded { .. } => {
-                    node.unblind(fetcher)?;
-                    self.collapse_if_possible(fetcher, hinter)?;
+                _ => {
+                    // If the child is a (blinded?) branch then no need for collapse
+                    // because deletion did not collapse the (blinded?) branch
                 }
-                _ => {}
             },
             Self::Branch { stack } => {
                 // Count non-empty children
