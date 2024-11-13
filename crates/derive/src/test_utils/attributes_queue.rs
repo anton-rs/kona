@@ -12,12 +12,11 @@ use alloy_eips::BlockNumHash;
 use async_trait::async_trait;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo, SingleBatch};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
+use thiserror::Error;
 
 /// An error returned by the [`TestAttributesBuilder`].
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum TestAttributesBuilderError {}
-
-impl core::error::Error for TestAttributesBuilderError {}
 
 /// A mock implementation of the [`AttributesBuilder`] for testing.
 #[derive(Debug, Default)]

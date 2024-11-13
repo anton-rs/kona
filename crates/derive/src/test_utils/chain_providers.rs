@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
+use thiserror::Error;
 
 /// A mock chain provider for testing.
 #[derive(Debug, Clone, Default)]
@@ -76,22 +77,22 @@ impl TestChainProvider {
 }
 
 /// An error for the [TestChainProvider] and [TestL2ChainProvider].
-#[derive(Debug, derive_more::Display)]
+#[derive(Error, Debug)]
 pub enum TestProviderError {
     /// The block was not found.
-    #[display("Block not found")]
+    #[error("Block not found")]
     BlockNotFound,
     /// The header was not found.
-    #[display("Header not found")]
+    #[error("Header not found")]
     HeaderNotFound,
     /// The receipts were not found.
-    #[display("Receipts not found")]
+    #[error("Receipts not found")]
     ReceiptsNotFound,
     /// The L2 block was not found.
-    #[display("L2 Block not found")]
+    #[error("L2 Block not found")]
     L2BlockNotFound,
     /// The system config was not found.
-    #[display("System config not found")]
+    #[error("System config not found")]
     SystemConfigNotFound(u64),
 }
 
@@ -100,8 +101,6 @@ impl From<TestProviderError> for PipelineErrorKind {
         PipelineError::Provider(val.to_string()).temp()
     }
 }
-
-impl core::error::Error for TestProviderError {}
 
 #[async_trait]
 impl ChainProvider for TestChainProvider {
