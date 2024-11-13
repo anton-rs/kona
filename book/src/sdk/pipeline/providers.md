@@ -62,7 +62,7 @@ let pipeline = PipelineBuilder::new()
 > Notice
 >
 > The only required method for the [`DataAvailabilityProvider`][dap]
-> trait is the [`open_data`][open-data] method.
+> trait is the [`next`][next] method.
 
 ```rust
 use async_trait::async_trait;
@@ -83,7 +83,7 @@ pub struct ExampleAvail {
 impl DataAvailabilityProvider for ExampleAvail {
    type Item = Bytes;
 
-   async fn open_data(&self, block_ref: &BlockInfo) -> PipelineResult<Self::Item> {
+   async fn next(&self, block_ref: &BlockInfo) -> PipelineResult<Self::Item> {
       todo!("return an AsyncIterator implementation here")
    }
 }
@@ -93,7 +93,7 @@ impl DataAvailabilityProvider for ExampleAvail {
 <!-- Links -->
 
 [dap]: https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html
-[open-data]: https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html#tymethod.open_data
+[next]: https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html#tymethod.next
 [builder]: https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html
 [alloy]: https://github.com/alloy-rs/alloy
 [kda]: https://crates.io/crates/kona-derive-alloy
