@@ -16,7 +16,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Setup mdbook
         run: |
-          cargo install mdbook mdbook-mermaid mdbook-template
+          cargo install --version 0.4.40 mdbook
+          cargo install mdbook-mermaid mdbook-template
       - name: Build book
         working-directory: ./book
         run: mdbook build
@@ -26,4 +27,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./book/book
-          mdbook-version: '0.4.40'
