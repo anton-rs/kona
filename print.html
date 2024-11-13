@@ -9,7 +9,7 @@
 
 
     <!-- Custom HTML head -->
-    
+
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
@@ -124,7 +124,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
                         <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor"
@@ -1041,7 +1041,7 @@ let pipeline = PipelineBuilder::new()
 <blockquote>
 <p>Notice</p>
 <p>The only required method for the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html"><code>DataAvailabilityProvider</code></a>
-trait is the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html#tymethod.open_data"><code>open_data</code></a> method.</p>
+trait is the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.DataAvailabilityProvider.html#tymethod.next"><code>next</code></a> method.</p>
 </blockquote>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1063,7 +1063,7 @@ pub struct ExampleAvail {
 impl DataAvailabilityProvider for ExampleAvail {
    type Item = Bytes;
 
-   async fn open_data(&amp;self, block_ref: &amp;BlockInfo) -&gt; PipelineResult&lt;Self::Item&gt; {
+   async fn next(&amp;self, block_ref: &amp;BlockInfo) -&gt; PipelineResult&lt;Self::Item&gt; {
       todo!("return an AsyncIterator implementation here")
    }
 }
