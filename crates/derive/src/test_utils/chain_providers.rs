@@ -4,7 +4,6 @@ use crate::{
     errors::{PipelineError, PipelineErrorKind},
     traits::{ChainProvider, L2ChainProvider},
 };
-use thiserror::Error;
 use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::{map::HashMap, B256};
@@ -12,6 +11,7 @@ use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
+use thiserror::Error;
 
 /// A mock chain provider for testing.
 #[derive(Debug, Clone, Default)]

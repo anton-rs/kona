@@ -1,8 +1,8 @@
 //! Contains driver-related error types.
 
-use thiserror::Error;
 use kona_derive::errors::PipelineErrorKind;
 use op_alloy_protocol::FromBlockError;
+use thiserror::Error;
 
 /// A [Result] type for the [DriverError].
 pub type DriverResult<T, E> = Result<T, DriverError<E>>;

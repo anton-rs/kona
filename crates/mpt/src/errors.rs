@@ -34,9 +34,7 @@ pub type OrderedListWalkerResult<T> = Result<T, OrderedListWalkerError>;
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum OrderedListWalkerError {
     /// Iterator has already been hydrated, and cannot be re-hydrated until it is exhausted.
-    #[error(
-        "Iterator has already been hydrated, and cannot be re-hydrated until it is exhausted"
-    )]
+    #[error("Iterator has already been hydrated, and cannot be re-hydrated until it is exhausted")]
     AlreadyHydrated,
     /// Trie node error.
     #[error("{0}")]

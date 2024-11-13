@@ -1,6 +1,5 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
-use thiserror::Error;
 use crate::{
     errors::{PipelineError, PipelineErrorKind},
     traits::L2ChainProvider,
@@ -11,6 +10,7 @@ use async_trait::async_trait;
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BatchValidationProvider, L2BlockInfo};
+use thiserror::Error;
 
 /// A mock implementation of the `SystemConfigL2Fetcher` for testing.
 #[derive(Debug, Default)]

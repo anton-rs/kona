@@ -1,11 +1,11 @@
 //! Error types for the client program.
 
 use alloc::string::{String, ToString};
-use thiserror::Error;
 use kona_derive::errors::{PipelineError, PipelineErrorKind};
 use kona_mpt::OrderedListWalkerError;
 use kona_preimage::errors::PreimageOracleError;
 use op_alloy_protocol::{FromBlockError, OpBlockConversionError};
+use thiserror::Error;
 
 /// Error from an oracle-backed provider.
 #[derive(Error, Debug)]
