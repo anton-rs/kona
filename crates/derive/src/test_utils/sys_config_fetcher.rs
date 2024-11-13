@@ -1,5 +1,6 @@
 //! Implements a mock [L2SystemConfigFetcher] for testing.
 
+use thiserror::Error;
 use crate::{
     errors::{PipelineError, PipelineErrorKind},
     traits::L2ChainProvider,
@@ -31,10 +32,10 @@ impl TestSystemConfigL2Fetcher {
 }
 
 /// An error returned by the [TestSystemConfigL2Fetcher].
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum TestSystemConfigL2FetcherError {
     /// The system config was not found.
-    #[display("system config not found: {_0}")]
+    #[error("system config not found: {0}")]
     NotFound(u64),
 }
 
@@ -43,8 +44,6 @@ impl From<TestSystemConfigL2FetcherError> for PipelineErrorKind {
         PipelineError::Provider(val.to_string()).temp()
     }
 }
-
-impl core::error::Error for TestSystemConfigL2FetcherError {}
 
 #[async_trait]
 impl BatchValidationProvider for TestSystemConfigL2Fetcher {

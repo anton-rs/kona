@@ -7,10 +7,9 @@ use crate::{
     TrieHinter, TrieNodeError, TrieProvider,
 };
 use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
-use alloy_primitives::{hex, keccak256, Bytes, B256};
+use alloy_primitives::{keccak256, Bytes, B256};
 use alloy_rlp::{length_of_length, Buf, Decodable, Encodable, Header, EMPTY_STRING_CODE};
 use alloy_trie::{Nibbles, EMPTY_ROOT_HASH};
-use derive_more::Display;
 
 /// The length of the branch list when RLP encoded
 const BRANCH_LIST_LENGTH: usize = 17;
@@ -61,19 +60,17 @@ const NIBBLE_WIDTH: usize = 4;
 /// As this implementation only supports uniform key sizes, the [TrieNode] data structure will fail
 /// to behave correctly if confronted with keys of varying lengths. Namely, this is because it does
 /// not support the `value` field in branch nodes, just like the Ethereum Merkle Patricia Trie.
-#[derive(Debug, Clone, Eq, PartialEq, Display)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TrieNode {
     /// An empty [TrieNode] is represented as an [EMPTY_STRING_CODE] (0x80).
     Empty,
     /// A blinded node is a node that has been blinded by a [keccak256] commitment.
-    #[display("Blinded({commitment})")]
     Blinded {
         /// The commitment that blinds the node.
         commitment: B256,
     },
     /// A leaf node is a 2-item node with the encoding `rlp([encoded_path, value])`
-    #[display("Leaf({}, {})", hex::encode(prefix.as_ref()), hex::encode(value.as_ref()))]
     Leaf {
         /// The key of the leaf node
         prefix: Nibbles,
@@ -81,7 +78,6 @@ pub enum TrieNode {
         value: Bytes,
     },
     /// An extension node is a 2-item pointer node with the encoding `rlp([encoded_path, key])`
-    #[display("Extension({}, {})", hex::encode(prefix.as_ref()), node)]
     Extension {
         /// The path prefix of the extension
         prefix: Nibbles,
@@ -90,7 +86,6 @@ pub enum TrieNode {
     },
     /// A branch node refers to up to 16 child nodes with the encoding
     /// `rlp([ v0, ..., v15, value ])`
-    #[display("Branch")]
     Branch {
         /// The 16 child nodes and value of the branch.
         stack: Vec<TrieNode>,
@@ -328,19 +323,19 @@ impl TrieNode {
         hinter: &H,
     ) -> TrieNodeResult<()> {
         match self {
-            Self::Empty => Err(TrieNodeError::KeyNotFound(self.to_string())),
+            Self::Empty => Err(TrieNodeError::KeyNotFound),
             Self::Leaf { prefix, .. } => {
                 if path == prefix {
                     *self = Self::Empty;
                     Ok(())
                 } else {
-                    Err(TrieNodeError::KeyNotFound(self.to_string()))
+                    Err(TrieNodeError::KeyNotFound)
                 }
             }
             Self::Extension { prefix, node } => {
                 let shared_nibbles = path.common_prefix_length(prefix);
                 if shared_nibbles < prefix.len() {
-                    return Err(TrieNodeError::KeyNotFound(self.to_string()));
+                    return Err(TrieNodeError::KeyNotFound);
                 } else if shared_nibbles == path.len() {
                     *self = Self::Empty;
                     return Ok(());

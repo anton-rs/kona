@@ -31,7 +31,7 @@ tracing.workspace = true
 miniz_oxide.workspace = true
 async-trait.workspace = true
 alloc-no-stdlib.workspace = true
-derive_more = { workspace = true, features = ["full"] }
+thiserror.workspace = true
 
 # `serde` feature dependencies
 serde = { workspace = true, optional = true, features = ["derive"] }

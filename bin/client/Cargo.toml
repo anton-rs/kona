@@ -42,7 +42,7 @@ cfg-if.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
-derive_more = { workspace = true, features = ["full"] }
+thiserror.workspace = true
 
 # `tracing-subscriber` feature dependencies
 tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }

@@ -2,40 +2,39 @@
 
 use super::{PipelineError, PipelineErrorKind};
 use alloc::string::{String, ToString};
+use thiserror::Error;
 
 /// Blob Decoding Error
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum BlobDecodingError {
     /// Invalid field element
-    #[display("Invalid field element")]
+    #[error("Invalid field element")]
     InvalidFieldElement,
     /// Invalid encoding version
-    #[display("Invalid encoding version")]
+    #[error("Invalid encoding version")]
     InvalidEncodingVersion,
     /// Invalid length
-    #[display("Invalid length")]
+    #[error("Invalid length")]
     InvalidLength,
     /// Missing Data
-    #[display("Missing data")]
+    #[error("Missing data")]
     MissingData,
 }
 
-impl core::error::Error for BlobDecodingError {}
-
 /// An error returned by the [BlobProviderError].
-#[derive(derive_more::Display, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum BlobProviderError {
     /// The number of specified blob hashes did not match the number of returned sidecars.
-    #[display("Blob sidecar length mismatch: expected {_0}, got {_1}")]
+    #[error("Blob sidecar length mismatch: expected {0}, got {1}")]
     SidecarLengthMismatch(usize, usize),
     /// Slot derivation error.
-    #[display("Failed to derive slot")]
+    #[error("Failed to derive slot")]
     SlotDerivation,
     /// Blob decoding error.
-    #[display("Blob decoding error: {_0}")]
-    BlobDecoding(BlobDecodingError),
+    #[error("Blob decoding error: {0}")]
+    BlobDecoding(#[from] BlobDecodingError),
     /// Error pertaining to the backend transport.
-    #[display("{_0}")]
+    #[error("{0}")]
     Backend(String),
 }
 
@@ -48,21 +47,6 @@ impl From<BlobProviderError> for PipelineErrorKind {
             BlobProviderError::SlotDerivation => PipelineError::Provider(val.to_string()).crit(),
             BlobProviderError::BlobDecoding(_) => PipelineError::Provider(val.to_string()).crit(),
             BlobProviderError::Backend(_) => PipelineError::Provider(val.to_string()).temp(),
-        }
-    }
-}
-
-impl From<BlobDecodingError> for BlobProviderError {
-    fn from(err: BlobDecodingError) -> Self {
-        Self::BlobDecoding(err)
-    }
-}
-
-impl core::error::Error for BlobProviderError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        match self {
-            Self::BlobDecoding(err) => Some(err),
-            _ => None,
         }
     }
 }

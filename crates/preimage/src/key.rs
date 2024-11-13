@@ -1,12 +1,13 @@
 //! Contains the [PreimageKey] type, which is used to identify preimages that may be fetched from
 //! the preimage oracle.
 
-use crate::errors::InvalidPreimageKeyType;
 use alloy_primitives::{B256, U256};
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 #[cfg(feature = "serde")]
 use serde::{Deserialize as SerdeDeserialize, Serialize as SerdeSerialize};
+
+use crate::errors::PreimageOracleError;
 
 /// <https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-key-types>
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
@@ -37,7 +38,7 @@ pub enum PreimageKeyType {
 }
 
 impl TryFrom<u8> for PreimageKeyType {
-    type Error = InvalidPreimageKeyType;
+    type Error = PreimageOracleError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         let key_type = match value {
@@ -47,7 +48,7 @@ impl TryFrom<u8> for PreimageKeyType {
             4 => Self::Sha256,
             5 => Self::Blob,
             6 => Self::Precompile,
-            _ => return Err(InvalidPreimageKeyType),
+            _ => return Err(PreimageOracleError::InvalidPreimageKey),
         };
         Ok(key_type)
     }
@@ -114,7 +115,7 @@ impl From<PreimageKey> for B256 {
 }
 
 impl TryFrom<[u8; 32]> for PreimageKey {
-    type Error = InvalidPreimageKeyType;
+    type Error = PreimageOracleError;
 
     fn try_from(value: [u8; 32]) -> Result<Self, Self::Error> {
         let key_type = PreimageKeyType::try_from(value[0])?;

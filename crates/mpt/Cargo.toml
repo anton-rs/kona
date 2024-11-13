@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 # General
-derive_more = { workspace = true, features = ["full"] }
+thiserror.workspace = true
 serde = { workspace = true, optional = true, features = ["derive", "alloc"] }
 
 # Revm + Alloy
