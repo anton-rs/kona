@@ -28,13 +28,7 @@ pub enum PipelineErrorKind {
     Critical(#[source] PipelineError),
     /// A reset error.
     #[error("Pipeline reset: {0}")]
-    Reset(#[source] ResetError),
-}
-
-impl From<ResetError> for PipelineErrorKind {
-    fn from(err: ResetError) -> Self {
-        Self::Reset(err)
-    }
+    Reset(#[from] ResetError),
 }
 
 /// An error encountered during the processing.

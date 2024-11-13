@@ -24,5 +24,5 @@ where
     FromBlock(#[from] FromBlockError),
     /// Error decoding or encoding RLP.
     #[error("RLP error: {0}")]
-    Rlp(#[from] alloy_rlp::Error),
+    Rlp(alloy_rlp::Error),
 }

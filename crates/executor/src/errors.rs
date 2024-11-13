@@ -36,7 +36,7 @@ pub enum ExecutorError {
     TrieDBError(#[from] TrieDBError),
     /// Execution error.
     #[error("Execution error: {0}")]
-    ExecutionError(#[from] EVMError<TrieDBError>),
+    ExecutionError(EVMError<TrieDBError>),
     /// Signature error.
     #[error("Signature error: {0}")]
     SignatureError(alloy_primitives::SignatureError),
