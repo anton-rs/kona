@@ -15,7 +15,7 @@ cfg_if! {
         pub(crate) type ClientIO = crate::zkvm::io::ZkvmIO;
     } else {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `native` target architecture."]
-        pub(crate) type ClientIO = native_io::NativeIO<'static>;
+        pub(crate) type ClientIO = native_io::NativeIO;
     }
 }
 
