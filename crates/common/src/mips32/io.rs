@@ -1,7 +1,7 @@
 use crate::{errors::IOResult, mips32::syscall, BasicKernelInterface, FileDescriptor};
 
 /// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target
-/// architecture. Exposes a safe interface for performing IO operations within the FPVM kernel.
+/// architecture. Exposes a safe interface for performing IO operations within the kernel.
 #[derive(Debug)]
 pub(crate) struct Mips32IO;
 

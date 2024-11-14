@@ -1,5 +1,4 @@
-//! This module contains the `ClientIO` struct, which is used to perform various IO operations
-//! inside of the FPVM kernel within a `client` program.
+//! This module contains the `ClientIO` struct, which is a system call interface for the kernel.
 
 use crate::{errors::IOResult, BasicKernelInterface, FileDescriptor};
 use cfg_if::cfg_if;
