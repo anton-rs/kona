@@ -50,8 +50,8 @@ pub use traits::{NoopTrieDBProvider, TrieDBProvider};
 /// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
 /// use anyhow::Result;
-/// use kona_executor::TrieDB;
-/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
+/// use kona_executor::{TrieDB, NoopTrieDBProvider};
+/// use kona_mpt::NoopTrieHinter;
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
 ///
 /// let mock_starting_root = B256::default();
@@ -60,7 +60,7 @@ pub use traits::{NoopTrieDBProvider, TrieDBProvider};
 /// let trie_db = TrieDB::new(
 ///     mock_starting_root,
 ///     mock_parent_block_header.seal_slow(),
-///     NoopTrieProvider,
+///     NoopTrieDBProvider,
 ///     NoopTrieHinter,
 /// );
 /// let mut state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
