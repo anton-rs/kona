@@ -7,16 +7,16 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(target_arch = "mips")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture."]
-        pub(crate) type ClientIO = crate::cannon::io::CannonIO;
+        pub(crate) type ClientIO = crate::mips32::io::Mips32IO;
     } else if #[cfg(target_arch = "riscv64")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
-        pub(crate)  type ClientIO = crate::asterisc::io::AsteriscIO;
+        pub(crate)  type ClientIO = crate::riscv64::io::RiscV64IO;
     } else if #[cfg(target_os = "zkvm")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `SP1` target architecture."]
         pub(crate) type ClientIO = crate::zkvm::io::ZkvmIO;
     } else {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `native` target architecture."]
-        pub(crate) type ClientIO = native_io::NativeIO;
+        pub(crate) type ClientIO = native_io::NativeIO<'static>;
     }
 }
 
