@@ -55,17 +55,17 @@ see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html
 - [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips-unknown-none` target.
 - [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64gc-unknown-none-elf` target.
 
-**`client` / `host` SDK**
-
-- [`common`](./crates/common): A suite of utilities for developing `client` programs to be run on top of Fault Proof VMs.
-- [`common-proc`](./crates/common-proc): Proc macro for the `client` program entrypoint.
-- [`preimage`](./crates/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
-
 **Protocol**
 - [`mpt`](./crates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
 - [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
-  - [`derive-alloy`](./crates/derive-alloy/): Online, `alloy`-backed derivation pipeline.
+  - [`driver`](./crates/driver): Stateful derivation pipeline driver.
+
+**Proof SDK**
+
+- [`common`](./crates/proof-sdk/common): A suite of utilities for developing `client` programs to be run on top of Fault Proof VMs.
+- [`common-proc`](./crates/proof-sdk/common-proc): Proc macro for the `client` program entrypoint.
+- [`preimage`](./crates/proof-sdk/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
 
 ## Book
 
