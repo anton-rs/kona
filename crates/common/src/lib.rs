@@ -27,10 +27,10 @@ pub use executor::block_on;
 pub(crate) mod linux;
 
 #[cfg(target_arch = "mips")]
-pub(crate) mod cannon;
+pub(crate) mod mips32;
 
 #[cfg(target_arch = "riscv64")]
-pub(crate) mod asterisc;
+pub(crate) mod riscv64;
 
 #[cfg(target_os = "zkvm")]
 pub(crate) mod zkvm;

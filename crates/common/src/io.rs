@@ -1,5 +1,4 @@
-//! This module contains the `ClientIO` struct, which is used to perform various IO operations
-//! inside of the FPVM kernel within a `client` program.
+//! This module contains the `ClientIO` struct, which is a system call interface for the kernel.
 
 use crate::{errors::IOResult, BasicKernelInterface, FileDescriptor};
 use cfg_if::cfg_if;
@@ -7,10 +6,10 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(target_arch = "mips")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target architecture."]
-        pub(crate) type ClientIO = crate::cannon::io::CannonIO;
+        pub(crate) type ClientIO = crate::mips32::io::Mips32IO;
     } else if #[cfg(target_arch = "riscv64")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
-        pub(crate)  type ClientIO = crate::asterisc::io::AsteriscIO;
+        pub(crate)  type ClientIO = crate::riscv64::io::RiscV64IO;
     } else if #[cfg(target_os = "zkvm")] {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `SP1` target architecture."]
         pub(crate) type ClientIO = crate::zkvm::io::ZkvmIO;

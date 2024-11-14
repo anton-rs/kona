@@ -1,10 +1,10 @@
 //! This module contains an implementation of a basic memory allocator for client programs in
-//! running on top of various FPVMs.
+//! running on an embedded device.
 //!
 //! The allocator is a linked list allocator based on the `dlmalloc` algorithm, which is a
 //! well-known and widely used allocator software such as OS Kernels.
 
-/// The global allocator for the program in FPVM environments.
+/// The global allocator for the program in embedded environments.
 #[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
 pub mod global_allocator {
     use linked_list_allocator::LockedHeap;
