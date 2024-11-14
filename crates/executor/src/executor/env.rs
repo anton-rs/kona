@@ -1,11 +1,11 @@
 //! Environment preparation for the executor.
 
 use super::{util::decode_holocene_eip_1559_params, StatelessL2BlockExecutor};
-use crate::{constants::FEE_RECIPIENT, ExecutorError, ExecutorResult};
+use crate::{constants::FEE_RECIPIENT, ExecutorError, ExecutorResult, TrieDBProvider};
 use alloy_consensus::Header;
 use alloy_eips::eip1559::BaseFeeParams;
 use alloy_primitives::{TxKind, U256};
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -16,7 +16,7 @@ use revm::primitives::{
 
 impl<P, H> StatelessL2BlockExecutor<'_, P, H>
 where
-    P: TrieProvider,
+    P: TrieDBProvider,
     H: TrieHinter,
 {
     /// Returns the active [SpecId] for the executor.

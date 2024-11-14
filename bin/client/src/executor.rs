@@ -4,8 +4,8 @@ use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use kona_driver::{Executor, ExecutorConstructor};
-use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor};
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor, TrieDBProvider};
+use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
@@ -13,12 +13,12 @@ use op_alloy_rpc_types_engine::OpPayloadAttributes;
 #[derive(Debug)]
 pub struct KonaExecutor<'a, P, H>(StatelessL2BlockExecutor<'a, P, H>)
 where
-    P: TrieProvider + Send + Sync + Clone,
+    P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone;
 
 impl<'a, P, H> KonaExecutor<'a, P, H>
 where
-    P: TrieProvider + Send + Sync + Clone,
+    P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
     /// Creates a new executor.
@@ -29,7 +29,7 @@ where
 
 impl<P, H> Executor for KonaExecutor<'_, P, H>
 where
-    P: TrieProvider + Send + Sync + Clone,
+    P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
     type Error = kona_executor::ExecutorError;
@@ -49,7 +49,7 @@ where
 #[derive(Debug)]
 pub struct KonaExecutorConstructor<'a, P, H>
 where
-    P: TrieProvider + Send + Sync + Clone,
+    P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
     /// The rollup config for the executor.
@@ -64,7 +64,7 @@ where
 
 impl<'a, P, H> KonaExecutorConstructor<'a, P, H>
 where
-    P: TrieProvider + Send + Sync + Clone,
+    P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
     /// Creates a new executor constructor.
@@ -80,7 +80,7 @@ where
 
 impl<'a, P, H> ExecutorConstructor<KonaExecutor<'a, P, H>> for KonaExecutorConstructor<'a, P, H>
 where
-    P: TrieProvider + Send + Sync + Clone,
+    P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
     /// Constructs the executor.

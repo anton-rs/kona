@@ -6,7 +6,7 @@ use alloc::{string::ToString, vec::Vec};
 use alloy_consensus::{Header, Sealed, EMPTY_ROOT_HASH};
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
-use kona_mpt::{Nibbles, TrieHinter, TrieNode, TrieNodeError, TrieProvider};
+use kona_mpt::{Nibbles, TrieHinter, TrieNode, TrieNodeError};
 use revm::{
     db::{states::StorageSlot, BundleState},
     primitives::{AccountInfo, Bytecode, HashMap, BLOCK_HASH_HISTORY},
@@ -16,6 +16,9 @@ use tracing::debug;
 
 mod account;
 pub use account::TrieAccount;
+
+mod traits;
+pub use traits::{NoopTrieDBProvider, TrieDBProvider};
 
 /// A Trie DB that caches open state in-memory.
 ///
@@ -47,8 +50,8 @@ pub use account::TrieAccount;
 /// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
 /// use anyhow::Result;
-/// use kona_executor::TrieDB;
-/// use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
+/// use kona_executor::{NoopTrieDBProvider, TrieDB};
+/// use kona_mpt::NoopTrieHinter;
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
 ///
 /// let mock_starting_root = B256::default();
@@ -57,7 +60,7 @@ pub use account::TrieAccount;
 /// let trie_db = TrieDB::new(
 ///     mock_starting_root,
 ///     mock_parent_block_header.seal_slow(),
-///     NoopTrieProvider,
+///     NoopTrieDBProvider,
 ///     NoopTrieHinter,
 /// );
 /// let mut state = StateBuilder::new_with_database(trie_db).with_bundle_update().build();
@@ -77,7 +80,7 @@ pub use account::TrieAccount;
 #[derive(Debug, Clone)]
 pub struct TrieDB<F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     /// The [TrieNode] representation of the root node.
@@ -86,7 +89,7 @@ where
     storage_roots: HashMap<Address, TrieNode>,
     /// The parent block hash of the current block.
     parent_block_header: Sealed<Header>,
-    /// The [TrieProvider]
+    /// The [TrieDBProvider]
     fetcher: F,
     /// The [TrieHinter]
     hinter: H,
@@ -94,7 +97,7 @@ where
 
 impl<F, H> TrieDB<F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     /// Creates a new [TrieDB] with the given root node.
@@ -294,7 +297,7 @@ where
 
 impl<F, H> Database for TrieDB<F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     type Error = TrieDBError;
@@ -387,13 +390,13 @@ mod tests {
     use super::*;
     use alloy_consensus::Sealable;
     use alloy_primitives::b256;
-    use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
+    use kona_mpt::NoopTrieHinter;
 
-    fn new_test_db() -> TrieDB<NoopTrieProvider, NoopTrieHinter> {
+    fn new_test_db() -> TrieDB<NoopTrieDBProvider, NoopTrieHinter> {
         TrieDB::new(
             B256::default(),
             Header::default().seal_slow(),
-            NoopTrieProvider,
+            NoopTrieDBProvider,
             NoopTrieHinter,
         )
     }

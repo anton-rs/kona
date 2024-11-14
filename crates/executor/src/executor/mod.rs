@@ -5,13 +5,13 @@ use crate::{
     db::TrieDB,
     errors::TrieDBError,
     syscalls::{ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call},
-    ExecutorError, ExecutorResult,
+    ExecutorError, ExecutorResult, TrieDBProvider,
 };
 use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Transaction, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{keccak256, logs_bloom, Bytes, Log, B256, U256};
-use kona_mpt::{ordered_trie_with_encoder, TrieHinter, TrieProvider};
+use kona_mpt::{ordered_trie_with_encoder, TrieHinter};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -35,7 +35,7 @@ use util::encode_holocene_eip_1559_params;
 #[derive(Debug)]
 pub struct StatelessL2BlockExecutor<'a, F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     /// The [RollupConfig].
@@ -48,7 +48,7 @@ where
 
 impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
@@ -449,14 +449,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::constants::FEE_RECIPIENT;
+    use crate::{constants::FEE_RECIPIENT, db::TrieDBProvider};
 
     use super::*;
     use alloy_primitives::{b256, hex};
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
-    use kona_mpt::{NoopTrieHinter, TrieNode};
+    use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
     use op_alloy_genesis::OP_MAINNET_BASE_FEE_PARAMS;
     use serde::Deserialize;
     use std::collections::HashMap;
@@ -494,7 +494,9 @@ mod test {
             )
             .map_err(Into::into)
         }
+    }
 
+    impl TrieDBProvider for TestdataTrieProvider {
         fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes> {
             self.preimages
                 .get(&code_hash)

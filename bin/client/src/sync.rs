@@ -9,7 +9,7 @@ use alloy_consensus::Sealed;
 use core::fmt::Debug;
 use kona_derive::traits::ChainProvider;
 use kona_driver::{PipelineCursor, TipCursor};
-use kona_mpt::TrieProvider;
+use kona_executor::TrieDBProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BatchValidationProvider;
 

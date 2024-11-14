@@ -1,9 +1,9 @@
 //! Contains the builder pattern for the [StatelessL2BlockExecutor].
 
 use super::StatelessL2BlockExecutor;
-use crate::db::TrieDB;
+use crate::db::{TrieDB, TrieDBProvider};
 use alloy_consensus::{Header, Sealable, Sealed};
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
 use revm::{db::State, handler::register::EvmHandler};
 
@@ -15,12 +15,12 @@ pub type KonaHandleRegister<F, H> =
 #[derive(Debug)]
 pub struct StatelessL2BlockExecutorBuilder<'a, F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
-    /// The [TrieProvider] to fetch the state trie preimages.
+    /// The [TrieDBProvider] to fetch the state trie preimages.
     provider: F,
     /// The [TrieHinter] to hint the state trie preimages.
     hinter: H,
@@ -32,7 +32,7 @@ where
 
 impl<'a, F, H> StatelessL2BlockExecutorBuilder<'a, F, H>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     /// Instantiate a new builder with the given [RollupConfig].
@@ -72,7 +72,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kona_mpt::{NoopTrieHinter, NoopTrieProvider};
+    use crate::NoopTrieDBProvider;
+    use kona_mpt::NoopTrieHinter;
 
     #[test]
     fn test_build_full() {
@@ -81,13 +82,13 @@ mod tests {
 
         fn test_handler_register<F, H>(_: &mut EvmHandler<'_, (), &mut State<&mut TrieDB<F, H>>>)
         where
-            F: TrieProvider,
+            F: TrieDBProvider,
             H: TrieHinter,
         {
         }
 
         let executor =
-            StatelessL2BlockExecutorBuilder::new(&config, NoopTrieProvider, NoopTrieHinter)
+            StatelessL2BlockExecutorBuilder::new(&config, NoopTrieDBProvider, NoopTrieHinter)
                 .with_handle_register(test_handler_register)
                 .build();
 

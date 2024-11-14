@@ -1,8 +1,8 @@
 //! Contains logic specific to Canyon hardfork activation.
 
-use crate::{db::TrieDB, errors::ExecutorResult};
+use crate::{db::TrieDB, errors::ExecutorResult, TrieDBProvider};
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
 use revm::{
     primitives::{Account, Bytecode, HashMap},
@@ -28,7 +28,7 @@ pub(crate) fn ensure_create2_deployer_canyon<F, H>(
     timestamp: u64,
 ) -> ExecutorResult<()>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     // If the canyon hardfork is active at the current timestamp, and it was not active at the
