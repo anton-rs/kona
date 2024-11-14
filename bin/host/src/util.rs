@@ -5,7 +5,7 @@ use alloy_provider::ReqwestProvider;
 use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
-use kona_client::HintType;
+use kona_proof::HintType;
 use os_pipe::{PipeReader, PipeWriter};
 use reqwest::Client;
 use tokio::task::JoinHandle;

@@ -1,4 +1,4 @@
-//! Contains the concrete implementation of the [ChainProvider] trait for the client program.
+//! Contains the concrete implementation of the [ChainProvider] trait for the proof.
 
 use crate::{errors::OracleProviderError, BootInfo, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -23,7 +23,7 @@ pub struct OracleL1ChainProvider<T: CommsClient> {
 
 impl<T: CommsClient> OracleL1ChainProvider<T> {
     /// Creates a new [OracleL1ChainProvider] with the given boot information and oracle client.
-    pub fn new(boot_info: Arc<BootInfo>, oracle: Arc<T>) -> Self {
+    pub const fn new(boot_info: Arc<BootInfo>, oracle: Arc<T>) -> Self {
         Self { boot_info, oracle }
     }
 }
@@ -141,7 +141,7 @@ impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
     fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, Self::Error> {
         // On L1, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             TrieNode::decode(
                 &mut self
                     .oracle

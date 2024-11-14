@@ -26,7 +26,7 @@ pub struct OracleL2ChainProvider<T: CommsClient> {
 
 impl<T: CommsClient> OracleL2ChainProvider<T> {
     /// Creates a new [OracleL2ChainProvider] with the given boot information and oracle client.
-    pub fn new(boot_info: Arc<BootInfo>, oracle: Arc<T>) -> Self {
+    pub const fn new(boot_info: Arc<BootInfo>, oracle: Arc<T>) -> Self {
         Self { boot_info, oracle }
     }
 }
@@ -148,7 +148,7 @@ impl<T: CommsClient> TrieProvider for OracleL2ChainProvider<T> {
     fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, OracleProviderError> {
         // On L2, trie node preimages are stored as keccak preimage types in the oracle. We assume
         // that a hint for these preimages has already been sent, prior to this call.
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             TrieNode::decode(
                 &mut self
                     .oracle
@@ -165,7 +165,7 @@ impl<T: CommsClient> TrieProvider for OracleL2ChainProvider<T> {
 impl<T: CommsClient> TrieDBProvider for OracleL2ChainProvider<T> {
     fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes, OracleProviderError> {
         // Fetch the bytecode preimage from the caching oracle.
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             self.oracle
                 .write(&HintType::L2Code.encode_with(&[hash.as_ref()]))
                 .await
@@ -181,7 +181,7 @@ impl<T: CommsClient> TrieDBProvider for OracleL2ChainProvider<T> {
 
     fn header_by_hash(&self, hash: B256) -> Result<Header, OracleProviderError> {
         // Fetch the header from the caching oracle.
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             self.oracle
                 .write(&HintType::L2BlockHeader.encode_with(&[hash.as_ref()]))
                 .await
@@ -201,7 +201,7 @@ impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
     type Error = OracleProviderError;
 
     fn hint_trie_node(&self, hash: B256) -> Result<(), Self::Error> {
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             self.oracle
                 .write(&HintType::L2StateNode.encode_with(&[hash.as_slice()]))
                 .await
@@ -210,7 +210,7 @@ impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
     }
 
     fn hint_account_proof(&self, address: Address, block_number: u64) -> Result<(), Self::Error> {
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             self.oracle
                 .write(
                     &HintType::L2AccountProof
@@ -227,7 +227,7 @@ impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
         slot: alloy_primitives::U256,
         block_number: u64,
     ) -> Result<(), Self::Error> {
-        kona_common::block_on(async move {
+        crate::block_on(async move {
             self.oracle
                 .write(&HintType::L2AccountStorageProof.encode_with(&[
                     block_number.to_be_bytes().as_ref(),

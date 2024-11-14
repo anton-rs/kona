@@ -18,7 +18,7 @@ pub struct OracleBlobProvider<T: CommsClient> {
 
 impl<T: CommsClient> OracleBlobProvider<T> {
     /// Constructs a new `OracleBlobProvider`.
-    pub fn new(oracle: Arc<T>) -> Self {
+    pub const fn new(oracle: Arc<T>) -> Self {
         Self { oracle }
     }
 

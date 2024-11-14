@@ -2304,6 +2304,7 @@ dependencies = [
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
+ "kona-proof",
  "lru",
  "op-alloy-consensus",
  "op-alloy-genesis",
@@ -2431,6 +2432,7 @@ dependencies = [
  "kona-derive",
  "kona-mpt",
  "kona-preimage",
+ "kona-proof",
  "op-alloy-genesis",
  "op-alloy-protocol",
  "os_pipe",
@@ -2478,6 +2480,32 @@ dependencies = [
  "serde",
  "thiserror 2.0.3",
  "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kona-proof"
+version = "0.0.1"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rlp",
+ "async-trait",
+ "kona-derive",
+ "kona-driver",
+ "kona-executor",
+ "kona-mpt",
+ "kona-preimage",
+ "lru",
+ "op-alloy-consensus",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "op-alloy-rpc-types-engine",
+ "serde",
+ "serde_json",
+ "spin",
+ "thiserror 2.0.3",
  "tracing",
 ]
 

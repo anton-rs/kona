@@ -1,30 +1,29 @@
 [package]
-name = "kona-client"
-version = "0.1.0"
-publish = false
+name = "kona-proof"
+description = "OP Stack Proof SDK"
+version = "0.0.1"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 # Workspace
 kona-mpt.workspace = true
-kona-common.workspace = true
 kona-derive.workspace = true
 kona-driver.workspace = true
 kona-preimage.workspace = true
 kona-executor.workspace = true
-kona-common-proc.workspace = true
-kona-proof.workspace = true
 
 # Alloy
 alloy-rlp.workspace = true
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
 alloy-primitives.workspace = true
-alloy-rpc-types-engine.workspace = true
 
 # Op Alloy
 op-alloy-protocol.workspace = true
@@ -32,25 +31,11 @@ op-alloy-consensus.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 op-alloy-genesis = { workspace = true, features = ["serde"] }
 
-# Revm
-revm.workspace = true
-
 # General
 lru.workspace = true
 spin.workspace = true
 serde.workspace = true
-cfg-if.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
 thiserror.workspace = true
-
-# `tracing-subscriber` feature dependencies
-tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
-
-[features]
-tracing-subscriber = ["dep:tracing-subscriber"]
-
-[[bin]]
-name = "kona"
-path = "src/kona.rs"
