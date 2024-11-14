@@ -10,7 +10,14 @@ categories = ["cryptography", "cryptography::cryptocurrencies"]
 exclude = ["**/target"]
 
 [workspace]
-members = ["crates/*", "bin/*"]
+members = [
+  "crates/derive",
+  "crates/driver",
+  "crates/executor",
+  "crates/mpt",
+  "crates/proof-sdk/*",
+  "bin/*"
+]
 default-members = ["bin/host", "bin/client"]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
@@ -57,12 +64,12 @@ lto = "fat"
 # Workspace
 kona-mpt = { path = "crates/mpt", version = "0.0.6", default-features = false }
 kona-client = { path = "bin/client", version = "0.1.0", default-features = false }
-kona-common = { path = "crates/common", version = "0.0.4", default-features = false }
 kona-derive = { path = "crates/derive", version = "0.0.6", default-features = false }
 kona-driver = { path = "crates/driver", version = "0.0.0", default-features = false }
-kona-preimage = { path = "crates/preimage", version = "0.0.4", default-features = false }
 kona-executor = { path = "crates/executor", version = "0.0.5", default-features = false }
-kona-common-proc = { path = "crates/common-proc", version = "0.0.5", default-features = false }
+kona-common = { path = "crates/proof-sdk/common", version = "0.0.4", default-features = false }
+kona-common-proc = { path = "crates/proof-sdk/common-proc", version = "0.0.5", default-features = false }
+kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.0.4", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.9", default-features = false }
