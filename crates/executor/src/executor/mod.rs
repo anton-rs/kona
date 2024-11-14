@@ -160,8 +160,8 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
-            if (transaction.gas_limit() as u128) > block_available_gas &&
-                (is_regolith || !transaction.is_system_transaction())
+            if (transaction.gas_limit() as u128) > block_available_gas
+                && (is_regolith || !transaction.is_system_transaction())
             {
                 return Err(ExecutorError::BlockGasLimitExceeded);
             }
