@@ -16,7 +16,7 @@ mod executor;
 pub use executor::{KonaHandleRegister, StatelessL2BlockExecutor, StatelessL2BlockExecutorBuilder};
 
 mod db;
-pub use db::{TrieAccount, TrieDB};
+pub use db::{TrieAccount, TrieDB, TrieDBProvider, NoopTrieDBProvider};
 
 mod constants;
 mod syscalls;

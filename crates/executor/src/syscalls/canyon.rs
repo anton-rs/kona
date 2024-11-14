@@ -1,8 +1,8 @@
 //! Contains logic specific to Canyon hardfork activation.
 
-use crate::{db::TrieDB, errors::ExecutorResult};
+use crate::{db::TrieDB, errors::ExecutorResult, TrieDBProvider};
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
 use revm::{
     primitives::{Account, Bytecode, HashMap},
@@ -28,13 +28,13 @@ pub(crate) fn ensure_create2_deployer_canyon<F, H>(
     timestamp: u64,
 ) -> ExecutorResult<()>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     // If the canyon hardfork is active at the current timestamp, and it was not active at the
     // previous block timestamp, then we need to force-deploy the create2 deployer contract.
-    if config.is_canyon_active(timestamp) &&
-        !config.is_canyon_active(db.database.parent_block_header().timestamp)
+    if config.is_canyon_active(timestamp)
+        && !config.is_canyon_active(db.database.parent_block_header().timestamp)
     {
         // Load the create2 deployer account from the cache.
         let acc = db.load_cache_account(CREATE_2_DEPLOYER_ADDR)?;

@@ -8,6 +8,7 @@ use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
+use kona_executor::TrieDBProvider;
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
@@ -159,7 +160,9 @@ impl<T: CommsClient> TrieProvider for OracleL2ChainProvider<T> {
             .map_err(OracleProviderError::Rlp)
         })
     }
+}
 
+impl<T: CommsClient> TrieDBProvider for OracleL2ChainProvider<T> {
     fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes, OracleProviderError> {
         // Fetch the bytecode preimage from the caching oracle.
         kona_common::block_on(async move {

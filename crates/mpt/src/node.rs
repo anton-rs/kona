@@ -787,7 +787,7 @@ mod test {
                 acc
             },
         );
-        let fetcher = TrieNodeProvider::new(preimages, Default::default(), Default::default());
+        let fetcher = TrieNodeProvider::new(preimages);
 
         let mut root_node = fetcher.trie_node_by_hash(root).unwrap();
         for (i, value) in VALUES.iter().enumerate() {

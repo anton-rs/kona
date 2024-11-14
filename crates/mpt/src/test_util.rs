@@ -125,17 +125,11 @@ pub(crate) async fn get_live_derivable_transactions_list(
 /// A mock [TrieProvider] for testing that serves in-memory preimages.
 pub(crate) struct TrieNodeProvider {
     preimages: BTreeMap<B256, Bytes>,
-    bytecode: BTreeMap<B256, Bytes>,
-    headers: BTreeMap<B256, alloy_consensus::Header>,
 }
 
 impl TrieNodeProvider {
-    pub(crate) const fn new(
-        preimages: BTreeMap<B256, Bytes>,
-        bytecode: BTreeMap<B256, Bytes>,
-        headers: BTreeMap<B256, alloy_consensus::Header>,
-    ) -> Self {
-        Self { preimages, bytecode, headers }
+    pub(crate) const fn new(preimages: BTreeMap<B256, Bytes>) -> Self {
+        Self { preimages }
     }
 }
 
@@ -152,13 +146,5 @@ impl TrieProvider for TrieNodeProvider {
                 .as_ref(),
         )
         .map_err(Into::into)
-    }
-
-    fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes> {
-        self.bytecode.get(&hash).cloned().ok_or_else(|| anyhow!("Key not found"))
-    }
-
-    fn header_by_hash(&self, hash: B256) -> Result<alloy_consensus::Header> {
-        self.headers.get(&hash).cloned().ok_or_else(|| anyhow!("Key not found"))
     }
 }

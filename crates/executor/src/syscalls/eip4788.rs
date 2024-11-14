@@ -3,11 +3,12 @@
 use crate::{
     db::TrieDB,
     errors::{ExecutorError, ExecutorResult},
+    TrieDBProvider,
 };
 use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
-use kona_mpt::{TrieHinter, TrieProvider};
+use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{
@@ -28,7 +29,7 @@ pub(crate) fn pre_block_beacon_root_contract_call<F, H>(
     payload: &OpPayloadAttributes,
 ) -> ExecutorResult<()>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     // apply pre-block EIP-4788 contract call
@@ -60,7 +61,7 @@ fn apply_beacon_root_contract_call<F, H>(
     evm: &mut Evm<'_, (), &mut State<&mut TrieDB<F, H>>>,
 ) -> ExecutorResult<()>
 where
-    F: TrieProvider,
+    F: TrieDBProvider,
     H: TrieHinter,
 {
     if !config.is_ecotone_active(timestamp) {

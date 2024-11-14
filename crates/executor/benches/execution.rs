@@ -7,7 +7,7 @@ use alloy_rlp::Decodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
-use kona_executor::StatelessL2BlockExecutor;
+use kona_executor::{StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
 use op_alloy_genesis::{RollupConfig, OP_MAINNET_BASE_FEE_PARAMS};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -48,7 +48,9 @@ impl TrieProvider for TestdataTrieProvider {
         )
         .map_err(Into::into)
     }
+}
 
+impl TrieDBProvider for TestdataTrieProvider {
     fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes> {
         self.preimages
             .get(&code_hash)

@@ -4,7 +4,7 @@ use crate::{errors::OracleProviderError, BootInfo, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{Header, Receipt, ReceiptEnvelope, TxEnvelope};
 use alloy_eips::eip2718::Decodable2718;
-use alloy_primitives::{Bytes, B256};
+use alloy_primitives::B256;
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_derive::traits::ChainProvider;
@@ -152,13 +152,5 @@ impl<T: CommsClient> TrieProvider for OracleL1ChainProvider<T> {
             )
             .map_err(OracleProviderError::Rlp)
         })
-    }
-
-    fn bytecode_by_hash(&self, _: B256) -> Result<Bytes, Self::Error> {
-        unimplemented!("TrieProvider::bytecode_by_hash unimplemented for OracleL1ChainProvider")
-    }
-
-    fn header_by_hash(&self, _: B256) -> Result<Header, Self::Error> {
-        unimplemented!("TrieProvider::header_by_hash unimplemented for OracleL1ChainProvider")
     }
 }

@@ -19,7 +19,6 @@ serde = { workspace = true, optional = true, features = ["derive", "alloc"] }
 # Revm + Alloy
 alloy-rlp.workspace = true
 alloy-trie.workspace = true
-alloy-consensus.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 
 [dev-dependencies]
