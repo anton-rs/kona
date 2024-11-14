@@ -1,4 +1,7 @@
-use crate::{errors::PreimageOracleResult, PreimageKey};
+use crate::{
+    errors::{ChannelResult, PreimageOracleResult},
+    PreimageKey,
+};
 use alloc::{boxed::Box, string::String, vec::Vec};
 use async_trait::async_trait;
 
@@ -97,4 +100,38 @@ pub trait PreimageFetcher {
     /// - `Ok(Vec<u8>)` if the preimage was successfully fetched.
     /// - `Err(_)` if the preimage could not be fetched.
     async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>>;
+}
+
+/// A [Channel] is a high-level interface to read and write data to a counterparty.
+#[async_trait]
+pub trait Channel {
+    /// Asynchronously read data from the channel into the provided buffer.
+    ///
+    /// # Arguments
+    /// - `buf`: The buffer to read data into.
+    ///
+    /// # Returns
+    /// - `Ok(usize)`: The number of bytes read.
+    /// - `Err(_)` if the data could not be read.
+    async fn read(&self, buf: &mut [u8]) -> ChannelResult<usize>;
+
+    /// Asynchronously read exactly `buf.len()` bytes into `buf` from the channel.
+    ///
+    /// # Arguments
+    /// - `buf`: The buffer to read data into.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the data was successfully read.
+    /// - `Err(_)` if the data could not be read.
+    async fn read_exact(&self, buf: &mut [u8]) -> ChannelResult<usize>;
+
+    /// Asynchronously write the provided buffer to the channel.
+    ///
+    /// # Arguments
+    /// - `buf`: The buffer to write to the host.
+    ///
+    /// # Returns
+    /// - `Ok(usize)`: The number of bytes written.
+    /// - `Err(_)` if the data could not be written.
+    async fn write(&self, buf: &[u8]) -> ChannelResult<usize>;
 }

@@ -18,8 +18,8 @@ thiserror.workspace = true
 async-trait.workspace = true
 alloy-primitives.workspace = true
 
-# Workspace
-kona-common.workspace = true
+# `std` feature dependencies
+tokio = { workspace = true, features = ["full"], optional = true }
 
 # `rkyv` feature dependencies
 rkyv = { workspace = true, optional = true }
@@ -28,10 +28,10 @@ rkyv = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
-os_pipe.workspace = true
 tokio = { workspace = true, features = ["full"] }
 
 [features]
 default = []
+std = ["dep:tokio"]
 rkyv = ["dep:rkyv"]
 serde = ["dep:serde"]

@@ -1,21 +1,24 @@
 use crate::{
     errors::{PreimageOracleError, PreimageOracleResult},
-    traits::PreimageFetcher,
-    PipeHandle, PreimageKey, PreimageOracleClient, PreimageOracleServer,
+    traits::{Channel, PreimageFetcher},
+    PreimageKey, PreimageOracleClient, PreimageOracleServer,
 };
 use alloc::{boxed::Box, vec::Vec};
 use tracing::trace;
 
-/// An [OracleReader] is a high-level interface to the preimage oracle.
+/// An [OracleReader] is a high-level interface to the preimage oracle channel.
 #[derive(Debug, Clone, Copy)]
-pub struct OracleReader {
-    pipe_handle: PipeHandle,
+pub struct OracleReader<C> {
+    channel: C,
 }
 
-impl OracleReader {
-    /// Create a new [OracleReader] from a [PipeHandle].
-    pub const fn new(pipe_handle: PipeHandle) -> Self {
-        Self { pipe_handle }
+impl<C> OracleReader<C>
+where
+    C: Channel,
+{
+    /// Create a new [OracleReader] from a [Channel].
+    pub const fn new(channel: C) -> Self {
+        Self { channel }
     }
 
     /// Set the preimage key for the global oracle reader. This will overwrite any existing key, and
@@ -24,17 +27,20 @@ impl OracleReader {
     async fn write_key(&self, key: PreimageKey) -> PreimageOracleResult<usize> {
         // Write the key to the host so that it can prepare the preimage.
         let key_bytes: [u8; 32] = key.into();
-        self.pipe_handle.write(&key_bytes).await?;
+        self.channel.write(&key_bytes).await?;
 
         // Read the length prefix and reset the cursor.
         let mut length_buffer = [0u8; 8];
-        self.pipe_handle.read_exact(&mut length_buffer).await?;
+        self.channel.read_exact(&mut length_buffer).await?;
         Ok(u64::from_be_bytes(length_buffer) as usize)
     }
 }
 
 #[async_trait::async_trait]
-impl PreimageOracleClient for OracleReader {
+impl<C> PreimageOracleClient for OracleReader<C>
+where
+    C: Channel + Send + Sync,
+{
     /// Get the data corresponding to the currently set key from the host. Return the data in a new
     /// heap allocated `Vec<u8>`
     async fn get(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
@@ -50,8 +56,8 @@ impl PreimageOracleClient for OracleReader {
 
         trace!(target: "oracle_client", "Reading data from preimage oracle. Key {key}");
 
-        // Grab a read lock on the preimage pipe to read the data.
-        self.pipe_handle.read_exact(&mut data_buffer).await?;
+        // Grab a read lock on the preimage channel to read the data.
+        self.channel.read_exact(&mut data_buffer).await?;
 
         trace!(target: "oracle_client", "Successfully read data from preimage oracle. Key: {key}");
 
@@ -77,7 +83,7 @@ impl PreimageOracleClient for OracleReader {
             return Ok(());
         }
 
-        self.pipe_handle.read_exact(buf).await?;
+        self.channel.read_exact(buf).await?;
 
         trace!(target: "oracle_client", "Successfully read data from preimage oracle. Key: {key}");
 
@@ -87,26 +93,32 @@ impl PreimageOracleClient for OracleReader {
 
 /// An [OracleServer] is a router for the host to serve data back to the client [OracleReader].
 #[derive(Debug, Clone, Copy)]
-pub struct OracleServer {
-    pipe_handle: PipeHandle,
+pub struct OracleServer<C> {
+    channel: C,
 }
 
-impl OracleServer {
-    /// Create a new [OracleServer] from a [PipeHandle].
-    pub const fn new(pipe_handle: PipeHandle) -> Self {
-        Self { pipe_handle }
+impl<C> OracleServer<C>
+where
+    C: Channel,
+{
+    /// Create a new [OracleServer] from a [Channel].
+    pub const fn new(chanel: C) -> Self {
+        Self { channel: chanel }
     }
 }
 
 #[async_trait::async_trait]
-impl PreimageOracleServer for OracleServer {
+impl<C> PreimageOracleServer for OracleServer<C>
+where
+    C: Channel + Send + Sync,
+{
     async fn next_preimage_request<F>(&self, fetcher: &F) -> Result<(), PreimageOracleError>
     where
         F: PreimageFetcher + Send + Sync,
     {
         // Read the preimage request from the client, and throw early if there isn't is any.
         let mut buf = [0u8; 32];
-        self.pipe_handle.read_exact(&mut buf).await?;
+        self.channel.read_exact(&mut buf).await?;
         let preimage_key = PreimageKey::try_from(buf)?;
 
         trace!(target: "oracle_server", "Fetching preimage for key {preimage_key}");
@@ -115,12 +127,8 @@ impl PreimageOracleServer for OracleServer {
         let value = fetcher.get_preimage(preimage_key).await?;
 
         // Write the length as a big-endian u64 followed by the data.
-        let data = [(value.len() as u64).to_be_bytes().as_ref(), value.as_ref()]
-            .into_iter()
-            .flatten()
-            .copied()
-            .collect::<Vec<_>>();
-        self.pipe_handle.write(data.as_slice()).await?;
+        self.channel.write(value.len().to_be_bytes().as_ref()).await?;
+        self.channel.write(value.as_ref()).await?;
 
         trace!(target: "oracle_server", "Successfully wrote preimage data for key {preimage_key}");
 
@@ -131,11 +139,10 @@ impl PreimageOracleServer for OracleServer {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{test_utils::bidirectional_pipe, PreimageKeyType};
+    use crate::{native_channel::BidirectionalChannel, PreimageKeyType};
     use alloc::sync::Arc;
     use alloy_primitives::keccak256;
-    use kona_common::FileDescriptor;
-    use std::{collections::HashMap, os::unix::io::AsRawFd};
+    use std::collections::HashMap;
     use tokio::sync::Mutex;
 
     struct TestFetcher {
@@ -166,13 +173,10 @@ mod test {
             Arc::new(Mutex::new(preimages))
         };
 
-        let preimage_pipe = bidirectional_pipe().unwrap();
+        let preimage_channel = BidirectionalChannel::new::<2>().unwrap();
 
         let client = tokio::task::spawn(async move {
-            let oracle_reader = OracleReader::new(PipeHandle::new(
-                FileDescriptor::Wildcard(preimage_pipe.client.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(preimage_pipe.client.write.as_raw_fd() as usize),
-            ));
+            let oracle_reader = OracleReader::new(preimage_channel.client);
             let mut contents_a = [0u8; 10];
             let mut contents_b = [0u8; 6];
             oracle_reader.get_exact(key_a, &mut contents_a).await.unwrap();
@@ -181,10 +185,7 @@ mod test {
             (contents_a, contents_b)
         });
         tokio::task::spawn(async move {
-            let oracle_server = OracleServer::new(PipeHandle::new(
-                FileDescriptor::Wildcard(preimage_pipe.host.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(preimage_pipe.host.write.as_raw_fd() as usize),
-            ));
+            let oracle_server = OracleServer::new(preimage_channel.host);
             let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
 
             loop {
@@ -218,23 +219,17 @@ mod test {
             Arc::new(Mutex::new(preimages))
         };
 
-        let preimage_pipe = bidirectional_pipe().unwrap();
+        let preimage_channel = BidirectionalChannel::new::<2>().unwrap();
 
         let client = tokio::task::spawn(async move {
-            let oracle_reader = OracleReader::new(PipeHandle::new(
-                FileDescriptor::Wildcard(preimage_pipe.client.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(preimage_pipe.client.write.as_raw_fd() as usize),
-            ));
+            let oracle_reader = OracleReader::new(preimage_channel.client);
             let contents_a = oracle_reader.get(key_a).await.unwrap();
             let contents_b = oracle_reader.get(key_b).await.unwrap();
 
             (contents_a, contents_b)
         });
         tokio::task::spawn(async move {
-            let oracle_server = OracleServer::new(PipeHandle::new(
-                FileDescriptor::Wildcard(preimage_pipe.host.read.as_raw_fd() as usize),
-                FileDescriptor::Wildcard(preimage_pipe.host.write.as_raw_fd() as usize),
-            ));
+            let oracle_server = OracleServer::new(preimage_channel.host);
             let test_fetcher = TestFetcher { preimages: Arc::clone(&preimages) };
 
             loop {
