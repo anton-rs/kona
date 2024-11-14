@@ -6,8 +6,8 @@ use alloy_consensus::Header;
 use alloy_primitives::{Bytes, B256};
 use kona_mpt::{TrieNode, TrieProvider};
 
-/// The [TrieDBProvider] trait defines the synchronous interface for fetching EVM bytecode hash preimages
-/// as well as [Header] preimages.
+/// The [TrieDBProvider] trait defines the synchronous interface for fetching EVM bytecode hash
+/// preimages as well as [Header] preimages.
 pub trait TrieDBProvider: TrieProvider {
     /// Fetches the preimage of the bytecode hash provided.
     ///

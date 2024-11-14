@@ -20,7 +20,7 @@ where
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
-    /// The [TrieProvider] to fetch the state trie preimages.
+    /// The [TrieDBProvider] to fetch the state trie preimages.
     provider: F,
     /// The [TrieHinter] to hint the state trie preimages.
     hinter: H,
