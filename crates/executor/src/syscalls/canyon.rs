@@ -33,8 +33,8 @@ where
 {
     // If the canyon hardfork is active at the current timestamp, and it was not active at the
     // previous block timestamp, then we need to force-deploy the create2 deployer contract.
-    if config.is_canyon_active(timestamp)
-        && !config.is_canyon_active(db.database.parent_block_header().timestamp)
+    if config.is_canyon_active(timestamp) &&
+        !config.is_canyon_active(db.database.parent_block_header().timestamp)
     {
         // Load the create2 deployer account from the cache.
         let acc = db.load_cache_account(CREATE_2_DEPLOYER_ADDR)?;
