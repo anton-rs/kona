@@ -2474,8 +2474,6 @@ version = "0.0.4"
 dependencies = [
  "alloy-primitives",
  "async-trait",
- "kona-common",
- "os_pipe",
  "rkyv",
  "serde",
  "thiserror 2.0.3",

@@ -17,8 +17,9 @@ use server::PreimageServer;
 use anyhow::{anyhow, bail, Result};
 use command_fds::{CommandFdExt, FdMapping};
 use futures::FutureExt;
+use kona_client::PipeHandle;
 use kona_common::FileDescriptor;
-use kona_preimage::{HintReader, OracleServer, PipeHandle};
+use kona_preimage::{HintReader, OracleServer};
 use kv::KeyValueStore;
 use std::{
     io::{stderr, stdin, stdout},

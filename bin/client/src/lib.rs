@@ -22,5 +22,8 @@ pub use hint::HintType;
 pub mod boot;
 pub use boot::BootInfo;
 
+mod pipe;
+pub use pipe::PipeHandle;
+
 mod caching_oracle;
 pub use caching_oracle::{CachingOracle, FlushableCache};

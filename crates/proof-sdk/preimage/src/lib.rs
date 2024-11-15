@@ -5,7 +5,7 @@
 )]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
 
 extern crate alloc;
 
@@ -20,14 +20,13 @@ pub use oracle::{OracleReader, OracleServer};
 mod hint;
 pub use hint::{HintReader, HintWriter};
 
-mod pipe;
-pub use pipe::PipeHandle;
-
 mod traits;
 pub use traits::{
-    CommsClient, HintReaderServer, HintRouter, HintWriterClient, PreimageFetcher,
+    Channel, CommsClient, HintReaderServer, HintRouter, HintWriterClient, PreimageFetcher,
     PreimageOracleClient, PreimageOracleServer,
 };
 
-#[cfg(test)]
-mod test_utils;
+#[cfg(any(test, feature = "std"))]
+mod native_channel;
+#[cfg(any(test, feature = "std"))]
+pub use native_channel::{BidirectionalChannel, NativeChannel};

@@ -1,6 +1,8 @@
 //! This module contains a rudamentary pipe between two file descriptors, using [kona_common::io]
 //! for reading and writing from the file descriptors.
 
+use alloc::boxed::Box;
+use async_trait::async_trait;
 use core::{
     cell::RefCell,
     cmp::Ordering,
@@ -9,6 +11,10 @@ use core::{
     task::{Context, Poll},
 };
 use kona_common::{errors::IOResult, io, FileDescriptor};
+use kona_preimage::{
+    errors::{ChannelError, ChannelResult},
+    Channel,
+};
 
 /// [PipeHandle] is a handle for one end of a bidirectional pipe.
 #[derive(Debug, Clone, Copy)]
@@ -48,6 +54,21 @@ impl PipeHandle {
     /// Returns the write handle for the pipe.
     pub const fn write_handle(&self) -> FileDescriptor {
         self.write_handle
+    }
+}
+
+#[async_trait]
+impl Channel for PipeHandle {
+    async fn read(&self, buf: &mut [u8]) -> ChannelResult<usize> {
+        self.read(buf).map_err(|_| ChannelError::Closed)
+    }
+
+    async fn read_exact(&self, buf: &mut [u8]) -> ChannelResult<usize> {
+        self.read_exact(buf).await.map_err(|_| ChannelError::Closed)
+    }
+
+    async fn write(&self, buf: &[u8]) -> ChannelResult<usize> {
+        self.write(buf).await.map_err(|_| ChannelError::Closed)
     }
 }
 
