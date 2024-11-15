@@ -1,5 +1,6 @@
 //! Contains an oracle-backed pipeline.
 
+use crate::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, FlushableCache};
 use alloc::{boxed::Box, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -20,8 +21,6 @@ use kona_preimage::CommsClient;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
-
-use crate::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, FlushableCache};
 
 /// An oracle-backed derivation pipeline.
 pub type OracleDerivationPipeline<O, B> = DerivationPipeline<

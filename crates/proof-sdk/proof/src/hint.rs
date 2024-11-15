@@ -1,13 +1,12 @@
 //! This module contains the [HintType] enum.
 
+use crate::errors::HintParsingError;
 use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
 use alloy_primitives::hex;
 use core::fmt::Display;
-
-use crate::errors::HintParsingError;
 
 /// The [HintType] enum is used to specify the type of hint that was received.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -52,18 +51,18 @@ impl TryFrom<&str> for HintType {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "l1-block-header" => Ok(HintType::L1BlockHeader),
-            "l1-transactions" => Ok(HintType::L1Transactions),
-            "l1-receipts" => Ok(HintType::L1Receipts),
-            "l1-blob" => Ok(HintType::L1Blob),
-            "l1-precompile" => Ok(HintType::L1Precompile),
-            "l2-block-header" => Ok(HintType::L2BlockHeader),
-            "l2-transactions" => Ok(HintType::L2Transactions),
-            "l2-code" => Ok(HintType::L2Code),
-            "starting-l2-output" => Ok(HintType::StartingL2Output),
-            "l2-state-node" => Ok(HintType::L2StateNode),
-            "l2-account-proof" => Ok(HintType::L2AccountProof),
-            "l2-account-storage-proof" => Ok(HintType::L2AccountStorageProof),
+            "l1-block-header" => Ok(Self::L1BlockHeader),
+            "l1-transactions" => Ok(Self::L1Transactions),
+            "l1-receipts" => Ok(Self::L1Receipts),
+            "l1-blob" => Ok(Self::L1Blob),
+            "l1-precompile" => Ok(Self::L1Precompile),
+            "l2-block-header" => Ok(Self::L2BlockHeader),
+            "l2-transactions" => Ok(Self::L2Transactions),
+            "l2-code" => Ok(Self::L2Code),
+            "starting-l2-output" => Ok(Self::StartingL2Output),
+            "l2-state-node" => Ok(Self::L2StateNode),
+            "l2-account-proof" => Ok(Self::L2AccountProof),
+            "l2-account-storage-proof" => Ok(Self::L2AccountStorageProof),
             _ => Err(HintParsingError(value.to_string())),
         }
     }

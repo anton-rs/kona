@@ -15,9 +15,9 @@ use alloy_rpc_types::{
     Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
 };
 use anyhow::{anyhow, Result};
-use kona_client::HintType;
 use kona_derive::sources::IndexedBlobHash;
 use kona_preimage::{PreimageKey, PreimageKeyType};
+use kona_proof::HintType;
 use op_alloy_protocol::BlockInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;

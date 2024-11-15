@@ -22,7 +22,7 @@ where
     H: TrieHinter + Send + Sync + Clone,
 {
     /// Creates a new executor.
-    pub fn new(executor: StatelessL2BlockExecutor<'a, P, H>) -> Self {
+    pub const fn new(executor: StatelessL2BlockExecutor<'a, P, H>) -> Self {
         Self(executor)
     }
 }

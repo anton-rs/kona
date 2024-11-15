@@ -8,20 +8,36 @@
 extern crate alloc;
 
 use alloc::{string::String, sync::Arc};
-use kona_client::{
+use kona_client::PipeHandle;
+use kona_common::{io, FileDescriptor};
+use kona_common_proc::client_entry;
+use kona_driver::{Driver, DriverError};
+use kona_preimage::{HintWriter, OracleReader};
+use kona_proof::{
     executor::KonaExecutorConstructor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
     sync::new_pipeline_cursor,
     BootInfo, CachingOracle,
 };
-use kona_common::io;
-use kona_common_proc::client_entry;
-use kona_driver::{Driver, DriverError};
-
-pub(crate) mod fault;
-use fault::{fpvm_handle_register, HINT_WRITER, ORACLE_READER};
 use tracing::{error, info, warn};
+
+mod handler;
+use handler::fpvm_handle_register;
+
+/// The global preimage oracle reader pipe.
+static ORACLE_READER_PIPE: PipeHandle =
+    PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
+
+/// The global hint writer pipe.
+static HINT_WRITER_PIPE: PipeHandle =
+    PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
+
+/// The global preimage oracle reader.
+static ORACLE_READER: OracleReader<PipeHandle> = OracleReader::new(ORACLE_READER_PIPE);
+
+/// The global hint writer.
+static HINT_WRITER: HintWriter<PipeHandle> = HintWriter::new(HINT_WRITER_PIPE);
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;

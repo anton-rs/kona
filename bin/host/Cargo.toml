@@ -18,6 +18,7 @@ kona-client.workspace = true
 kona-derive.workspace = true
 kona-common.workspace = true
 kona-preimage.workspace = true
+kona-proof.workspace = true
 
 # Alloy
 alloy-rlp.workspace = true

@@ -1,4 +1,4 @@
-//! Contains the L1 constructs of the client program.
+//! Contains the L1 constructs of the proof, backed by the preimage oracle ABI as a data source.
 
 mod pipeline;
 pub use pipeline::{
