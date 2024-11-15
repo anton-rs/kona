@@ -30,7 +30,7 @@ fn fpvm_kzg_point_eval(input: &Bytes, gas_limit: u64) -> PrecompileResult {
         return Err(PrecompileError::BlobInvalidInputLength.into());
     }
 
-    let result_data = kona_common::block_on(async move {
+    let result_data = kona_proof::block_on(async move {
         // Write the hint for the ecrecover precompile run.
         let hint_data = &[POINT_EVAL_ADDRESS.as_ref(), input.as_ref()];
         HINT_WRITER

@@ -32,10 +32,10 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
     let expanded = quote! {
         fn #fn_name() -> Result<(), String> {
             match #fn_body {
-                Ok(_) => kona_common::io::exit(0),
+                Ok(_) => kona_std_fpvm::io::exit(0),
                 Err(e) => {
-                    kona_common::io::print_err(alloc::format!("Program encountered fatal error: {:?}\n", e).as_ref());
-                    kona_common::io::exit(1);
+                    kona_std_fpvm::io::print_err(alloc::format!("Program encountered fatal error: {:?}\n", e).as_ref());
+                    kona_std_fpvm::io::exit(1);
                 }
             }
         }
@@ -47,15 +47,15 @@ pub fn client_entry(attr: TokenStream, input: TokenStream) -> TokenStream {
                 #[doc = "Program entry point"]
                 #[no_mangle]
                 pub extern "C" fn _start() {
-                    kona_common::alloc_heap!(HEAP_SIZE);
+                    kona_std_fpvm::alloc_heap!(HEAP_SIZE);
                     let _ = #fn_name();
                 }
 
                 #[panic_handler]
                 fn panic(info: &core::panic::PanicInfo) -> ! {
                     let msg = alloc::format!("Panic: {}", info);
-                    kona_common::io::print_err(msg.as_ref());
-                    kona_common::io::exit(2)
+                    kona_std_fpvm::io::print_err(msg.as_ref());
+                    kona_std_fpvm::io::exit(2)
                 }
             }
         }

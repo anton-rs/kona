@@ -14,9 +14,8 @@ workspace = true
 [dependencies]
 # Workspace
 kona-mpt.workspace = true
-kona-client.workspace = true
 kona-derive.workspace = true
-kona-common.workspace = true
+kona-std-fpvm.workspace = true
 kona-preimage.workspace = true
 kona-proof.workspace = true
 

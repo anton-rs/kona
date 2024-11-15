@@ -17,9 +17,8 @@ use server::PreimageServer;
 use anyhow::{anyhow, bail, Result};
 use command_fds::{CommandFdExt, FdMapping};
 use futures::FutureExt;
-use kona_client::PipeHandle;
-use kona_common::FileDescriptor;
 use kona_preimage::{HintReader, OracleServer};
+use kona_std_fpvm::{FileChannel, FileDescriptor};
 use kv::KeyValueStore;
 use std::{
     io::{stderr, stdin, stdout},
@@ -35,8 +34,8 @@ use util::Pipe;
 /// invoked by the Fault Proof VM and the client program is running in the parent process.
 pub async fn start_server(cfg: HostCli) -> Result<()> {
     let (preimage_pipe, hint_pipe) = (
-        PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
-        PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite),
+        FileChannel::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
+        FileChannel::new(FileDescriptor::HintRead, FileDescriptor::HintWrite),
     );
     let oracle_server = OracleServer::new(preimage_pipe);
     let hint_reader = HintReader::new(hint_pipe);
@@ -136,11 +135,11 @@ pub async fn start_native_preimage_server<KV>(
 where
     KV: KeyValueStore + Send + Sync + ?Sized + 'static,
 {
-    let hint_reader = HintReader::new(PipeHandle::new(
+    let hint_reader = HintReader::new(FileChannel::new(
         FileDescriptor::Wildcard(hint_pipe.read.as_raw_fd() as usize),
         FileDescriptor::Wildcard(hint_pipe.write.as_raw_fd() as usize),
     ));
-    let oracle_server = OracleServer::new(PipeHandle::new(
+    let oracle_server = OracleServer::new(FileChannel::new(
         FileDescriptor::Wildcard(preimage_pipe.read.as_raw_fd() as usize),
         FileDescriptor::Wildcard(preimage_pipe.write.as_raw_fd() as usize),
     ));

@@ -1,4 +1,4 @@
-//! Error types for the client program.
+//! Error types for the proof program.
 
 use alloc::string::{String, ToString};
 use kona_derive::errors::{PipelineError, PipelineErrorKind};

@@ -8,9 +8,6 @@
 extern crate alloc;
 
 use alloc::{string::String, sync::Arc};
-use kona_client::PipeHandle;
-use kona_common::{io, FileDescriptor};
-use kona_common_proc::client_entry;
 use kona_driver::{Driver, DriverError};
 use kona_preimage::{HintWriter, OracleReader};
 use kona_proof::{
@@ -20,24 +17,26 @@ use kona_proof::{
     sync::new_pipeline_cursor,
     BootInfo, CachingOracle,
 };
+use kona_std_fpvm::{io, FileChannel, FileDescriptor};
+use kona_std_fpvm_proc::client_entry;
 use tracing::{error, info, warn};
 
 mod handler;
 use handler::fpvm_handle_register;
 
 /// The global preimage oracle reader pipe.
-static ORACLE_READER_PIPE: PipeHandle =
-    PipeHandle::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
+static ORACLE_READER_PIPE: FileChannel =
+    FileChannel::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
 
 /// The global hint writer pipe.
-static HINT_WRITER_PIPE: PipeHandle =
-    PipeHandle::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
+static HINT_WRITER_PIPE: FileChannel =
+    FileChannel::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
 
 /// The global preimage oracle reader.
-static ORACLE_READER: OracleReader<PipeHandle> = OracleReader::new(ORACLE_READER_PIPE);
+static ORACLE_READER: OracleReader<FileChannel> = OracleReader::new(ORACLE_READER_PIPE);
 
 /// The global hint writer.
-static HINT_WRITER: HintWriter<PipeHandle> = HintWriter::new(HINT_WRITER_PIPE);
+static HINT_WRITER: HintWriter<FileChannel> = HintWriter::new(HINT_WRITER_PIPE);
 
 /// The size of the LRU cache in the oracle.
 const ORACLE_LRU_SIZE: usize = 1024;
@@ -53,7 +52,7 @@ fn main() -> Result<(), String> {
             .expect("setting default subscriber failed");
     }
 
-    kona_common::block_on(async move {
+    kona_proof::block_on(async move {
         ////////////////////////////////////////////////////////////////
         //                          PROLOGUE                          //
         ////////////////////////////////////////////////////////////////
