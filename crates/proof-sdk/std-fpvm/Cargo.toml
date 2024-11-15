@@ -1,7 +1,7 @@
 [package]
-name = "kona-common"
-description = "Common traits and system interfaces for developing client programs on top of Fault Proof VMs."
-version = "0.1.0"
+name = "kona-std-fpvm"
+description = "Platform specific APIs for interacting with Fault Proof VM kernels."
+version = "0.0.1"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -12,6 +12,11 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+# Workspace
+kona-preimage.workspace = true
+
+# External
 cfg-if.workspace = true
 thiserror.workspace = true
 linked_list_allocator.workspace = true
+async-trait.workspace = true

@@ -63,9 +63,10 @@ see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html
 
 **Proof SDK**
 
-- [`common`](./crates/proof-sdk/common): A suite of utilities for developing `client` programs to be run on top of Fault Proof VMs.
-- [`common-proc`](./crates/proof-sdk/common-proc): Proc macro for the `client` program entrypoint.
-- [`preimage`](./crates/proof-sdk/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI
+- [`kona-proof`](./crates/proof-sdk/proof): High level OP Stack state transition proof SDK.
+- [`preimage`](./crates/proof-sdk/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI.
+- [`std-fpvm`](./crates/proof-sdk/std-fpvm): Platform specific [Fault Proof VM][g-fault-proof-vm] kernel APIs.
+- [`std-fpvm-proc`](./crates/proof-sdk/std-fpvm-proc): Proc macro for [Fault Proof Program][fpp-specs] entrypoints.
 
 ## Book
 

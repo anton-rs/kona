@@ -38,7 +38,7 @@ fn fpvm_ecpairing(input: &Bytes, gas_limit: u64) -> PrecompileResult {
         return Err(PrecompileError::Bn128PairLength.into());
     }
 
-    let result_data = kona_common::block_on(async move {
+    let result_data = kona_proof::block_on(async move {
         // Write the hint for the ecrecover precompile run.
         let hint_data = &[ECPAIRING_ADDRESS.as_ref(), input.as_ref()];
         HINT_WRITER

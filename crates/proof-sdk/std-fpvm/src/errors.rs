@@ -1,4 +1,4 @@
-//! Errors for the `kona-common` crate.
+//! Errors for the `kona-std-fpvm` crate.
 
 use thiserror::Error;
 

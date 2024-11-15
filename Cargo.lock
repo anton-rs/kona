@@ -2322,14 +2322,14 @@ dependencies = [
  "alloy-rpc-types-engine",
  "async-trait",
  "cfg-if",
- "kona-common",
- "kona-common-proc",
  "kona-derive",
  "kona-driver",
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
  "kona-proof",
+ "kona-std-fpvm",
+ "kona-std-fpvm-proc",
  "lru",
  "op-alloy-consensus",
  "op-alloy-genesis",
@@ -2342,27 +2342,6 @@ dependencies = [
  "thiserror 2.0.3",
  "tracing",
  "tracing-subscriber",
-]
-
-[[package]]
-name = "kona-common"
-version = "0.1.0"
-dependencies = [
- "cfg-if",
- "linked_list_allocator",
- "thiserror 2.0.3",
-]
-
-[[package]]
-name = "kona-common-proc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cfg-if",
- "kona-common",
- "proc-macro2",
- "quote",
- "syn 2.0.87",
 ]
 
 [[package]]
@@ -2450,12 +2429,11 @@ dependencies = [
  "clap",
  "command-fds",
  "futures",
- "kona-client",
- "kona-common",
  "kona-derive",
  "kona-mpt",
  "kona-preimage",
  "kona-proof",
+ "kona-std-fpvm",
  "op-alloy-genesis",
  "op-alloy-protocol",
  "op-alloy-rpc-types-engine",
@@ -2532,6 +2510,29 @@ dependencies = [
  "spin",
  "thiserror 2.0.3",
  "tracing",
+]
+
+[[package]]
+name = "kona-std-fpvm"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "cfg-if",
+ "kona-preimage",
+ "linked_list_allocator",
+ "thiserror 2.0.3",
+]
+
+[[package]]
+name = "kona-std-fpvm-proc"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "cfg-if",
+ "kona-std-fpvm",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
 ]
 
 [[package]]
