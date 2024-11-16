@@ -59,7 +59,7 @@ where
     /// The trie hinter for the executor.
     trie_hinter: H,
     /// The handle register for the executor.
-    handle_register: KonaHandleRegister<P, H>,
+    handle_register: Option<KonaHandleRegister<P, H>>,
 }
 
 impl<'a, P, H> KonaExecutorConstructor<'a, P, H>
@@ -72,7 +72,7 @@ where
         rollup_config: &'a Arc<RollupConfig>,
         trie_provider: P,
         trie_hinter: H,
-        handle_register: KonaHandleRegister<P, H>,
+        handle_register: Option<KonaHandleRegister<P, H>>,
     ) -> Self {
         Self { rollup_config, trie_provider, trie_hinter, handle_register }
     }
@@ -85,15 +85,17 @@ where
 {
     /// Constructs the executor.
     fn new_executor(&self, header: Sealed<Header>) -> KonaExecutor<'a, P, H> {
-        KonaExecutor::new(
-            StatelessL2BlockExecutor::builder(
-                self.rollup_config,
-                self.trie_provider.clone(),
-                self.trie_hinter.clone(),
-            )
-            .with_parent_header(header)
-            .with_handle_register(self.handle_register)
-            .build(),
+        let mut builder = StatelessL2BlockExecutor::builder(
+            self.rollup_config,
+            self.trie_provider.clone(),
+            self.trie_hinter.clone(),
         )
+        .with_parent_header(header);
+
+        if let Some(register) = self.handle_register {
+            builder = builder.with_handle_register(register.clone());
+        }
+
+        KonaExecutor::new(builder.build())
     }
 }

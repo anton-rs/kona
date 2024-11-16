@@ -40,3 +40,9 @@ tracing.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
 thiserror.workspace = true
+
+# `std` feature dependencies
+tokio = { workspace = true, features = ["full"], optional = true }
+
+[features]
+std = ["dep:tokio"]
