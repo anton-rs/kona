@@ -155,7 +155,7 @@ where
 {
     fn is_last_in_span(&self) -> bool {
         self.batch_validator.as_ref().map_or_else(
-            || self.batch_queue.as_ref().map_or(false, |batch_queue| batch_queue.is_last_in_span()),
+            || self.batch_queue.as_ref().is_some_and(|batch_queue| batch_queue.is_last_in_span()),
             |batch_validator| batch_validator.is_last_in_span(),
         )
     }
