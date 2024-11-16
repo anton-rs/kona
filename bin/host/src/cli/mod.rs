@@ -92,12 +92,12 @@ pub struct HostCli {
         env
     )]
     pub data_dir: Option<PathBuf>,
-    /// Run the specified client program natively as a separate process detached from the host.
+    /// Run the specified client program natively.
     #[clap(long, conflicts_with = "server", required_unless_present = "server")]
-    pub exec: Option<String>,
+    pub native: bool,
     /// Run in pre-image server mode without executing any client program. If not provided, the
     /// host will run the client program in the host process.
-    #[clap(long, conflicts_with = "exec", required_unless_present = "exec")]
+    #[clap(long, conflicts_with = "native", required_unless_present = "native")]
     pub server: bool,
     /// The L2 chain ID of a supported chain. If provided, the host will look for the corresponding
     /// rollup config in the superchain registry.
@@ -230,9 +230,9 @@ mod test {
             // valid
             (["--server", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
             (["--server", "--rollup-config-path", "dummy", "--data-dir", "dummy"].as_slice(), true),
-            (["--exec", "dummy", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
+            (["--native", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
             (
-                ["--exec", "dummy", "--rollup-config-path", "dummy", "--data-dir", "dummy"]
+                ["--native", "--rollup-config-path", "dummy", "--data-dir", "dummy"]
                     .as_slice(),
                 true,
             ),
@@ -252,10 +252,10 @@ mod test {
                 true,
             ),
             // invalid
-            (["--server", "--exec", "dummy", "--l2-chain-id", "0"].as_slice(), false),
+            (["--server", "--native", "--l2-chain-id", "0"].as_slice(), false),
             (["--l2-chain-id", "0", "--rollup-config-path", "dummy", "--server"].as_slice(), false),
             (["--server"].as_slice(), false),
-            (["--exec", "dummy"].as_slice(), false),
+            (["--native"].as_slice(), false),
             (["--rollup-config-path", "dummy"].as_slice(), false),
             (["--l2-chain-id", "0"].as_slice(), false),
             (["--l1-node-address", "dummy", "--server", "--l2-chain-id", "0"].as_slice(), false),

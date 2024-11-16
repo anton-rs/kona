@@ -6,34 +6,8 @@ use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use kona_proof::HintType;
-use os_pipe::{PipeReader, PipeWriter};
 use reqwest::Client;
 use tokio::task::JoinHandle;
-
-/// A bidirectional pipe, with a client and host end.
-#[derive(Debug)]
-pub struct BidirectionalPipe {
-    pub(crate) client: Pipe,
-    pub(crate) host: Pipe,
-}
-
-/// A single-direction pipe, with a read and write end.
-#[derive(Debug)]
-pub struct Pipe {
-    pub(crate) read: PipeReader,
-    pub(crate) write: PipeWriter,
-}
-
-/// Creates a [BidirectionalPipe] instance.
-pub fn bidirectional_pipe() -> Result<BidirectionalPipe> {
-    let (ar, bw) = os_pipe::pipe().map_err(|e| anyhow!("Failed to create pipe: {e}"))?;
-    let (br, aw) = os_pipe::pipe().map_err(|e| anyhow!("Failed to create pipe: {e}"))?;
-
-    Ok(BidirectionalPipe {
-        client: Pipe { read: ar, write: aw },
-        host: Pipe { read: br, write: bw },
-    })
-}
 
 /// Parses a hint from a string.
 ///

@@ -1,25 +1,49 @@
 //! Contains the accelerated version of the KZG point evaluation precompile.
 
-use crate::{HINT_WRITER, ORACLE_READER};
-use alloc::{string::ToString, vec::Vec};
+use alloc::{string::ToString, sync::Arc, vec::Vec};
 use alloy_primitives::{keccak256, Address, Bytes};
-use kona_preimage::{
-    errors::PreimageOracleError, HintWriterClient, PreimageKey, PreimageKeyType,
-    PreimageOracleClient,
-};
+use kona_preimage::{errors::PreimageOracleError, CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::{errors::OracleProviderError, HintType};
 use revm::{
-    precompile::{u64_to_address, Error as PrecompileError, PrecompileWithAddress},
-    primitives::{Precompile, PrecompileOutput, PrecompileResult},
+    precompile::{u64_to_address, Error as PrecompileError},
+    primitives::{PrecompileOutput, PrecompileResult, StatefulPrecompile},
 };
 
-const POINT_EVAL_ADDRESS: Address = u64_to_address(0x0A);
+/// The address of the KZG point evaluation precompile.
+pub const POINT_EVAL_ADDRESS: Address = u64_to_address(0x0A);
 
-pub(crate) const FPVM_KZG_POINT_EVAL: PrecompileWithAddress =
-    PrecompileWithAddress(POINT_EVAL_ADDRESS, Precompile::Standard(fpvm_kzg_point_eval));
+/// An accelerated version of the KZG point evaluation precompile that calls out to the host for the
+/// result of the precompile execution.
+#[derive(Debug)]
+pub struct KZGPointEvalAccelerated<C> {
+    /// The comms client.
+    comms_client: Arc<C>,
+}
+
+impl<C> KZGPointEvalAccelerated<C>
+where
+    C: CommsClient,
+{
+    /// Creates a new [KZGPointEvalAccelerated] instance.
+    fn new(comms_client: Arc<C>) -> Self {
+        Self { comms_client }
+    }
+}
+
+impl<C> StatefulPrecompile for KZGPointEvalAccelerated<C>
+where
+    C: CommsClient + Send + Sync,
+{
+    fn call(&self, input: &Bytes, gas_limit: u64, _: &revm::primitives::Env) -> PrecompileResult {
+        fpvm_kzg_point_eval(self.comms_client.as_ref(), input, gas_limit)
+    }
+}
 
 /// Performs an FPVM-accelerated KZG point evaluation precompile call.
-fn fpvm_kzg_point_eval(input: &Bytes, gas_limit: u64) -> PrecompileResult {
+fn fpvm_kzg_point_eval<C>(comms_client: &C, input: &Bytes, gas_limit: u64) -> PrecompileResult
+where
+    C: CommsClient,
+{
     const GAS_COST: u64 = 50_000;
 
     if gas_limit < GAS_COST {
@@ -33,7 +57,7 @@ fn fpvm_kzg_point_eval(input: &Bytes, gas_limit: u64) -> PrecompileResult {
     let result_data = kona_proof::block_on(async move {
         // Write the hint for the ecrecover precompile run.
         let hint_data = &[POINT_EVAL_ADDRESS.as_ref(), input.as_ref()];
-        HINT_WRITER
+        comms_client
             .write(&HintType::L1Precompile.encode_with(hint_data))
             .await
             .map_err(OracleProviderError::Preimage)?;
@@ -43,7 +67,7 @@ fn fpvm_kzg_point_eval(input: &Bytes, gas_limit: u64) -> PrecompileResult {
         let key_hash = keccak256(&raw_key_data);
 
         // Fetch the result of the ecrecover precompile run from the host.
-        let result_data = ORACLE_READER
+        let result_data = comms_client
             .get(PreimageKey::new(*key_hash, PreimageKeyType::Precompile))
             .await
             .map_err(OracleProviderError::Preimage)?;

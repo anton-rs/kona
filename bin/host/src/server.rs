@@ -88,7 +88,7 @@ where
         {
             loop {
                 match server.next_preimage_request(fetcher).await {
-                    Ok(_) => (),
+                    Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),
                     Err(e) => {
                         error!("Failed to serve preimage request: {e}");
@@ -119,7 +119,7 @@ where
         {
             loop {
                 match server.next_hint(router).await {
-                    Ok(_) => (),
+                    Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),
                     Err(e) => {
                         error!("Failed to serve route hint: {e}");
@@ -129,7 +129,7 @@ where
             }
         }
 
-        if let Some(fetcher) = fetcher {
+        if let Some(fetcher) = fetcher.as_ref() {
             do_loop(&OnlineHintRouter::new(Arc::clone(&fetcher)), &hint_reader).await
         } else {
             do_loop(&OfflineHintRouter, &hint_reader).await

@@ -19,7 +19,7 @@ async-trait.workspace = true
 alloy-primitives.workspace = true
 
 # `std` feature dependencies
-tokio = { workspace = true, features = ["full"], optional = true }
+async-channel = { workspace = true, optional = true }
 
 # `rkyv` feature dependencies
 rkyv = { workspace = true, optional = true }
@@ -32,6 +32,6 @@ tokio = { workspace = true, features = ["full"] }
 
 [features]
 default = []
-std = ["dep:tokio"]
+std = ["dep:async-channel"]
 rkyv = ["dep:rkyv"]
 serde = ["dep:serde"]

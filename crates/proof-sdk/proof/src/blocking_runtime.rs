@@ -1,15 +1,27 @@
 //! This module contains a blocking runtime for futures, allowing for synchronous execution of async
 //! code in an embedded environment.
 
-use alloc::boxed::Box;
-use core::{
-    future::Future,
-    task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
-};
+use core::future::Future;
+
+/// This function blocks on a future in place until it is ready.
+#[cfg(feature = "std")]
+pub fn block_on<T>(f: impl Future<Output = T>) -> T {
+    // When running with Tokio, use the appropriate blocking mechanism
+    if let Ok(runtime) = tokio::runtime::Handle::try_current() {
+        tokio::task::block_in_place(|| runtime.block_on(f))
+    } else {
+        // Fallback to tokio's block_on if we're not in a runtime
+        tokio::runtime::Runtime::new().unwrap().block_on(f)
+    }
+}
 
 /// This function busy waits on a future until it is ready. It uses a no-op waker to poll the future
 /// in a thread-blocking loop.
+#[cfg(not(feature = "std"))]
 pub fn block_on<T>(f: impl Future<Output = T>) -> T {
+    use alloc::boxed::Box;
+    use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
+
     let mut f = Box::pin(f);
 
     // Construct a no-op waker.

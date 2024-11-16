@@ -6,15 +6,12 @@ use crate::{
     errors::{ChannelError, ChannelResult},
     Channel,
 };
+use async_channel::{unbounded, Receiver, Sender};
 use async_trait::async_trait;
-use std::{io::Result, sync::Arc};
-use tokio::sync::{
-    mpsc::{channel, Receiver, Sender},
-    Mutex,
-};
+use std::io::Result;
 
 /// A bidirectional channel, allowing for synchronized communication between two parties.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BidirectionalChannel {
     /// The client handle of the channel.
     pub client: NativeChannel,
@@ -24,22 +21,22 @@ pub struct BidirectionalChannel {
 
 impl BidirectionalChannel {
     /// Creates a [BidirectionalChannel] instance.
-    pub fn new<const BUF: usize>() -> Result<Self> {
-        let (bw, ar) = channel(BUF);
-        let (aw, br) = channel(BUF);
+    pub fn new() -> Result<Self> {
+        let (bw, ar) = unbounded();
+        let (aw, br) = unbounded();
 
         Ok(Self {
-            client: NativeChannel { read: Arc::new(Mutex::new(ar)), write: aw },
-            host: NativeChannel { read: Arc::new(Mutex::new(br)), write: bw },
+            client: NativeChannel { read: ar, write: aw },
+            host: NativeChannel { read: br, write: bw },
         })
     }
 }
 
 /// A channel with a receiver and sender.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NativeChannel {
     /// The receiver of the channel.
-    pub(crate) read: Arc<Mutex<Receiver<Vec<u8>>>>,
+    pub(crate) read: Receiver<Vec<u8>>,
     /// The sender of the channel.
     pub(crate) write: Sender<Vec<u8>>,
 }
@@ -47,33 +44,20 @@ pub struct NativeChannel {
 #[async_trait]
 impl Channel for NativeChannel {
     async fn read(&self, buf: &mut [u8]) -> ChannelResult<usize> {
-        let data = self.read.lock().await.recv().await.ok_or(ChannelError::Closed)?;
+        let data = self.read.recv().await.map_err(|_| ChannelError::Closed)?;
         let len = data.len().min(buf.len());
         buf[..len].copy_from_slice(&data[..len]);
         Ok(len)
     }
 
     async fn read_exact(&self, buf: &mut [u8]) -> ChannelResult<usize> {
-        let mut read_lock = self.read.lock().await;
-
-        let mut read = 0;
-        while read < buf.len() {
-            let data = read_lock.recv().await.ok_or(ChannelError::Closed)?;
-            let len = data.len();
-
-            if len + read > buf.len() {
-                return Err(ChannelError::UnexpectedEOF);
-            }
-
-            buf[read..read + len].copy_from_slice(&data[..]);
-            read += len;
-        }
-
-        Ok(read)
+        let data = self.read.recv().await.map_err(|_| ChannelError::Closed)?;
+        buf[..].copy_from_slice(&data[..]);
+        Ok(buf.len())
     }
 
     async fn write(&self, buf: &[u8]) -> ChannelResult<usize> {
-        self.write.send(buf.to_vec()).await.unwrap();
+        self.write.send(buf.to_vec()).await.map_err(|_| ChannelError::Closed)?;
         Ok(buf.len())
     }
 }
