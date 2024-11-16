@@ -60,24 +60,6 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
-[patch.crates-io]
-op-alloy-genesis = { git = "https://github.com/alloy-rs/op-alloy", branch = "klkvr/fix-protected" }
-op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "klkvr/fix-protected" }
-op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "klkvr/fix-protected" }
-op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", branch = "klkvr/fix-protected" }
-
-alloy-eips = { git = "https://github.com/refcell/alloy", branch = "main" }
-alloy-serde = { git = "https://github.com/refcell/alloy", branch = "main" }
-alloy-provider = { git = "https://github.com/refcell/alloy", branch = "main"}
-alloy-consensus = { git = "https://github.com/refcell/alloy",  branch = "main"}
-alloy-transport = { git = "https://github.com/refcell/alloy", branch = "main"}
-alloy-rpc-types = { git = "https://github.com/refcell/alloy",  branch = "main"}
-alloy-rpc-client = { git = "https://github.com/refcell/alloy", branch = "main"}
-alloy-node-bindings = { git = "https://github.com/refcell/alloy",branch = "main"}
-alloy-transport-http = { git = "https://github.com/refcell/alloy", branch = "main"}
-alloy-rpc-types-engine = { git = "https://github.com/refcell/alloy", branch = "main"}
-alloy-rpc-types-beacon = { git = "https://github.com/refcell/alloy", branch = "main"}
-
 [workspace.dependencies]
 # Workspace
 kona-mpt = { path = "crates/mpt", version = "0.0.6", default-features = false }
@@ -96,7 +78,7 @@ alloy-trie = { version = "0.7.4", default-features = false }
 alloy-eips = { version = "0.6.4", default-features = false }
 alloy-serde = { version = "0.6.4", default-features = false }
 alloy-provider = { version = "0.6.4", default-features = false }
-alloy-primitives = { version = "0.8", default-features = false }
+alloy-primitives = { version = "0.8.12", default-features = false }
 alloy-consensus = { version = "0.6.4", default-features = false }
 alloy-transport = { version = "0.6.4", default-features = false }
 alloy-rpc-types = { version = "0.6.4", default-features = false }
@@ -107,10 +89,10 @@ alloy-rpc-types-engine = { version = "0.6.4", default-features = false }
 alloy-rpc-types-beacon = { version = "0.6.4", default-features = false }
 
 # OP Alloy
-op-alloy-genesis = { version = "0.6.5", default-features = false }
-op-alloy-protocol = { version = "0.6.5", default-features = false }
-op-alloy-consensus = { version = "0.6.5", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.6.5", default-features = false }
+op-alloy-genesis = { version = "0.6.6", default-features = false }
+op-alloy-protocol = { version = "0.6.6", default-features = false }
+op-alloy-consensus = { version = "0.6.6", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.6.6", default-features = false }
 
 # General
 lru = "0.12.4"
