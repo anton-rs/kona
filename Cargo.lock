@@ -2913,7 +2913,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 [[package]]
 name = "op-alloy-consensus"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#72a92542e6c766024b7e80347ffa7d566db22586"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2922,14 +2922,13 @@ dependencies = [
  "alloy-serde",
  "derive_more",
  "serde",
- "spin",
  "thiserror 2.0.3",
 ]
 
 [[package]]
 name = "op-alloy-genesis"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#72a92542e6c766024b7e80347ffa7d566db22586"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2943,7 +2942,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-protocol"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#72a92542e6c766024b7e80347ffa7d566db22586"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2965,7 +2964,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-rpc-types-engine"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#72a92542e6c766024b7e80347ffa7d566db22586"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -3052,28 +3051,29 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "3.6.12"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "306800abfa29c7f16596b5970a588435e3d5b3149683d00c12b699cc19f895ee"
+checksum = "8be4817d39f3272f69c59fe05d0535ae6456c2dc2fa1ba02910296c7e0a5c590"
 dependencies = [
  "arrayvec",
  "bitvec",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
+ "rustversion",
  "serde",
 ]
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "3.6.12"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d830939c76d294956402033aee57a6da7b438f2294eb94864c37b0569053a42c"
+checksum = "8781a75c6205af67215f382092b6e0a4ff3734798523e69073d4bcd294ec767b"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.87",
 ]
 
 [[package]]
