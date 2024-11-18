@@ -11,7 +11,6 @@ use alloy_consensus::{Transaction, TxEip4844Variant, TxEnvelope, TxType};
 use alloy_primitives::{Address, Bytes};
 use async_trait::async_trait;
 use op_alloy_protocol::BlockInfo;
-use tracing::warn;
 
 /// A data iterator that reads from a blob.
 #[derive(Debug, Clone)]

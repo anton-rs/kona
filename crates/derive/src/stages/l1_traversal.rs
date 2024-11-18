@@ -11,7 +11,6 @@ use alloy_primitives::Address;
 use async_trait::async_trait;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::BlockInfo;
-use tracing::warn;
 
 /// The [L1Traversal] stage of the derivation pipeline.
 ///

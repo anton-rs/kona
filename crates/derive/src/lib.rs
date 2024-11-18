@@ -9,6 +9,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+extern crate tracing;
+
 /// Required types and traits for kona's derivation pipeline.
 pub mod prelude {
     pub use crate::{

@@ -14,7 +14,6 @@ use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, L2BlockInfo, SingleBatch};
 use op_alloy_rpc_types_engine::{OpAttributesWithParent, OpPayloadAttributes};
-use tracing::info;
 
 /// [AttributesQueue] accepts batches from the [BatchQueue] stage
 /// and transforms them into [OpPayloadAttributes].

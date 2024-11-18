@@ -6,7 +6,6 @@ use alloy_primitives::{B256, U256};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use op_alloy_genesis::RollupConfig;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
