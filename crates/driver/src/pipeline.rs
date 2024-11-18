@@ -10,7 +10,6 @@ use kona_derive::{
     traits::{Pipeline, SignalReceiver},
     types::{ActivationSignal, ResetSignal, StepResult},
 };
-use tracing::{info, warn};
 
 /// The Driver's Pipeline
 ///
