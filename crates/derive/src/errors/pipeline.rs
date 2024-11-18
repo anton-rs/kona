@@ -3,7 +3,7 @@
 use crate::errors::BuilderError;
 use alloc::string::String;
 use alloy_primitives::B256;
-use op_alloy_genesis::system::SystemConfigUpdateError;
+use op_alloy_genesis::SystemConfigUpdateError;
 use op_alloy_protocol::{DepositError, SpanBatchError};
 use thiserror::Error;
 
