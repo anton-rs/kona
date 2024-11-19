@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1](https://github.com/anton-rs/kona/releases/tag/kona-proof-v0.0.1) - 2024-11-19
+
+### Added
+
+- *(workspace)* `kona-proof` ([#818](https://github.com/anton-rs/kona/pull/818))
+
 ## [0.0.4](https://github.com/anton-rs/kona/compare/kona-common-v0.0.3...kona-common-v0.0.4) - 2024-10-25
 
 ### Added

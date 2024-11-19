@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/anton-rs/kona/compare/kona-preimage-v0.0.4...kona-preimage-v0.0.5) - 2024-11-19
+
+### Added
+
+- *(preimage)* Decouple from `kona-common` ([#817](https://github.com/anton-rs/kona/pull/817))
+
+### Other
+
+- *(workspace)* Reorganize SDK ([#816](https://github.com/anton-rs/kona/pull/816))
+
 ## [0.0.4](https://github.com/anton-rs/kona/compare/kona-preimage-v0.0.3...kona-preimage-v0.0.4) - 2024-10-25
 
 ### Added

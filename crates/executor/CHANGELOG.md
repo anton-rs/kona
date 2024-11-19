@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.5...kona-executor-v0.0.6) - 2024-11-19
+
+### Added
+
+- *(mpt)* Extend `TrieProvider` in `kona-executor` ([#813](https://github.com/anton-rs/kona/pull/813))
+
+### Other
+
+- *(workspace)* Migrate back to `thiserror` v2 ([#811](https://github.com/anton-rs/kona/pull/811))
+
 ## [0.0.5](https://github.com/anton-rs/kona/compare/kona-executor-v0.0.4...kona-executor-v0.0.5) - 2024-11-06
 
 ### Added
