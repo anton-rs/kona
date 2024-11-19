@@ -13,7 +13,6 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch, SpanBatch,
 };
-use tracing::{error, trace};
 
 /// Provides [Batch]es for the [BatchStream] stage.
 #[async_trait]

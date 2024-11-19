@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{Batch, BatchValidity, BlockInfo, L2BlockInfo, SingleBatch};
-use tracing::{debug, error, info, warn};
 
 /// The [BatchValidator] stage is responsible for validating the [SingleBatch]es from
 /// the [BatchStream] [AttributesQueue]'s consumption.

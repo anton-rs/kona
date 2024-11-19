@@ -9,6 +9,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+extern crate tracing;
+
 mod errors;
 pub use errors::{ExecutorError, ExecutorResult, TrieDBError, TrieDBResult};
 

@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Frame};
-use tracing::{debug, error, trace};
 
 /// Provides data frames for the [FrameQueue] stage.
 #[async_trait]

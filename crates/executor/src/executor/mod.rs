@@ -20,7 +20,6 @@ use revm::{
     primitives::{calc_excess_blob_gas, EnvWithHandlerCfg},
     Evm,
 };
-use tracing::{debug, info};
 
 mod builder;
 pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};

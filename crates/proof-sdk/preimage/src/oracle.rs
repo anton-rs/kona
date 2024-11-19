@@ -4,7 +4,6 @@ use crate::{
     PreimageKey, PreimageOracleClient, PreimageOracleServer,
 };
 use alloc::{boxed::Box, vec::Vec};
-use tracing::trace;
 
 /// An [OracleReader] is a high-level interface to the preimage oracle channel.
 #[derive(Debug, Clone, Copy)]

@@ -16,7 +16,6 @@ use op_alloy_genesis::{
     RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
 };
 use op_alloy_protocol::{Batch, BlockInfo};
-use tracing::{debug, error, warn};
 
 /// ZLIB Deflate Compression Method.
 pub(crate) const ZLIB_DEFLATE_COMPRESSION_METHOD: u8 = 8;

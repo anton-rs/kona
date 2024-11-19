@@ -14,7 +14,6 @@ use op_alloy_genesis::{
     RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
 };
 use op_alloy_protocol::{BlockInfo, Channel};
-use tracing::{debug, error, info, warn};
 
 /// The [ChannelAssembler] stage is responsible for assembling the [Frame]s from the [FrameQueue]
 /// stage into a raw compressed [Channel].

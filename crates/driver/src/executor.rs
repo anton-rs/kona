@@ -1,13 +1,14 @@
 //! An abstraction for the driver's block executor.
 
-use alloc::string::ToString;
-use alloy_consensus::{Header, Sealed};
-use alloy_primitives::B256;
-use async_trait::async_trait;
 use core::{
     error::Error,
     fmt::{Debug, Display},
 };
+
+use alloc::string::ToString;
+use alloy_consensus::{Header, Sealed};
+use alloy_primitives::B256;
+use async_trait::async_trait;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// Executor
