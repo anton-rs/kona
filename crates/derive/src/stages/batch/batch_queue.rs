@@ -461,9 +461,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        stages::channel::channel_reader::BatchReader,
-        test_utils::{CollectingLayer, TestL2ChainProvider, TestNextBatchProvider, TraceStorage},
+    use crate::test_utils::{
+        CollectingLayer, TestL2ChainProvider, TestNextBatchProvider, TraceStorage,
     };
     use alloc::vec;
     use alloy_consensus::Header;
@@ -472,7 +471,7 @@ mod tests {
     use alloy_rlp::{BytesMut, Encodable};
     use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
     use op_alloy_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
-    use op_alloy_protocol::{L1BlockInfoBedrock, L1BlockInfoTx};
+    use op_alloy_protocol::{BatchReader, L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
 
