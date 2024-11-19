@@ -95,10 +95,11 @@ alloy-rpc-types-engine = { version = "0.6.4", default-features = false }
 alloy-rpc-types-beacon = { version = "0.6.4", default-features = false }
 
 # OP Alloy
-op-alloy-genesis = { version = "0.6.6", default-features = false }
-op-alloy-protocol = { version = "0.6.6", default-features = false }
-op-alloy-consensus = { version = "0.6.6", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.6.6", default-features = false }
+op-alloy-genesis = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/chore/rm-hardcoded-configs", default-features = false }
+op-alloy-protocol = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/chore/rm-hardcoded-configs", default-features = false }
+op-alloy-registry = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/chore/rm-hardcoded-configs", default-features = false }
+op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/chore/rm-hardcoded-configs", default-features = false }
+op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", branch = "rf/chore/rm-hardcoded-configs", default-features = false }
 
 # General
 lru = "0.12.4"

@@ -952,9 +952,9 @@ dependencies = [
 
 [[package]]
 name = "bytemuck"
-version = "1.19.0"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8334215b81e418a0a7bdb8ef0849474f40bb10c8b71f1c4ed315cff49f32494d"
+checksum = "8b37c88a63ffd85d15b406896cc343916d7cf57838a847b3a6f2ca5d39a5695a"
 
 [[package]]
 name = "byteorder"
@@ -1895,9 +1895,9 @@ checksum = "7d71d3574edd2771538b901e6549113b4006ece66150fb69c0fb6d9a2adae946"
 
 [[package]]
 name = "hyper"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbbff0a806a4728c99295b254c8838933b5b082d75e3cb70c8dab21fdfbcfa9a"
+checksum = "97818827ef4f364230e16705d4706e2897df2bb60617d6ca15d598025a3c481f"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2370,6 +2370,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "proptest",
  "serde",
@@ -2515,6 +2516,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "serde",
  "serde_json",
@@ -2913,7 +2915,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 [[package]]
 name = "op-alloy-consensus"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/chore/rm-hardcoded-configs#1096e66ae909e1205fdb536fcfbb745de3647335"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2928,7 +2930,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-genesis"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/chore/rm-hardcoded-configs#1096e66ae909e1205fdb536fcfbb745de3647335"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2942,7 +2944,7 @@ dependencies = [
 [[package]]
 name = "op-alloy-protocol"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/chore/rm-hardcoded-configs#1096e66ae909e1205fdb536fcfbb745de3647335"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2962,9 +2964,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "op-alloy-registry"
+version = "0.6.6"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/chore/rm-hardcoded-configs#1096e66ae909e1205fdb536fcfbb745de3647335"
+dependencies = [
+ "alloy-primitives",
+ "lazy_static",
+ "op-alloy-genesis",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "op-alloy-rpc-types-engine"
 version = "0.6.6"
-source = "git+https://github.com/alloy-rs/op-alloy?branch=main#cbac051d27b01fb85d1d628428a9ca8f9e9d9ad0"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=rf/chore/rm-hardcoded-configs#1096e66ae909e1205fdb536fcfbb745de3647335"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -5194,3 +5208,23 @@ dependencies = [
  "quote",
  "syn 2.0.87",
 ]
+
+[[patch.unused]]
+name = "op-alloy-consensus"
+version = "0.6.6"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#653c7357049df8049d3216311a254fe1ed87a685"
+
+[[patch.unused]]
+name = "op-alloy-genesis"
+version = "0.6.6"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#653c7357049df8049d3216311a254fe1ed87a685"
+
+[[patch.unused]]
+name = "op-alloy-protocol"
+version = "0.6.6"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#653c7357049df8049d3216311a254fe1ed87a685"
+
+[[patch.unused]]
+name = "op-alloy-rpc-types-engine"
+version = "0.6.6"
+source = "git+https://github.com/alloy-rs/op-alloy?branch=main#653c7357049df8049d3216311a254fe1ed87a685"

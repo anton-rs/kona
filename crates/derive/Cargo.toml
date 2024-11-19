@@ -43,6 +43,7 @@ tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 [dev-dependencies]
 spin.workspace = true
 proptest.workspace = true
+op-alloy-registry.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
