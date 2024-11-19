@@ -145,7 +145,7 @@ pub(crate) mod tests {
     use alloc::vec;
     use alloy_consensus::Receipt;
     use alloy_primitives::{address, b256, hex, Bytes, Log, LogData, B256};
-    use op_alloy_genesis::system::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
+    use op_alloy_genesis::{CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC};
 
     const L1_SYS_CONFIG_ADDR: Address = address!("1337000000000000000000000000000000000000");
 
