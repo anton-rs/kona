@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{BlockInfo, Channel, ChannelId, Frame};
-use tracing::{trace, warn};
 
 /// The maximum size of a channel bank.
 pub(crate) const MAX_CHANNEL_BANK_SIZE: usize = 100_000_000;
@@ -249,7 +248,6 @@ mod tests {
         types::ResetSignal,
     };
     use alloc::{vec, vec::Vec};
-    use op_alloy_genesis::{BASE_MAINNET_CONFIG, OP_MAINNET_CONFIG};
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
 
@@ -509,9 +507,12 @@ mod tests {
         let subscriber = tracing_subscriber::Registry::default().with(layer);
         let _guard = tracing::subscriber::set_default(subscriber);
 
-        const ROLLUP_CONFIGS: [RollupConfig; 2] = [OP_MAINNET_CONFIG, BASE_MAINNET_CONFIG];
+        let configs: [RollupConfig; 2] = [
+            op_alloy_registry::ROLLUP_CONFIGS.get(&10).cloned().unwrap(),
+            op_alloy_registry::ROLLUP_CONFIGS.get(&8453).cloned().unwrap(),
+        ];
 
-        for cfg in ROLLUP_CONFIGS {
+        for cfg in configs {
             let frames = [
                 crate::frame!(0xFF, 0, vec![0xDD; 50], false),
                 crate::frame!(0xFF, 1, vec![0xDD; 50], true),

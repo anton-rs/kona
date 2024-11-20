@@ -13,7 +13,6 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch,
 };
-use tracing::{error, info, warn};
 
 /// [BatchQueue] is responsible for o rdering unordered batches
 /// and gnerating empty batches when the sequence window has passed.

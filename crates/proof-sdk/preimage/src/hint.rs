@@ -5,7 +5,6 @@ use crate::{
 };
 use alloc::{boxed::Box, format, string::String, vec};
 use async_trait::async_trait;
-use tracing::{error, trace};
 
 /// A [HintWriter] is a high-level interface to the hint channel. It provides a way to write hints
 /// to the host.

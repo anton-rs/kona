@@ -10,7 +10,6 @@ use kona_derive::{
     traits::{Pipeline, SignalReceiver},
     types::{ActivationSignal, ResetSignal, StepResult},
 };
-use tracing::{info, warn};
 
 /// The Driver's Pipeline
 ///
@@ -21,7 +20,7 @@ where
     P: Pipeline + SignalReceiver,
 {
     /// Flushes any cache on re-org.
-    fn flush(&self);
+    fn flush(&mut self);
 
     /// Produces the disputed [OpAttributesWithParent] payload, directly after the given
     /// starting l2 safe head.

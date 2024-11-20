@@ -12,7 +12,7 @@ use alloy_primitives::{address, Address, Bytes, B256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
-use op_alloy_consensus::Hardforks;
+use op_alloy_consensus::{Hardfork, Hardforks};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -132,12 +132,12 @@ where
         if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
             !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
         {
-            upgrade_transactions = Hardforks::ecotone_txs();
+            upgrade_transactions = Hardforks::ECOTONE.txs().collect();
         }
         if self.rollup_cfg.is_fjord_active(next_l2_time) &&
             !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
         {
-            upgrade_transactions.append(&mut Hardforks::fjord_txs());
+            upgrade_transactions.append(&mut Hardforks::FJORD.txs().collect());
         }
 
         // Build and encode the L1 info transaction for the current payload.

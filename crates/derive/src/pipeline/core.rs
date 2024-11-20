@@ -13,7 +13,6 @@ use core::fmt::Debug;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
-use tracing::{error, trace, warn};
 
 /// The derivation pipeline is responsible for deriving L2 inputs from L1 data.
 #[derive(Debug)]

@@ -1,10 +1,11 @@
 //! Contains the cursor for the derivation pipeline.
 
-use crate::TipCursor;
 use alloc::collections::{btree_map::BTreeMap, vec_deque::VecDeque};
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::{map::HashMap, B256};
 use op_alloy_protocol::{BlockInfo, L2BlockInfo};
+
+use crate::TipCursor;
 
 /// A cursor that tracks the pipeline tip.
 #[derive(Debug, Clone)]

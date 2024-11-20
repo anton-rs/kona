@@ -12,7 +12,6 @@ use revm::{
     primitives::{AccountInfo, Bytecode, HashMap, BLOCK_HASH_HISTORY},
     Database,
 };
-use tracing::debug;
 
 mod account;
 pub use account::TrieAccount;
