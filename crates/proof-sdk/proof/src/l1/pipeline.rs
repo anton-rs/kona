@@ -104,7 +104,7 @@ where
     B: BlobProvider + Send + Sync + Debug + Clone,
 {
     /// Flushes the cache on re-org.
-    fn flush(&self) {
+    fn flush(&mut self) {
         self.caching_oracle.flush();
     }
 }
