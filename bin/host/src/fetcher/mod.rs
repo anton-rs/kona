@@ -8,12 +8,12 @@ use crate::{
 };
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
-use alloy_primitives::{address, keccak256, Address, Bytes, B256, map::HashMap};
+use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
-    Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
-    debug::ExecutionWitness
+    debug::ExecutionWitness, Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind,
+    Transaction,
 };
 use anyhow::{anyhow, Result};
 use kona_derive::sources::IndexedBlobHash;
@@ -518,7 +518,10 @@ where
                 let execute_payload_response: ExecutionWitness = self
                     .l2_provider
                     .client()
-                    .request::<(B256, Vec<u8>), ExecutionWitness>("debug_executePayload", (parent_block_hash, payload_attributes))
+                    .request::<(B256, Vec<u8>), ExecutionWitness>(
+                        "debug_executePayload",
+                        (parent_block_hash, payload_attributes),
+                    )
                     .await
                     .map_err(|e| anyhow!("Failed to fetch preimage: {e}"))?;
 
