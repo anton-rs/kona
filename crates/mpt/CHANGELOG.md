@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.6...kona-mpt-v0.0.7) - 2024-11-20
+
+### Added
+
+- *(mpt)* Extend `TrieProvider` in `kona-executor` ([#813](https://github.com/anton-rs/kona/pull/813))
+
+### Fixed
+
+- *(mpt)* Remove unnused collapse ([#808](https://github.com/anton-rs/kona/pull/808))
+
+### Other
+
+- v0.6.6 op-alloy ([#804](https://github.com/anton-rs/kona/pull/804))
+- *(workspace)* Migrate back to `thiserror` v2 ([#811](https://github.com/anton-rs/kona/pull/811))
+- Revert "chore: bump alloy deps ([#788](https://github.com/anton-rs/kona/pull/788))" ([#791](https://github.com/anton-rs/kona/pull/791))
+
 ## [0.0.6](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.5...kona-mpt-v0.0.6) - 2024-11-06
 
 ### Added

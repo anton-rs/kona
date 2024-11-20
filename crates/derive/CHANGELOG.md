@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.6...kona-derive-v0.0.7) - 2024-11-20
+
+### Added
+
+- *(driver)* Abstract, Default Pipeline ([#796](https://github.com/anton-rs/kona/pull/796))
+
+### Other
+
+- *(derive)* remove batch reader ([#826](https://github.com/anton-rs/kona/pull/826))
+- op-alloy 0.6.8 ([#830](https://github.com/anton-rs/kona/pull/830))
+- *(driver)* use tracing macros ([#823](https://github.com/anton-rs/kona/pull/823))
+- *(deps)* op-alloy 0.6.7 ([#824](https://github.com/anton-rs/kona/pull/824))
+- v0.6.6 op-alloy ([#804](https://github.com/anton-rs/kona/pull/804))
+- *(workspace)* Migrate back to `thiserror` v2 ([#811](https://github.com/anton-rs/kona/pull/811))
+- *(derive)* Re-export types ([#790](https://github.com/anton-rs/kona/pull/790))
+- Revert "chore: bump alloy deps ([#788](https://github.com/anton-rs/kona/pull/788))" ([#791](https://github.com/anton-rs/kona/pull/791))
+
 ## [0.0.6](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.5...kona-derive-v0.0.6) - 2024-11-06
 
 ### Added

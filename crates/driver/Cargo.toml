@@ -1,7 +1,7 @@
 [package]
 name = "kona-driver"
 description = "A no_std derivation pipeline driver"
-version = "0.0.0"
+version = "0.0.1"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
