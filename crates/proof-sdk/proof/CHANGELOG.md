@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- fixes ([#827](https://github.com/anton-rs/kona/pull/827))
+- imports ([#829](https://github.com/anton-rs/kona/pull/829))
+
+### Other
+
+- op-alloy 0.6.8 ([#830](https://github.com/anton-rs/kona/pull/830))
+- *(driver)* use tracing macros ([#823](https://github.com/anton-rs/kona/pull/823))
+
+## [0.0.1](https://github.com/anton-rs/kona/releases/tag/kona-proof-v0.0.1) - 2024-11-20
+
+### Added
+
+- *(workspace)* `kona-proof` ([#818](https://github.com/anton-rs/kona/pull/818))
+
+### Fixed
+
 - imports ([#829](https://github.com/anton-rs/kona/pull/829))
 
 ### Other
