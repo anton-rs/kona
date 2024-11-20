@@ -2246,9 +2246,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "1.0.12"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a73e9fe3c49d7afb2ace819fa181a287ce54a0983eda4e0eb05c22f82ffe534"
+checksum = "540654e97a3f4470a492cd30ff187bc95d89557a903a2bbf112e2fae98104ef2"
 
 [[package]]
 name = "jobserver"
@@ -2335,7 +2335,7 @@ dependencies = [
 
 [[package]]
 name = "kona-common"
-version = "0.0.5"
+version = "0.1.0"
 dependencies = [
  "cfg-if",
  "linked_list_allocator",
@@ -2344,7 +2344,7 @@ dependencies = [
 
 [[package]]
 name = "kona-common-proc"
-version = "0.0.6"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -2356,7 +2356,7 @@ dependencies = [
 
 [[package]]
 name = "kona-derive"
-version = "0.0.7"
+version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2381,7 +2381,7 @@ dependencies = [
 
 [[package]]
 name = "kona-driver"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -2398,7 +2398,7 @@ dependencies = [
 
 [[package]]
 name = "kona-executor"
-version = "0.0.6"
+version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2461,7 +2461,7 @@ dependencies = [
 
 [[package]]
 name = "kona-mpt"
-version = "0.0.7"
+version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -2484,7 +2484,7 @@ dependencies = [
 
 [[package]]
 name = "kona-preimage"
-version = "0.0.5"
+version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "async-trait",
@@ -2497,7 +2497,7 @@ dependencies = [
 
 [[package]]
 name = "kona-proof"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -3539,7 +3539,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sync_wrapper 1.0.1",
+ "sync_wrapper 1.0.2",
  "system-configuration",
  "tokio",
  "tokio-native-tls",
@@ -4316,9 +4316,9 @@ checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
 
 [[package]]
 name = "sync_wrapper"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
+checksum = "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263"
 dependencies = [
  "futures-core",
 ]
