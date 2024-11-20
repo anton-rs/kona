@@ -2370,6 +2370,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "proptest",
  "serde",
@@ -2515,6 +2516,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "serde",
  "serde_json",
@@ -2962,6 +2964,19 @@ dependencies = [
  "thiserror 2.0.3",
  "tracing",
  "unsigned-varint",
+]
+
+[[package]]
+name = "op-alloy-registry"
+version = "0.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "589e7906a7c8d71f06b130ee1d8a0a07b0b2cd0e0771157a770e6c20a34da953"
+dependencies = [
+ "alloy-primitives",
+ "lazy_static",
+ "op-alloy-genesis",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

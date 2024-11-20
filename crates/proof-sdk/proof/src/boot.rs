@@ -5,6 +5,7 @@ use crate::errors::OracleProviderError;
 use alloy_primitives::{B256, U256};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use op_alloy_genesis::RollupConfig;
+use op_alloy_registry::ROLLUP_CONFIGS;
 use serde::{Deserialize, Serialize};
 
 /// The local key ident for the L1 head hash.
@@ -104,8 +105,8 @@ impl BootInfo {
 
         // Attempt to load the rollup config from the chain ID. If there is no config for the chain,
         // fall back to loading the config from the preimage oracle.
-        let rollup_config = if let Some(config) = RollupConfig::from_l2_chain_id(chain_id) {
-            config
+        let rollup_config = if let Some(config) = ROLLUP_CONFIGS.get(&chain_id) {
+            config.clone()
         } else {
             warn!(
                 target: "boot-loader",
