@@ -81,7 +81,7 @@ alloy-provider = { version = "0.6.4", default-features = false }
 alloy-primitives = { version = "0.8.12", default-features = false }
 alloy-consensus = { version = "0.6.4", default-features = false }
 alloy-transport = { version = "0.6.4", default-features = false }
-alloy-rpc-types = { version = "0.6.4", default-features = false }
+alloy-rpc-types = { version = "0.6.4", default-features = false, features = ["debug"] }
 alloy-rpc-client = { version = "0.6.4", default-features = false }
 alloy-node-bindings = { version = "0.6.4", default-features = false }
 alloy-transport-http = { version = "0.6.4", default-features = false }
