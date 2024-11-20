@@ -44,6 +44,7 @@ tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 spin.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
+op-alloy-registry.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
