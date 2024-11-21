@@ -93,7 +93,7 @@ where
         .with_parent_header(header);
 
         if let Some(register) = self.handle_register {
-            builder = builder.with_handle_register(register.clone());
+            builder = builder.with_handle_register(register);
         }
 
         KonaExecutor::new(builder.build())

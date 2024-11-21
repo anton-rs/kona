@@ -2,6 +2,7 @@
 //! for reading and writing from the file descriptors.
 
 use crate::{io, FileDescriptor};
+use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{
     cell::RefCell,
@@ -14,7 +15,6 @@ use kona_preimage::{
     errors::{ChannelError, ChannelResult},
     Channel,
 };
-use alloc::boxed::Box;
 
 /// [FileChannel] is a handle for one end of a bidirectional channel.
 #[derive(Debug, Clone, Copy)]

@@ -1,6 +1,5 @@
-//! Native implementation of the [Channel] trait, backed by [tokio]'s [mpsc] channel primitives.
-//!
-//! [mpsc]: tokio::sync::mpsc
+//! Native implementation of the [Channel] trait, backed by [async_channel]'s unbounded
+//! channel primitives.
 
 use crate::{
     errors::{ChannelError, ChannelResult},

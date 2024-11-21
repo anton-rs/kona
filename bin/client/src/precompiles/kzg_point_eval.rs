@@ -25,6 +25,7 @@ where
     C: CommsClient,
 {
     /// Creates a new [KZGPointEvalAccelerated] instance.
+    #[allow(unused)]
     fn new(comms_client: Arc<C>) -> Self {
         Self { comms_client }
     }

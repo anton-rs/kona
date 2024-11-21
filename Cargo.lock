@@ -2447,7 +2447,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
- "futures",
  "kona-client",
  "kona-derive",
  "kona-mpt",
