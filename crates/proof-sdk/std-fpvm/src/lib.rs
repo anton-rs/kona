@@ -13,6 +13,9 @@ pub mod errors;
 
 pub mod io;
 
+#[cfg(feature = "tracing")]
+pub mod tracing;
+
 pub mod malloc;
 
 mod traits;

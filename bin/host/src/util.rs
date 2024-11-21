@@ -7,7 +7,6 @@ use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use kona_proof::HintType;
 use reqwest::Client;
-use tokio::task::JoinHandle;
 
 /// Parses a hint from a string.
 ///
@@ -32,18 +31,4 @@ pub(crate) fn http_provider(url: &str) -> ReqwestProvider {
     let url = url.parse().unwrap();
     let http = Http::<Client>::new(url);
     ReqwestProvider::new(RpcClient::new(http, true))
-}
-
-/// Flattens the result of a [JoinHandle] into a single result.
-pub(crate) async fn flatten_join_result<T, E>(
-    handle: JoinHandle<Result<T, E>>,
-) -> Result<T, anyhow::Error>
-where
-    E: std::fmt::Display,
-{
-    match handle.await {
-        Ok(Ok(result)) => Ok(result),
-        Ok(Err(err)) => Err(anyhow!("{}", err)),
-        Err(err) => anyhow::bail!(err),
-    }
 }

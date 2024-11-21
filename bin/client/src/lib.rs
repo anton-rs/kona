@@ -44,13 +44,14 @@ pub enum FaultProofProgramError {
 }
 
 /// Executes the fault proof program with the given [PreimageOracleClient] and [HintWriterClient].
-pub async fn run<POC, HWC>(
-    oracle_client: POC,
-    hint_client: HWC,
+#[inline]
+pub async fn run<P, H>(
+    oracle_client: P,
+    hint_client: H,
 ) -> Result<(), FaultProofProgramError>
 where
-    POC: PreimageOracleClient + Send + Sync + Debug + Clone,
-    HWC: HintWriterClient + Send + Sync + Debug + Clone,
+    P: PreimageOracleClient + Send + Sync + Debug + Clone,
+    H: HintWriterClient + Send + Sync + Debug + Clone,
 {
     const ORACLE_LRU_SIZE: usize = 1024;
 
@@ -102,7 +103,6 @@ where
     ////////////////////////////////////////////////////////////////
 
     // Create a new derivation driver with the given boot information and oracle.
-
     let cursor = new_pipeline_cursor(
         oracle.clone(),
         &boot,
