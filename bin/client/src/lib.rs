@@ -58,8 +58,7 @@ where
     //                          PROLOGUE                          //
     ////////////////////////////////////////////////////////////////
 
-    let oracle =
-        Arc::new(CachingOracle::new(ORACLE_LRU_SIZE, oracle_client, hint_client));
+    let oracle = Arc::new(CachingOracle::new(ORACLE_LRU_SIZE, oracle_client, hint_client));
     let boot = match BootInfo::load(oracle.as_ref()).await {
         Ok(boot) => Arc::new(boot),
         Err(e) => {

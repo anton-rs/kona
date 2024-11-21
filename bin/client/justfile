@@ -118,8 +118,6 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
   # Move to the workspace root
   cd $(git rev-parse --show-toplevel)
 
-  echo "Building client program..."
-  cargo build --bin kona --profile release-client-lto --features tracing-subscriber
   echo "Running host program with native client program..."
   cargo r --bin kona-host --release -- \
     --l1-head $L1_HEAD \
@@ -128,7 +126,7 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
     --agreed-l2-output-root $AGREED_L2_OUTPUT_ROOT \
     --claimed-l2-block-number $CLAIMED_L2_BLOCK_NUMBER \
     --l2-chain-id $L2_CHAIN_ID \
-    --exec $CLIENT_BIN_PATH \
+    --native \
     --data-dir ./data \
     {{verbosity}}
 

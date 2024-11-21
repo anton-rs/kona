@@ -30,8 +30,8 @@ const ABOUT: &str = "
 kona-host is a CLI application that runs the Kona pre-image server and client program. The host
 can run in two modes: server mode and native mode. In server mode, the host runs the pre-image
 server and waits for the client program in the parent process to request pre-images. In native
-mode, the host runs the client program in a child process with the pre-image server in the primary
-thread.
+mode, the host runs the client program in a separate thread with the pre-image server in the
+primary thread.
 ";
 
 /// The host binary CLI application arguments.
@@ -231,11 +231,7 @@ mod test {
             (["--server", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
             (["--server", "--rollup-config-path", "dummy", "--data-dir", "dummy"].as_slice(), true),
             (["--native", "--l2-chain-id", "0", "--data-dir", "dummy"].as_slice(), true),
-            (
-                ["--native", "--rollup-config-path", "dummy", "--data-dir", "dummy"]
-                    .as_slice(),
-                true,
-            ),
+            (["--native", "--rollup-config-path", "dummy", "--data-dir", "dummy"].as_slice(), true),
             (
                 [
                     "--l1-node-address",

@@ -130,7 +130,7 @@ where
         }
 
         if let Some(fetcher) = fetcher.as_ref() {
-            do_loop(&OnlineHintRouter::new(Arc::clone(&fetcher)), &hint_reader).await
+            do_loop(&OnlineHintRouter::new(Arc::clone(fetcher)), &hint_reader).await
         } else {
             do_loop(&OfflineHintRouter, &hint_reader).await
         }
