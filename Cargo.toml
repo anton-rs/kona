@@ -66,6 +66,7 @@ kona-mpt = { path = "crates/mpt", version = "0.1.0", default-features = false }
 kona-derive = { path = "crates/derive", version = "0.1.0", default-features = false }
 kona-driver = { path = "crates/driver", version = "0.1.0", default-features = false }
 kona-executor = { path = "crates/executor", version = "0.1.0", default-features = false }
+kona-client = { path = "bin/client", version = "0.1.0", default-features = false }
 kona-std-fpvm = { path = "crates/proof-sdk/std-fpvm", version = "0.1.0", default-features = false }
 kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.0", default-features = false }
 kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.1.0", default-features = false }
