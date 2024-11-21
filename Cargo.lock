@@ -2502,7 +2502,7 @@ dependencies = [
 
 [[package]]
 name = "kona-std-fpvm"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -2513,7 +2513,7 @@ dependencies = [
 
 [[package]]
 name = "kona-std-fpvm-proc"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "cfg-if",
