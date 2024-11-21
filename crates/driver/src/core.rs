@@ -34,11 +34,11 @@ where
     /// Marker for the pipeline.
     _marker2: core::marker::PhantomData<P>,
     /// A pipeline abstraction.
-    pipeline: DP,
+    pub pipeline: DP,
     /// Cursor to keep track of the L2 tip
-    cursor: PipelineCursor,
+    pub cursor: PipelineCursor,
     /// Executor constructor.
-    executor: EC,
+    pub executor: EC,
 }
 
 impl<E, EC, DP, P> Driver<E, EC, DP, P>
