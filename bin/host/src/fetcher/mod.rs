@@ -514,7 +514,8 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
                 let parent_block_hash = B256::from_slice(&hint_data.as_ref()[..32]);
-                let payload_attributes: OpPayloadAttributes = serde_json::from_slice(&hint_data[32..])?;
+                let payload_attributes: OpPayloadAttributes =
+                    serde_json::from_slice(&hint_data[32..])?;
 
                 let execute_payload_response: ExecutionWitness = self
                     .l2_provider

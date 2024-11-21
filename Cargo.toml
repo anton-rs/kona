@@ -93,7 +93,7 @@ op-alloy-genesis = { version = "0.6.8", default-features = false }
 op-alloy-registry = { version = "0.6.8", default-features = false }
 op-alloy-protocol = { version = "0.6.8", default-features = false }
 op-alloy-consensus = { version = "0.6.8", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.6.8", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.6.8", default-features = false, features = ["serde"] }
 
 # General
 lru = "0.12.4"
