@@ -33,9 +33,8 @@ action-tests test_name='Test_ProgramAction' *args='':
     (cd monorepo && make devnet-allocs)
   fi
 
-  echo "Building client and host programs for the native target"
-  just build-native --bin kona --profile release-client-lto --features tracing-subscriber && \
-    just build-native --bin kona-host --release
+  echo "Building host program for the native target"
+  just build-native --bin kona-host --release
 
   echo "Running action tests for the client program on the native target"
   export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"

@@ -92,7 +92,7 @@ pub struct HostCli {
         env
     )]
     pub data_dir: Option<PathBuf>,
-    /// Run the specified client program natively.
+    /// Run the client program natively.
     #[clap(long, conflicts_with = "server", required_unless_present = "server")]
     pub native: bool,
     /// Run in pre-image server mode without executing any client program. If not provided, the

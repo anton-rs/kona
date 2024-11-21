@@ -12,7 +12,7 @@ pub mod providers;
 pub mod server;
 pub mod util;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use fetcher::Fetcher;
 use kona_preimage::{
     BidirectionalChannel, HintReader, HintWriter, NativeChannel, OracleReader, OracleServer,
@@ -22,17 +22,17 @@ use kv::KeyValueStore;
 use server::PreimageServer;
 use std::sync::Arc;
 use tokio::{sync::RwLock, task};
-use tracing::{debug, error, info};
+use tracing::info;
 
 /// Starts the [PreimageServer] in the primary thread. In this mode, the host program has been
 /// invoked by the Fault Proof VM and the client program is running in the parent process.
 pub async fn start_server(cfg: HostCli) -> Result<()> {
-    let (preimage_pipe, hint_pipe) = (
+    let (preimage_chan, hint_chan) = (
         FileChannel::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
         FileChannel::new(FileDescriptor::HintRead, FileDescriptor::HintWrite),
     );
-    let oracle_server = OracleServer::new(preimage_pipe);
-    let hint_reader = HintReader::new(hint_pipe);
+    let oracle_server = OracleServer::new(preimage_chan);
+    let hint_reader = HintReader::new(hint_chan);
     let kv_store = cfg.construct_kv_store();
     let fetcher = if !cfg.is_offline() {
         let (l1_provider, blob_provider, l2_provider) = cfg.create_providers().await?;
@@ -49,8 +49,7 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
 
     // Start the server and wait for it to complete.
     info!("Starting preimage server.");
-    let server = PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher);
-    server.start().await?;
+    PreimageServer::new(oracle_server, hint_reader, kv_store, fetcher).start().await?;
     info!("Preimage server has exited.");
 
     Ok(())
@@ -67,10 +66,8 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
 /// - `Err(_)` if the client program failed to execute, was killed by a signal, or the host program
 ///   exited first.
 pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
-    let BidirectionalChannel { host: preimage_host, client: preimage_client } =
-        BidirectionalChannel::new()?;
-    let BidirectionalChannel { host: hint_host, client: hint_client } =
-        BidirectionalChannel::new()?;
+    let hint_chan = BidirectionalChannel::new()?;
+    let preimage_chan = BidirectionalChannel::new()?;
     let kv_store = cfg.construct_kv_store();
     let fetcher = if !cfg.is_offline() {
         let (l1_provider, blob_provider, l2_provider) = cfg.create_providers().await?;
@@ -86,29 +83,22 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
     };
 
     // Create the server and start it.
-    let server_task =
-        task::spawn(start_native_preimage_server(kv_store, fetcher, hint_host, preimage_host));
+    let server_task = task::spawn(start_native_preimage_server(
+        kv_store,
+        fetcher,
+        hint_chan.host,
+        preimage_chan.host,
+    ));
 
     // Start the client program in a separate child process.
     let program_task = task::spawn(kona_client::run(
-        OracleReader::new(preimage_client),
-        HintWriter::new(hint_client),
+        OracleReader::new(preimage_chan.client),
+        HintWriter::new(hint_chan.client),
     ));
 
     // Execute both tasks and wait for them to complete.
     info!("Starting preimage server and client program.");
-    let client_result;
-    tokio::select!(
-        r = util::flatten_join_result(server_task) => {
-            r?;
-            error!(target: "kona_host", "Preimage server exited before client program.");
-            bail!("Host program exited before client program.");
-        },
-        r = util::flatten_join_result(program_task) => {
-            client_result = r;
-            debug!(target: "kona_host", "Client program has exited with result: {client_result:?}.");
-        }
-    );
+    let (_, client_result) = tokio::try_join!(server_task, program_task,)?;
     info!(target: "kona_host", "Preimage server and client program have joined.");
 
     Ok(client_result.is_err() as i32)

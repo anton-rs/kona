@@ -45,11 +45,9 @@ serde_json.workspace = true
 async-trait.workspace = true
 thiserror.workspace = true
 
-# `tracing-subscriber` feature dependencies
-tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
-
 [features]
-tracing-subscriber = ["dep:tracing-subscriber"]
+default = ["client-tracing"]
+client-tracing = ["kona-std-fpvm/tracing"]
 
 [[bin]]
 name = "kona"

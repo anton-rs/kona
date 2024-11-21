@@ -28,5 +28,14 @@ static HINT_WRITER: HintWriter<FileChannel> = HintWriter::new(HINT_WRITER_PIPE);
 
 #[client_entry(100_000_000)]
 fn main() -> Result<(), String> {
-    kona_proof::block_on(async move { kona_client::run(ORACLE_READER, HINT_WRITER).await })
+    #[cfg(feature = "client-tracing")]
+    {
+        use kona_std_fpvm::tracing::FpvmTracingSubscriber;
+
+        let subscriber = FpvmTracingSubscriber::new(tracing::Level::INFO);
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Failed to set tracing subscriber");
+    }
+
+    kona_proof::block_on(kona_client::run(ORACLE_READER, HINT_WRITER))
 }

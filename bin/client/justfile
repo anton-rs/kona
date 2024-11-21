@@ -106,8 +106,6 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc verbo
 run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l2_chain_id verbosity='':
   #!/usr/bin/env bash
 
-  CLIENT_BIN_PATH="./target/release-client-lto/kona"
-
   CLAIMED_L2_BLOCK_NUMBER={{block_number}}
   CLAIMED_L2_OUTPUT_ROOT={{l2_claim}}
   AGREED_L2_OUTPUT_ROOT={{l2_output_root}}

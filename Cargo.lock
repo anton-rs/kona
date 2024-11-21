@@ -2372,7 +2372,6 @@ dependencies = [
  "spin",
  "thiserror 2.0.3",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -2553,6 +2552,7 @@ dependencies = [
  "kona-preimage",
  "linked_list_allocator",
  "thiserror 2.0.3",
+ "tracing",
 ]
 
 [[package]]

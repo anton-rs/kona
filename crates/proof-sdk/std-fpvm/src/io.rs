@@ -11,16 +11,29 @@ cfg_if! {
         #[doc = "Concrete implementation of the [BasicKernelInterface] trait for the `riscv64` target architecture."]
         pub(crate) type ClientIO = crate::riscv64::io::RiscV64IO;
     } else {
-        #[doc = "No-op implementation of the [BasicKernelInterface] trait."]
-        pub(crate) struct NoopClientIO;
+        use std::{fs::File, os::fd::FromRawFd, io::{Read, Write}};
+        use crate::errors::IOError;
 
-        impl BasicKernelInterface for NoopClientIO {
-            fn write(_: FileDescriptor, _: &[u8]) -> IOResult<usize> {
-                Ok(0)
+        #[doc = "Native implementation of the [BasicKernelInterface] trait."]
+        pub(crate) struct NativeClientIO;
+
+        impl BasicKernelInterface for NativeClientIO {
+            fn write(fd: FileDescriptor, buf: &[u8]) -> IOResult<usize> {
+                unsafe {
+                    let mut file = File::from_raw_fd(fd as i32);
+                    file.write_all(buf).map_err(|_| IOError(-9))?;
+                    std::mem::forget(file);
+                    Ok(buf.len())
+                }
             }
 
-            fn read(_: FileDescriptor, _: &mut [u8]) -> IOResult<usize> {
-                Ok(0)
+            fn read(fd: FileDescriptor, buf: &mut [u8]) -> IOResult<usize> {
+                unsafe {
+                    let mut file = File::from_raw_fd(fd as i32);
+                    file.read(buf).map_err(|_| IOError(-9))?;
+                    std::mem::forget(file);
+                    Ok(buf.len())
+                }
             }
 
             fn exit(code: usize) -> ! {
@@ -28,8 +41,8 @@ cfg_if! {
             }
         }
 
-        #[doc = "No-op implementation of the [BasicKernelInterface] trait."]
-        pub(crate) type ClientIO = NoopClientIO;
+        #[doc = "Native implementation of the [BasicKernelInterface] trait."]
+        pub(crate) type ClientIO = NativeClientIO;
     }
 }
 
