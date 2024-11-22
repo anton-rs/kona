@@ -34,10 +34,10 @@ action-tests test_name='Test_ProgramAction' *args='':
   fi
 
   echo "Building host program for the native target"
-  just build-native --bin kona-host --release
+  just build-native --bin kona-host --profile test
 
   echo "Running action tests for the client program on the native target"
-  export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"
+  export KONA_HOST_PATH="{{justfile_directory()}}/target/debug/kona-host"
   export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
 
   cd monorepo/op-e2e/actions/proofs && \

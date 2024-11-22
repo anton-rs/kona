@@ -50,10 +50,8 @@ jobs:
         run: |
           llvm-profdata-19 merge -sparse *.profraw -o coverage.profdata
           llvm-cov-19 export \
-            -format=lcov ./target/release/kona-host \
+            -format=lcov ./target/debug/kona-host \
             -instr-profile=coverage.profdata > coverage.lcov
-          # Filter out lines with "//" (comments) or "impl"
-          grep -v -E '//$|impl' "coverage.lcov" > "filtered_coverage.lcov"
       - name: Upload coverage to codecov.io
         uses: codecov/codecov-action@v4
         with:
