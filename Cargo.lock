@@ -313,7 +313,6 @@ checksum = "c74832aa474b670309c20fffc2a869fa141edab7c79ff7963fad0a08de60bae1"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-debug",
- "alloy-rpc-types-engine",
  "alloy-rpc-types-eth",
  "alloy-serde",
  "serde",
