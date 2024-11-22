@@ -509,7 +509,7 @@ where
                     Ok::<(), anyhow::Error>(())
                 })?;
             }
-            HintType::L2ExecutePayloadProof => {
+            HintType::L2PayloadWitness => {
                 if hint_data.len() < 32 {
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
