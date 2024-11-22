@@ -81,7 +81,7 @@ alloy-provider = { version = "0.6.4", default-features = false }
 alloy-primitives = { version = "0.8.12", default-features = false }
 alloy-consensus = { version = "0.6.4", default-features = false }
 alloy-transport = { version = "0.6.4", default-features = false }
-alloy-rpc-types = { version = "0.6.4", default-features = false }
+alloy-rpc-types = { version = "0.6.4", default-features = false, features = ["debug"] }
 alloy-rpc-client = { version = "0.6.4", default-features = false }
 alloy-node-bindings = { version = "0.6.4", default-features = false }
 alloy-transport-http = { version = "0.6.4", default-features = false }
@@ -93,7 +93,7 @@ op-alloy-genesis = { version = "0.6.8", default-features = false }
 op-alloy-registry = { version = "0.6.8", default-features = false }
 op-alloy-protocol = { version = "0.6.8", default-features = false }
 op-alloy-consensus = { version = "0.6.8", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.6.8", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.6.8", default-features = false, features = ["serde"] }
 
 # General
 lru = "0.12.4"

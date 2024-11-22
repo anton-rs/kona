@@ -312,6 +312,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c74832aa474b670309c20fffc2a869fa141edab7c79ff7963fad0a08de60bae1"
 dependencies = [
  "alloy-primitives",
+ "alloy-rpc-types-debug",
  "alloy-rpc-types-eth",
  "alloy-serde",
  "serde",
@@ -329,6 +330,16 @@ dependencies = [
  "serde",
  "serde_with",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "alloy-rpc-types-debug"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba2253bee958658ebd614c07a61c40580e09dd1fad3f017684314442332ab753"
+dependencies = [
+ "alloy-primitives",
+ "serde",
 ]
 
 [[package]]
@@ -2447,6 +2458,7 @@ dependencies = [
  "kona-proof",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-rpc-types-engine",
  "os_pipe",
  "proptest",
  "reqwest",

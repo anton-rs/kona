@@ -8,17 +8,19 @@ use crate::{
 };
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
-use alloy_primitives::{address, keccak256, Address, Bytes, B256};
+use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
-    Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
+    debug::ExecutionWitness, Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind,
+    Transaction,
 };
 use anyhow::{anyhow, Result};
 use kona_derive::sources::IndexedBlobHash;
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_proof::HintType;
 use op_alloy_protocol::BlockInfo;
+use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, trace, warn};
@@ -506,6 +508,38 @@ where
                     kv_write_lock.set(key.into(), node.into())?;
                     Ok::<(), anyhow::Error>(())
                 })?;
+            }
+            HintType::L2PayloadWitness => {
+                if hint_data.len() < 32 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+                let parent_block_hash = B256::from_slice(&hint_data.as_ref()[..32]);
+                let payload_attributes: OpPayloadAttributes =
+                    serde_json::from_slice(&hint_data[32..])?;
+
+                let execute_payload_response: ExecutionWitness = self
+                    .l2_provider
+                    .client()
+                    .request::<(B256, OpPayloadAttributes), ExecutionWitness>(
+                        "debug_executePayload",
+                        (parent_block_hash, payload_attributes),
+                    )
+                    .await
+                    .map_err(|e| anyhow!("Failed to fetch preimage: {e}"))?;
+
+                let mut merged = HashMap::<B256, Bytes>::new();
+                merged.extend(execute_payload_response.state);
+                merged.extend(execute_payload_response.codes);
+                merged.extend(execute_payload_response.keys);
+
+                let mut kv_write_lock = self.kv_store.write().await;
+                for (hash, preimage) in merged.into_iter() {
+                    let computed_hash = keccak256(preimage.as_ref());
+                    assert_eq!(computed_hash, hash, "Preimage hash does not match expected hash");
+
+                    let key = PreimageKey::new(*hash, PreimageKeyType::Keccak256);
+                    kv_write_lock.set(key.into(), preimage.into())?;
+                }
             }
         }
 
