@@ -112,7 +112,7 @@ struct WriteFuture<'a> {
 
 impl<'a> WriteFuture<'a> {
     /// Create a new [WriteFuture] from a channel and a buffer.
-    fn new(channel: FileChannel, buf: &'a [u8]) -> Self {
+    const fn new(channel: FileChannel, buf: &'a [u8]) -> Self {
         Self { channel, buf, written: 0 }
     }
 }
