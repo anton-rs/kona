@@ -15,7 +15,15 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
       - uses: taiki-e/install-action@just
+      - name: Install LLVM and Clang
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 19
+          sudo apt-get install llvm-19 llvm-19-tools
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
       - name: Clone monorepo
         run: just monorepo
       - uses: Swatinem/rust-cache@v2
@@ -43,4 +51,20 @@ jobs:
           version: ${{ steps.collect-versions.outputs.forge-version }}
       - name: Run Actions Tests
         run: |
+          export RUSTFLAGS="-C instrument-coverage"
+          export LLVM_PROFILE_FILE="kona-host-%p-%m.profraw"
           just action-tests
+      - name: Convert profile to lcov
+        run: |
+
+          llvm-profdata-19 merge -sparse *.profraw -o coverage.profdata
+          llvm-cov-19 export \
+            -format=lcov ./target/release/kona-host \
+            -instr-profile=coverage.profdata > coverage.lcov
+      - name: Upload coverage to codecov.io
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: OS,RUST
+          files: coverage.lcov
