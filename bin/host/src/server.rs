@@ -12,7 +12,7 @@ use kona_preimage::{
     errors::PreimageOracleError, HintReaderServer, HintRouter, PreimageFetcher,
     PreimageOracleServer,
 };
-use std::{future::{Future, IntoFuture}, pin::Pin, sync::Arc, task::{Context, Poll}};
+use std::sync::Arc;
 use tokio::{spawn, sync::RwLock};
 use tracing::{error, info};
 

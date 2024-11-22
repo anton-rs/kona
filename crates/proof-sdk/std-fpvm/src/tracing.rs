@@ -11,7 +11,8 @@ use tracing::{
     Event, Level, Metadata, Subscriber,
 };
 
-/// Custom [Subscriber] implementation that uses [crate::io] to write log entries to [crate::FileDescriptor::StdOut].
+/// Custom [Subscriber] implementation that uses [crate::io] to write log entries to
+/// [crate::FileDescriptor::StdOut].
 #[derive(Debug, Clone)]
 pub struct FpvmTracingSubscriber {
     min_level: Level,
@@ -39,7 +40,8 @@ impl Subscriber for FpvmTracingSubscriber {
 
     fn event(&self, event: &Event<'_>) {
         let metadata = event.metadata();
-        // Comparisons for the [Level] type are inverted. See the [Level] documentation for more information.
+        // Comparisons for the [Level] type are inverted. See the [Level] documentation for more
+        // information.
         if *metadata.level() > self.min_level {
             return;
         }
@@ -60,8 +62,8 @@ struct FieldVisitor {
 }
 
 impl FieldVisitor {
-    fn new() -> Self {
-        FieldVisitor { message: String::new() }
+    const fn new() -> Self {
+        Self { message: String::new() }
     }
 }
 

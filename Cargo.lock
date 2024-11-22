@@ -2466,7 +2466,6 @@ dependencies = [
  "op-alloy-genesis",
  "op-alloy-protocol",
  "op-alloy-rpc-types-engine",
- "os_pipe",
  "proptest",
  "reqwest",
  "revm",
