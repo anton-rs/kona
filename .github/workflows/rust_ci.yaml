@@ -146,7 +146,7 @@ jobs:
         run: just hack
   coverage:
     runs-on: ubuntu-latest
-    name: codecov
+    name: coverage
     steps:
       - uses: actions/checkout@v4
         with:
