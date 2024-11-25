@@ -145,7 +145,7 @@ mod test {
     async fn test_unblock_on_bad_utf8() {
         let mock_data = [0xf0, 0x90, 0x28, 0xbc];
 
-        let hint_channel = BidirectionalChannel::new::<2>().unwrap();
+        let hint_channel = BidirectionalChannel::new().unwrap();
 
         let client = tokio::task::spawn(async move {
             let hint_writer = HintWriter::new(hint_channel.client);
@@ -174,7 +174,7 @@ mod test {
     async fn test_unblock_on_fetch_failure() {
         const MOCK_DATA: &str = "test-hint 0xfacade";
 
-        let hint_channel = BidirectionalChannel::new::<2>().unwrap();
+        let hint_channel = BidirectionalChannel::new().unwrap();
 
         let client = tokio::task::spawn(async move {
             let hint_writer = HintWriter::new(hint_channel.client);
@@ -196,7 +196,7 @@ mod test {
         const MOCK_DATA: &str = "test-hint 0xfacade";
 
         let incoming_hints = Arc::new(Mutex::new(Vec::new()));
-        let hint_channel = BidirectionalChannel::new::<2>().unwrap();
+        let hint_channel = BidirectionalChannel::new().unwrap();
 
         let client = tokio::task::spawn(async move {
             let hint_writer = HintWriter::new(hint_channel.client);

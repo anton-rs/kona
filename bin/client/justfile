@@ -25,9 +25,9 @@ run-client-asterisc block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc ver
 
   # Get the info for the previous block
   AGREED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((CLAIMED_L2_BLOCK_NUMBER - 1))) | jq -r .outputRoot)
-  AGREED_L2_HEAD_HASH=$(cast block --rpc-url $L2_NODE_ADDRESS $((CLAIMED_L2_BLOCK_NUMBER - 1)) -j | jq -r .hash)
+  AGREED_L2_HEAD_HASH=$(cast block --rpc-url $L2_NODE_ADDRESS $((CLAIMED_L2_BLOCK_NUMBER - 1)) --json | jq -r .hash)
   L1_ORIGIN_NUM=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((CLAIMED_L2_BLOCK_NUMBER - 1))) | jq -r .blockRef.l1origin.number)
-  L1_HEAD=$(cast block --rpc-url $L1_NODE_ADDRESS $((L1_ORIGIN_NUM + 30)) -j | jq -r .hash)
+  L1_HEAD=$(cast block --rpc-url $L1_NODE_ADDRESS $((L1_ORIGIN_NUM + 30)) --json | jq -r .hash)
   L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_NODE_ADDRESS)
 
   # Move to the workspace root
@@ -79,18 +79,14 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc verbo
 
   # Get the info for the previous block
   AGREED_L2_OUTPUT_ROOT=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((CLAIMED_L2_BLOCK_NUMBER - 1))) | jq -r .outputRoot)
-  AGREED_L2_HEAD_HASH=$(cast block --rpc-url $L2_NODE_ADDRESS $((CLAIMED_L2_BLOCK_NUMBER - 1)) -j | jq -r .hash)
+  AGREED_L2_HEAD_HASH=$(cast block --rpc-url $L2_NODE_ADDRESS $((CLAIMED_L2_BLOCK_NUMBER - 1)) --json | jq -r .hash)
   L1_ORIGIN_NUM=$(cast rpc --rpc-url $OP_NODE_ADDRESS "optimism_outputAtBlock" $(cast 2h $((CLAIMED_L2_BLOCK_NUMBER - 1))) | jq -r .blockRef.l1origin.number)
-  L1_HEAD=$(cast block --rpc-url $L1_NODE_ADDRESS $((L1_ORIGIN_NUM + 30)) -j | jq -r .hash)
+  L1_HEAD=$(cast block --rpc-url $L1_NODE_ADDRESS $((L1_ORIGIN_NUM + 30)) --json | jq -r .hash)
   L2_CHAIN_ID=$(cast chain-id --rpc-url $L2_NODE_ADDRESS)
-
-  CLIENT_BIN_PATH="./target/release-client-lto/kona"
 
   # Move to the workspace root
   cd $(git rev-parse --show-toplevel)
 
-  echo "Building client program..."
-  cargo build --bin kona --profile release-client-lto --features tracing-subscriber
   echo "Running host program with native client program..."
   cargo r --bin kona-host --release -- \
     --l1-head $L1_HEAD \
@@ -102,15 +98,13 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc verbo
     --l1-node-address $L1_NODE_ADDRESS \
     --l1-beacon-address $L1_BEACON_ADDRESS \
     --l2-node-address $L2_NODE_ADDRESS \
-    --exec $CLIENT_BIN_PATH \
+    --native \
     --data-dir ./data \
     {{verbosity}}
 
 # Run the client program natively with the host program attached, in offline mode.
 run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l2_chain_id verbosity='':
   #!/usr/bin/env bash
-
-  CLIENT_BIN_PATH="./target/release-client-lto/kona"
 
   CLAIMED_L2_BLOCK_NUMBER={{block_number}}
   CLAIMED_L2_OUTPUT_ROOT={{l2_claim}}
@@ -122,8 +116,6 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
   # Move to the workspace root
   cd $(git rev-parse --show-toplevel)
 
-  echo "Building client program..."
-  cargo build --bin kona --profile release-client-lto --features tracing-subscriber
   echo "Running host program with native client program..."
   cargo r --bin kona-host --release -- \
     --l1-head $L1_HEAD \
@@ -132,7 +124,7 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
     --agreed-l2-output-root $AGREED_L2_OUTPUT_ROOT \
     --claimed-l2-block-number $CLAIMED_L2_BLOCK_NUMBER \
     --l2-chain-id $L2_CHAIN_ID \
-    --exec $CLIENT_BIN_PATH \
+    --native \
     --data-dir ./data \
     {{verbosity}}
 

@@ -49,12 +49,11 @@ impl Channel for FileChannel {
     }
 
     async fn read_exact(&self, buf: &mut [u8]) -> ChannelResult<usize> {
-        (ReadFuture { channel: *self, buf: RefCell::new(buf), read: 0 }.await)
-            .map_err(|_| ChannelError::Closed)
+        ReadFuture::new(*self, buf).await.map_err(|_| ChannelError::Closed)
     }
 
     async fn write(&self, buf: &[u8]) -> ChannelResult<usize> {
-        (WriteFuture { channel: *self, buf, written: 0 }).await.map_err(|_| ChannelError::Closed)
+        WriteFuture::new(*self, buf).await.map_err(|_| ChannelError::Closed)
     }
 }
 
@@ -66,6 +65,13 @@ struct ReadFuture<'a> {
     buf: RefCell<&'a mut [u8]>,
     /// The number of bytes read so far
     read: usize,
+}
+
+impl<'a> ReadFuture<'a> {
+    /// Create a new [ReadFuture] from a channel and a buffer.
+    fn new(channel: FileChannel, buf: &'a mut [u8]) -> Self {
+        Self { channel, buf: RefCell::new(buf), read: 0 }
+    }
 }
 
 impl Future for ReadFuture<'_> {
@@ -102,6 +108,13 @@ struct WriteFuture<'a> {
     buf: &'a [u8],
     /// The number of bytes written so far
     written: usize,
+}
+
+impl<'a> WriteFuture<'a> {
+    /// Create a new [WriteFuture] from a channel and a buffer.
+    const fn new(channel: FileChannel, buf: &'a [u8]) -> Self {
+        Self { channel, buf, written: 0 }
+    }
 }
 
 impl Future for WriteFuture<'_> {

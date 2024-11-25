@@ -172,7 +172,7 @@ mod test {
             Arc::new(Mutex::new(preimages))
         };
 
-        let preimage_channel = BidirectionalChannel::new::<2>().unwrap();
+        let preimage_channel = BidirectionalChannel::new().unwrap();
 
         let client = tokio::task::spawn(async move {
             let oracle_reader = OracleReader::new(preimage_channel.client);
@@ -218,7 +218,7 @@ mod test {
             Arc::new(Mutex::new(preimages))
         };
 
-        let preimage_channel = BidirectionalChannel::new::<2>().unwrap();
+        let preimage_channel = BidirectionalChannel::new().unwrap();
 
         let client = tokio::task::spawn(async move {
             let oracle_reader = OracleReader::new(preimage_channel.client);

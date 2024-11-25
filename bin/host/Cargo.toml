@@ -16,8 +16,9 @@ workspace = true
 kona-mpt.workspace = true
 kona-derive.workspace = true
 kona-std-fpvm.workspace = true
-kona-preimage.workspace = true
-kona-proof.workspace = true
+kona-preimage = { workspace = true, features = ["std"] }
+kona-proof = { workspace = true, features = ["std"] }
+kona-client.workspace = true
 
 # Alloy
 alloy-rlp.workspace = true
@@ -43,14 +44,11 @@ revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", 
 anyhow.workspace = true
 tracing.workspace = true
 reqwest.workspace = true
-futures.workspace = true
-os_pipe.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
 tokio = { workspace = true, features = ["full"] }
 serde = { workspace = true, features = ["derive"] }
 rocksdb = { workspace = true, features = ["snappy"] }
-command-fds = { workspace = true, features = ["tokio"] }
 clap = { workspace = true, features = ["derive", "env"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 
