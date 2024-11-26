@@ -3,10 +3,10 @@
 use crate::{errors::OracleProviderError, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Blob;
-use alloy_eips::eip4844::FIELD_ELEMENTS_PER_BLOB;
+use alloy_eips::eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB};
 use alloy_primitives::keccak256;
 use async_trait::async_trait;
-use kona_derive::{sources::IndexedBlobHash, traits::BlobProvider};
+use kona_derive::traits::BlobProvider;
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_protocol::BlockInfo;
 

@@ -2390,7 +2390,6 @@ dependencies = [
  "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "proptest",
- "serde",
  "serde_json",
  "spin",
  "thiserror 2.0.3",
