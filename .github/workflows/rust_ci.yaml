@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        target: ["native", "cannon", "asterisc"]
+        target: ["native", "mips32", "riscv64g"]
     name: lint-${{ matrix.target }}
     steps:
       - name: Checkout sources
@@ -83,7 +83,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        target: ["native", "cannon", "asterisc"]
+        target: ["native", "mips32", "riscv64g"]
     name: build-${{ matrix.target }}
     continue-on-error: true
     steps:
