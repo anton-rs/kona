@@ -23,7 +23,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        fpvm: ["asterisc"]
+        fpvm: ["riscv64g"]
     env:
       IMAGE_NAME: ${{ github.repository }}/kona-fpp-${{ matrix.fpvm }}
     steps:

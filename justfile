@@ -67,22 +67,22 @@ lint-native: fmt-native-check lint-docs
   cargo +nightly clippy --workspace --all --all-features --all-targets -- -D warnings
 
 # Lint the workspace (mips arch). Currently, only the `kona-std-fpvm` crate is linted for the `cannon` target, as it is the only crate with architecture-specific code.
-lint-cannon:
+lint-mips32:
   docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/cannon-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target /mips-unknown-none.json -Zbuild-std=core,alloc -- -D warnings
+    ghcr.io/anton-rs/kona/mips32-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target /mips-unknown-none.json -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the workspace (risc-v arch). Currently, only the `kona-std-fpvm` crate is linted for the `asterisc` target, as it is the only crate with architecture-specific code.
-lint-asterisc:
+lint-riscv64g:
   docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/asterisc-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std=core,alloc -- -D warnings
+    ghcr.io/anton-rs/kona/riscv64g-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target riscv64gc-unknown-linux-gnu -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the Rust documentation
 lint-docs:
@@ -93,34 +93,34 @@ test-docs:
   cargo test --doc --all --locked
 
 # Build the workspace for all available targets
-build: build-native build-cannon build-asterisc
+build: build-native build-mips32 build-riscv64g
 
 # Build for the native target
 build-native *args='':
   cargo build --workspace $@
 
 # Build for the `cannon` target. Any crates that require the stdlib are excluded from the build for this target.
-build-cannon *args='':
+build-mips32 *args='':
   docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
+    ghcr.io/anton-rs/kona/mips32-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
-build-asterisc *args='':
+build-riscv64g *args='':
   docker run \
     --rm \
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
+    ghcr.io/anton-rs/kona/riscv64g-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
 
 # Build the `kona-client` prestate artifacts for the latest release.
 build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
   #!/bin/bash
-  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
+  PATH_TO_REPRO_BUILDER=./build/riscv64g/riscv64g-repro.dockerfile
   OUTPUT_DIR={{out}}
 
   echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
@@ -136,7 +136,7 @@ build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-a
 # binaries.
 build-client-prestate-asterisc-image kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
   #!/bin/bash
-  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
+  PATH_TO_REPRO_BUILDER=./build/riscv64g/riscv64g-repro.dockerfile
   OUTPUT_DIR={{out}}
 
   echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"

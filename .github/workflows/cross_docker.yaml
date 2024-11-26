@@ -13,7 +13,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        target: ["cannon", "asterisc"]
+        target: ["mips32", "riscv64g"]
     env:
       IMAGE_NAME: ${{ github.repository }}/${{ matrix.target }}-builder
     steps:

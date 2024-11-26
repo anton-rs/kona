@@ -4,12 +4,12 @@ set fallback := true
 default:
   @just --list
 
-all: cannon asterisc
+all: mips32 riscv64g
 
-# Build the `cannon` program builder image
-cannon:
-	docker build -t cannon-pipeline:latest -f cannon/cannon.dockerfile ./cannon
+# Build the `mips32` program builder image
+mips32:
+	docker build -t mips32-pipeline:latest -f mips32/mips32.dockerfile ./mips32
 
-# Build the `asterisc` program builder image
-asterisc:
-	docker build -t asterisc-pipeline:latest -f asterisc/asterisc.dockerfile ./asterisc
+# Build the `riscv64g` program builder image
+riscv64g:
+	docker build -t riscv64g-pipeline:latest -f riscv64g/riscv64g.dockerfile ./riscv64g
