@@ -314,7 +314,7 @@ where
                         ))?;
                         match sidecar.verify_blob(&alloy_eips::eip4844::IndexedBlobHash {
                             hash: hash.hash,
-                            index: hash.index as u64,
+                            index: hash.index,
                         }) {
                             Ok(_) => Ok(sidecar.blob),
                             Err(e) => Err(BlobProviderError::Backend(e.to_string())),

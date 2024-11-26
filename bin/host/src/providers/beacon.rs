@@ -128,7 +128,7 @@ impl BeaconClient for OnlineBeaconClient {
         let mut sidecars = Vec::with_capacity(hashes.len());
         hashes.iter().for_each(|hash| {
             if let Some(sidecar) =
-                raw_response.data.iter().find(|sidecar| sidecar.index == hash.index as u64)
+                raw_response.data.iter().find(|sidecar| sidecar.index == hash.index)
             {
                 sidecars.push(sidecar.clone());
             }
