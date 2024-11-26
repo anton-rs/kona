@@ -48,7 +48,7 @@ clean-actions:
   rm -rf monorepo/
 
 # Lint the workspace for all available targets
-lint-all: lint-native lint-cannon lint-asterisc lint-docs
+lint-all: lint-native lint-mips32 lint-riscv64g lint-docs
 
 # Runs `cargo hack check` against the workspace
 hack:
