@@ -187,7 +187,7 @@ where
                 let timestamp = u64::from_be_bytes(timestamp_data_bytes);
 
                 let partial_block_ref = BlockInfo { timestamp, ..Default::default() };
-                let indexed_hash = IndexedBlobHash { index: index as usize, hash };
+                let indexed_hash = IndexedBlobHash { index, hash };
 
                 // Fetch the blob sidecar from the blob provider.
                 let mut sidecars = self

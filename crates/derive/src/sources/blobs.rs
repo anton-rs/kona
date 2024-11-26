@@ -106,7 +106,7 @@ where
                 continue;
             };
             for blob in blob_hashes {
-                let indexed = IndexedBlobHash { hash: blob, index: number as usize };
+                let indexed = IndexedBlobHash { hash: blob, index: number };
                 hashes.push(indexed);
                 data.push(BlobData::default());
                 number += 1;

@@ -7,7 +7,7 @@ use alloy_primitives::B256;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct IndexedBlobHash {
     /// The index of the blob
-    pub index: usize,
+    pub index: u64,
     /// The hash of the blob
     pub hash: B256,
 }
