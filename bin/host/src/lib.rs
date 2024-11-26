@@ -10,7 +10,6 @@ pub mod kv;
 pub mod preimage;
 pub mod providers;
 pub mod server;
-pub mod util;
 
 use anyhow::Result;
 use fetcher::Fetcher;

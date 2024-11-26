@@ -4,7 +4,6 @@
 use crate::{
     kv::KeyValueStore,
     providers::{OnlineBeaconClient, OnlineBlobProvider},
-    util,
 };
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{eip2718::Encodable2718, eip4844::FIELD_ELEMENTS_PER_BLOB, BlockId};
@@ -18,7 +17,7 @@ use alloy_rpc_types::{
 use anyhow::{anyhow, Result};
 use kona_derive::sources::IndexedBlobHash;
 use kona_preimage::{PreimageKey, PreimageKeyType};
-use kona_proof::HintType;
+use kona_proof::{Hint, HintType};
 use op_alloy_protocol::BlockInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
@@ -98,7 +97,8 @@ where
 
     /// Fetch the preimage for the given hint and insert it into the key-value store.
     async fn prefetch(&self, hint: &str) -> Result<()> {
-        let (hint_type, hint_data) = util::parse_hint(hint)?;
+        let hint = Hint::parse(hint)?;
+        let (hint_type, hint_data) = hint.split();
         trace!(target: "fetcher", "Fetching hint: {hint_type} {hint_data}");
 
         match hint_type {
