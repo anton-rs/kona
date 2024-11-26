@@ -212,8 +212,7 @@ async fn derive_deposits(
         for l in r.logs.iter() {
             let curr_index = global_index;
             global_index += 1;
-            #[allow(clippy::all)]
-            if !l.data.topics().first().map_or(false, |i| *i == DEPOSIT_EVENT_ABI_HASH) {
+            if l.data.topics().first().is_none_or(|i| *i != DEPOSIT_EVENT_ABI_HASH) {
                 continue;
             }
             if l.address != deposit_contract {

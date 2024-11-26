@@ -1,6 +1,6 @@
 [package]
-name = "kona-common-proc"
-description = "Proc macro extension for the `kona-common` crate."
+name = "kona-std-fpvm-proc"
+description = "Proc macro entry point for `kona-std-fpvm` targeted programs."
 version = "0.1.0"
 edition.workspace = true
 authors.workspace = true
@@ -17,7 +17,7 @@ anyhow.workspace = true
 cfg-if.workspace = true
 
 # Workspace
-kona-common.workspace = true
+kona-std-fpvm.workspace = true
 
 # Proc Macros
 quote = "1.0"

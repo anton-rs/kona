@@ -13,8 +13,8 @@ use kona_preimage::{
     PreimageOracleServer,
 };
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::error;
+use tokio::{spawn, sync::RwLock};
+use tracing::{error, info};
 
 /// The [PreimageServer] is responsible for waiting for incoming preimage requests and
 /// serving them to the client.
@@ -57,16 +57,14 @@ where
     /// Starts the [PreimageServer] and waits for incoming requests.
     pub async fn start(self) -> Result<()> {
         // Create the futures for the oracle server and hint router.
-        let server_fut = Self::start_oracle_server(
+        let server = spawn(Self::start_oracle_server(
             self.kv_store.clone(),
             self.fetcher.clone(),
             self.oracle_server,
-        );
-        let hinter_fut = Self::start_hint_router(self.hint_reader, self.fetcher);
+        ));
+        let hint_router = spawn(Self::start_hint_router(self.hint_reader, self.fetcher));
 
         // Spawn tasks for the futures and wait for them to complete.
-        let server = tokio::task::spawn(server_fut);
-        let hint_router = tokio::task::spawn(hinter_fut);
         tokio::select! {
             s = server => s.map_err(|e| anyhow!(e))?,
             h = hint_router => h.map_err(|e| anyhow!(e))?,
@@ -88,7 +86,7 @@ where
         {
             loop {
                 match server.next_preimage_request(fetcher).await {
-                    Ok(_) => (),
+                    Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),
                     Err(e) => {
                         error!("Failed to serve preimage request: {e}");
@@ -98,6 +96,7 @@ where
             }
         }
 
+        info!("Starting oracle server");
         if let Some(fetcher) = fetcher.as_ref() {
             do_loop(&OnlinePreimageFetcher::new(Arc::clone(fetcher)), &oracle_server).await
         } else {
@@ -119,7 +118,7 @@ where
         {
             loop {
                 match server.next_hint(router).await {
-                    Ok(_) => (),
+                    Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),
                     Err(e) => {
                         error!("Failed to serve route hint: {e}");
@@ -129,8 +128,9 @@ where
             }
         }
 
-        if let Some(fetcher) = fetcher {
-            do_loop(&OnlineHintRouter::new(Arc::clone(&fetcher)), &hint_reader).await
+        info!("Starting hint router");
+        if let Some(fetcher) = fetcher.as_ref() {
+            do_loop(&OnlineHintRouter::new(Arc::clone(fetcher)), &hint_reader).await
         } else {
             do_loop(&OfflineHintRouter, &hint_reader).await
         }
