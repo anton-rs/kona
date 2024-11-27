@@ -527,7 +527,7 @@ where
                     .await
                     .map_err(|e| anyhow!("Failed to fetch preimage: {e}"))?;
 
-                let mut merged = HashMap::<B256, Bytes>::new();
+                let mut merged = HashMap::<B256, Bytes>::default();
                 merged.extend(execute_payload_response.state);
                 merged.extend(execute_payload_response.codes);
                 merged.extend(execute_payload_response.keys);
