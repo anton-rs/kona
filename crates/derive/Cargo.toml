@@ -30,9 +30,6 @@ tracing.workspace = true
 async-trait.workspace = true
 thiserror.workspace = true
 
-# `serde` feature dependencies
-serde = { workspace = true, optional = true, features = ["derive"] }
-
 # `test-utils` feature dependencies
 spin = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
@@ -47,9 +44,8 @@ tracing-subscriber = { workspace = true, features = ["fmt"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
 
 [features]
-default = ["serde"]
+default = []
 serde = [
-  "dep:serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
   "op-alloy-consensus/serde",
