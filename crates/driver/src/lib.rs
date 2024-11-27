@@ -19,7 +19,7 @@ mod pipeline;
 pub use pipeline::DriverPipeline;
 
 mod executor;
-pub use executor::{Executor, ExecutorConstructor};
+pub use executor::Executor;
 
 mod core;
 pub use core::Driver;

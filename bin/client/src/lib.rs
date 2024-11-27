@@ -14,7 +14,7 @@ use kona_executor::ExecutorError;
 use kona_preimage::{HintWriterClient, PreimageOracleClient};
 use kona_proof::{
     errors::OracleProviderError,
-    executor::KonaExecutorConstructor,
+    executor::KonaExecutor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
     sync::new_pipeline_cursor,
@@ -116,7 +116,7 @@ where
         l1_provider.clone(),
         l2_provider.clone(),
     );
-    let executor = KonaExecutorConstructor::new(&cfg, l2_provider.clone(), l2_provider, None);
+    let executor = KonaExecutor::new(&cfg, l2_provider.clone(), l2_provider, None, None);
     let mut driver = Driver::new(cursor, executor, pipeline);
 
     // Run the derivation pipeline until we are able to produce the output root of the claimed
