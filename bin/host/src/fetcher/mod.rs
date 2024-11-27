@@ -1,7 +1,7 @@
 //! This module contains the [Fetcher] struct, which is responsible for fetching preimages from a
 //! remote source.
 
-use crate::{blobs::OnlineBlobProvider, kv::KeyValueStore, util};
+use crate::{blobs::OnlineBlobProvider, kv::KeyValueStore};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -17,7 +17,7 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageKeyType};
-use kona_proof::HintType;
+use kona_proof::{Hint, HintType};
 use op_alloy_protocol::BlockInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
@@ -97,7 +97,8 @@ where
 
     /// Fetch the preimage for the given hint and insert it into the key-value store.
     async fn prefetch(&self, hint: &str) -> Result<()> {
-        let (hint_type, hint_data) = util::parse_hint(hint)?;
+        let hint = Hint::parse(hint)?;
+        let (hint_type, hint_data) = hint.split();
         trace!(target: "fetcher", "Fetching hint: {hint_type} {hint_data}");
 
         match hint_type {

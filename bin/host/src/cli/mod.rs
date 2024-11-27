@@ -6,16 +6,18 @@ use crate::{
         DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
         SplitKeyValueStore,
     },
-    util,
 };
 use alloy_primitives::B256;
 use alloy_provider::ReqwestProvider;
+use alloy_rpc_client::RpcClient;
+use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use clap::{
     builder::styling::{AnsiColor, Color, Style},
     ArgAction, Parser,
 };
 use op_alloy_genesis::RollupConfig;
+use reqwest::Client;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
@@ -128,6 +130,13 @@ impl HostCli {
             self.l1_beacon_address.is_none()
     }
 
+    /// Returns an HTTP provider for the given URL.
+    fn http_provider(url: &str) -> ReqwestProvider {
+        let url = url.parse().unwrap();
+        let http = Http::<Client>::new(url);
+        ReqwestProvider::new(RpcClient::new(http, true))
+    }
+
     /// Creates the providers associated with the [HostCli] configuration.
     ///
     /// ## Returns
@@ -142,10 +151,10 @@ impl HostCli {
         )
         .await
         .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
-        let l1_provider = util::http_provider(
+        let l1_provider = Self::http_provider(
             self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
         );
-        let l2_provider = util::http_provider(
+        let l2_provider = Self::http_provider(
             self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
         );
 

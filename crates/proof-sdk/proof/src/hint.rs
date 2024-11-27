@@ -5,8 +5,41 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::hex;
+use alloy_primitives::{hex, Bytes};
 use core::fmt::Display;
+
+/// A [Hint] is parsed in the format `<hint_type> <hint_data>`, where `<hint_type>` is a string that
+/// represents the type of hint, and `<hint_data>` is the data associated with the hint (bytes
+/// encoded as hex UTF-8).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Hint {
+    /// The type of hint.
+    pub hint_type: HintType,
+    /// The data associated with the hint.
+    pub hint_data: Bytes,
+}
+
+impl Hint {
+    /// Parses a hint from a string.
+    pub fn parse(s: &str) -> Result<Self, HintParsingError> {
+        let mut parts = s.split(' ').collect::<Vec<_>>();
+
+        if parts.len() != 2 {
+            return Err(HintParsingError(alloc::format!("Invalid hint format: {}", s)));
+        }
+
+        let hint_type = HintType::try_from(parts.remove(0))?;
+        let hint_data =
+            hex::decode(parts.remove(0)).map_err(|e| HintParsingError(e.to_string()))?.into();
+
+        Ok(Self { hint_type, hint_data })
+    }
+
+    /// Splits the [Hint] into its components.
+    pub fn split(self) -> (HintType, Bytes) {
+        (self.hint_type, self.hint_data)
+    }
+}
 
 /// The [HintType] enum is used to specify the type of hint that was received.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
