@@ -151,10 +151,6 @@ impl HostCli {
         )
         .await
         .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
-        blob_provider
-            .load_configs()
-            .await
-            .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
         let l1_provider = Self::http_provider(
             self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
         );
