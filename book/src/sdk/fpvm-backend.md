@@ -3,13 +3,14 @@
 > 📖 Before reading this section of the book, it is advised to read the [Fault Proof Program Environment](../fpp-dev/env.md)
 > section to familiarize yourself with the PreimageOracle IO pattern.
 
-Kona is effectively split into two parts:
+Kona is effectively split into three parts:
 
 - OP Stack state transition logic (`kona-derive`, `kona-executor`, `kona-mpt`)
+- OP Stack state transition proof SDK (`kona-preimage`, `kona-proof`)
 - {{#template ../../templates/glossary-link.md root=./ ref=fault-proof-vm text=Fault Proof VM}} IO and utilities
-  (`kona-common`, `kona-common-proc`, `kona-preimage`)
+  (`kona-std-fpvm`, `kona-std-fpvm-proc`)
 
-This section of the book focuses on the usage of `kona-common` and `kona-preimage` to facilitate host<->client
+This section of the book focuses on the usage of `kona-std-fpvm` and `kona-preimage` to facilitate host<->client
 communication for programs running on top of the [FPVM targets](../fpp-dev/env.md).
 
 ## Host <-> Client Communication API
@@ -17,20 +18,20 @@ communication for programs running on top of the [FPVM targets](../fpp-dev/env.m
 The FPVM system API is built on several layers. In this document, we'll cover these layers, from lowest-level to
 highest-level API.
 
-### `kona-common`
+### `kona-std-fpvm`
 
-`kona-common` implements raw syscall dispatch, a default global memory allocator, and a blocking async runtime.
-`kona-common` relies on a minimal linux backend to function, supporting only the syscalls required to implement the
+`kona-std-fpvm` implements raw syscall dispatch, a default global memory allocator, and a blocking async runtime.
+`kona-std-fpvm` relies on a minimal linux backend to function, supporting only the syscalls required to implement the
 [PreimageOracle ABI][preimage-specs] (`read`, `write`, `exit_group`).
 
 These syscalls are exposed to the user through the `io` module directly, with each supported platform implementing the
-[`BasicKernelInterface`](https://docs.rs/kona-common/latest/kona_common/trait.BasicKernelInterface.html) trait.
+[`BasicKernelInterface`](https://docs.rs/kona-std-fpvm/latest/kona_std_fpvm/trait.BasicKernelInterface.html) trait.
 
-To directly dispatch these syscalls, the [`io`](https://docs.rs/kona-common/latest/kona_common/io/index.html) module
+To directly dispatch these syscalls, the [`io`](https://docs.rs/kona-std-fpvm/latest/kona_std_fpvm/io/index.html) module
 exposes a safe API:
 
 ```rs
-use kona_common::{io, FileDescriptor};
+use kona_std_fpvm::{io, FileDescriptor};
 
 // Print to `stdout`. Infallible, will panic if dispatch fails.
 io::print("Hello, world!");
@@ -55,16 +56,16 @@ when developing programs that target the [FPVMs](../fpp-dev/env.md), barring nee
 
 ### `kona-preimage`
 
-`kona-preimage` is an implementation of the [PreimageOracle ABI][preimage-specs], built on top of `kona-common`. This
-crate enables synchronous communication between the host and client program, described in
+`kona-preimage` is an implementation of the [PreimageOracle ABI][preimage-specs]. This crate enables synchronous
+communication between the host and client program, described in
 [Host <-> Client Communication](../fpp-dev/env.md#host---client-communication) in the FPP Dev environment section of the
 book.
 
-The crate is built around the [`PipeHandle`](https://docs.rs/kona-preimage/latest/kona_preimage/struct.PipeHandle.html),
+The crate is built around the [`Channel`](https://docs.rs/kona-preimage/latest/kona_preimage/trait.Channel.html) trait,
 which serves as a single end of a bidirectional pipe (see: [`pipe` manpage](https://man7.org/linux/man-pages/man2/pipe.2.html)).
 
 Through this handle, the higher-level constructs can read and write data to the counterparty holding on to the other end
-of the pipe, following the protocol below:
+of the channel, following the protocol below:
 
 <center>
 
@@ -93,9 +94,9 @@ The interfaces of each part of the above protocol are described by the following
 Each of these traits, however, can be re-implemented to redefine the host<->client communication protocol if the needs
 of the consumer are not covered by the to-[spec][preimage-specs] implementations.
 
-### `kona-client` - Oracle-backed sources (example)
+### `kona-proof` - Oracle-backed sources (example)
 
-Finally, in `kona-client`, implementations of data source traits from `kona-derive` and `kona-executor` are implemented
+Finally, in `kona-proof`, implementations of data source traits from `kona-derive` and `kona-executor` are provided
 to pull in untyped data from the host by `PreimageKey`. These data source traits are covered in more detail within
 the [Custom Backend](./custom-backend.md) section, but we'll quickly gloss over them here to build intuition.
 
@@ -132,8 +133,8 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 ```
 
 In `header_by_hash`, we use the inner `HintWriter` to send a hint to the host to prepare the block hash preimage.
-Then, once we've received an acknowledgement from the host that the preimage has been prepared, we reach out for 
-the RLP (which is the preimage of the hash). After the RLP is received, we decode the `Header` type, and return 
+Then, once we've received an acknowledgement from the host that the preimage has been prepared, we reach out for
+the RLP (which is the preimage of the hash). After the RLP is received, we decode the `Header` type, and return
 it to the user.
 
 {{ #include ../links.md }}

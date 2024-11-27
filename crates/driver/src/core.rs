@@ -72,16 +72,18 @@ where
     pub async fn advance_to_target(
         &mut self,
         cfg: &RollupConfig,
-        mut target: u64,
+        mut target: Option<u64>,
     ) -> DriverResult<(u64, B256), E::Error> {
         loop {
             // Check if we have reached the target block number.
-            if self.cursor.l2_safe_head().block_info.number >= target {
-                info!(target: "client", "Derivation complete, reached L2 safe head.");
-                return Ok((
-                    self.cursor.l2_safe_head().block_info.number,
-                    *self.cursor.l2_safe_head_output_root(),
-                ));
+            if let Some(tb) = target {
+                if self.cursor.l2_safe_head().block_info.number >= tb {
+                    info!(target: "client", "Derivation complete, reached L2 safe head.");
+                    return Ok((
+                        self.cursor.l2_safe_head().block_info.number,
+                        *self.cursor.l2_safe_head_output_root(),
+                    ));
+                }
             }
 
             let OpAttributesWithParent { mut attributes, .. } = match self
@@ -95,7 +97,9 @@ where
 
                     // Adjust the target block number to the current safe head, as no more blocks
                     // can be produced.
-                    target = self.cursor.l2_safe_head().block_info.number;
+                    if target.is_some() {
+                        target = Some(self.cursor.l2_safe_head().block_info.number);
+                    };
                     continue;
                 }
                 Err(e) => {

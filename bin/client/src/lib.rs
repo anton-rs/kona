@@ -122,7 +122,7 @@ where
     // Run the derivation pipeline until we are able to produce the output root of the claimed
     // L2 block.
     let (number, output_root) =
-        driver.advance_to_target(&boot.rollup_config, boot.claimed_l2_block_number).await?;
+        driver.advance_to_target(&boot.rollup_config, Some(boot.claimed_l2_block_number)).await?;
 
     ////////////////////////////////////////////////////////////////
     //                          EPILOGUE                          //
