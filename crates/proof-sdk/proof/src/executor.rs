@@ -1,8 +1,9 @@
 //! An executor constructor.
 
-use alloc::sync::Arc;
+use alloc::{boxed::Box, sync::Arc};
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
+use async_trait::async_trait;
 use kona_driver::Executor;
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::TrieHinter;
@@ -45,12 +46,19 @@ where
     }
 }
 
+#[async_trait]
 impl<P, H> Executor for KonaExecutor<'_, P, H>
 where
     P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
     type Error = kona_executor::ExecutorError;
+
+    /// Waits for the executor to be ready.
+    async fn wait_until_ready(&mut self) {
+        /* no-op for the kona executor */
+        /* This is used when an engine api is used instead of a stateless block executor */
+    }
 
     /// Updates the safe header.
     ///

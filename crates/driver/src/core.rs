@@ -54,6 +54,11 @@ where
         }
     }
 
+    /// Waits until the executor is ready.
+    pub async fn wait_for_executor(&mut self) {
+        self.executor.wait_until_ready().await;
+    }
+
     /// Advances the derivation pipeline to the target block number.
     ///
     /// ## Takes

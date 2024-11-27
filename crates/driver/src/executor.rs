@@ -1,5 +1,6 @@
 //! An abstraction for the driver's block executor.
 
+use alloc::boxed::Box;
 use core::{
     error::Error,
     fmt::{Debug, Display},
@@ -18,6 +19,9 @@ use op_alloy_rpc_types_engine::OpPayloadAttributes;
 pub trait Executor {
     /// The error type for the Executor.
     type Error: Error + Debug + Display + ToString;
+
+    /// Waits for the executor to be ready.
+    async fn wait_until_ready(&mut self);
 
     /// Updates the safe header.
     fn update_safe_head(&mut self, header: Sealed<Header>);
