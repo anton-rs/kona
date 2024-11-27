@@ -7,18 +7,21 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
+use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
-use kona_executor::ExecutorError;
-use kona_preimage::{HintWriterClient, PreimageOracleClient};
+use kona_executor::{ExecutorError, TrieDBProvider};
+use kona_preimage::{
+    CommsClient, HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient,
+};
 use kona_proof::{
     errors::OracleProviderError,
     executor::KonaExecutorConstructor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
     sync::new_pipeline_cursor,
-    BootInfo, CachingOracle,
+    BootInfo, CachingOracle, HintType,
 };
 use thiserror::Error;
 use tracing::{error, info, warn};
@@ -64,35 +67,34 @@ where
             return Err(e.into());
         }
     };
-    let l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
-    let l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
+    let mut l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
+    let mut l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
     let beacon = OracleBlobProvider::new(oracle.clone());
 
-    // If the genesis block is claimed, we can exit early.
-    // The agreed upon prestate is consented to by all parties, and there is no state
-    // transition, so the claim is valid if the claimed output root matches the agreed
-    // upon output root.
-    if boot.claimed_l2_block_number == 0 {
-        warn!("Genesis block claimed. Exiting early.");
-        if boot.agreed_l2_output_root == boot.claimed_l2_output_root {
-            info!(
-                target: "client",
-                "Successfully validated genesis block with output root {output_root}",
-                output_root = boot.agreed_l2_output_root
-            );
-            return Ok(());
-        } else {
-            error!(
-                target: "client",
-                "Failed to validate genesis block. Expected {genesis_root}, actual {claimed_root}",
-                genesis_root = boot.agreed_l2_output_root,
-                claimed_root = boot.claimed_l2_output_root
-            );
-            return Err(FaultProofProgramError::InvalidClaim(
-                boot.agreed_l2_output_root,
-                boot.claimed_l2_output_root,
-            ));
-        };
+    // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
+    // invalid.
+    let safe_head = fetch_safe_head(oracle.as_ref(), boot.as_ref(), &mut l2_provider).await?;
+    if boot.claimed_l2_block_number < safe_head.number {
+        error!(
+            target: "client",
+            "Claimed L2 block number {claimed} is less than the safe head {safe}",
+            claimed = boot.claimed_l2_block_number,
+            safe = safe_head.number
+        );
+        return Err(FaultProofProgramError::InvalidClaim(
+            boot.agreed_l2_output_root,
+            boot.claimed_l2_output_root,
+        ));
+    }
+
+    // In the case where the agreed upon L2 output root is the same as the claimed L2 output root,
+    // trace extension is detected and we can skip the derivation and execution steps.
+    if boot.agreed_l2_output_root == boot.claimed_l2_output_root {
+        info!(
+            target: "client",
+            "Trace extension detected. State transition is already agreed upon.",
+        );
+        return Ok(());
     }
 
     ////////////////////////////////////////////////////////////////
@@ -100,13 +102,7 @@ where
     ////////////////////////////////////////////////////////////////
 
     // Create a new derivation driver with the given boot information and oracle.
-    let cursor = new_pipeline_cursor(
-        oracle.clone(),
-        &boot,
-        &mut l1_provider.clone(),
-        &mut l2_provider.clone(),
-    )
-    .await?;
+    let cursor = new_pipeline_cursor(&boot, safe_head, &mut l1_provider, &mut l2_provider).await?;
     let cfg = Arc::new(boot.rollup_config.clone());
     let pipeline = OraclePipeline::new(
         cfg.clone(),
@@ -146,4 +142,34 @@ where
     );
 
     Ok(())
+}
+
+/// Fetches the safe head of the L2 chain based on the agreed upon L2 output root in the
+/// [BootInfo].
+async fn fetch_safe_head<O>(
+    caching_oracle: &O,
+    boot_info: &BootInfo,
+    l2_chain_provider: &mut OracleL2ChainProvider<O>,
+) -> Result<Sealed<Header>, OracleProviderError>
+where
+    O: CommsClient,
+{
+    caching_oracle
+        .write(&HintType::StartingL2Output.encode_with(&[boot_info.agreed_l2_output_root.as_ref()]))
+        .await
+        .map_err(OracleProviderError::Preimage)?;
+    let mut output_preimage = [0u8; 128];
+    caching_oracle
+        .get_exact(
+            PreimageKey::new(*boot_info.agreed_l2_output_root, PreimageKeyType::Keccak256),
+            &mut output_preimage,
+        )
+        .await
+        .map_err(OracleProviderError::Preimage)?;
+
+    let safe_hash =
+        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
+    l2_chain_provider
+        .header_by_hash(safe_hash)
+        .map(|header| Sealed::new_unchecked(header, safe_hash))
 }
