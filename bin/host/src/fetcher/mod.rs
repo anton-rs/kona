@@ -1,11 +1,7 @@
 //! This module contains the [Fetcher] struct, which is responsible for fetching preimages from a
 //! remote source.
 
-use crate::{
-    kv::KeyValueStore,
-    providers::{OnlineBeaconClient, OnlineBlobProvider},
-    util,
-};
+use crate::{blobs::OnlineBlobProvider, kv::KeyValueStore, util};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -41,7 +37,7 @@ where
     /// L1 chain provider.
     l1_provider: ReqwestProvider,
     /// The blob provider
-    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
+    blob_provider: OnlineBlobProvider,
     /// L2 chain provider.
     l2_provider: ReqwestProvider,
     /// L2 head
@@ -58,7 +54,7 @@ where
     pub const fn new(
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
-        blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
+        blob_provider: OnlineBlobProvider,
         l2_provider: ReqwestProvider,
         l2_head: B256,
     ) -> Self {
