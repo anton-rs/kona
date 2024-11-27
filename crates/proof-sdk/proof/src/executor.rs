@@ -3,7 +3,7 @@
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
-use kona_driver::{Executor, ExecutorConstructor};
+use kona_driver::Executor;
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
@@ -11,43 +11,7 @@ use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// An executor wrapper type.
 #[derive(Debug)]
-pub struct KonaExecutor<'a, P, H>(StatelessL2BlockExecutor<'a, P, H>)
-where
-    P: TrieDBProvider + Send + Sync + Clone,
-    H: TrieHinter + Send + Sync + Clone;
-
-impl<'a, P, H> KonaExecutor<'a, P, H>
-where
-    P: TrieDBProvider + Send + Sync + Clone,
-    H: TrieHinter + Send + Sync + Clone,
-{
-    /// Creates a new executor.
-    pub const fn new(executor: StatelessL2BlockExecutor<'a, P, H>) -> Self {
-        Self(executor)
-    }
-}
-
-impl<P, H> Executor for KonaExecutor<'_, P, H>
-where
-    P: TrieDBProvider + Send + Sync + Clone,
-    H: TrieHinter + Send + Sync + Clone,
-{
-    type Error = kona_executor::ExecutorError;
-
-    /// Execute the given payload attributes.
-    fn execute_payload(&mut self, attributes: OpPayloadAttributes) -> Result<&Header, Self::Error> {
-        self.0.execute_payload(attributes)
-    }
-
-    /// Computes the output root.
-    fn compute_output_root(&mut self) -> Result<B256, Self::Error> {
-        self.0.compute_output_root()
-    }
-}
-
-/// An executor constructor.
-#[derive(Debug)]
-pub struct KonaExecutorConstructor<'a, P, H>
+pub struct KonaExecutor<'a, P, H>
 where
     P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
@@ -60,31 +24,39 @@ where
     trie_hinter: H,
     /// The handle register for the executor.
     handle_register: Option<KonaHandleRegister<P, H>>,
+    /// The executor.
+    inner: Option<StatelessL2BlockExecutor<'a, P, H>>,
 }
 
-impl<'a, P, H> KonaExecutorConstructor<'a, P, H>
+impl<'a, P, H> KonaExecutor<'a, P, H>
 where
     P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
-    /// Creates a new executor constructor.
-    pub fn new(
+    /// Creates a new executor.
+    pub const fn new(
         rollup_config: &'a Arc<RollupConfig>,
         trie_provider: P,
         trie_hinter: H,
         handle_register: Option<KonaHandleRegister<P, H>>,
+        inner: Option<StatelessL2BlockExecutor<'a, P, H>>,
     ) -> Self {
-        Self { rollup_config, trie_provider, trie_hinter, handle_register }
+        Self { rollup_config, trie_provider, trie_hinter, handle_register, inner }
     }
 }
 
-impl<'a, P, H> ExecutorConstructor<KonaExecutor<'a, P, H>> for KonaExecutorConstructor<'a, P, H>
+impl<P, H> Executor for KonaExecutor<'_, P, H>
 where
     P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,
 {
-    /// Constructs the executor.
-    fn new_executor(&self, header: Sealed<Header>) -> KonaExecutor<'a, P, H> {
+    type Error = kona_executor::ExecutorError;
+
+    /// Updates the safe header.
+    ///
+    /// Since the L2 block executor is stateless, on an update to the safe head,
+    /// a new executor is created with the updated header.
+    fn update_safe_head(&mut self, header: Sealed<Header>) {
         let mut builder = StatelessL2BlockExecutor::builder(
             self.rollup_config,
             self.trie_provider.clone(),
@@ -95,7 +67,22 @@ where
         if let Some(register) = self.handle_register {
             builder = builder.with_handle_register(register);
         }
+        self.inner = Some(builder.build());
+    }
 
-        KonaExecutor::new(builder.build())
+    /// Execute the given payload attributes.
+    fn execute_payload(&mut self, attributes: OpPayloadAttributes) -> Result<&Header, Self::Error> {
+        self.inner.as_mut().map_or_else(
+            || Err(kona_executor::ExecutorError::MissingExecutor),
+            |e| e.execute_payload(attributes),
+        )
+    }
+
+    /// Computes the output root.
+    fn compute_output_root(&mut self) -> Result<B256, Self::Error> {
+        self.inner.as_mut().map_or_else(
+            || Err(kona_executor::ExecutorError::MissingExecutor),
+            |e| e.compute_output_root(),
+        )
     }
 }

@@ -15,17 +15,13 @@ use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
-use crate::{
-    DriverError, DriverPipeline, DriverResult, Executor, ExecutorConstructor, PipelineCursor,
-    TipCursor,
-};
+use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
 
 /// The Rollup Driver entrypoint.
 #[derive(Debug)]
-pub struct Driver<E, EC, DP, P>
+pub struct Driver<E, DP, P>
 where
     E: Executor + Send + Sync + Debug,
-    EC: ExecutorConstructor<E> + Send + Sync + Debug,
     DP: DriverPipeline<P> + Send + Sync + Debug,
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
@@ -37,19 +33,18 @@ where
     pub pipeline: DP,
     /// Cursor to keep track of the L2 tip
     pub cursor: PipelineCursor,
-    /// Executor constructor.
-    pub executor: EC,
+    /// The Executor.
+    pub executor: E,
 }
 
-impl<E, EC, DP, P> Driver<E, EC, DP, P>
+impl<E, DP, P> Driver<E, DP, P>
 where
     E: Executor + Send + Sync + Debug,
-    EC: ExecutorConstructor<E> + Send + Sync + Debug,
     DP: DriverPipeline<P> + Send + Sync + Debug,
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
     /// Creates a new [Driver].
-    pub const fn new(cursor: PipelineCursor, executor: EC, pipeline: DP) -> Self {
+    pub const fn new(cursor: PipelineCursor, executor: E, pipeline: DP) -> Self {
         Self {
             _marker: core::marker::PhantomData,
             _marker2: core::marker::PhantomData,
@@ -108,9 +103,8 @@ where
                 }
             };
 
-            let mut executor =
-                self.executor.new_executor(self.cursor.l2_safe_head_header().clone());
-            let header = match executor.execute_payload(attributes.clone()) {
+            self.executor.update_safe_head(self.cursor.l2_safe_head_header().clone());
+            let header = match self.executor.execute_payload(attributes.clone()) {
                 Ok(header) => header,
                 Err(e) => {
                     error!(target: "client", "Failed to execute L2 block: {}", e);
@@ -133,9 +127,8 @@ where
                         });
 
                         // Retry the execution.
-                        executor =
-                            self.executor.new_executor(self.cursor.l2_safe_head_header().clone());
-                        match executor.execute_payload(attributes.clone()) {
+                        self.executor.update_safe_head(self.cursor.l2_safe_head_header().clone());
+                        match self.executor.execute_payload(attributes.clone()) {
                             Ok(header) => header,
                             Err(e) => {
                                 error!(
@@ -176,7 +169,7 @@ where
             let cursor = TipCursor::new(
                 l2_info,
                 header.clone().seal_slow(),
-                executor.compute_output_root().map_err(DriverError::Executor)?,
+                self.executor.compute_output_root().map_err(DriverError::Executor)?,
             );
             self.cursor.advance(origin, cursor);
         }

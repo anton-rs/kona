@@ -43,6 +43,9 @@ pub enum ExecutorError {
     /// RLP error.
     #[error("RLP error: {0}")]
     RLPError(alloy_eips::eip2718::Eip2718Error),
+    /// Missing the executor.
+    #[error("Missing the executor")]
+    MissingExecutor,
 }
 
 /// A [Result] type for the [ExecutorError] enum.

@@ -19,21 +19,13 @@ pub trait Executor {
     /// The error type for the Executor.
     type Error: Error + Debug + Display + ToString;
 
+    /// Updates the safe header.
+    fn update_safe_head(&mut self, header: Sealed<Header>);
+
     /// Execute the gicen [OpPayloadAttributes].
     fn execute_payload(&mut self, attributes: OpPayloadAttributes) -> Result<&Header, Self::Error>;
 
     /// Computes the output root.
     /// Expected to be called after the payload has been executed.
     fn compute_output_root(&mut self) -> Result<B256, Self::Error>;
-}
-
-/// Constructs the Executor.
-///
-/// This trait abstracts the construction of the Executor.
-pub trait ExecutorConstructor<E>
-where
-    E: Executor,
-{
-    /// Construct the Executor.
-    fn new_executor(&self, header: Sealed<Header>) -> E;
 }
