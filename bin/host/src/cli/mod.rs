@@ -1,11 +1,11 @@
 //! This module contains all CLI-specific code for the host binary.
 
 use crate::{
+    blobs::OnlineBlobProvider,
     kv::{
         DiskKeyValueStore, LocalKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore,
         SplitKeyValueStore,
     },
-    providers::{OnlineBeaconClient, OnlineBlobProvider},
 };
 use alloy_primitives::B256;
 use alloy_provider::ReqwestProvider;
@@ -145,11 +145,12 @@ impl HostCli {
     /// - A [ReqwestProvider] for the L2 node.
     pub async fn create_providers(
         &self,
-    ) -> Result<(ReqwestProvider, OnlineBlobProvider<OnlineBeaconClient>, ReqwestProvider)> {
-        let beacon_client = OnlineBeaconClient::new_http(
+    ) -> Result<(ReqwestProvider, OnlineBlobProvider, ReqwestProvider)> {
+        let blob_provider = OnlineBlobProvider::new_http(
             self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
-        );
-        let mut blob_provider = OnlineBlobProvider::new(beacon_client, None, None);
+        )
+        .await
+        .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
         blob_provider
             .load_configs()
             .await
