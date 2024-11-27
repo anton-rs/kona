@@ -9,19 +9,18 @@ use crate::{
 };
 use alloy_primitives::B256;
 use alloy_provider::ReqwestProvider;
+use alloy_rpc_client::RpcClient;
+use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use clap::{
     builder::styling::{AnsiColor, Color, Style},
     ArgAction, Parser,
 };
 use op_alloy_genesis::RollupConfig;
+use reqwest::Client;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
-
-use alloy_rpc_client::RpcClient;
-use alloy_transport_http::Http;
-use reqwest::Client;
 
 mod parser;
 pub(crate) use parser::parse_b256;
