@@ -109,7 +109,7 @@ where
             };
 
             self.executor.update_safe_head(self.cursor.l2_safe_head_header().clone());
-            let header = match self.executor.execute_payload(attributes.clone()) {
+            let header = match self.executor.execute_payload(attributes.clone()).await {
                 Ok(header) => header,
                 Err(e) => {
                     error!(target: "client", "Failed to execute L2 block: {}", e);
@@ -133,7 +133,7 @@ where
 
                         // Retry the execution.
                         self.executor.update_safe_head(self.cursor.l2_safe_head_header().clone());
-                        match self.executor.execute_payload(attributes.clone()) {
+                        match self.executor.execute_payload(attributes.clone()).await {
                             Ok(header) => header,
                             Err(e) => {
                                 error!(

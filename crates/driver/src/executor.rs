@@ -27,7 +27,10 @@ pub trait Executor {
     fn update_safe_head(&mut self, header: Sealed<Header>);
 
     /// Execute the gicen [OpPayloadAttributes].
-    fn execute_payload(&mut self, attributes: OpPayloadAttributes) -> Result<&Header, Self::Error>;
+    async fn execute_payload(
+        &mut self,
+        attributes: OpPayloadAttributes,
+    ) -> Result<Header, Self::Error>;
 
     /// Computes the output root.
     /// Expected to be called after the payload has been executed.
