@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/anton-rs/kona/compare/kona-mpt-v0.1.0...kona-mpt-v0.1.1) - 2024-12-03
+
+### Other
+
+- update deps and clean up misc features ([#864](https://github.com/anton-rs/kona/pull/864))
+
 ## [0.0.7](https://github.com/anton-rs/kona/compare/kona-mpt-v0.0.6...kona-mpt-v0.0.7) - 2024-11-20
 
 ### Added

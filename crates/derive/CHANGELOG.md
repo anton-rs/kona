@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/anton-rs/kona/compare/kona-derive-v0.1.0...kona-derive-v0.2.0) - 2024-12-03
+
+### Added
+
+- *(workspace)* Isolate FPVM-specific platform code ([#821](https://github.com/anton-rs/kona/pull/821))
+
+### Fixed
+
+- bump ([#855](https://github.com/anton-rs/kona/pull/855))
+- nightly lint ([#858](https://github.com/anton-rs/kona/pull/858))
+
+### Other
+
+- *(derive)* remove indexed blob hash ([#847](https://github.com/anton-rs/kona/pull/847))
+
 ## [0.0.7](https://github.com/anton-rs/kona/compare/kona-derive-v0.0.6...kona-derive-v0.0.7) - 2024-11-20
 
 ### Added
