@@ -79,11 +79,17 @@ where
     }
 
     /// Execute the given payload attributes.
-    fn execute_payload(&mut self, attributes: OpPayloadAttributes) -> Result<&Header, Self::Error> {
-        self.inner.as_mut().map_or_else(
-            || Err(kona_executor::ExecutorError::MissingExecutor),
-            |e| e.execute_payload(attributes),
-        )
+    async fn execute_payload(
+        &mut self,
+        attributes: OpPayloadAttributes,
+    ) -> Result<Header, Self::Error> {
+        self.inner
+            .as_mut()
+            .map_or_else(
+                || Err(kona_executor::ExecutorError::MissingExecutor),
+                |e| e.execute_payload(attributes),
+            )
+            .cloned()
     }
 
     /// Computes the output root.
