@@ -1,0 +1,63 @@
+[package]
+name = "kona-derive"
+description = "A no_std derivation pipeline implementation for the OP Stack"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Alloy
+alloy-eips.workspace = true
+alloy-rpc-types-engine.workspace = true
+alloy-rlp = { workspace = true, features = ["derive"] }
+alloy-consensus = { workspace = true, features = ["k256"] }
+alloy-primitives = { workspace = true, features = ["rlp", "k256", "map"] }
+
+# Op Alloy
+op-alloy-genesis.workspace = true
+op-alloy-protocol.workspace = true
+op-alloy-rpc-types-engine.workspace = true
+op-alloy-consensus = { workspace = true, features = ["k256"] }
+
+# General
+tracing.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+
+# `serde` feature dependencies
+serde = { workspace = true, optional = true, features = ["derive"] }
+
+# `test-utils` feature dependencies
+spin = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
+
+[dev-dependencies]
+spin.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
+op-alloy-registry.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
+alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
+
+[features]
+default = ["serde"]
+serde = [
+  "dep:serde",
+  "alloy-primitives/serde",
+  "alloy-consensus/serde",
+  "op-alloy-consensus/serde",
+  "op-alloy-protocol/serde",
+  "op-alloy-genesis/serde",
+  "op-alloy-rpc-types-engine/serde",
+]
+test-utils = [
+  "dep:spin",
+  "dep:tracing-subscriber",
+]

@@ -34,6 +34,9 @@ pub enum OracleProviderError {
     /// Serde error.
     #[error("Serde error: {0}")]
     Serde(serde_json::Error),
+    /// AltDA error.
+    #[error("AltDA error: {0}")]
+    AltDA(String),
 }
 
 impl From<OracleProviderError> for PipelineErrorKind {

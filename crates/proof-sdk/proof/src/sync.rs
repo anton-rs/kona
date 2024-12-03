@@ -24,6 +24,8 @@ where
     let safe_head_info = l2_chain_provider.l2_block_info_by_number(safe_header.number).await?;
     let l1_origin = chain_provider.block_info_by_number(safe_head_info.l1_origin.number).await?;
 
+    info!(target: "client", "hehe l1_origin {:?}", l1_origin);
+
     // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
     // captured.
     let channel_timeout =
@@ -33,6 +35,8 @@ where
         l1_origin_number = boot_info.rollup_config.genesis.l1.number;
     }
     let origin = chain_provider.block_info_by_number(l1_origin_number).await?;
+
+    info!(target: "client", "origin {:?}", origin);
 
     // Construct the cursor.
     let mut cursor = PipelineCursor::new(channel_timeout, origin);

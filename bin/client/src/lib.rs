@@ -20,6 +20,7 @@ use kona_proof::{
     executor::KonaExecutor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
+    altda::OracleEigenDAProvider,
     sync::new_pipeline_cursor,
     BootInfo, CachingOracle, HintType,
 };
@@ -70,6 +71,7 @@ where
     let mut l1_provider = OracleL1ChainProvider::new(boot.clone(), oracle.clone());
     let mut l2_provider = OracleL2ChainProvider::new(boot.clone(), oracle.clone());
     let beacon = OracleBlobProvider::new(oracle.clone());
+    let eigenda_blob_provider = OracleEigenDAProvider::new(oracle.clone());
 
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
@@ -111,6 +113,7 @@ where
         beacon,
         l1_provider.clone(),
         l2_provider.clone(),
+        eigenda_blob_provider.clone(),
     );
     let executor = KonaExecutor::new(&cfg, l2_provider.clone(), l2_provider, None, None);
     let mut driver = Driver::new(cursor, executor, pipeline);

@@ -10,8 +10,17 @@
 mod blob_data;
 pub use blob_data::BlobData;
 
+mod eigenda_data;
+pub use eigenda_data::EigenDABlobData;
+
 mod ethereum;
 pub use ethereum::EthereumDataSource;
+
+mod eigenda;
+pub use eigenda::EigenDADataSource;
+
+mod eigenda_blobs;
+pub use eigenda_blobs::EigenDABlobSource;
 
 mod blobs;
 pub use blobs::BlobSource;

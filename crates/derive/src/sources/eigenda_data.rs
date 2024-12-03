@@ -1,3 +1,6 @@
+use alloy_primitives::{Address, Bytes};
+use crate::errors::BlobDecodingError;
+
 #[derive(Default, Clone, Debug)]
 pub struct EigenDABlobData {
     /// The blob data
@@ -11,6 +14,7 @@ impl EigenDABlobData {
     /// Returns a [BlobDecodingError] if the blob is invalid.
     pub(crate) fn decode(&self) -> Result<Bytes, BlobDecodingError> {
         // where we can implement zero bytes etc.
+        todo!()
     }
 
 }

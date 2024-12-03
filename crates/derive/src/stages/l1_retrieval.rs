@@ -81,6 +81,7 @@ where
     type Item = DAP::Item;
 
     async fn next_data(&mut self) -> PipelineResult<Self::Item> {
+        info!(target: "l1-retrieval", "next_data");
         if self.next.is_none() {
             self.next = Some(
                 self.prev
