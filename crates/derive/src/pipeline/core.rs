@@ -204,6 +204,8 @@ mod tests {
                     suggested_fee_recipient: Default::default(),
                     withdrawals: None,
                     parent_beacon_block_root: None,
+                    target_blobs_per_block: None,
+                    max_blobs_per_block: None,
                 },
                 transactions: None,
                 no_tx_pool: None,
