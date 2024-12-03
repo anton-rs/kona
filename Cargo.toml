@@ -63,74 +63,74 @@ lto = "fat"
 [workspace.dependencies]
 # Workspace
 kona-mpt = { path = "crates/mpt", version = "0.1.0", default-features = false }
+kona-client = { path = "bin/client", version = "0.1.0", default-features = false }
 kona-derive = { path = "crates/derive", version = "0.1.0", default-features = false }
 kona-driver = { path = "crates/driver", version = "0.1.0", default-features = false }
 kona-executor = { path = "crates/executor", version = "0.1.0", default-features = false }
-kona-client = { path = "bin/client", version = "0.1.0", default-features = false }
-kona-std-fpvm = { path = "crates/proof-sdk/std-fpvm", version = "0.1.0", default-features = false }
-kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.0", default-features = false }
-kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.1.0", default-features = false }
 kona-proof = { path = "crates/proof-sdk/proof", version = "0.1.0", default-features = false }
+kona-std-fpvm = { path = "crates/proof-sdk/std-fpvm", version = "0.1.0", default-features = false }
+kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.1.0", default-features = false }
+kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.0", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.9", default-features = false }
 alloy-trie = { version = "0.7.4", default-features = false }
-alloy-eips = { version = "0.7.0", default-features = false }
-alloy-serde = { version = "0.7.0", default-features = false }
-alloy-provider = { version = "0.7.0", default-features = false }
-alloy-primitives = { version = "0.8.13", default-features = false }
-alloy-consensus = { version = "0.7.0", default-features = false }
-alloy-transport = { version = "0.7.0", default-features = false }
-alloy-rpc-types = { version = "0.7.0", default-features = false, features = ["debug"] }
-alloy-rpc-client = { version = "0.7.0", default-features = false }
-alloy-node-bindings = { version = "0.7.0", default-features = false }
-alloy-transport-http = { version = "0.7.0", default-features = false }
-alloy-rpc-types-engine = { version = "0.7.0", default-features = false }
-alloy-rpc-types-beacon = { version = "0.7.0", default-features = false }
+alloy-eips = { version = "0.7.2", default-features = false }
+alloy-serde = { version = "0.7.2", default-features = false }
+alloy-provider = { version = "0.7.2", default-features = false }
+alloy-consensus = { version = "0.7.2", default-features = false }
+alloy-transport = { version = "0.7.2", default-features = false }
+alloy-rpc-types = { version = "0.7.2", default-features = false }
+alloy-rpc-client = { version = "0.7.2", default-features = false }
+alloy-primitives = { version = "0.8.14", default-features = false }
+alloy-node-bindings = { version = "0.7.2", default-features = false }
+alloy-transport-http = { version = "0.7.2", default-features = false }
+alloy-rpc-types-engine = { version = "0.7.2", default-features = false }
+alloy-rpc-types-beacon = { version = "0.7.2", default-features = false }
 
 # OP Alloy
-op-alloy-genesis = { version = "0.7.1", default-features = false }
-op-alloy-registry = { version = "0.7.1", default-features = false }
-op-alloy-protocol = { version = "0.7.1", default-features = false }
-op-alloy-consensus = { version = "0.7.1", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.7.1", default-features = false, features = ["serde"] }
+op-alloy-genesis = { version = "0.7.2", default-features = false }
+op-alloy-registry = { version = "0.7.2", default-features = false }
+op-alloy-protocol = { version = "0.7.2", default-features = false }
+op-alloy-consensus = { version = "0.7.2", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.7.2", default-features = false }
 
 # General
 lru = "0.12.4"
 spin = "0.9.8"
 rand = "0.8.5"
 clap = "4.5.19"
-tokio = "1.40.0"
+tokio = "1.42.0"
 async-channel = "2.3.1"
 cfg-if = "1.0.0"
-reqwest = "0.12.8"
+reqwest = "0.12.9"
 async-trait = "0.1.83"
 linked_list_allocator = "0.10.5"
 
 # General
 sha2 = { version = "0.10.8", default-features = false }
 c-kzg = { version = "2.0.0", default-features = false }
-anyhow = { version = "1.0.89", default-features = false }
-thiserror = { version = "2.0", default-features = false }
+anyhow = { version = "1.0.93", default-features = false }
+thiserror = { version = "2.0.4", default-features = false }
 
 # Tracing
 tracing-loki = "0.2.5"
-tracing-subscriber = "0.3.18"
-tracing = { version = "0.1.40", default-features = false }
+tracing-subscriber = "0.3.19"
+tracing = { version = "0.1.41", default-features = false }
 
 # Testing
 pprof = "0.14.0"
-proptest = "1.5"
+proptest = "1.5.0"
 criterion = "0.5.1"
 
 # Serialization
-rkyv = "0.8.8"
-serde = { version = "1.0.213", default-features = false }
-serde_json = { version = "1.0.132", default-features = false }
+rkyv = "0.8.9"
+serde = { version = "1.0.215", default-features = false }
+serde_json = { version = "1.0.133", default-features = false }
 
 # Ethereum
 unsigned-varint = "0.8.0"
 revm = { version = "16.0.0", default-features = false }
 
 # K/V database
-rocksdb = { version = "0.22", default-features = false }
+rocksdb = { version = "0.22.0", default-features = false }

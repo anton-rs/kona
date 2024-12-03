@@ -29,8 +29,8 @@ alloy-primitives.workspace = true
 op-alloy-registry.workspace = true
 op-alloy-protocol.workspace = true
 op-alloy-consensus.workspace = true
-op-alloy-rpc-types-engine.workspace = true
 op-alloy-genesis = { workspace = true, features = ["serde"] }
+op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # General
 lru.workspace = true
