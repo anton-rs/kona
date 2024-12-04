@@ -11,7 +11,7 @@ use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
-use kona_executor::{ExecutorError, TrieDBProvider};
+use kona_executor::{ExecutorError, KonaHandleRegister, TrieDBProvider};
 use kona_preimage::{
     CommsClient, HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient,
 };
@@ -25,12 +25,6 @@ use kona_proof::{
 };
 use thiserror::Error;
 use tracing::{error, info, warn};
-
-mod precompiles;
-pub use precompiles::{
-    EcPairingAccelerated, EcPairingAcceleratedGranite, EcRecoverAccelerated,
-    KZGPointEvalAccelerated, ECPAIRING_ADDRESS, ECRECOVER_ADDRESS, POINT_EVAL_ADDRESS,
-};
 
 /// An error that can occur when running the fault proof program.
 #[derive(Error, Debug)]
@@ -48,7 +42,16 @@ pub enum FaultProofProgramError {
 
 /// Executes the fault proof program with the given [PreimageOracleClient] and [HintWriterClient].
 #[inline]
-pub async fn run<P, H>(oracle_client: P, hint_client: H) -> Result<(), FaultProofProgramError>
+pub async fn run<P, H>(
+    oracle_client: P,
+    hint_client: H,
+    handle_register: Option<
+        KonaHandleRegister<
+            OracleL2ChainProvider<CachingOracle<P, H>>,
+            OracleL2ChainProvider<CachingOracle<P, H>>,
+        >,
+    >,
+) -> Result<(), FaultProofProgramError>
 where
     P: PreimageOracleClient + Send + Sync + Debug + Clone,
     H: HintWriterClient + Send + Sync + Debug + Clone,
@@ -112,7 +115,7 @@ where
         l1_provider.clone(),
         l2_provider.clone(),
     );
-    let executor = KonaExecutor::new(&cfg, l2_provider.clone(), l2_provider, None, None);
+    let executor = KonaExecutor::new(&cfg, l2_provider.clone(), l2_provider, handle_register, None);
     let mut driver = Driver::new(cursor, executor, pipeline);
 
     // Run the derivation pipeline until we are able to produce the output root of the claimed
