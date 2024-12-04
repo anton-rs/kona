@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_map_or)]
 //! Contains the [BatchValidator] stage.
 
 use super::NextBatchProvider;
@@ -55,7 +56,7 @@ where
     /// ## Returns
     /// - `true` if the origin is behind the parent origin.
     fn origin_behind(&self, parent: &L2BlockInfo) -> bool {
-        self.prev.origin().is_none_or(|origin| origin.number < parent.l1_origin.number)
+        self.prev.origin().map_or(true, |origin| origin.number < parent.l1_origin.number)
     }
 
     /// Updates the [BatchValidator]'s view of the L1 origin blocks.
