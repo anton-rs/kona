@@ -25,4 +25,7 @@ where
     /// Error decoding or encoding RLP.
     #[error("RLP error: {0}")]
     Rlp(alloy_rlp::Error),
+    /// End of source error used to reset the target.
+    #[error("End of source")]
+    EndOfSource,
 }

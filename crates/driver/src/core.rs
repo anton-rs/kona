@@ -59,33 +59,13 @@ where
         self.executor.wait_until_ready().await;
     }
 
-    /// Advances the derivation pipeline to the target block number.
-    ///
-    /// ## Takes
-    /// - `cfg`: The rollup configuration.
-    /// - `target`: The target block number.
-    ///
-    /// ## Returns
-    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
-    ///   output root.
-    /// - `Err(e)` - An error if the block could not be produced.
-    pub async fn advance_to_target(
+    /// Performs a single advancements of the derivation pipeline.
+    pub async fn advance(
         &mut self,
         cfg: &RollupConfig,
-        mut target: Option<u64>,
-    ) -> DriverResult<(u64, B256), E::Error> {
+        target_reset: bool,
+    ) -> DriverResult<OpBlock, E::Error> {
         loop {
-            // Check if we have reached the target block number.
-            if let Some(tb) = target {
-                if self.cursor.l2_safe_head().block_info.number >= tb {
-                    info!(target: "client", "Derivation complete, reached L2 safe head.");
-                    return Ok((
-                        self.cursor.l2_safe_head().block_info.number,
-                        *self.cursor.l2_safe_head_output_root(),
-                    ));
-                }
-            }
-
             let OpAttributesWithParent { mut attributes, .. } = match self
                 .pipeline
                 .produce_payload(*self.cursor.l2_safe_head())
@@ -95,12 +75,12 @@ where
                 Err(PipelineErrorKind::Critical(PipelineError::EndOfSource)) => {
                     warn!(target: "client", "Exhausted data source; Halting derivation and using current safe head.");
 
-                    // Adjust the target block number to the current safe head, as no more blocks
-                    // can be produced.
-                    if target.is_some() {
-                        target = Some(self.cursor.l2_safe_head().block_info.number);
-                    };
-                    continue;
+                    // Return here so the target can be adjusted if it is `Some`.
+                    if target_reset {
+                        return Err(DriverError::EndOfSource);
+                    } else {
+                        continue;
+                    }
                 }
                 Err(e) => {
                     error!(target: "client", "Failed to produce payload: {:?}", e);
@@ -177,6 +157,50 @@ where
                 self.executor.compute_output_root().map_err(DriverError::Executor)?,
             );
             self.cursor.advance(origin, cursor);
+
+            return Ok(block);
+        }
+    }
+
+    /// Advances the derivation pipeline to the target block number.
+    ///
+    /// ## Takes
+    /// - `cfg`: The rollup configuration.
+    /// - `target`: The target block number.
+    ///
+    /// ## Returns
+    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
+    ///   output root.
+    /// - `Err(e)` - An error if the block could not be produced.
+    pub async fn advance_to_target(
+        &mut self,
+        cfg: &RollupConfig,
+        mut target: Option<u64>,
+    ) -> DriverResult<(u64, B256), E::Error> {
+        loop {
+            // Check if we have reached the target block number.
+            if let Some(tb) = target {
+                if self.cursor.l2_safe_head().block_info.number >= tb {
+                    info!(target: "client", "Derivation complete, reached L2 safe head.");
+                    return Ok((
+                        self.cursor.l2_safe_head().block_info.number,
+                        *self.cursor.l2_safe_head_output_root(),
+                    ));
+                }
+            }
+
+            match self.advance(cfg, target.is_some()).await {
+                Err(DriverError::EndOfSource) => {
+                    // Adjust the target block number to the current safe head, as no more blocks
+                    // can be produced.
+                    if target.is_some() {
+                        target = Some(self.cursor.l2_safe_head().block_info.number);
+                    };
+                    continue;
+                }
+                Err(e) => return Err(e),
+                Ok(_) => {}
+            }
         }
     }
 }
