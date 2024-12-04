@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/anton-rs/kona/compare/kona-preimage-v0.1.0...kona-preimage-v0.2.0) - 2024-12-03
+
+### Added
+
+- *(workspace)* Isolate FPVM-specific platform code ([#821](https://github.com/anton-rs/kona/pull/821))
+
 ## [0.0.5](https://github.com/anton-rs/kona/compare/kona-preimage-v0.0.4...kona-preimage-v0.0.5) - 2024-11-20
 
 ### Added

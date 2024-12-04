@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/anton-rs/kona/compare/kona-driver-v0.1.0...kona-driver-v0.2.0) - 2024-12-03
+
+### Added
+
+- *(driver)* wait for engine ([#851](https://github.com/anton-rs/kona/pull/851))
+- *(driver)* refines the executor interface for the driver ([#850](https://github.com/anton-rs/kona/pull/850))
+
+### Fixed
+
+- bump ([#865](https://github.com/anton-rs/kona/pull/865))
+
+### Other
+
+- *(driver)* advance with optional target ([#848](https://github.com/anton-rs/kona/pull/848))
+- *(driver)* visibility ([#834](https://github.com/anton-rs/kona/pull/834))
+
 ## [0.0.1](https://github.com/anton-rs/kona/compare/kona-driver-v0.0.0...kona-driver-v0.0.1) - 2024-11-20
 
 ### Added
