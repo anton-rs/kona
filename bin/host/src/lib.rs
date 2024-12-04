@@ -93,6 +93,7 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
     let program_task = task::spawn(kona_client::run(
         OracleReader::new(preimage_chan.client),
         HintWriter::new(hint_chan.client),
+        None,
     ));
 
     // Execute both tasks and wait for them to complete.
