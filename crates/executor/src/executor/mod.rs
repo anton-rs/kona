@@ -1,61 +1,70 @@
 //! A stateless block executor for the OP Stack.
 
 use crate::{
-    constants::{L2_TO_L1_BRIDGE, OUTPUT_ROOT_VERSION},
+    constants::{L2_TO_L1_BRIDGE, OUTPUT_ROOT_VERSION, FEE_RECIPIENT},
     db::TrieDB,
     errors::TrieDBError,
-    syscalls::{ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call},
+    syscalls::{ensure_create2_deployer_canyon, apply_beacon_root_contract_call},
     ExecutorError, ExecutorResult, TrieDBProvider,
 };
 use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Transaction, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{keccak256, logs_bloom, Bytes, Log, B256, U256};
+use alloy_rlp::Encodable;
 use kona_mpt::{ordered_trie_with_encoder, TrieHinter};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
-    primitives::{calc_excess_blob_gas, EnvWithHandlerCfg},
     Evm,
 };
+use revm_primitives::{calc_excess_blob_gas, EnvWithHandlerCfg};
 
 mod builder;
-pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
+pub use builder::StatelessL2BlockExecutorBuilder;
+use reth_evm::{ConfigureEvmEnv, NextBlockEnvAttributes};
+use reth_primitives::TransactionSigned;
 
 mod env;
 
+mod evm_config;
+pub use evm_config::DefaultEVMConfig;
 mod util;
 use util::encode_holocene_eip_1559_params;
 
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F, H>
+pub struct StatelessL2BlockExecutor<'a, F, H, C>
 where
     F: TrieDBProvider,
     H: TrieHinter,
+    C: KonaEvmConfig,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
     /// The inner state database component.
     trie_db: TrieDB<F, H>,
-    /// The [KonaHandleRegister] to use during execution.
-    handler_register: Option<KonaHandleRegister<F, H>>,
+    /// The [KonaEvmConfig] used for execution.
+    evm_config: C,
 }
 
-impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
+impl<'a, F, H, C> StatelessL2BlockExecutor<'a, F, H, C>
 where
     F: TrieDBProvider,
     H: TrieHinter,
+    C: KonaEvmConfig,
+    // ZTODO: is there cleaner way to do this?
+    <C as ConfigureEvmEnv>::Header: From<<C as evm_config::KonaEvmConfig>::Header>
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
     pub fn builder(
         config: &'a RollupConfig,
         provider: F,
         hinter: H,
-    ) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
+    ) -> StatelessL2BlockExecutorBuilder<'a, F, H, C> {
         StatelessL2BlockExecutorBuilder::new(config, provider, hinter)
     }
 
@@ -76,19 +85,20 @@ where
     /// 5. Compute the [state root, transactions root, receipts root, logs bloom] for the processed
     ///    block.
     pub fn execute_payload(&mut self, payload: OpPayloadAttributes) -> ExecutorResult<&Header> {
-        // Prepare the `revm` environment.
-        let base_fee_params = Self::active_base_fee_params(
-            self.config,
-            self.trie_db.parent_block_header(),
-            &payload,
-        )?;
-        let initialized_block_env = Self::prepare_block_env(
-            self.revm_spec_id(payload.payload_attributes.timestamp),
-            self.trie_db.parent_block_header(),
-            &payload,
-            &base_fee_params,
-        )?;
-        let initialized_cfg = self.evm_cfg_env(payload.payload_attributes.timestamp);
+        let next_block_env_attrs = NextBlockEnvAttributes {
+            timestamp: payload.payload_attributes.timestamp,
+            suggested_fee_recipient: FEE_RECIPIENT,
+            prev_randao: payload.payload_attributes.prev_randao,
+        };
+
+        let parent_header: <C as KonaEvmConfig>::Header = self.trie_db.parent_block_header().into();
+
+        // TODO: error handling
+        let (initialized_cfg, initialized_block_env) =
+            self.evm_config.next_cfg_and_block_env(
+                &parent_header.into(), next_block_env_attrs
+            ).unwrap();
+
         let block_number = initialized_block_env.number.to::<u64>();
         let base_fee = initialized_block_env.basefee.to::<u128>();
         let gas_limit = payload.gas_limit.ok_or(ExecutorError::MissingGasLimit)?;
@@ -106,14 +116,32 @@ where
         let mut state =
             State::builder().with_database(&mut self.trie_db).with_bundle_update().build();
 
+        // Construct the block-scoped EVM with the given configuration.
+        // The transaction environment is set within the loop for each transaction.
+        let evm = {
+            let env_with_handler_cfg = EnvWithHandlerCfg::new_with_cfg_env(
+                initialized_cfg.clone(),
+                initialized_block_env.clone(),
+                Default::default(),
+            );
+
+            let mut base = Evm::builder().with_db(&mut state).with_env_with_handler_cfg(env_with_handler_cfg);
+
+            if let Some(handler) = self.evm_config.handler_register() {
+                base = base.append_handler_register(handler);
+            }
+
+            base.build()
+        };
+
         // Apply the pre-block EIP-4788 contract call.
-        pre_block_beacon_root_contract_call(
-            &mut state,
+        apply_beacon_root_contract_call(
             self.config,
+            &self.evm_config,
+            payload.payload_attributes.timestamp,
             block_number,
-            &initialized_cfg,
-            &initialized_block_env,
-            &payload,
+            payload.payload_attributes.parent_beacon_block_root,
+            &mut evm
         )?;
 
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
@@ -127,34 +155,16 @@ where
         let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(transactions.len());
         let is_regolith = self.config.is_regolith_active(payload.payload_attributes.timestamp);
 
-        // Construct the block-scoped EVM with the given configuration.
-        // The transaction environment is set within the loop for each transaction.
-        let mut evm = {
-            let mut base = Evm::builder().with_db(&mut state).with_env_with_handler_cfg(
-                EnvWithHandlerCfg::new_with_cfg_env(
-                    initialized_cfg.clone(),
-                    initialized_block_env.clone(),
-                    Default::default(),
-                ),
-            );
-
-            // If a handler register is provided, append it to the base EVM.
-            if let Some(handler) = self.handler_register {
-                base = base.append_handler_register(handler);
-            }
-
-            base.build()
-        };
-
         // Execute the transactions in the payload.
         let decoded_txs = transactions
             .iter()
-            .map(|raw_tx| {
+            .map(|mut raw_tx| {
                 let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref())
                     .map_err(ExecutorError::RLPError)?;
                 Ok((tx, raw_tx.as_ref()))
             })
             .collect::<ExecutorResult<Vec<_>>>()?;
+
         for (transaction, raw_transaction) in decoded_txs {
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
@@ -166,10 +176,9 @@ where
             }
 
             // Modify the transaction environment with the current transaction.
-            evm = evm
-                .modify()
-                .with_tx_env(Self::prepare_tx_env(&transaction, raw_transaction)?)
-                .build();
+            // ZTODO: error handling
+            let reth_tx = TransactionSigned::decode_2718(&mut raw_transaction.clone()).unwrap();
+            self.evm_config.fill_tx_env(evm.tx_mut(), &reth_tx, reth_tx.recover_signer().unwrap());
 
             // If the transaction is a deposit, cache the depositor account.
             //
