@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_map_or)]
 //! The [`AttributesBuilder`] and it's default implementation.
 
 use crate::{
@@ -214,7 +215,7 @@ async fn derive_deposits(
         for l in r.logs.iter() {
             let curr_index = global_index;
             global_index += 1;
-            if l.data.topics().first().is_none_or(|i| *i != DEPOSIT_EVENT_ABI_HASH) {
+            if l.data.topics().first().map_or(true, |i| *i != DEPOSIT_EVENT_ABI_HASH) {
                 continue;
             }
             if l.address != deposit_contract {
