@@ -1,22 +1,31 @@
 //! Contains the builder pattern for the [StatelessL2BlockExecutor].
 
-use super::StatelessL2BlockExecutor;
-use crate::{
-    db::{TrieDB, TrieDBProvider},
-    DefaultEVMConfig
-};
+use super::{StatelessL2BlockExecutor, KonaEvmConfig};
+use crate::db::{TrieDB, TrieDBProvider};
 use alloy_consensus::{Header, Sealable, Sealed};
 use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
+use reth_optimism_chainspec::OpChainSpec;
+use alloc::sync::Arc;
 use revm::{db::State, handler::register::EvmHandler};
-use reth_evm::ConfigureEvm;
+
+/// A type alias for the [revm::handler::register::HandleRegister] for kona's block executor.
+pub type KonaHandleRegister<F, H> =
+    for<'i> fn(&mut EvmHandler<'i, (), &mut State<&mut TrieDB<F, H>>>);
+
+#[derive(Debug)]
+enum EvmConfigOrChainSpec<C: KonaEvmConfig> {
+    EvmConfig(C),
+    ChainSpec(Arc<OpChainSpec>),
+}
 
 /// The builder pattern for the [StatelessL2BlockExecutor].
+#[derive(Debug)]
 pub struct StatelessL2BlockExecutorBuilder<'a, F, H, C>
 where
     F: TrieDBProvider,
     H: TrieHinter,
-    C: ConfigureEvm,
+    C: KonaEvmConfig,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
@@ -26,19 +35,21 @@ where
     hinter: H,
     /// The parent [Header] to begin execution from.
     parent_header: Option<Sealed<Header>>,
-    /// The [ConfigureEvm] used for execution.
-    evm_config: Option<C>,
+    /// The [KonaEvmConfig] or chainspec used to derive it.
+    evm_config: Option<EvmConfigOrChainSpec<C>>,
+    /// The [KonaHandleRegister] to use during execution.
+    handler_register: Option<KonaHandleRegister<F, H>>,
 }
 
 impl<'a, F, H, C> StatelessL2BlockExecutorBuilder<'a, F, H, C>
 where
     F: TrieDBProvider,
     H: TrieHinter,
-    C: ConfigureEvm,
+    C: KonaEvmConfig,
 {
     /// Instantiate a new builder with the given [RollupConfig].
     pub fn new(config: &'a RollupConfig, provider: F, hinter: H) -> Self {
-        Self { config, provider, hinter, parent_header: None, evm_config: None }
+        Self { config, provider, hinter, parent_header: None, evm_config: None, handler_register: None }
     }
 
     /// Set the [Header] to begin execution from.
@@ -48,8 +59,20 @@ where
     }
 
     /// Set the [KonaHandleRegister] for execution.
+    pub fn with_handle_register(mut self, handler_register: KonaHandleRegister<F, H>) -> Self {
+        self.handler_register = Some(handler_register);
+        self
+    }
+
+    /// Set the [KonaHandleRegister] for execution.
     pub fn with_evm_config(mut self, evm_config: C) -> Self {
-        self.evm_config = Some(evm_config);
+        self.evm_config = Some(EvmConfigOrChainSpec::EvmConfig(evm_config));
+        self
+    }
+
+    /// Set the [KonaHandleRegister] for execution.
+    pub fn with_chain_spec(mut self, chain_spec: Arc<OpChainSpec>) -> Self {
+        self.evm_config = Some(EvmConfigOrChainSpec::ChainSpec(chain_spec));
         self
     }
 
@@ -60,8 +83,11 @@ where
             default_header.seal_slow()
         });
 
-        // TODO: think through default behavior, may need chain spec or something
-        let evm_config = self.evm_config.unwrap_or_else(|| DefaultEVMConfig::new());
+        // ZTODO: error handling
+        let evm_config = match self.evm_config.unwrap() {
+            EvmConfigOrChainSpec::EvmConfig(config) => config,
+            EvmConfigOrChainSpec::ChainSpec(chain_spec) => C::new(chain_spec)
+        };
 
         let trie_db =
             TrieDB::new(parent_header.state_root, parent_header, self.provider, self.hinter);
@@ -70,6 +96,7 @@ where
             config: self.config,
             trie_db,
             evm_config,
+            handler_register: self.handler_register,
         }
     }
 }

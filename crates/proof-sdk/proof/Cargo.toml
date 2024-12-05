@@ -32,6 +32,8 @@ op-alloy-consensus.workspace = true
 op-alloy-genesis = { workspace = true, features = ["serde"] }
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
+reth-optimism-chainspec.workspace = true
+
 # General
 lru.workspace = true
 spin.workspace = true

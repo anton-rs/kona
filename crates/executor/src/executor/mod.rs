@@ -11,7 +11,6 @@ use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Transaction, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{keccak256, logs_bloom, Bytes, Log, B256, U256};
-use alloy_rlp::Encodable;
 use kona_mpt::{ordered_trie_with_encoder, TrieHinter};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
@@ -23,14 +22,14 @@ use revm::{
 use revm_primitives::{calc_excess_blob_gas, EnvWithHandlerCfg};
 
 mod builder;
-pub use builder::StatelessL2BlockExecutorBuilder;
-use reth_evm::{ConfigureEvmEnv, NextBlockEnvAttributes};
+pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
+
+use reth_evm::NextBlockEnvAttributes;
 use reth_primitives::TransactionSigned;
 
-mod env;
-
 mod evm_config;
-pub use evm_config::DefaultEVMConfig;
+pub use evm_config::KonaEvmConfig;
+
 mod util;
 use util::encode_holocene_eip_1559_params;
 
@@ -49,6 +48,8 @@ where
     trie_db: TrieDB<F, H>,
     /// The [KonaEvmConfig] used for execution.
     evm_config: C,
+    /// The [KonaHandleRegister] to use during execution.
+    handler_register: Option<KonaHandleRegister<F, H>>,
 }
 
 impl<'a, F, H, C> StatelessL2BlockExecutor<'a, F, H, C>
@@ -56,8 +57,6 @@ where
     F: TrieDBProvider,
     H: TrieHinter,
     C: KonaEvmConfig,
-    // ZTODO: is there cleaner way to do this?
-    <C as ConfigureEvmEnv>::Header: From<<C as evm_config::KonaEvmConfig>::Header>
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
     pub fn builder(
@@ -91,12 +90,10 @@ where
             prev_randao: payload.payload_attributes.prev_randao,
         };
 
-        let parent_header: <C as KonaEvmConfig>::Header = self.trie_db.parent_block_header().into();
-
         // TODO: error handling
         let (initialized_cfg, initialized_block_env) =
             self.evm_config.next_cfg_and_block_env(
-                &parent_header.into(), next_block_env_attrs
+                &C::localize_alloy_header(&self.trie_db.parent_block_header()), next_block_env_attrs
             ).unwrap();
 
         let block_number = initialized_block_env.number.to::<u64>();
@@ -116,9 +113,18 @@ where
         let mut state =
             State::builder().with_database(&mut self.trie_db).with_bundle_update().build();
 
+
+        // ZTODO: Confirm ok to change this order
+        // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
+        ensure_create2_deployer_canyon(
+            &mut state,
+            self.config,
+            payload.payload_attributes.timestamp,
+        )?;
+
         // Construct the block-scoped EVM with the given configuration.
         // The transaction environment is set within the loop for each transaction.
-        let evm = {
+        let mut evm = {
             let env_with_handler_cfg = EnvWithHandlerCfg::new_with_cfg_env(
                 initialized_cfg.clone(),
                 initialized_block_env.clone(),
@@ -127,7 +133,7 @@ where
 
             let mut base = Evm::builder().with_db(&mut state).with_env_with_handler_cfg(env_with_handler_cfg);
 
-            if let Some(handler) = self.evm_config.handler_register() {
+            if let Some(handler) = self.handler_register {
                 base = base.append_handler_register(handler);
             }
 
@@ -144,13 +150,6 @@ where
             &mut evm
         )?;
 
-        // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
-        ensure_create2_deployer_canyon(
-            &mut state,
-            self.config,
-            payload.payload_attributes.timestamp,
-        )?;
-
         let mut cumulative_gas_used = 0u64;
         let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(transactions.len());
         let is_regolith = self.config.is_regolith_active(payload.payload_attributes.timestamp);
@@ -158,7 +157,7 @@ where
         // Execute the transactions in the payload.
         let decoded_txs = transactions
             .iter()
-            .map(|mut raw_tx| {
+            .map(|raw_tx| {
                 let tx = OpTxEnvelope::decode_2718(&mut raw_tx.as_ref())
                     .map_err(ExecutorError::RLPError)?;
                 Ok((tx, raw_tx.as_ref()))
@@ -177,6 +176,7 @@ where
 
             // Modify the transaction environment with the current transaction.
             // ZTODO: error handling
+            // ZTODO: clone required but says unnecessary
             let reth_tx = TransactionSigned::decode_2718(&mut raw_transaction.clone()).unwrap();
             self.evm_config.fill_tx_env(evm.tx_mut(), &reth_tx, reth_tx.recover_signer().unwrap());
 

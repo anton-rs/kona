@@ -17,7 +17,7 @@ pub use errors::{ExecutorError, ExecutorResult, TrieDBError, TrieDBResult};
 
 mod executor;
 pub use executor::{
-    KonaHandleRegister, StatelessL2BlockExecutor, StatelessL2BlockExecutorBuilder
+    KonaHandleRegister, StatelessL2BlockExecutor, StatelessL2BlockExecutorBuilder, KonaEvmConfig
 };
 
 mod db;

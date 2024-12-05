@@ -2675,6 +2675,7 @@ dependencies = [
  "op-alloy-genesis",
  "op-alloy-protocol",
  "op-alloy-rpc-types-engine",
+ "reth-optimism-chainspec",
  "revm",
  "serde",
  "serde_json",
@@ -2742,6 +2743,8 @@ dependencies = [
  "pprof",
  "rand",
  "reth-evm",
+ "reth-optimism-chainspec",
+ "reth-optimism-forks",
  "reth-primitives",
  "reth-primitives-traits",
  "revm",
@@ -2846,6 +2849,7 @@ dependencies = [
  "op-alloy-protocol",
  "op-alloy-registry",
  "op-alloy-rpc-types-engine",
+ "reth-optimism-chainspec",
  "serde",
  "serde_json",
  "spin",
@@ -4281,6 +4285,39 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
  "zstd",
+]
+
+[[package]]
+name = "reth-optimism-chainspec"
+version = "1.1.2"
+source = "git+https://github.com/paradigmxyz/reth.git?rev=8e4a917#8e4a917ec1aa70b3779083454ff2d5ecf6b44168"
+dependencies = [
+ "alloy-chains",
+ "alloy-consensus 0.6.4",
+ "alloy-eips 0.6.4",
+ "alloy-genesis",
+ "alloy-primitives",
+ "derive_more",
+ "once_cell",
+ "op-alloy-rpc-types",
+ "reth-chainspec",
+ "reth-ethereum-forks",
+ "reth-network-peers",
+ "reth-optimism-forks",
+ "reth-primitives-traits",
+ "serde_json",
+]
+
+[[package]]
+name = "reth-optimism-forks"
+version = "1.1.2"
+source = "git+https://github.com/paradigmxyz/reth.git?rev=8e4a917#8e4a917ec1aa70b3779083454ff2d5ecf6b44168"
+dependencies = [
+ "alloy-chains",
+ "alloy-primitives",
+ "once_cell",
+ "reth-ethereum-forks",
+ "serde",
 ]
 
 [[package]]

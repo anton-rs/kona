@@ -99,6 +99,8 @@ op-alloy-rpc-types-engine = { version = "0.7.2", default-features = false }
 reth-evm = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
 reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
+reth-optimism-chainspec = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
+reth-optimism-forks = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
 
 # General
 lru = "0.12.4"

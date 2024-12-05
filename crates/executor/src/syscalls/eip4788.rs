@@ -3,22 +3,21 @@
 use crate::{
     db::TrieDB,
     errors::{ExecutorError, ExecutorResult},
+    executor::KonaEvmConfig,
     TrieDBProvider,
 };
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
-use alloy_primitives::{Address, Bytes, B256, U256};
+use alloy_primitives::B256;
 use kona_mpt::TrieHinter;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{
     db::State,
     DatabaseCommit, Evm,
 };
-use reth_evm::ConfigureEvm;
 
 /// Apply the EIP-4788 pre-block beacon root contract call to a given EVM instance.
-pub fn apply_beacon_root_contract_call<F, H, C: ConfigureEvm>(
+pub(crate) fn apply_beacon_root_contract_call<F, H, C: KonaEvmConfig>(
     config: &RollupConfig,
     evm_config: &C,
     timestamp: u64,
@@ -51,7 +50,6 @@ where
 
     // modify env for pre block call
     evm_config.fill_tx_env_system_contract_call(
-        // ZTODO: Current reth uses different version, need to sync them somehow
         &mut *evm.context.evm.env,
         alloy_eips::eip4788::SYSTEM_ADDRESS,
         BEACON_ROOTS_ADDRESS,
