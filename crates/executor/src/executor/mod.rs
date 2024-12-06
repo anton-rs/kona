@@ -1,30 +1,28 @@
 //! A stateless block executor for the OP Stack.
 
 use crate::{
-    constants::{L2_TO_L1_BRIDGE, OUTPUT_ROOT_VERSION},
+    constants::{L2_TO_L1_BRIDGE, OUTPUT_ROOT_VERSION, FEE_RECIPIENT},
     db::TrieDB,
     errors::TrieDBError,
-    syscalls::{ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call},
+    syscalls::{ensure_create2_deployer_canyon, apply_beacon_root_contract_call},
     ExecutorError, ExecutorResult, TrieDBProvider,
 };
 use alloc::vec::Vec;
 use alloy_consensus::{Header, Sealable, Transaction, EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
+use alloy_primitives::Address;
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{keccak256, logs_bloom, Bytes, Log, B256, U256};
 use kona_mpt::{ordered_trie_with_encoder, TrieHinter};
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
-use revm::{
-    db::{states::bundle_state::BundleRetention, State},
-    primitives::{calc_excess_blob_gas, EnvWithHandlerCfg},
-    Evm,
-};
+use revm::db::{states::bundle_state::BundleRetention, State};
+use revm_primitives::{calc_excess_blob_gas, EnvWithHandlerCfg};
 
 mod builder;
-pub use builder::{KonaHandleRegister, StatelessL2BlockExecutorBuilder};
+pub use builder::StatelessL2BlockExecutorBuilder;
 
-mod env;
+use reth_evm::{ConfigureEvm, NextBlockEnvAttributes};
 
 mod util;
 use util::encode_holocene_eip_1559_params;
@@ -32,30 +30,32 @@ use util::encode_holocene_eip_1559_params;
 /// The block executor for the L2 client program. Operates off of a [TrieDB] backed [State],
 /// allowing for stateless block execution of OP Stack blocks.
 #[derive(Debug)]
-pub struct StatelessL2BlockExecutor<'a, F, H>
+pub struct StatelessL2BlockExecutor<'a, F, H, C>
 where
     F: TrieDBProvider,
     H: TrieHinter,
+    C: ConfigureEvm<Header=Header, Transaction=OpTxEnvelope>,
 {
     /// The [RollupConfig].
     config: &'a RollupConfig,
     /// The inner state database component.
     trie_db: TrieDB<F, H>,
-    /// The [KonaHandleRegister] to use during execution.
-    handler_register: Option<KonaHandleRegister<F, H>>,
+    /// The [ConfigureEvm] used for execution.
+    evm_config: C,
 }
 
-impl<'a, F, H> StatelessL2BlockExecutor<'a, F, H>
+impl<'a, F, H, C> StatelessL2BlockExecutor<'a, F, H, C>
 where
     F: TrieDBProvider,
     H: TrieHinter,
+    C: ConfigureEvm<Header=Header, Transaction=OpTxEnvelope>,
 {
     /// Constructs a new [StatelessL2BlockExecutorBuilder] with the given [RollupConfig].
     pub fn builder(
         config: &'a RollupConfig,
         provider: F,
         hinter: H,
-    ) -> StatelessL2BlockExecutorBuilder<'a, F, H> {
+    ) -> StatelessL2BlockExecutorBuilder<'a, F, H, C> {
         StatelessL2BlockExecutorBuilder::new(config, provider, hinter)
     }
 
@@ -76,19 +76,17 @@ where
     /// 5. Compute the [state root, transactions root, receipts root, logs bloom] for the processed
     ///    block.
     pub fn execute_payload(&mut self, payload: OpPayloadAttributes) -> ExecutorResult<&Header> {
-        // Prepare the `revm` environment.
-        let base_fee_params = Self::active_base_fee_params(
-            self.config,
-            self.trie_db.parent_block_header(),
-            &payload,
-        )?;
-        let initialized_block_env = Self::prepare_block_env(
-            self.revm_spec_id(payload.payload_attributes.timestamp),
-            self.trie_db.parent_block_header(),
-            &payload,
-            &base_fee_params,
-        )?;
-        let initialized_cfg = self.evm_cfg_env(payload.payload_attributes.timestamp);
+        let next_block_env_attrs = NextBlockEnvAttributes {
+            timestamp: payload.payload_attributes.timestamp,
+            suggested_fee_recipient: FEE_RECIPIENT,
+            prev_randao: payload.payload_attributes.prev_randao,
+        };
+
+        let parent_header = self.trie_db.parent_block_header();
+        let (initialized_cfg, initialized_block_env) =
+            self.evm_config.next_cfg_and_block_env(&parent_header, next_block_env_attrs).map_err(
+                |_| ExecutorError::EvmConfigError)?;
+
         let block_number = initialized_block_env.number.to::<u64>();
         let base_fee = initialized_block_env.basefee.to::<u128>();
         let gas_limit = payload.gas_limit.ok_or(ExecutorError::MissingGasLimit)?;
@@ -106,16 +104,6 @@ where
         let mut state =
             State::builder().with_database(&mut self.trie_db).with_bundle_update().build();
 
-        // Apply the pre-block EIP-4788 contract call.
-        pre_block_beacon_root_contract_call(
-            &mut state,
-            self.config,
-            block_number,
-            &initialized_cfg,
-            &initialized_block_env,
-            &payload,
-        )?;
-
         // Ensure that the create2 contract is deployed upon transition to the Canyon hardfork.
         ensure_create2_deployer_canyon(
             &mut state,
@@ -123,28 +111,28 @@ where
             payload.payload_attributes.timestamp,
         )?;
 
+        // Construct the block-scoped EVM with the given configuration.
+        // The transaction environment is set within the loop for each transaction.
+        let env_with_handler_cfg = EnvWithHandlerCfg::new_with_cfg_env(
+            initialized_cfg,
+            initialized_block_env,
+            Default::default(),
+        );
+        let mut evm = self.evm_config.evm_with_env(&mut state, env_with_handler_cfg);
+
+        // Apply the pre-block EIP-4788 contract call.
+        apply_beacon_root_contract_call(
+            self.config,
+            &self.evm_config,
+            payload.payload_attributes.timestamp,
+            block_number,
+            payload.payload_attributes.parent_beacon_block_root,
+            &mut evm,
+        )?;
+
         let mut cumulative_gas_used = 0u64;
         let mut receipts: Vec<OpReceiptEnvelope> = Vec::with_capacity(transactions.len());
         let is_regolith = self.config.is_regolith_active(payload.payload_attributes.timestamp);
-
-        // Construct the block-scoped EVM with the given configuration.
-        // The transaction environment is set within the loop for each transaction.
-        let mut evm = {
-            let mut base = Evm::builder().with_db(&mut state).with_env_with_handler_cfg(
-                EnvWithHandlerCfg::new_with_cfg_env(
-                    initialized_cfg.clone(),
-                    initialized_block_env.clone(),
-                    Default::default(),
-                ),
-            );
-
-            // If a handler register is provided, append it to the base EVM.
-            if let Some(handler) = self.handler_register {
-                base = base.append_handler_register(handler);
-            }
-
-            base.build()
-        };
 
         // Execute the transactions in the payload.
         let decoded_txs = transactions
@@ -155,6 +143,7 @@ where
                 Ok((tx, raw_tx.as_ref()))
             })
             .collect::<ExecutorResult<Vec<_>>>()?;
+
         for (transaction, raw_transaction) in decoded_txs {
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
@@ -166,10 +155,7 @@ where
             }
 
             // Modify the transaction environment with the current transaction.
-            evm = evm
-                .modify()
-                .with_tx_env(Self::prepare_tx_env(&transaction, raw_transaction)?)
-                .build();
+            self.evm_config.fill_tx_env(evm.tx_mut(), &transaction, Address::from([0; 20]));
 
             // If the transaction is a deposit, cache the depositor account.
             //
@@ -455,11 +441,16 @@ mod test {
     use alloy_primitives::{b256, hex};
     use alloy_rlp::Decodable;
     use alloy_rpc_types_engine::PayloadAttributes;
+    use alloy_eips::eip1559::BaseFeeParams;
     use anyhow::{anyhow, Result};
     use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
     use op_alloy_genesis::OP_MAINNET_BASE_FEE_PARAMS;
     use serde::Deserialize;
     use std::collections::HashMap;
+    use reth_optimism_chainspec::{OpChainSpec, OpChainSpecBuilder, OP_MAINNET};
+    use reth_optimism_forks::OpHardfork;
+    use kona_client::DefaultEvmConfig;
+    use alloc::sync::Arc;
 
     /// A [TrieProvider] implementation that fetches trie nodes and bytecode from the local
     /// testdata folder.
@@ -537,12 +528,17 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #120794431's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        let evm_config = DefaultEvmConfig::new_with_fpvm_precompiles(
+            Arc::new((**OP_MAINNET).clone()),
+        );
+
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, TestdataTrieProvider, NoopTrieHinter, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new("block_120794432_exec"),
             NoopTrieHinter,
         )
         .with_parent_header(header.seal_slow())
+        .with_evm_config(evm_config)
         .build();
 
         let raw_tx = hex!("7ef8f8a003b511b9b71520cd62cad3b5fd5b1b8eaebd658447723c31c7f1eba87cfe98c894deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e2000000558000c5fc5000000000000000300000000665a33a70000000001310e960000000000000000000000000000000000000000000000000000000214d2697300000000000000000000000000000000000000000000000000000000000000015346d208a396843018a2e666c8e7832067358433fb87ca421273c6a4e69f78d50000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985");
@@ -598,12 +594,17 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121049888's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        let evm_config = DefaultEvmConfig::new_with_fpvm_precompiles(
+            Arc::new((**OP_MAINNET).clone()),
+        );
+
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, TestdataTrieProvider, NoopTrieHinter, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new("block_121049889_exec"),
             NoopTrieHinter,
         )
         .with_parent_header(parent_header.seal_slow())
+        .with_evm_config(evm_config)
         .build();
 
         let raw_txs = alloc::vec![
@@ -663,12 +664,17 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121003240's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        let evm_config = DefaultEvmConfig::new_with_fpvm_precompiles(
+            Arc::new((**OP_MAINNET).clone()),
+        );
+
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, TestdataTrieProvider, NoopTrieHinter, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new("block_121003241_exec"),
             NoopTrieHinter,
         )
         .with_parent_header(parent_header.seal_slow())
+        .with_evm_config(evm_config)
         .build();
 
         let raw_txs = alloc::vec![
@@ -735,12 +741,17 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        let evm_config = DefaultEvmConfig::new_with_fpvm_precompiles(
+            Arc::new((**OP_MAINNET).clone()),
+        );
+
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, TestdataTrieProvider, NoopTrieHinter, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new("block_121057303_exec"),
             NoopTrieHinter,
         )
         .with_parent_header(parent_header.seal_slow())
+        .with_evm_config(evm_config)
         .build();
 
         let raw_txs = alloc::vec![
@@ -800,13 +811,18 @@ mod test {
         let raw_expected_header = hex!("f90246a024c6416b9d3f0546dfa2d536403232d36cf91d5d38236655e2e580c1642fdbaca01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347944200000000000000000000000000000000000011a01477b41c16571887dd0cfacd4972f67d98079cbaa4bf98244eacde4aef8d1ab7a043ab54ba630647289234e3e63861b49d99e839e78852450508d457e524eed43fa042351814b43a1a58a71fdff474360fbb9e510393764863cb04bde6fd4ca0367eb9010008408008c6000010581104c08c41068c8098020012402058d084a18a6408012213000000b02000000000102020800040202162c0424210820040e0405020215810c200800000000001a1000c480044002500011480822041080080c60e001840890a20850016240003012540010060c82006058024020014005480118000040a410c400000260800900000030004486a0820000c884400038060c08981201010322c060008200022100008195004cc082001049028d80000088000000000d402410030020080a102c2e00e1e141000044000208240045804001008018000800041110c1d0a4222056000201500806200190400049851890037500ac089c3000080840737513d8401c9c38084019fe25b8466627c3380a0c7acc30c856d749a81902d811e879e8dae5de2e022091aaa7eb4b586dcd3d05288000000000000000084039231b0a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b4218080a0a4414c4984ce7285b82bd9b21c642af30f0f648fb6f4929b67753e7345a06bab");
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
-        // Initialize the block executor on block #121057302's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        // Initialize the block executor on block #121065788's post-state.
+        let evm_config = DefaultEvmConfig::new_with_fpvm_precompiles(
+            Arc::new((**OP_MAINNET).clone()),
+        );
+
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, TestdataTrieProvider, NoopTrieHinter, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new("block_121065789_exec"),
             NoopTrieHinter,
         )
         .with_parent_header(parent_header.seal_slow())
+        .with_evm_config(evm_config)
         .build();
 
         let raw_txs = alloc::vec![
@@ -876,12 +892,17 @@ mod test {
         let expected_header = Header::decode(&mut &raw_expected_header[..]).unwrap();
 
         // Initialize the block executor on block #121135703's post-state.
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        let evm_config = DefaultEvmConfig::new_with_fpvm_precompiles(
+            Arc::new((**OP_MAINNET).clone()),
+        );
+
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, TestdataTrieProvider, NoopTrieHinter, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new("block_121135704_exec"),
             NoopTrieHinter,
         )
         .with_parent_header(parent_header.seal_slow())
+        .with_evm_config(evm_config)
         .build();
 
         let raw_txs = alloc::vec![

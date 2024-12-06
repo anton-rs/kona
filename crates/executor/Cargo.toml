@@ -28,6 +28,14 @@ op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # Revm
 revm = { workspace = true, features = ["optimism"] }
+revm-primitives.workspace = true
+
+# Reth
+reth-evm.workspace = true
+reth-primitives-traits.workspace = true
+reth-primitives.workspace = true
+reth-optimism-chainspec.workspace = true
+reth-optimism-forks.workspace = true
 
 # General
 thiserror.workspace = true
@@ -42,6 +50,7 @@ alloy-rpc-types-engine.workspace = true
 serde = { workspace = true, features = ["derive"] }
 criterion = { workspace = true, features = ["html_reports"] }
 pprof = { workspace = true, features = ["criterion", "flamegraph", "frame-pointer"] }
+kona-client.workspace = true
 
 [[bench]]
 name = "execution"

@@ -7,12 +7,17 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use kona_preimage::{HintWriter, OracleReader};
-use kona_std_fpvm::{FileChannel, FileDescriptor};
-use kona_std_fpvm_proc::client_entry;
+mod evm_config;
+pub use evm_config::KonaEvmConfig;
 
 mod precompiles;
+use precompiles::fpvm_handle_register;
+
+use alloc::{sync::Arc, string::String};
+use kona_std_fpvm_proc::client_entry;
+use kona_preimage::{HintWriter, OracleReader};
+use kona_std_fpvm::{FileChannel, FileDescriptor};
+use reth_optimism_chainspec::OP_MAINNET;
 
 /// The global preimage oracle reader pipe.
 static ORACLE_READER_PIPE: FileChannel =
@@ -28,6 +33,7 @@ static ORACLE_READER: OracleReader<FileChannel> = OracleReader::new(ORACLE_READE
 /// The global hint writer.
 static HINT_WRITER: HintWriter<FileChannel> = HintWriter::new(HINT_WRITER_PIPE);
 
+
 #[client_entry(100_000_000)]
 fn main() -> Result<(), String> {
     #[cfg(feature = "client-tracing")]
@@ -39,9 +45,12 @@ fn main() -> Result<(), String> {
             .expect("Failed to set tracing subscriber");
     }
 
+    // // ZTODO: derive this from the rollup config
+    let evm_config = KonaEvmConfig::new(Arc::new((**OP_MAINNET).clone()));
+
     kona_proof::block_on(kona_client::run(
         ORACLE_READER,
         HINT_WRITER,
-        Some(precompiles::fpvm_handle_register),
+        evm_config
     ))
 }

@@ -46,6 +46,12 @@ pub enum ExecutorError {
     /// Missing the executor.
     #[error("Missing the executor")]
     MissingExecutor,
+    /// EVM Config error.
+    #[error("EVM Config error.")]
+    EvmConfigError,
+    /// Transaction signature error.
+    #[error("Transaction signature error")]
+    TransactionSignatureError
 }
 
 /// A [Result] type for the [ExecutorError] enum.
