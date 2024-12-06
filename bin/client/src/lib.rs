@@ -10,11 +10,13 @@ extern crate alloc;
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
+use op_alloy_consensus::OpTxEnvelope;
 use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
 use kona_executor::{ExecutorError, TrieDBProvider};
 use kona_preimage::{
-    CommsClient, HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient,
+    CommsClient, HintWriterClient, PreimageKey, PreimageKeyType,
+    PreimageOracleClient,
 };
 use kona_proof::{
     errors::OracleProviderError,
@@ -24,18 +26,10 @@ use kona_proof::{
     sync::new_pipeline_cursor,
     BootInfo, CachingOracle, HintType,
 };
+use reth_evm::ConfigureEvm;
 use thiserror::Error;
 use tracing::{error, info, warn};
-use reth_optimism_chainspec::OP_MAINNET;
 
-mod precompiles;
-pub use precompiles::fpvm_handle_register;
-
-mod evm_config;
-use evm_config::KonaEvmConfig;
-
-mod kona;
-pub use kona::{HINT_WRITER, ORACLE_READER};
 
 /// An error that can occur when running the fault proof program.
 #[derive(Error, Debug)]
@@ -53,13 +47,15 @@ pub enum FaultProofProgramError {
 
 /// Executes the fault proof program with the given [PreimageOracleClient] and [HintWriterClient].
 #[inline]
-pub async fn run<P, H>(
+pub async fn run<P, H, C>(
     oracle_client: P,
-    hint_client: H
+    hint_client: H,
+    evm_config: C,
 ) -> Result<(), FaultProofProgramError>
 where
     P: PreimageOracleClient + Send + Sync + Debug + Clone + 'static,
     H: HintWriterClient + Send + Sync + Debug + Clone + 'static,
+    C: ConfigureEvm<Header=Header, Transaction=OpTxEnvelope> + Debug + Clone + 'static,
 {
     const ORACLE_LRU_SIZE: usize = 1024;
 
@@ -120,8 +116,7 @@ where
         l1_provider.clone(),
         l2_provider.clone(),
     );
-    // ZTODO: derive this from the rollup config
-    let evm_config = KonaEvmConfig::new(Arc::new((**OP_MAINNET).clone()));
+
     let executor = KonaExecutor::new(&cfg, l2_provider.clone(), l2_provider, evm_config, None);
     let mut driver = Driver::new(cursor, executor, pipeline);
 
