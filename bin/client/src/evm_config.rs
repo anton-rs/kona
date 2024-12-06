@@ -7,41 +7,29 @@ use reth_evm::{ConfigureEvm, ConfigureEvmEnv, NextBlockEnvAttributes};
 use reth_optimism_chainspec::{DecodeError, OpChainSpec};
 use reth_optimism_forks::OpHardfork;
 use revm::{
-    primitives::{Env, OptimismFields, BlobExcessGasAndPrice, BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, SpecId,
-        TransactTo, TxEnv, HandlerCfg, AnalysisKind},
     Database, Evm, EvmBuilder,
-    db::State, handler::register::EvmHandler
+    primitives::{
+        Env, OptimismFields, BlobExcessGasAndPrice, BlockEnv, CfgEnv,
+        CfgEnvWithHandlerCfg, SpecId, TransactTo, TxEnv, HandlerCfg, AnalysisKind
+    },
 };
-use crate::db::{TrieDB, TrieDBProvider};
-use kona_mpt::TrieHinter;
 
-/// A type alias for the [revm::handler::register::HandleRegister] for kona's block executor.
-pub type KonaHandleRegister<F, H> =
-    for<'i> fn(&mut EvmHandler<'i, (), &mut State<&mut TrieDB<F, H>>>);
+use crate::fpvm_handle_register;
 
 /// A default implementation of the EVM Config.
 #[derive(Clone, Debug)]
-pub struct DefaultEvmConfig<F: TrieDBProvider, H: TrieHinter> {
+pub struct KonaEvmConfig {
     chain_spec: Arc<OpChainSpec>,
-    handler_register: Option<KonaHandleRegister<F, H>>,
 }
 
-impl<F, H> DefaultEvmConfig<F, H>
-where
-    F: TrieDBProvider,
-    H: TrieHinter,
-{
+impl KonaEvmConfig {
     /// Create a new instance of the default EVM config from a chain spec.
-    pub const fn new(chain_spec: Arc<OpChainSpec>, handler_register: Option<KonaHandleRegister<F, H>>) -> Self {
-        Self { chain_spec, handler_register }
+    pub const fn new(chain_spec: Arc<OpChainSpec>) -> Self {
+        Self { chain_spec }
     }
 }
 
-impl<F, H>  ConfigureEvmEnv for DefaultEvmConfig<F, H>
-where
-    F: TrieDBProvider + Clone + 'static,
-    H: TrieHinter + Clone + 'static,
-{
+impl  ConfigureEvmEnv for KonaEvmConfig {
     type Header = Header;
     type Transaction = OpTxEnvelope;
     type Error = DecodeError;
@@ -278,11 +266,15 @@ where
     }
 }
 
-impl ConfigureEvm for DefaultEvmConfig {
+impl ConfigureEvm for KonaEvmConfig {
     type DefaultExternalContext<'a> = ();
 
     fn evm<DB: Database>(&self, db: DB) -> Evm<'_, Self::DefaultExternalContext<'_>, DB> {
-        EvmBuilder::default().with_db(db).optimism().build()
+        EvmBuilder::default()
+            .with_db(db)
+            .optimism()
+            .append_handler_register(fpvm_handle_register)
+            .build()
     }
 
     fn default_external_context<'a>(&self) -> Self::DefaultExternalContext<'a> {}
@@ -290,18 +282,18 @@ impl ConfigureEvm for DefaultEvmConfig {
 
 fn revm_spec_by_timestamp_after_bedrock(chain_spec: &OpChainSpec, timestamp: u64) -> SpecId {
     if chain_spec.fork(OpHardfork::Holocene).active_at_timestamp(timestamp) {
-        revm_primitives::HOLOCENE
+        revm::primitives::HOLOCENE
     } else if chain_spec.fork(OpHardfork::Granite).active_at_timestamp(timestamp) {
-        revm_primitives::GRANITE
+        revm::primitives::GRANITE
     } else if chain_spec.fork(OpHardfork::Fjord).active_at_timestamp(timestamp) {
-        revm_primitives::FJORD
+        revm::primitives::FJORD
     } else if chain_spec.fork(OpHardfork::Ecotone).active_at_timestamp(timestamp) {
-        revm_primitives::ECOTONE
+        revm::primitives::ECOTONE
     } else if chain_spec.fork(OpHardfork::Canyon).active_at_timestamp(timestamp) {
-        revm_primitives::CANYON
+        revm::primitives::CANYON
     } else if chain_spec.fork(OpHardfork::Regolith).active_at_timestamp(timestamp) {
-        revm_primitives::REGOLITH
+        revm::primitives::REGOLITH
     } else {
-        revm_primitives::BEDROCK
+        revm::primitives::BEDROCK
     }
 }

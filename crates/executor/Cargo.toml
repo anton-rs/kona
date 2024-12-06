@@ -50,6 +50,7 @@ alloy-rpc-types-engine.workspace = true
 serde = { workspace = true, features = ["derive"] }
 criterion = { workspace = true, features = ["html_reports"] }
 pprof = { workspace = true, features = ["criterion", "flamegraph", "frame-pointer"] }
+kona-client.workspace = true
 
 [[bench]]
 name = "execution"

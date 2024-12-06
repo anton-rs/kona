@@ -34,7 +34,13 @@ op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # Revm
 revm.workspace = true
+
+# Reth
+reth-evm.workspace = true
+reth-primitives-traits.workspace = true
+reth-primitives.workspace = true
 reth-optimism-chainspec.workspace = true
+reth-optimism-forks.workspace = true
 
 # General
 lru.workspace = true

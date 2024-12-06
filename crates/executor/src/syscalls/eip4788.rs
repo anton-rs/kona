@@ -3,7 +3,6 @@
 use crate::{
     db::TrieDB,
     errors::{ExecutorError, ExecutorResult},
-    executor::KonaEvmConfig,
     TrieDBProvider,
 };
 use alloc::boxed::Box;
@@ -15,15 +14,16 @@ use revm::{
     db::State,
     DatabaseCommit, Evm,
 };
+use reth_evm::ConfigureEvm;
 
 /// Apply the EIP-4788 pre-block beacon root contract call to a given EVM instance.
-pub(crate) fn apply_beacon_root_contract_call<F, H, C: KonaEvmConfig>(
+pub(crate) fn apply_beacon_root_contract_call<F, H, C: ConfigureEvm>(
     config: &RollupConfig,
     evm_config: &C,
     timestamp: u64,
     block_number: u64,
     parent_beacon_block_root: Option<B256>,
-    evm: &mut Evm<'_, (), &mut State<&mut TrieDB<F, H>>>,
+    evm: &mut Evm<'_, C::DefaultExternalContext<'_>, &mut State<&mut TrieDB<F, H>>>,
 ) -> ExecutorResult<()>
 where
     F: TrieDBProvider,

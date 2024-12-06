@@ -96,11 +96,11 @@ op-alloy-consensus = { version = "0.7.2", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.7.2", default-features = false }
 
 # Reth
-reth-evm = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
-reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
-reth-optimism-chainspec = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
-reth-optimism-forks = { git = "https://github.com/paradigmxyz/reth.git", rev = "8e4a917" }
+reth-evm = { git = "https://github.com/zobront/reth.git", branch = "fill-env-opt-deposit", default-features = false }
+reth-primitives-traits = { git = "https://github.com/zobront/reth.git", branch = "fill-env-opt-deposit", default-features = false }
+reth-primitives = { git = "https://github.com/zobront/reth.git", branch = "fill-env-opt-deposit", default-features = false, features = ["optimism"] }
+reth-optimism-chainspec = { git = "https://github.com/zobront/reth.git", branch = "fill-env-opt-deposit", default-features = false }
+reth-optimism-forks = { git = "https://github.com/zobront/reth.git", branch = "fill-env-opt-deposit", default-features = false }
 
 # General
 lru = "0.12.4"

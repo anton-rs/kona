@@ -1,19 +1,23 @@
 #![allow(missing_docs)]
 //! Benches for the [StatelessL2BlockExecutor] implementation.
 
+extern crate alloc;
+use alloc::sync::Arc;
+
 use alloy_consensus::{Header, Sealable};
 use alloy_primitives::{address, b256, hex, Bytes, B256};
 use alloy_rlp::Decodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
-use kona_executor::{StatelessL2BlockExecutor, TrieDBProvider};
+use kona_executor::{StatelessL2BlockExecutor, TrieDBProvider, DefaultEvmConfig};
 use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
 use op_alloy_genesis::{RollupConfig, OP_MAINNET_BASE_FEE_PARAMS};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use pprof::criterion::{Output, PProfProfiler};
 use serde::Deserialize;
 use std::collections::HashMap;
+use reth_optimism_chainspec::OpChainSpecBuilder;
 
 /// A [TrieProvider] implementation that fetches trie nodes and bytecode from the local
 /// testdata folder.
@@ -85,14 +89,20 @@ fn op_mainnet_exec_bench(
         ..Default::default()
     };
 
+    let evm_config = DefaultEvmConfig::new(
+        Arc::new(
+            OpChainSpecBuilder::optimism_mainnet().build()
+        )
+    );
     // Bench the block execution.
     bencher.iter(|| {
-        let mut l2_block_executor = StatelessL2BlockExecutor::builder(
+        let mut l2_block_executor: StatelessL2BlockExecutor<'_, _, _, DefaultEvmConfig> = StatelessL2BlockExecutor::builder(
             &rollup_config,
             TestdataTrieProvider::new(data_folder),
             NoopTrieHinter,
         )
         .with_parent_header(pre_state_header.clone().seal_slow())
+        .with_evm_config(evm_config.clone())
         .build();
         l2_block_executor.execute_payload(payload_attrs.clone()).unwrap();
     });
