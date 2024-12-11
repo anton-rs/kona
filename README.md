@@ -53,7 +53,7 @@ see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html
 **Build Pipelines**
 
 - [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips-unknown-none` target.
-- [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64gc-unknown-none-elf` target.
+- [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64imac-unknown-none-elf` target.
 
 **Protocol**
 - [`mpt`](./crates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
