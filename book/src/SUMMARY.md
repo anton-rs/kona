@@ -15,5 +15,6 @@
     - [Custom Providers](./sdk/pipeline/providers.md)
     - [Stage Swapping](./sdk/pipeline/stages.md)
     - [Signaling](./sdk/pipeline/signaling.md)
+- [Interop](./interop.md)
 - [Glossary](./glossary.md)
 - [Contributing](./CONTRIBUTING.md)
