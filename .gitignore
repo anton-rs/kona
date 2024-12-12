@@ -9,3 +9,6 @@ monorepo/
 
 # Environment Variables
 .env
+
+# kona-host data-dir
+data/
