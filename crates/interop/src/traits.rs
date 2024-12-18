@@ -1,5 +1,6 @@
 //! Traits for the `kona-interop` crate.
 
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloy_primitives::B256;
 use async_trait::async_trait;

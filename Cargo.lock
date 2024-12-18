@@ -2400,6 +2400,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-client-interop"
+version = "0.1.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rlp",
+ "alloy-rpc-types-engine",
+ "async-trait",
+ "cfg-if",
+ "kona-derive",
+ "kona-driver",
+ "kona-executor",
+ "kona-mpt",
+ "kona-preimage",
+ "kona-proof",
+ "kona-std-fpvm",
+ "kona-std-fpvm-proc",
+ "lru",
+ "op-alloy-consensus",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "op-alloy-rpc-types-engine",
+ "revm",
+ "serde",
+ "serde_json",
+ "spin",
+ "thiserror 2.0.4",
+ "tracing",
+]
+
+[[package]]
 name = "kona-derive"
 version = "0.2.0"
 dependencies = [

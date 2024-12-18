@@ -4,11 +4,12 @@
 //! <https://github.com/ethereum-optimism/optimism/blob/34d5f66ade24bd1f3ce4ce7c0a6cfc1a6540eca1/packages/contracts-bedrock/src/L2/CrossL2Inbox.sol>
 
 use alloc::{vec, vec::Vec};
-use alloy_primitives::{Address, Bytes, Log, U256};
+use alloy_primitives::{keccak256, Address, Bytes, Log, U256};
 use alloy_sol_types::{sol, SolCall, SolType};
 
 sol! {
     /// @notice The struct for a pointer to a message payload in a remote (or local) chain.
+    #[derive(Default, Debug, Clone, PartialEq, Eq)]
     struct MessageIdentifierAbi {
         address origin;
         uint256 blockNumber;
@@ -16,6 +17,12 @@ sol! {
         uint256 timestamp;
         uint256 chainId;
     }
+
+    /// @notice Emitted when a cross chain message is being executed.
+    /// @param msgHash Hash of message payload being executed.
+    /// @param id Encoded Identifier of the message.
+    #[derive(Default, Debug, Clone, PartialEq, Eq)]
+    event ExecutingMessage(bytes32 indexed msgHash, MessageIdentifierAbi id);
 
     /// @notice Executes a cross chain message on the destination chain.
     /// @param _id      Identifier of the message.
@@ -115,47 +122,8 @@ impl From<MessageIdentifier> for MessageIdentifierAbi {
     }
 }
 
-/// A [ExecutingMessage] is a message that is being relayed from one chain to another.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExecutingMessage {
-    /// The identifier of the message.
-    pub id: MessageIdentifier,
-    /// The target address to call.
-    pub target: Address,
-    /// The message payload to call the target with.
-    pub message: RawMessagePayload,
-}
-
-impl ExecutingMessage {
-    /// Decode a [ExecutingMessage] from ABI-encoded calldata (with the `executeMessage` selector).
-    pub fn abi_decode(data: &[u8], validate: bool) -> Result<Self, alloy_sol_types::Error> {
-        executeMessageCall::abi_decode(data, validate).and_then(|call| Ok(call.into()))
-    }
-
-    /// Encode the [ExecutingMessage] as ABI-encoded calldata (with the `executeMessage` selector).
-    pub fn abi_encode(&self) -> Vec<u8> {
-        executeMessageCall::from(self.clone()).abi_encode()
-    }
-}
-
 impl From<executeMessageCall> for ExecutingMessage {
     fn from(call: executeMessageCall) -> Self {
-        Self { id: call._id.into(), target: call._target, message: call._message.into() }
-    }
-}
-
-impl From<ExecutingMessage> for executeMessageCall {
-    fn from(msg: ExecutingMessage) -> Self {
-        executeMessageCall {
-            _id: MessageIdentifierAbi {
-                origin: msg.id.origin,
-                blockNumber: U256::from(msg.id.block_number),
-                logIndex: U256::from(msg.id.log_index),
-                timestamp: U256::from(msg.id.timestamp),
-                chainId: U256::from(msg.id.chain_id),
-            },
-            _target: msg.target,
-            _message: msg.message.into(),
-        }
+        Self { id: call._id.into(), msgHash: keccak256(call._message.as_ref()) }
     }
 }

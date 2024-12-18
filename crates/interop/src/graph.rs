@@ -8,7 +8,7 @@ use alloy_consensus::{Header, Sealed};
 ///
 /// This structure is used to determine whether or not any interop messages are invalid within the set of blocks
 /// within the graph. An "invalid message" is one that was relayed from one chain to another, but the original
-/// [MessageIdentifier] is not present within the graph.
+/// [MessageIdentifier] is not present within the graph or from a dependency referenced via the [InteropProvider].
 ///
 /// [MessageIdentifier]: crate::MessageIdentifier
 #[derive(Debug)]
@@ -52,7 +52,7 @@ where
             for receipt in receipts {
                 for log in receipt.logs() {
                     if log.address == CROSS_L2_INBOX_ADDRESS {
-                        let message = ExecutingMessage::from(log);
+                        let message = ExecutingMessage::from(log.clone());
                         self.edges.as_mut().unwrap().push(message);
                     }
                 }
