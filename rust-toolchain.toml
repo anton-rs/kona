@@ -1,0 +1,2 @@
+[toolchain]
+channel = "nightly" # needed so that vscode formats using rustmfmt.toml that uses nightly features
