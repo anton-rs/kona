@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/anton-rs/kona/compare/kona-driver-v0.2.0...kona-driver-v0.2.1) - 2024-12-20
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.2.0](https://github.com/anton-rs/kona/compare/kona-driver-v0.1.0...kona-driver-v0.2.0) - 2024-12-03
 
 ### Added

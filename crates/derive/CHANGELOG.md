@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/anton-rs/kona/compare/kona-derive-v0.2.0...kona-derive-v0.2.1) - 2024-12-20
+
+### Other
+
+- patch for rust 1.81 ([#867](https://github.com/anton-rs/kona/pull/867))
+
 ## [0.2.0](https://github.com/anton-rs/kona/compare/kona-derive-v0.1.0...kona-derive-v0.2.0) - 2024-12-03
 
 ### Added
