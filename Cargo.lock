@@ -2377,7 +2377,7 @@ dependencies = [
 
 [[package]]
 name = "kona-derive"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2401,7 +2401,7 @@ dependencies = [
 
 [[package]]
 name = "kona-driver"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "kona-executor"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2479,7 +2479,7 @@ dependencies = [
 
 [[package]]
 name = "kona-mpt"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -2516,7 +2516,7 @@ dependencies = [
 
 [[package]]
 name = "kona-proof"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
