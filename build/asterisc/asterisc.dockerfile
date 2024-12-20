@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
   clang \
   make \
   cmake \
-  git 
+  git
 
 # Install Rustup and Rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain ${RUST_VERSION} --component rust-src
@@ -29,5 +29,5 @@ ENV CC_riscv64_unknown_none_elf=riscv64-linux-gnu-gcc \
   CXX_riscv64_unknown_none_elf=riscv64-linux-gnu-g++ \
   CARGO_TARGET_RISCV64_UNKNOWN_NONE_ELF_LINKER=riscv64-linux-gnu-gcc \
   RUSTFLAGS="-Clink-arg=-e_start -Ctarget-feature=-c" \
-  CARGO_BUILD_TARGET="riscv64gc-unknown-none-elf" \
+  CARGO_BUILD_TARGET="riscv64imac-unknown-none-elf" \
   RUSTUP_TOOLCHAIN=${RUST_VERSION}
