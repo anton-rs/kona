@@ -55,6 +55,12 @@ debug = true
 inherits = "dev"
 panic = "abort"
 
+[profile.release-client]
+inherits = "release"
+panic = "abort"
+codegen-units = 1
+lto = false
+
 [profile.release-client-lto]
 inherits = "release"
 panic = "abort"

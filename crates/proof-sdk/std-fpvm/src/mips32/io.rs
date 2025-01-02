@@ -16,11 +16,11 @@ pub(crate) struct Mips32IO;
 #[repr(usize)]
 pub(crate) enum SyscallNumber {
     /// Sets the Exited and ExitCode states to true and $a0 respectively.
-    Exit = 4246,
+    Exit = 5205,
     /// Similar behavior as Linux/MIPS with support for unaligned reads.
-    Read = 4003,
+    Read = 5000,
     /// Similar behavior as Linux/MIPS with support for unaligned writes.
-    Write = 4004,
+    Write = 5001,
 }
 
 impl BasicKernelInterface for Mips32IO {
