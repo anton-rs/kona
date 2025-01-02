@@ -41,6 +41,7 @@ serde_json.workspace = true
 op-alloy-registry.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
+tracing = { workspace = true, features = ["std"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitrary"] }
 
 [features]
