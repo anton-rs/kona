@@ -47,7 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git
 # Build kona-client on the selected tag
 RUN git checkout $CLIENT_TAG && \
   cargo build -Zbuild-std=core,alloc --workspace --bin kona --locked --profile release-client-lto --exclude kona-host --exclude kona-derive-alloy && \
-  mv ./target/riscv64gc-unknown-none-elf/release-client-lto/kona /kona-client-elf
+  mv ./target/riscv64imac-unknown-none-elf/release-client-lto/kona /kona-client-elf
 
 ################################################################
 #                Build kona-host @ `CLIENT_TAG`                #
