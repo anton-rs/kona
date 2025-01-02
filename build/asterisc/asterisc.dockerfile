@@ -28,6 +28,6 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 ENV CC_riscv64_unknown_none_elf=riscv64-linux-gnu-gcc \
   CXX_riscv64_unknown_none_elf=riscv64-linux-gnu-g++ \
   CARGO_TARGET_RISCV64_UNKNOWN_NONE_ELF_LINKER=riscv64-linux-gnu-gcc \
-  RUSTFLAGS="-Clink-arg=-e_start -Ctarget-feature=-c" \
+  RUSTFLAGS="-Clink-arg=-e_start -Ctarget-feature=-c,-zicsr,-zifencei,-zicntr,zihpm" \
   CARGO_BUILD_TARGET="riscv64imac-unknown-none-elf" \
   RUSTUP_TOOLCHAIN=${RUST_VERSION}
