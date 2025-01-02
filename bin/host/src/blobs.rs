@@ -1,9 +1,8 @@
 //! Contains an online implementation of the `BlobProvider` trait.
 
-use alloy_eips::eip4844::{Blob, BlobTransactionSidecarItem, IndexedBlobHash};
+use alloy_eips::eip4844::{BlobTransactionSidecarItem, IndexedBlobHash};
 use alloy_rpc_types_beacon::sidecar::{BeaconBlobBundle, BlobData};
-use async_trait::async_trait;
-use kona_derive::{errors::BlobProviderError, traits::BlobProvider};
+use kona_derive::errors::BlobProviderError;
 use op_alloy_protocol::BlockInfo;
 use reqwest::Client;
 
@@ -62,7 +61,7 @@ impl APIGenesisResponse {
     }
 }
 
-/// An online implementation of the [BlobProvider] trait.
+/// An online provider to fetch blob sidecars.
 #[derive(Debug, Clone)]
 pub struct OnlineBlobProvider {
     /// The base url.
@@ -196,42 +195,5 @@ impl OnlineBlobProvider {
                 kzg_proof: s.kzg_proof,
             })
             .collect::<Vec<BlobTransactionSidecarItem>>())
-    }
-}
-
-#[async_trait]
-impl BlobProvider for OnlineBlobProvider {
-    type Error = BlobProviderError;
-
-    /// Fetches blob sidecars that were confirmed in the specified L1 block with the given indexed
-    /// hashes. The blobs are validated for their index and hashes using the specified
-    /// [IndexedBlobHash].
-    async fn get_blobs(
-        &mut self,
-        block_ref: &BlockInfo,
-        blob_hashes: &[IndexedBlobHash],
-    ) -> Result<Vec<Box<Blob>>, Self::Error> {
-        // Fetch the blob sidecars for the given block reference and blob hashes.
-        let sidecars = self.fetch_filtered_sidecars(block_ref, blob_hashes).await?;
-
-        // Validate the blob sidecars straight away with the num hashes.
-        let blobs = sidecars
-            .into_iter()
-            .enumerate()
-            .map(|(i, sidecar)| {
-                let hash = blob_hashes
-                    .get(i)
-                    .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
-                match sidecar.verify_blob(&alloy_eips::eip4844::IndexedBlobHash {
-                    hash: hash.hash,
-                    index: hash.index,
-                }) {
-                    Ok(_) => Ok(sidecar.blob),
-                    Err(e) => Err(BlobProviderError::Backend(e.to_string())),
-                }
-            })
-            .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
-            .map_err(|e| BlobProviderError::Backend(e.to_string()))?;
-        Ok(blobs)
     }
 }
