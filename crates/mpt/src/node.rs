@@ -584,7 +584,7 @@ impl Encodable for TrieNode {
             Self::Extension { prefix, node } => {
                 // Encode the extension node's header, prefix, and pointer node.
                 Header { list: true, payload_length: self.payload_length() }.encode(out);
-                prefix.pack().as_slice().encode(out);
+                alloy_trie::nodes::encode_path_leaf(prefix, true).as_slice().encode(out);
                 let mut blinded = node.clone();
                 blinded.blind();
                 blinded.encode(out);
