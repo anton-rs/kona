@@ -3,7 +3,7 @@
 use super::{util::decode_holocene_eip_1559_params, StatelessL2BlockExecutor};
 use crate::{constants::FEE_RECIPIENT, ExecutorError, ExecutorResult, TrieDBProvider};
 use alloy_consensus::Header;
-use alloy_eips::eip1559::BaseFeeParams;
+use alloy_eips::{eip1559::BaseFeeParams, eip7840::BlobParams};
 use alloy_primitives::{TxKind, U256};
 use kona_mpt::TrieHinter;
 use op_alloy_consensus::OpTxEnvelope;
@@ -71,7 +71,7 @@ where
         base_fee_params: &BaseFeeParams,
     ) -> ExecutorResult<BlockEnv> {
         let blob_excess_gas_and_price = parent_header
-            .next_block_excess_blob_gas()
+            .next_block_excess_blob_gas(BlobParams::cancun())
             .or_else(|| spec_id.is_enabled_in(SpecId::ECOTONE).then_some(0))
             .map(BlobExcessGasAndPrice::new);
         let next_block_base_fee =

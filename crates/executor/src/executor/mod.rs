@@ -219,7 +219,7 @@ where
             // Create receipt envelope.
             let receipt = OpReceiptEnvelope::<Log>::from_parts(
                 result.is_success(),
-                cumulative_gas_used as u128,
+                cumulative_gas_used,
                 result.logs(),
                 transaction.tx_type(),
                 depositor
@@ -344,7 +344,6 @@ where
             excess_blob_gas: excess_blob_gas.and_then(|x| x.try_into().ok()),
             parent_beacon_block_root: payload.payload_attributes.parent_beacon_block_root,
             extra_data: encoded_base_fee_params,
-            target_blobs_per_block: None,
         }
         .seal_slow();
 

@@ -179,8 +179,6 @@ where
                 suggested_fee_recipient: SEQUENCER_FEE_VAULT_ADDRESS,
                 parent_beacon_block_root: parent_beacon_root,
                 withdrawals,
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             transactions: Some(txs),
             no_tx_pool: Some(true),
