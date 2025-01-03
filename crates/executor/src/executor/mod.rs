@@ -59,6 +59,19 @@ where
         StatelessL2BlockExecutorBuilder::new(config, provider, hinter)
     }
 
+    /// Fetches the L2 to L1 message passer account from the cache or underlying trie.
+    fn message_passer_account(db: &mut TrieDB<F, H>) -> Result<B256, TrieDBError> {
+        match db.storage_roots().get(&L2_TO_L1_BRIDGE) {
+            Some(storage_root) => {
+                storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)
+            }
+            None => Ok(db
+                .get_trie_account(&L2_TO_L1_BRIDGE)?
+                .ok_or(TrieDBError::MissingAccountInfo)?
+                .storage_root),
+        }
+    }
+
     /// Executes the given block, returning the resulting state root.
     ///
     /// ## Steps
@@ -260,10 +273,16 @@ where
 
         // The withdrawals root on OP Stack chains, after Canyon activation, is always the empty
         // root hash.
-        let withdrawals_root = self
+        let mut withdrawals_root = self
             .config
             .is_canyon_active(payload.payload_attributes.timestamp)
             .then_some(EMPTY_ROOT_HASH);
+
+        // If the Isthmus hardfork is active, the withdrawals root is the L2 to L1 message passer
+        // account.
+        if self.config.is_isthmus_active(payload.payload_attributes.timestamp) {
+            withdrawals_root = Some(Self::message_passer_account(state.database)?);
+        }
 
         // Compute logs bloom filter for the block.
         let logs_bloom = logs_bloom(receipts.iter().flat_map(|receipt| receipt.logs()));
@@ -299,9 +318,12 @@ where
             .transpose()?
             .unwrap_or_default();
 
+        // Compute the parent hash.
+        let parent_hash = state.database.parent_block_header().seal();
+
         // Construct the new header.
         let header = Header {
-            parent_hash: state.database.parent_block_header().seal(),
+            parent_hash,
             ommers_hash: EMPTY_OMMER_ROOT_HASH,
             beneficiary: payload.payload_attributes.suggested_fee_recipient,
             state_root,
@@ -353,19 +375,7 @@ where
     /// - `Ok(output_root)`: The computed output root.
     /// - `Err(_)`: If an error occurred while computing the output root.
     pub fn compute_output_root(&mut self) -> ExecutorResult<B256> {
-        // Fetch the L2 to L1 message passer account from the cache or underlying trie.
-        let storage_root = match self.trie_db.storage_roots().get(&L2_TO_L1_BRIDGE) {
-            Some(storage_root) => {
-                storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)?
-            }
-            None => {
-                self.trie_db
-                    .get_trie_account(&L2_TO_L1_BRIDGE)?
-                    .ok_or(TrieDBError::MissingAccountInfo)?
-                    .storage_root
-            }
-        };
-
+        let storage_root = Self::message_passer_account(&mut self.trie_db)?;
         let parent_header = self.trie_db.parent_block_header();
 
         info!(
