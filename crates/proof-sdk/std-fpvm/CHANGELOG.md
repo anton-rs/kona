@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/anton-rs/kona/compare/kona-std-fpvm-v0.1.1...kona-std-fpvm-v0.1.2) - 2025-01-03
+
+### Added
+
+- *(build)* Adjust RV target - `riscv64g` -> `riscv64ima` (#868)
+
 ## [0.1.1](https://github.com/anton-rs/kona/compare/kona-std-fpvm-v0.1.0...kona-std-fpvm-v0.1.1) - 2024-12-03
 
 ### Other
