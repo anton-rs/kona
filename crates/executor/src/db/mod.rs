@@ -110,7 +110,7 @@ where
         }
     }
 
-    /// Consumes `Self` and takes the the current state root of the trie DB.
+    /// Consumes `Self` and takes the current state root of the trie DB.
     pub fn take_root_node(self) -> TrieNode {
         self.root_node
     }
