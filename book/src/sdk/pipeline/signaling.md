@@ -13,7 +13,7 @@ pipeline driver. The variants of [`StepResult`][step-result] and what they
 signal include the following.
 
 - `StepResult::PreparedAttributes` - signals that payload attributes are
-   ready to be be consumed by the pipeline driver.
+   ready to be consumed by the pipeline driver.
 - `StepResult::AdvancedOrigin` - signals that the pipeline has derived all
    payload attributes for the given L1 block, and the origin of the pipeline
    was advanced to the next canonical L1 block.
