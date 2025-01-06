@@ -1,6 +1,6 @@
 # `kona-book`
 
-This repository contains the source code for the Kona book, which is available at [anton-rs.github.io/kona](https://anton-rs.github.io/kona/).
+This repository contains the source code for the Kona book, which is available at [op-rs.github.io/kona](https://op-rs.github.io/kona/).
 
 ## Contributing
 

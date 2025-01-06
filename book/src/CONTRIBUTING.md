@@ -20,7 +20,7 @@ Before working with this repository locally, you'll need to install several depe
 
 ## Pull Request Process
 
-1. Before anything, [create an issue](https://github.com/anton-rs/kona/issues/new) to discuss the change you're
+1. Before anything, [create an issue](https://github.com/op-rs/kona/issues/new) to discuss the change you're
    wanting to make, if it is significant or changes functionality. Feel free to skip this step for trivial changes.
 1. Once your change is implemented, ensure that all checks are passing before creating a PR. The full CI pipeline can
    be run locally via the `justfile`s in the repository.

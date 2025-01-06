@@ -13,7 +13,7 @@ command = "mdbook-mermaid"
 [output.html]
 default-theme = "ferra"
 preferred-dark-theme = "ferra"
-git-repository-url = "https://github.com/anton-rs/kona"
-edit-url-template = "https://github.com/anton-rs/kona/edit/main/book/{path}"
+git-repository-url = "https://github.com/op-rs/kona"
+edit-url-template = "https://github.com/op-rs/kona/edit/main/book/{path}"
 additional-css = ["custom.css"]
 additional-js = ["mermaid.min.js", "mermaid-init.js"]

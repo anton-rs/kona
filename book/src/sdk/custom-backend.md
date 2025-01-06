@@ -85,7 +85,7 @@ let pipeline = PipelineBuilder::new()
 ```
 
 From here, a custom derivation driver is needed to produce the desired execution payload(s). An example of this for
-`kona-client` can be found in the [DerivationDriver](https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77).
+`kona-client` can be found in the [DerivationDriver](https://github.com/op-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77).
 
 ### `kona-mpt` / `kona-executor` sources
 
@@ -113,7 +113,7 @@ let header = executor.execute_payload(...).expect("Failed execution");
 ### Bringing it Together
 
 Once your custom backend traits for both `kona-derive` and `kona-executor` have been implemented,
-your final binary may look something like [that of `kona-client`'s](https://github.com/anton-rs/kona/blob/main/bin/client/src/kona.rs).
+your final binary may look something like [that of `kona-client`'s](https://github.com/op-rs/kona/blob/main/bin/client/src/kona.rs).
 Alternatively, if you're looking to prove a wider range of blocks, [`op-succinct`'s `range` program](https://github.com/succinctlabs/op-succinct/tree/main/programs/range)
 offers a good example of running the pipeline and executor across a string of contiguous blocks.
 
