@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/op-rs/kona/compare/kona-executor-v0.2.0...kona-executor-v0.2.1) - 2025-01-07
+
+### Fixed
+
+- op-rs rename (#883)
+
+### Other
+
+- Bump Dependencies (#880)
+- remove redundant words in comment (#882)
+- Isthmus Withdrawals Root (#881)
+
 ## [0.2.0](https://github.com/op-rs/kona/compare/kona-executor-v0.1.0...kona-executor-v0.2.0) - 2024-12-03
 
 ### Added

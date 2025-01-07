@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/op-rs/kona/compare/kona-derive-v0.2.0...kona-derive-v0.2.1) - 2025-01-07
+
+### Fixed
+
+- op-rs rename (#883)
+- *(derive)* `BatchStream` Past batch handling (#876)
+- *(derive)* make tests compile (#878)
+
+### Other
+
+- Bump Dependencies (#880)
+- patch for rust 1.81 ([#867](https://github.com/op-rs/kona/pull/867))
+
 ## [0.2.0](https://github.com/op-rs/kona/compare/kona-derive-v0.1.0...kona-derive-v0.2.0) - 2024-12-03
 
 ### Added
