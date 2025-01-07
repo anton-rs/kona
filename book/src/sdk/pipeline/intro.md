@@ -285,12 +285,12 @@ So, [@clabby][clabby] and [@refcell][refcell] stood up [kona][kona] in a few mon
 
 <!-- Links -->
 
-[driver]: https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74
+[driver]: https://github.com/op-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74
 [next]: https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#tymethod.next
 [builder]: https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html
 [alloy]: https://github.com/alloy-rs/alloy
 [ethers-rs]: https://github.com/gakonst/ethers-rs
-[kona]: https://github.com/anton-rs/kona
+[kona]: https://github.com/op-rs/kona
 [clabby]: https://github.com/clabby
 [refcell]: https://github.com/refcell
 [go]: https://go.dev/

@@ -7,17 +7,17 @@
 </h4>
 
 <p align="center">
-  <a href="https://github.com/anton-rs/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/anton-rs/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
-  <a href="https://github.com/anton-rs/kona/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-d1d1f6.svg?label=license&labelColor=2a2f35" alt="License"></a>
-  <a href="https://anton-rs.github.io/kona"><img src="https://img.shields.io/badge/Contributor%20Book-854a15?logo=mdBook&labelColor=2a2f35" alt="Book"></a>
+  <a href="https://github.com/op-rs/kona/actions/workflows/rust_ci.yaml"><img src="https://github.com/op-rs/kona/actions/workflows/rust_ci.yaml/badge.svg?label=ci" alt="CI"></a>
+  <a href="https://github.com/op-rs/kona/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-d1d1f6.svg?label=license&labelColor=2a2f35" alt="License"></a>
+  <a href="https://op-rs.github.io/kona"><img src="https://img.shields.io/badge/Contributor%20Book-854a15?logo=mdBook&labelColor=2a2f35" alt="Book"></a>
   <a href="https://github.com/ethereum-optimism/monorepo"><img src="https://img.shields.io/badge/OP%20Stack-monorepo-red?labelColor=2a2f35" alt="OP Stack"></a>
-  <a href="https://img.shields.io/codecov/c/github/anton-rs/kona"><img src="https://img.shields.io/codecov/c/github/anton-rs/kona" alt="Codecov"></a>
+  <a href="https://img.shields.io/codecov/c/github/op-rs/kona"><img src="https://img.shields.io/codecov/c/github/op-rs/kona" alt="Codecov"></a>
 </p>
 
 <p align="center">
   <a href="#whats-kona">What's Kona?</a> •
   <a href="#overview">Overview</a> •
-  <a href="https://anton-rs.github.io/kona/CONTRIBUTING.html">Contributing</a> •
+  <a href="https://op-rs.github.io/kona/CONTRIBUTING.html">Contributing</a> •
   <a href="#credits">Credits</a>
 </p>
 
@@ -37,7 +37,7 @@ program! Kona is also used by:
 - [`op-succinct`][op-succinct]
 
 To build your own backend for kona, or build a new application on top of its libraries,
-see the [SDK section of the book](https://anton-rs.github.io/kona/sdk/intro.html).
+see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
 
 ### Development Status
 
@@ -83,11 +83,11 @@ getting started with building your own programs, and a reference for the librari
 [op-stack]: https://github.com/ethereum-optimism/optimism
 [op-program]: https://github.com/ethereum-optimism/optimism/tree/develop/op-program
 [cannon]: https://github.com/ethereum-optimism/optimism/tree/develop/cannon
-[cannon-rs]: https://github.com/anton-rs/cannon-rs
+[cannon-rs]: https://github.com/op-rs/cannon-rs
 [badboi-cannon-rs]: https://github.com/BadBoiLabs/cannon-rs
 [asterisc]: https://github.com/etheruem-optimism/asterisc
 [fpp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html
-[book]: https://anton-rs.github.io/kona/
+[book]: https://op-rs.github.io/kona/
 [op-succinct]: https://github.com/succinctlabs/op-succinct
 [op-labs]: https://github.com/ethereum-optimism
 [bad-boi-labs]: https://github.com/BadBoiLabs

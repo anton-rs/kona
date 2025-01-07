@@ -73,7 +73,7 @@ lint-cannon:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/cannon-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target /mips-unknown-none.json -Zbuild-std=core,alloc -- -D warnings
+    ghcr.io/op-rs/kona/cannon-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target /mips-unknown-none.json -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the workspace (risc-v arch). Currently, only the `kona-std-fpvm` crate is linted for the `asterisc` target, as it is the only crate with architecture-specific code.
 lint-asterisc:
@@ -82,7 +82,7 @@ lint-asterisc:
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/asterisc-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target riscv64imac-unknown-none-elf -Zbuild-std=core,alloc -- -D warnings
+    ghcr.io/op-rs/kona/asterisc-builder:main cargo +nightly clippy -p kona-std-fpvm --all-features --target riscv64imac-unknown-none-elf -Zbuild-std=core,alloc -- -D warnings
 
 # Lint the Rust documentation
 lint-docs:
@@ -106,7 +106,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
+    ghcr.io/op-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -115,7 +115,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/anton-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
+    ghcr.io/op-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
 
 # Build the `kona-client` prestate artifacts for the latest release.
 build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-artifacts-asterisc':

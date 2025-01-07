@@ -2,7 +2,7 @@
 
 _Documentation for the Kona project._
 
-<a href="https://github.com/anton-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a>
+<a href="https://github.com/op-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a>
 
 > 📖 `kona` is in active development, and is not yet ready for use in production. During development, this book will evolve quickly and may contain inaccuracies.
 >

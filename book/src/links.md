@@ -3,7 +3,7 @@
 [op-stack]: https://github.com/ethereum-optimism/optimism
 [op-program]: https://github.com/ethereum-optimism/optimism/tree/develop/op-program
 [cannon]: https://github.com/ethereum-optimism/optimism/tree/develop/cannon
-[cannon-rs]: https://github.com/anton-rs/cannon-rs
+[cannon-rs]: https://github.com/op-rs/cannon-rs
 [asterisc]: https://github.com/ethereum-optimism/asterisc
 [fp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html
 [fpp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html#fault-proof-program
@@ -15,11 +15,11 @@
 
 <!-- Kona links -->
 
-[kona]: https://github.com/anton-rs/kona
-[book]: https://anton-rs.github.io/kona/
-[issues]: https://github.com/anton-rs/kona/issues
-[new-issue]: https://github.com/anton-rs/kona/issues/new
-[contributing]: https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md
+[kona]: https://github.com/op-rs/kona
+[book]: https://op-rs.github.io/kona/
+[issues]: https://github.com/op-rs/kona/issues
+[new-issue]: https://github.com/op-rs/kona/issues/new
+[contributing]: https://github.com/op-rs/kona/tree/main/CONTRIBUTING.md
 
 <!-- People -->
 
