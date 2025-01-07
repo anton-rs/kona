@@ -566,8 +566,6 @@ mod test {
                     "edba75784acf3165bffd96df8b78ffdb3781db91f886f22b4bee0a6f722df939"
                 ),
                 suggested_fee_recipient: FEE_RECIPIENT,
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(0x1c9c380),
             transactions: Some(alloc::vec![raw_tx.into()]),
@@ -631,8 +629,6 @@ mod test {
                 parent_beacon_block_root: Some(b256!(
                     "5e7da14ac6b18e62306c84d9d555387d4b4a6c3d122df22a2af2b68bf219860d"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(30000000),
             transactions: Some(raw_txs),
@@ -703,8 +699,6 @@ mod test {
                 parent_beacon_block_root: Some(b256!(
                     "50f4a35e2f059621cba649e719d23a2a9d030189fd19172a689c76d3adf39fec"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(0x1c9c380),
             transactions: Some(raw_txs),
@@ -769,8 +763,6 @@ mod test {
                 parent_beacon_block_root: Some(b256!(
                     "fa918fbee01a47f475d70995e78b4505bd8714962012720cab27f7e66ec4ea5b"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
@@ -844,8 +836,6 @@ mod test {
                 parent_beacon_block_root: Some(b256!(
                     "a4414c4984ce7285b82bd9b21c642af30f0f648fb6f4929b67753e7345a06bab"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
@@ -924,8 +914,6 @@ mod test {
                 parent_beacon_block_root: Some(b256!(
                     "8ab0d68c0fc4fe40d31baf01bcf73de45ddf15ab58e66738ca6c60648676f9af"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
