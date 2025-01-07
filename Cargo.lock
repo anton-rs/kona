@@ -2935,9 +2935,9 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 
 [[package]]
 name = "op-alloy-consensus"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0adb232ec805af3aa35606c19329aa7dc44c4457ae318ed0b8fc7f799dd7dbfe"
+checksum = "250244eadaf1a25e0e2ad263110ad2d1b43c2e57ddf4c025e71552d98196a8d3"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2951,9 +2951,9 @@ dependencies = [
 
 [[package]]
 name = "op-alloy-genesis"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84c272cfd65317538f5815c2b7059445230b050d48ebe2d0bab3e861d419a785"
+checksum = "98334a9cdccc5878e9d5c48afc9cc1b84da58dbc68d41f9488d8f71688b495d3"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2966,9 +2966,9 @@ dependencies = [
 
 [[package]]
 name = "op-alloy-protocol"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad65d040648e0963ed378e88489f5805e24fb56b7e6611362299cd4c24debeb2"
+checksum = "753762429c31f838b59c886b31456c9bf02fd38fb890621665523a9087ae06ae"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2976,9 +2976,10 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-serde",
+ "alloy-sol-types",
  "async-trait",
  "brotli",
- "cfg-if",
+ "derive_more",
  "miniz_oxide",
  "op-alloy-consensus",
  "op-alloy-genesis",
@@ -2990,9 +2991,9 @@ dependencies = [
 
 [[package]]
 name = "op-alloy-registry"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab9a7dc8695ee3004f172ac787d6f86ac9aedfcca55094360f7914c41ba59ab1"
+checksum = "812e817159c7f8a451896fb0584132a1413d5579a3fe3f7b8756e333f0eb15ee"
 dependencies = [
  "alloy-primitives",
  "lazy_static",
@@ -3003,9 +3004,9 @@ dependencies = [
 
 [[package]]
 name = "op-alloy-rpc-types-engine"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f8833ef149ceb74f8f25a79801d110d88ec2db32e700fa10db6c5f5b5cbb71a"
+checksum = "c43f00d4060a6a38f5bf0a8182b4cc4c7071e2bc96942f414619251b522169eb"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
