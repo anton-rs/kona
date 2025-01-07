@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/op-rs/kona/compare/kona-mpt-v0.1.1...kona-mpt-v0.1.2) - 2025-01-07
+
+### Fixed
+
+- op-rs rename (#883)
+
+### Other
+
+- Bump Dependencies (#880)
+
 ## [0.1.1](https://github.com/op-rs/kona/compare/kona-mpt-v0.1.0...kona-mpt-v0.1.1) - 2024-12-03
 
 ### Other
