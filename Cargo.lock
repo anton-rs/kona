@@ -168,9 +168,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-json-abi"
-version = "0.8.14"
+version = "0.8.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac4b22b3e51cac09fd2adfcc73b55f447b4df669f983c13f7894ec82b607c63f"
+checksum = "c357da577dfb56998d01f574d81ad7a1958d248740a7981b205d69d65a7da404"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-type-parser",
@@ -502,9 +502,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-sol-type-parser"
-version = "0.8.14"
+version = "0.8.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac17c6e89a50fb4a758012e4b409d9a0ba575228e69b539fe37d7a1bd507ca4a"
+checksum = "1f3d6d2c490f650c5abd65a9a583b09a8c8931c265d3a55b18a8e349dd6d9d84"
 dependencies = [
  "serde",
  "winnow",
@@ -2400,38 +2400,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kona-client-interop"
-version = "0.1.0"
-dependencies = [
- "alloy-consensus",
- "alloy-eips",
- "alloy-primitives",
- "alloy-rlp",
- "alloy-rpc-types-engine",
- "async-trait",
- "cfg-if",
- "kona-derive",
- "kona-driver",
- "kona-executor",
- "kona-mpt",
- "kona-preimage",
- "kona-proof",
- "kona-std-fpvm",
- "kona-std-fpvm-proc",
- "lru",
- "op-alloy-consensus",
- "op-alloy-genesis",
- "op-alloy-protocol",
- "op-alloy-rpc-types-engine",
- "revm",
- "serde",
- "serde_json",
- "spin",
- "thiserror 2.0.4",
- "tracing",
-]
-
-[[package]]
 name = "kona-derive"
 version = "0.2.0"
 dependencies = [
@@ -2544,6 +2512,8 @@ dependencies = [
  "op-alloy-consensus",
  "serde",
  "thiserror 2.0.4",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

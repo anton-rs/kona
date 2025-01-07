@@ -10,6 +10,7 @@
 extern crate alloc;
 
 mod graph;
+pub use graph::DependencyGraph;
 
 mod message;
 pub use message::{ExecutingMessage, MessageIdentifier, RawMessagePayload};
@@ -19,3 +20,6 @@ mod constants;
 mod traits;
 
 mod errors;
+
+#[cfg(test)]
+mod test_utils;

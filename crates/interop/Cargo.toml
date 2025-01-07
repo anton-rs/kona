@@ -16,9 +16,13 @@ workspace = true
 thiserror.workspace = true
 serde = { workspace = true, optional = true, features = ["derive", "alloc"] }
 async-trait.workspace = true
+tracing.workspace = true
 
 # Alloy
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-sol-types = "0.8.14"
 alloy-consensus.workspace = true
 op-alloy-consensus.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

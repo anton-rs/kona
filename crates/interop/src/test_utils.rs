@@ -1,0 +1,154 @@
+//! Test utilities for `kona-interop`.
+
+#![allow(missing_docs, unreachable_pub)]
+
+use crate::{errors::InteropProviderResult, traits::InteropProvider};
+use alloy_consensus::{Header, Receipt, ReceiptWithBloom, Sealed};
+use alloy_primitives::{map::HashMap, Address, Bytes, Log, LogData, B256};
+use async_trait::async_trait;
+use op_alloy_consensus::OpReceiptEnvelope;
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct MockInteropProvider {
+    pub headers: HashMap<u64, HashMap<u64, Sealed<Header>>>,
+    pub receipts: HashMap<u64, HashMap<u64, Vec<OpReceiptEnvelope>>>,
+}
+
+impl MockInteropProvider {
+    pub fn new(
+        headers: HashMap<u64, HashMap<u64, Sealed<Header>>>,
+        receipts: HashMap<u64, HashMap<u64, Vec<OpReceiptEnvelope>>>,
+    ) -> Self {
+        Self { headers, receipts }
+    }
+}
+
+#[async_trait]
+impl InteropProvider for MockInteropProvider {
+    /// Fetch a [Header] by its number.
+    async fn header_by_number(&self, chain_id: u64, number: u64) -> InteropProviderResult<Header> {
+        Ok(self
+            .headers
+            .get(&chain_id)
+            .and_then(|headers| headers.get(&number))
+            .unwrap()
+            .inner()
+            .clone())
+    }
+
+    /// Fetch a [Header] by its hash.
+    async fn header_by_hash(&self, chain_id: u64, hash: B256) -> InteropProviderResult<Header> {
+        Ok(self
+            .headers
+            .get(&chain_id)
+            .and_then(|headers| headers.values().find(|header| header.hash() == hash))
+            .unwrap()
+            .inner()
+            .clone())
+    }
+
+    /// Fetch all receipts for a given block by number.
+    async fn receipts_by_number(
+        &self,
+        chain_id: u64,
+        number: u64,
+    ) -> InteropProviderResult<Vec<OpReceiptEnvelope>> {
+        Ok(self.receipts.get(&chain_id).and_then(|receipts| receipts.get(&number)).unwrap().clone())
+    }
+
+    /// Fetch all receipts for a given block by hash.
+    async fn receipts_by_hash(
+        &self,
+        chain_id: u64,
+        block_hash: B256,
+    ) -> InteropProviderResult<Vec<OpReceiptEnvelope>> {
+        Ok(self
+            .receipts
+            .get(&chain_id)
+            .and_then(|receipts| {
+                let headers = self.headers.get(&chain_id).unwrap();
+                let number =
+                    headers.values().find(|header| header.hash() == block_hash).unwrap().number;
+                receipts.get(&number)
+            })
+            .unwrap()
+            .clone())
+    }
+}
+
+pub struct SuperchainBuilder {
+    chains: HashMap<u64, ChainBuilder>,
+    timestamp: u64,
+}
+
+pub struct ChainBuilder {
+    header: Header,
+    receipts: Vec<OpReceiptEnvelope>,
+}
+
+impl SuperchainBuilder {
+    pub fn new(timestamp: u64) -> Self {
+        Self { chains: HashMap::new(), timestamp }
+    }
+
+    pub fn chain(&mut self, chain_id: u64) -> &mut ChainBuilder {
+        self.chains.entry(chain_id).or_insert_with(|| ChainBuilder::new(self.timestamp))
+    }
+
+    /// Builds the scenario into the format needed for testing
+    pub fn build(self) -> (Vec<(u64, Sealed<Header>)>, MockInteropProvider) {
+        let mut headers_map = HashMap::new();
+        let mut receipts_map = HashMap::new();
+        let mut sealed_headers = Vec::new();
+
+        for (chain_id, chain) in self.chains {
+            let header = chain.header;
+            let header_hash = header.hash_slow();
+            let sealed_header = header.seal(header_hash);
+
+            let mut chain_headers = HashMap::new();
+            chain_headers.insert(0, sealed_header.clone());
+            headers_map.insert(chain_id, chain_headers);
+
+            let mut chain_receipts = HashMap::new();
+            chain_receipts.insert(0, chain.receipts);
+            receipts_map.insert(chain_id, chain_receipts);
+
+            sealed_headers.push((chain_id, sealed_header));
+        }
+
+        (sealed_headers, MockInteropProvider::new(headers_map, receipts_map))
+    }
+}
+
+impl ChainBuilder {
+    pub fn new(timestamp: u64) -> Self {
+        Self { header: Header { timestamp, ..Default::default() }, receipts: Vec::new() }
+    }
+
+    pub fn add_initiating_message(&mut self, message_data: Bytes) -> &mut Self {
+        let receipt = OpReceiptEnvelope::Eip1559(ReceiptWithBloom {
+            receipt: Receipt {
+                logs: vec![Log {
+                    address: Address::ZERO,
+                    data: LogData::new(vec![], message_data).unwrap(),
+                }],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        self.receipts.push(receipt);
+        self
+    }
+
+    pub fn add_executing_message(
+        &mut self,
+        message_hash: [u8; 32],
+        origin_chain_id: u64,
+        origin_timestamp: u64,
+    ) -> &mut Self {
+        // Create executing message receipt...
+        // Add your executing message logic here
+        self
+    }
+}

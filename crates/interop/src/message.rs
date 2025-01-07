@@ -3,14 +3,16 @@
 //! <https://specs.optimism.io/interop/messaging.html#messaging>
 //! <https://github.com/ethereum-optimism/optimism/blob/34d5f66ade24bd1f3ce4ce7c0a6cfc1a6540eca1/packages/contracts-bedrock/src/L2/CrossL2Inbox.sol>
 
+use crate::constants::CROSS_L2_INBOX_ADDRESS;
 use alloc::{vec, vec::Vec};
-use alloy_primitives::{keccak256, Address, Bytes, Log, U256};
-use alloy_sol_types::{sol, SolCall, SolType};
+use alloy_primitives::{keccak256, Bytes, Log};
+use alloy_sol_types::{sol, SolEvent};
+use op_alloy_consensus::OpReceiptEnvelope;
 
 sol! {
     /// @notice The struct for a pointer to a message payload in a remote (or local) chain.
     #[derive(Default, Debug, PartialEq, Eq)]
-    struct MessageIdentifierAbi {
+    struct MessageIdentifier {
         address origin;
         uint256 blockNumber;
         uint256 logIndex;
@@ -22,14 +24,14 @@ sol! {
     /// @param msgHash Hash of message payload being executed.
     /// @param id Encoded Identifier of the message.
     #[derive(Default, Debug, PartialEq, Eq)]
-    event ExecutingMessage(bytes32 indexed msgHash, MessageIdentifierAbi id);
+    event ExecutingMessage(bytes32 indexed msgHash, MessageIdentifier id);
 
     /// @notice Executes a cross chain message on the destination chain.
     /// @param _id      Identifier of the message.
     /// @param _target  Target address to call.
     /// @param _message Message payload to call target with.
     function executeMessage(
-        MessageIdentifierAbi calldata _id,
+        MessageIdentifier calldata _id,
         address _target,
         bytes calldata _message
     ) external;
@@ -39,8 +41,8 @@ sol! {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawMessagePayload(Bytes);
 
-impl From<Log> for RawMessagePayload {
-    fn from(log: Log) -> Self {
+impl From<&Log> for RawMessagePayload {
+    fn from(log: &Log) -> Self {
         let mut data = vec![0u8; log.topics().len() * 32 + log.data.data.len()];
         for (i, topic) in log.topics().iter().enumerate() {
             data[i * 32..(i + 1) * 32].copy_from_slice(topic.as_ref());
@@ -74,56 +76,39 @@ impl AsRef<[u8]> for RawMessagePayload {
     }
 }
 
-/// A [MessageIdentifier] uniquely represents a log that is emitted from a chain within
-/// the broader dependency set. It is included in the calldata of a transaction sent to the
-/// CrossL2Inbox contract.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MessageIdentifier {
-    /// The account that sent the message.
-    pub origin: Address,
-    /// The block number that the message was sent in.
-    pub block_number: u64,
-    /// The log index of the message in the block (global).
-    pub log_index: u64,
-    /// The timestamp of the message.
-    pub timestamp: u64,
-    /// The chain ID of the chain that the message was sent on.
-    pub chain_id: u64,
-}
-
-impl MessageIdentifier {
-    /// Decode a [MessageIdentifier] from ABI-encoded data.
-    pub fn abi_decode(data: &[u8], validate: bool) -> Result<Self, alloy_sol_types::Error> {
-        MessageIdentifierAbi::abi_decode(data, validate).and_then(|abi| Ok(abi.into()))
-    }
-}
-
-impl From<MessageIdentifierAbi> for MessageIdentifier {
-    fn from(abi: MessageIdentifierAbi) -> Self {
-        Self {
-            origin: abi.origin,
-            block_number: abi.blockNumber.to(),
-            log_index: abi.logIndex.to(),
-            timestamp: abi.timestamp.to(),
-            chain_id: abi.chainId.to(),
-        }
-    }
-}
-
-impl From<MessageIdentifier> for MessageIdentifierAbi {
-    fn from(id: MessageIdentifier) -> Self {
-        Self {
-            origin: id.origin,
-            blockNumber: U256::from(id.block_number),
-            logIndex: U256::from(id.log_index),
-            timestamp: U256::from(id.timestamp),
-            chainId: U256::from(id.chain_id),
-        }
-    }
-}
-
 impl From<executeMessageCall> for ExecutingMessage {
     fn from(call: executeMessageCall) -> Self {
         Self { id: call._id.into(), msgHash: keccak256(call._message.as_ref()) }
     }
+}
+
+/// A wrapper type for [ExecutingMessage] containing the chain ID of the chain that the message was
+/// executed on.
+#[derive(Debug)]
+pub struct EnrichedExecutingMessage {
+    /// The inner [ExecutingMessage].
+    pub inner: ExecutingMessage,
+    /// The chain ID of the chain that the message was executed on.
+    pub executing_chain_id: u64,
+}
+
+impl EnrichedExecutingMessage {
+    /// Create a new [ExecutingMessageWithOrigin] from an [ExecutingMessage] and a chain ID.
+    pub fn new(inner: ExecutingMessage, executing_chain_id: u64) -> Self {
+        Self { inner, executing_chain_id }
+    }
+}
+
+/// Extracts all [ExecutingMessage] logs from a list of [OpReceiptEnvelope]s.
+pub fn extract_executing_messages(receipts: &[OpReceiptEnvelope]) -> Vec<ExecutingMessage> {
+    receipts.iter().fold(Vec::new(), |mut acc, envelope| {
+        let executing_messages = envelope.logs().iter().filter_map(|log| {
+            (log.address == CROSS_L2_INBOX_ADDRESS && log.topics().len() == 2)
+                .then(|| ExecutingMessage::decode_log_data(&log.data, true).ok())
+                .flatten()
+        });
+
+        acc.extend(executing_messages);
+        acc
+    })
 }
