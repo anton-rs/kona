@@ -375,13 +375,13 @@ impl TrieNode {
             Self::Leaf { prefix, value } => {
                 // Encode the leaf node's header and key-value pair.
                 Header { list: true, payload_length }.encode(out);
-                prefix.pack().as_slice().encode(out);
+                alloy_trie::nodes::encode_path_leaf(prefix, true).as_slice().encode(out);
                 value.encode(out);
             }
             Self::Extension { prefix, node } => {
                 // Encode the extension node's header, prefix, and pointer node.
                 Header { list: true, payload_length }.encode(out);
-                prefix.pack().as_slice().encode(out);
+                alloy_trie::nodes::encode_path_leaf(prefix, false).as_slice().encode(out);
                 node.blind();
                 node.encode_in_place(out);
             }
@@ -578,13 +578,13 @@ impl Encodable for TrieNode {
             Self::Leaf { prefix, value } => {
                 // Encode the leaf node's header and key-value pair.
                 Header { list: true, payload_length: self.payload_length() }.encode(out);
-                prefix.pack().as_slice().encode(out);
+                alloy_trie::nodes::encode_path_leaf(prefix, true).as_slice().encode(out);
                 value.encode(out);
             }
             Self::Extension { prefix, node } => {
                 // Encode the extension node's header, prefix, and pointer node.
                 Header { list: true, payload_length: self.payload_length() }.encode(out);
-                alloy_trie::nodes::encode_path_leaf(prefix, true).as_slice().encode(out);
+                alloy_trie::nodes::encode_path_leaf(prefix, false).as_slice().encode(out);
                 let mut blinded = node.clone();
                 blinded.blind();
                 blinded.encode(out);
