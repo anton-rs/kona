@@ -157,10 +157,10 @@
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                        <a href="https://github.com/op-rs/kona" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/custom-backend.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/op-rs/kona/edit/main/book/src/sdk/custom-backend.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -271,7 +271,7 @@ let pipeline = PipelineBuilder::new()
    .build();
 </code></pre>
 <p>From here, a custom derivation driver is needed to produce the desired execution payload(s). An example of this for
-<code>kona-client</code> can be found in the <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77">DerivationDriver</a>.</p>
+<code>kona-client</code> can be found in the <a href="https://github.com/op-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77">DerivationDriver</a>.</p>
 <h3 id="kona-mpt--kona-executor-sources"><a class="header" href="#kona-mpt--kona-executor-sources"><code>kona-mpt</code> / <code>kona-executor</code> sources</a></h3>
 <p>Before getting started, we need to create custom implementations of the following traits:</p>
 <div class="table-wrapper"><table><thead><tr><th>Trait</th><th>Description</th></tr></thead><tbody>
@@ -294,7 +294,7 @@ let header = executor.execute_payload(...).expect("Failed execution");
 <span class="boring">}</span></code></pre></pre>
 <h3 id="bringing-it-together"><a class="header" href="#bringing-it-together">Bringing it Together</a></h3>
 <p>Once your custom backend traits for both <code>kona-derive</code> and <code>kona-executor</code> have been implemented,
-your final binary may look something like <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/kona.rs">that of <code>kona-client</code>'s</a>.
+your final binary may look something like <a href="https://github.com/op-rs/kona/blob/main/bin/client/src/kona.rs">that of <code>kona-client</code>'s</a>.
 Alternatively, if you're looking to prove a wider range of blocks, <a href="https://github.com/succinctlabs/op-succinct/tree/main/programs/range"><code>op-succinct</code>'s <code>range</code> program</a>
 offers a good example of running the pipeline and executor across a string of contiguous blocks.</p>
 <!-- External -->

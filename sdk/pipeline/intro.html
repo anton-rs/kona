@@ -157,10 +157,10 @@
                         <a href="../../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                        <a href="https://github.com/op-rs/kona" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona/edit/main/book/src/sdk/pipeline/intro.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/op-rs/kona/edit/main/book/src/sdk/pipeline/intro.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -389,7 +389,7 @@ the derivation pipeline. There are multiple different <code>StepResult</code>s t
 stepping on the pipeline, including advancing the origin, re-orgs, and pipeline resets.
 In the next section, pipeline resets are outlined.</p>
 <p>For an up-to-date driver that runs the derivation pipeline as part of the fault proof
-program, reference kona's <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74">client driver</a>.</p>
+program, reference kona's <a href="https://github.com/op-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74">client driver</a>.</p>
 <h2 id="resets"><a class="header" href="#resets">Resets</a></h2>
 <p>When stepping on the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a> produces a reset error, the driver
 of the pipeline must perform a reset on the pipeline. This is done by sending a "signal"
@@ -458,7 +458,7 @@ ecosystem moves quickly and <a href="https://github.com/a16z/magi">magi</a> was 
 <a href="https://github.com/gakonst/ethers-rs">ethers-rs</a> instead of new <a href="https://github.com/alloy-rs/alloy">alloy</a> types. Additionally, <a href="https://github.com/a16z/magi">magi</a>'s derivation
 pipeline was not <code>no_std</code> compatible - a hard requirement for running a rust fault proof
 program on top of the RISCV or MIPS ISAs.</p>
-<p>So, <a href="https://github.com/clabby">@clabby</a> and <a href="https://github.com/refcell">@refcell</a> stood up <a href="https://github.com/anton-rs/kona">kona</a> in a few months.</p>
+<p>So, <a href="https://github.com/clabby">@clabby</a> and <a href="https://github.com/refcell">@refcell</a> stood up <a href="https://github.com/op-rs/kona">kona</a> in a few months.</p>
 <!-- Links -->
 <!-- Pipeline Stages -->
 

@@ -158,7 +158,7 @@
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        <a href="https://github.com/anton-rs/kona" title="Git repository" aria-label="Git repository">
+                        <a href="https://github.com/op-rs/kona" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
 
@@ -190,10 +190,10 @@
                     <main>
                         <h1 id="kona-book"><a class="header" href="#kona-book">Kona Book</a></h1>
 <p><em>Documentation for the Kona project.</em></p>
-<p><a href="https://github.com/anton-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a></p>
+<p><a href="https://github.com/op-rs/kona"><img src="https://img.shields.io/badge/GitHub%20Repo-kona-green?logo=github"></a></p>
 <blockquote>
 <p>📖 <code>kona</code> is in active development, and is not yet ready for use in production. During development, this book will evolve quickly and may contain inaccuracies.</p>
-<p>Please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> if you find any errors or have any suggestions for improvements, and also feel free to <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">contribute</a> to the project!</p>
+<p>Please <a href="https://github.com/op-rs/kona/issues/new">open an issue</a> if you find any errors or have any suggestions for improvements, and also feel free to <a href="https://github.com/op-rs/kona/tree/main/CONTRIBUTING.md">contribute</a> to the project!</p>
 </blockquote>
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
 <p>Kona is a suite of libraries and build pipelines for developing verifiable Rust programs targeting
@@ -222,14 +222,14 @@ for optimizing performance-critical code.</p>
 <h2 id="development-status"><a class="header" href="#development-status">Development Status</a></h2>
 <p><strong>Kona is currently in active development, and is not yet ready for use in production.</strong></p>
 <h2 id="contributing"><a class="header" href="#contributing">Contributing</a></h2>
-<p>Contributors are welcome! Please see the <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">contributing guide</a> for more information.</p>
+<p>Contributors are welcome! Please see the <a href="https://github.com/op-rs/kona/tree/main/CONTRIBUTING.md">contributing guide</a> for more information.</p>
 <!-- External -->
 <!-- Kona links -->
 <!-- People -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fault-proof-program-development"><a class="header" href="#fault-proof-program-development">Fault Proof Program Development</a></h1>
 <p>This chapter provides an overview of <a href="fpp-dev/../glossary.html#fault-proof-program">Fault Proof Program</a>
 development
-on top of the custom FPVM targets supported by <a href="https://github.com/anton-rs/kona">Kona</a>.</p>
+on top of the custom FPVM targets supported by <a href="https://github.com/op-rs/kona">Kona</a>.</p>
 <p>At a high level, a Fault Proof Program is not much different from a regular <code>no_std</code> Rust program. A custom entrypoint is provided, and the program
 is compiled down to a custom target, which is then executed on the FPVM.</p>
 <p>Fault Proof Programs are structured with 3 stages:</p>
@@ -304,7 +304,7 @@ for each FPVM target:</p>
 <tr><td><code>asterisc</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
 </tbody></table>
 </div>
-<p>If there is a feature that you would like to see supported, please <a href="https://github.com/anton-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/anton-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
+<p>If there is a feature that you would like to see supported, please <a href="https://github.com/op-rs/kona/issues/new">open an issue</a> or <a href="https://github.com/op-rs/kona/tree/main/CONTRIBUTING.md">consider contributing</a>!</p>
 <h2 id="asterisc-risc-v"><a class="header" href="#asterisc-risc-v">Asterisc (RISC-V)</a></h2>
 <p>Asterisc is based off of the <code>rv64gc</code> target architecture, which defines the following extensions:</p>
 <ul>
@@ -517,7 +517,7 @@ of the consumer are not covered by the to-<a href="https://specs.optimism.io/exp
 <p>Finally, in <code>kona-proof</code>, implementations of data source traits from <code>kona-derive</code> and <code>kona-executor</code> are provided
 to pull in untyped data from the host by <code>PreimageKey</code>. These data source traits are covered in more detail within
 the <a href="sdk/./custom-backend.html">Custom Backend</a> section, but we'll quickly gloss over them here to build intuition.</p>
-<p>Let's take, for example, <a href="https://github.com/anton-rs/kona/blob/40a8d7ec3def4a1eeb26492a1e4338d8b032e428/bin/client/src/l1/chain_provider.rs#L16-L23"><code>OracleL1ChainProvider</code></a>.
+<p>Let's take, for example, <a href="https://github.com/op-rs/kona/blob/40a8d7ec3def4a1eeb26492a1e4338d8b032e428/bin/client/src/l1/chain_provider.rs#L16-L23"><code>OracleL1ChainProvider</code></a>.
 The <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trait.ChainProvider.html"><code>ChainProvider</code></a> trait in <code>kona-derive</code>
 defines a simple interface for fetching information about the L1 chain. In the <code>OracleL1ChainProvider</code>, this information
 is pulled in over the <a href="https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle">PreimageOracle ABI</a>. There are many other examples of these data source traits,
@@ -633,7 +633,7 @@ let pipeline = PipelineBuilder::new()
    .build();
 </code></pre>
 <p>From here, a custom derivation driver is needed to produce the desired execution payload(s). An example of this for
-<code>kona-client</code> can be found in the <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77">DerivationDriver</a>.</p>
+<code>kona-client</code> can be found in the <a href="https://github.com/op-rs/kona/blob/main/bin/client/src/l1/driver.rs#L77">DerivationDriver</a>.</p>
 <h3 id="kona-mpt--kona-executor-sources"><a class="header" href="#kona-mpt--kona-executor-sources"><code>kona-mpt</code> / <code>kona-executor</code> sources</a></h3>
 <p>Before getting started, we need to create custom implementations of the following traits:</p>
 <div class="table-wrapper"><table><thead><tr><th>Trait</th><th>Description</th></tr></thead><tbody>
@@ -656,7 +656,7 @@ let header = executor.execute_payload(...).expect("Failed execution");
 <span class="boring">}</span></code></pre></pre>
 <h3 id="bringing-it-together"><a class="header" href="#bringing-it-together">Bringing it Together</a></h3>
 <p>Once your custom backend traits for both <code>kona-derive</code> and <code>kona-executor</code> have been implemented,
-your final binary may look something like <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/kona.rs">that of <code>kona-client</code>'s</a>.
+your final binary may look something like <a href="https://github.com/op-rs/kona/blob/main/bin/client/src/kona.rs">that of <code>kona-client</code>'s</a>.
 Alternatively, if you're looking to prove a wider range of blocks, <a href="https://github.com/succinctlabs/op-succinct/tree/main/programs/range"><code>op-succinct</code>'s <code>range</code> program</a>
 offers a good example of running the pipeline and executor across a string of contiguous blocks.</p>
 <!-- External -->
@@ -912,7 +912,7 @@ the derivation pipeline. There are multiple different <code>StepResult</code>s t
 stepping on the pipeline, including advancing the origin, re-orgs, and pipeline resets.
 In the next section, pipeline resets are outlined.</p>
 <p>For an up-to-date driver that runs the derivation pipeline as part of the fault proof
-program, reference kona's <a href="https://github.com/anton-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74">client driver</a>.</p>
+program, reference kona's <a href="https://github.com/op-rs/kona/blob/main/bin/client/src/l1/driver.rs#L74">client driver</a>.</p>
 <h2 id="resets"><a class="header" href="#resets">Resets</a></h2>
 <p>When stepping on the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a> produces a reset error, the driver
 of the pipeline must perform a reset on the pipeline. This is done by sending a "signal"
@@ -981,7 +981,7 @@ ecosystem moves quickly and <a href="https://github.com/a16z/magi">magi</a> was 
 <a href="https://github.com/gakonst/ethers-rs">ethers-rs</a> instead of new <a href="https://github.com/alloy-rs/alloy">alloy</a> types. Additionally, <a href="https://github.com/a16z/magi">magi</a>'s derivation
 pipeline was not <code>no_std</code> compatible - a hard requirement for running a rust fault proof
 program on top of the RISCV or MIPS ISAs.</p>
-<p>So, <a href="https://github.com/clabby">@clabby</a> and <a href="https://github.com/refcell">@refcell</a> stood up <a href="https://github.com/anton-rs/kona">kona</a> in a few months.</p>
+<p>So, <a href="https://github.com/clabby">@clabby</a> and <a href="https://github.com/refcell">@refcell</a> stood up <a href="https://github.com/op-rs/kona">kona</a> in a few months.</p>
 <!-- Links -->
 <!-- Pipeline Stages -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="trait-abstracted-providers"><a class="header" href="#trait-abstracted-providers">Trait-abstracted Providers</a></h1>
@@ -1299,7 +1299,7 @@ that is designed to execute verifiable programs.</p>
 <h4 id="fault-proof-program"><a class="header" href="#fault-proof-program">Fault Proof Program</a></h4>
 <p>A <code>Fault Proof Program</code> is a program, commonly written in a general-purpose language such as Golang, C, or Rust, that may be compiled down
 to a compatible <code>Fault Proof VM</code> target and provably executed on that target VM.</p>
-<p>Examples of <code>Fault Proof Programs</code> include the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program">OP Program</a>, which runs on top of <a href="https://github.com/ethereum-optimism/optimism/tree/develop/cannon"><code>cannon</code></a>, <a href="https://github.com/anton-rs/cannon-rs"><code>cannon-rs</code></a>, and
+<p>Examples of <code>Fault Proof Programs</code> include the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program">OP Program</a>, which runs on top of <a href="https://github.com/ethereum-optimism/optimism/tree/develop/cannon"><code>cannon</code></a>, <a href="https://github.com/op-rs/cannon-rs"><code>cannon-rs</code></a>, and
 <a href="https://github.com/ethereum-optimism/asterisc"><code>asterisc</code></a> to verify a claim about the state of an <a href="https://github.com/ethereum-optimism/optimism">OP Stack</a> layer two.</p>
 <h4 id="preimage-abi"><a class="header" href="#preimage-abi">Preimage ABI</a></h4>
 <p>The <code>Preimage ABI</code> is a specification for a synchronous communication protocol between a <code>client</code> and a <code>host</code> that is used to request and read data from the <code>host</code>'s
@@ -1329,7 +1329,7 @@ discuss the change you wish to make via issue.</p>
 </ul>
 <h2 id="pull-request-process"><a class="header" href="#pull-request-process">Pull Request Process</a></h2>
 <ol>
-<li>Before anything, <a href="https://github.com/anton-rs/kona/issues/new">create an issue</a> to discuss the change you're
+<li>Before anything, <a href="https://github.com/op-rs/kona/issues/new">create an issue</a> to discuss the change you're
 wanting to make, if it is significant or changes functionality. Feel free to skip this step for trivial changes.</li>
 <li>Once your change is implemented, ensure that all checks are passing before creating a PR. The full CI pipeline can
 be run locally via the <code>justfile</code>s in the repository.</li>
