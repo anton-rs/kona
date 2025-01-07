@@ -2,9 +2,13 @@
 
 #![allow(missing_docs, unreachable_pub)]
 
-use crate::{errors::InteropProviderResult, traits::InteropProvider};
+use crate::{
+    errors::InteropProviderResult, traits::InteropProvider, ExecutingMessage, MessageIdentifier,
+    CROSS_L2_INBOX_ADDRESS,
+};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, Sealed};
-use alloy_primitives::{map::HashMap, Address, Bytes, Log, LogData, B256};
+use alloy_primitives::{map::HashMap, Address, Bytes, Log, LogData, B256, U256};
+use alloy_sol_types::{SolEvent, SolValue};
 use async_trait::async_trait;
 use op_alloy_consensus::OpReceiptEnvelope;
 
@@ -143,12 +147,34 @@ impl ChainBuilder {
 
     pub fn add_executing_message(
         &mut self,
-        message_hash: [u8; 32],
+        message_hash: B256,
+        origin_log_index: u64,
         origin_chain_id: u64,
         origin_timestamp: u64,
     ) -> &mut Self {
-        // Create executing message receipt...
-        // Add your executing message logic here
+        let receipt = OpReceiptEnvelope::Eip1559(ReceiptWithBloom {
+            receipt: Receipt {
+                logs: vec![Log {
+                    address: CROSS_L2_INBOX_ADDRESS,
+                    data: LogData::new(
+                        vec![ExecutingMessage::SIGNATURE_HASH, message_hash],
+                        MessageIdentifier {
+                            origin: Address::ZERO,
+                            blockNumber: U256::ZERO,
+                            logIndex: U256::from(origin_log_index),
+                            timestamp: U256::from(origin_timestamp),
+                            chainId: U256::from(origin_chain_id),
+                        }
+                        .abi_encode()
+                        .into(),
+                    )
+                    .unwrap(),
+                }],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        self.receipts.push(receipt);
         self
     }
 }

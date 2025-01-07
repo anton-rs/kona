@@ -238,80 +238,80 @@ where
 #[cfg(test)]
 mod test {
     use super::DependencyGraph;
-    use crate::{
-        constants::CROSS_L2_INBOX_ADDRESS, message::MessageIdentifier,
-        test_utils::MockInteropProvider, ExecutingMessage,
-    };
-    use alloy_consensus::{Header, Receipt, ReceiptWithBloom};
-    use alloy_primitives::{keccak256, map::HashMap, Address, Log, LogData, U256};
-    use alloy_sol_types::{sol, SolEvent, SolValue};
-    use op_alloy_consensus::OpReceiptEnvelope;
-
-    sol! {
-        event MockMessage(bytes32 indexed _id);
-    }
+    use crate::{test_utils::SuperchainBuilder, DependencyGraphError};
+    use alloy_primitives::{hex, keccak256};
 
     #[tokio::test]
     async fn test_derive_and_reduce_simple_graph() {
-        // Chain A
-        let header_a = Header { timestamp: 2, ..Default::default() };
-        let header_a_hash = header_a.hash_slow();
-        let sealed_header_a = header_a.seal(header_a_hash);
-        let receipts_a = vec![OpReceiptEnvelope::Eip1559(ReceiptWithBloom {
-            receipt: Receipt {
-                logs: vec![Log {
-                    address: Address::ZERO,
-                    data: LogData::new(vec![MockMessage::SIGNATURE_HASH], Default::default())
-                        .unwrap(),
-                }],
-                ..Default::default()
-            },
-            ..Default::default()
-        })];
+        let mut superchain = SuperchainBuilder::new(0);
 
-        // Chain B
-        let header_b = Header { timestamp: 2, ..Default::default() };
-        let header_b_hash = header_b.hash_slow();
-        let sealed_header_b = header_b.seal(header_b_hash);
-        let receipts_b = vec![OpReceiptEnvelope::Eip1559(ReceiptWithBloom {
-            receipt: Receipt {
-                logs: vec![Log {
-                    address: CROSS_L2_INBOX_ADDRESS,
-                    data: LogData::new(
-                        vec![
-                            ExecutingMessage::SIGNATURE_HASH,
-                            keccak256(MockMessage::SIGNATURE_HASH),
-                        ],
-                        MessageIdentifier {
-                            origin: Address::ZERO,
-                            blockNumber: U256::ZERO,
-                            logIndex: U256::from(2),
-                            timestamp: U256::from(2),
-                            chainId: U256::from(1),
-                        }
-                        .abi_encode()
-                        .into(),
-                    )
-                    .unwrap(),
-                }],
-                ..Default::default()
-            },
-            ..Default::default()
-        })];
+        const MESSAGE: [u8; 4] = hex!("deadbeef");
 
-        let mut headers = HashMap::new();
-        headers.insert(1, HashMap::from([(0, sealed_header_a.clone())]));
-        headers.insert(2, HashMap::from([(0, sealed_header_b.clone())]));
+        superchain.chain(1).add_initiating_message(MESSAGE.into());
+        superchain.chain(2).add_executing_message(keccak256(MESSAGE), 0, 1, 0);
 
-        let mut receipts = HashMap::new();
-        receipts.insert(1, HashMap::from([(0, receipts_a)]));
-        receipts.insert(2, HashMap::from([(0, receipts_b)]));
+        let (headers, provider) = superchain.build();
 
-        let provider = MockInteropProvider::new(headers, receipts);
-        let graph =
-            DependencyGraph::derive(&[(1, sealed_header_a), (2, sealed_header_b)], provider)
-                .await
-                .unwrap();
+        let graph = DependencyGraph::derive(headers.as_slice(), provider).await.unwrap();
         graph.resolve().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_derive_and_reduce_cyclical_graph() {
+        let mut superchain = SuperchainBuilder::new(0);
+
+        const MESSAGE: [u8; 4] = hex!("deadbeef");
+
+        superchain.chain(1).add_initiating_message(MESSAGE.into()).add_executing_message(
+            keccak256(MESSAGE),
+            1,
+            2,
+            0,
+        );
+        superchain
+            .chain(2)
+            .add_executing_message(keccak256(MESSAGE), 0, 1, 0)
+            .add_initiating_message(MESSAGE.into());
+
+        let (headers, provider) = superchain.build();
+
+        let graph = DependencyGraph::derive(headers.as_slice(), provider).await.unwrap();
+        graph.resolve().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_derive_and_reduce_simple_graph_invalid_chain_id() {
+        let mut superchain = SuperchainBuilder::new(0);
+
+        const MESSAGE: [u8; 4] = hex!("deadbeef");
+
+        superchain.chain(1).add_initiating_message(MESSAGE.into());
+        superchain.chain(2).add_executing_message(keccak256(MESSAGE), 0, 2, 0);
+
+        let (headers, provider) = superchain.build();
+
+        let graph = DependencyGraph::derive(headers.as_slice(), provider).await.unwrap();
+        assert_eq!(
+            graph.resolve().await.unwrap_err(),
+            DependencyGraphError::InvalidMessages(vec![2])
+        );
+    }
+
+    #[tokio::test]
+    async fn test_derive_and_reduce_simple_graph_invalid_log_index() {
+        let mut superchain = SuperchainBuilder::new(0);
+
+        const MESSAGE: [u8; 4] = hex!("deadbeef");
+
+        superchain.chain(1).add_initiating_message(MESSAGE.into());
+        superchain.chain(2).add_executing_message(keccak256(MESSAGE), 1, 1, 0);
+
+        let (headers, provider) = superchain.build();
+
+        let graph = DependencyGraph::derive(headers.as_slice(), provider).await.unwrap();
+        assert_eq!(
+            graph.resolve().await.unwrap_err(),
+            DependencyGraphError::InvalidMessages(vec![2])
+        );
     }
 }

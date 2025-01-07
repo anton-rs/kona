@@ -22,7 +22,17 @@ tracing.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-sol-types = "0.8.14"
 alloy-consensus.workspace = true
+alloy-rlp.workspace = true
 op-alloy-consensus.workspace = true
+
+# Arbitrary
+arbitrary = { version = "1.4", features = ["derive"], optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
+alloy-primitives = { workspace = true, features = ["rlp", "arbitrary"] }
+arbitrary = { version = "1.4", features = ["derive"] }
+rand.workspace = true
+
+[features]
+arbitrary = ["dep:arbitrary", "alloy-primitives/arbitrary"]

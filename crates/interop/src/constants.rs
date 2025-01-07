@@ -8,3 +8,9 @@ pub const CROSS_L2_INBOX_ADDRESS: Address = address!("42000000000000000000000000
 /// The expiry window for relaying an initiating message (in seconds).
 /// <https://specs.optimism.io/interop/messaging.html#message-expiry-invariant>
 pub const MESSAGE_EXPIRY_WINDOW: u64 = 180 * 24 * 60 * 60;
+
+/// The current version of the [SuperRoot] encoding format.
+pub const SUPER_ROOT_VERSION: u8 = 1;
+
+/// The current [TransitionState] encoding format version.
+pub const TRANSITION_STATE_VERSION: u8 = 2;

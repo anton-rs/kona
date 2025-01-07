@@ -16,10 +16,20 @@ mod message;
 pub use message::{ExecutingMessage, MessageIdentifier, RawMessagePayload};
 
 mod constants;
+pub use constants::{
+    CROSS_L2_INBOX_ADDRESS, MESSAGE_EXPIRY_WINDOW, SUPER_ROOT_VERSION, TRANSITION_STATE_VERSION,
+};
 
 mod traits;
+pub use traits::InteropProvider;
 
 mod errors;
+pub use errors::{
+    DependencyGraphError, DependencyGraphResult, InteropProviderError, InteropProviderResult,
+};
+
+mod pre_state;
+pub use pre_state::{OutputRootWithBlockHash, OutputRootWithChain, SuperRoot, TransitionState};
 
 #[cfg(test)]
 mod test_utils;
