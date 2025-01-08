@@ -2,7 +2,7 @@
 
 use alloc::boxed::Box;
 use async_trait::async_trait;
-use op_alloy_protocol::L2BlockInfo;
+use maili_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 use kona_derive::{

@@ -1,6 +1,6 @@
 //! Error types for derivation pipeline stages.
 
-use op_alloy_protocol::MAX_SPAN_BATCH_ELEMENTS;
+use maili_protocol::MAX_SPAN_BATCH_ELEMENTS;
 use thiserror::Error;
 
 /// A frame decompression error.

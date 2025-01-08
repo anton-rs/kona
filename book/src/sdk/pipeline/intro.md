@@ -93,7 +93,7 @@ the [`PipelineBuilder`][builder] to instantiate a [`DerivationPipeline`][dp].
 ```rust,ignore
 // Imports
 use std::sync::Arc;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 use op_alloy_genesis::RollupConfig;
 use hilo_providers_alloy::*;
 
