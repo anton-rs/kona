@@ -33,18 +33,10 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
     type Error = OracleProviderError;
 
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error> {
-        // Send a hint for the block header.
-        self.oracle
-            .write(&HintType::L1BlockHeader.encode_with(&[hash.as_ref()]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-
         // Fetch the header RLP from the oracle.
-        let header_rlp = self
-            .oracle
-            .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        let header_rlp = HintType::L1BlockHeader
+            .get_preimage(self.oracle.as_ref(), hash, PreimageKeyType::Keccak256)
+            .await?;
 
         // Decode the header RLP into a Header.
         Header::decode(&mut header_rlp.as_slice()).map_err(OracleProviderError::Rlp)

@@ -36,21 +36,15 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
     /// L2 safe head.
     async fn header_by_number(&mut self, block_number: u64) -> Result<Header, OracleProviderError> {
         // Fetch the starting L2 output preimage.
-        self.oracle
-            .write(
-                &HintType::StartingL2Output
-                    .encode_with(&[self.boot_info.agreed_l2_output_root.as_ref()]),
-            )
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-        let output_preimage = self
-            .oracle
-            .get(PreimageKey::new(
-                *self.boot_info.agreed_l2_output_root,
+        let mut output_preimage = [0u8; 128];
+        HintType::StartingL2Output
+            .get_exact_preimage(
+                self.oracle.as_ref(),
+                self.boot_info.agreed_l2_output_root,
                 PreimageKeyType::Keccak256,
-            ))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+                &mut output_preimage,
+            )
+            .await?;
 
         // Fetch the starting block header.
         let block_hash =
@@ -166,32 +160,20 @@ impl<T: CommsClient> TrieDBProvider for OracleL2ChainProvider<T> {
     fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes, OracleProviderError> {
         // Fetch the bytecode preimage from the caching oracle.
         crate::block_on(async move {
-            self.oracle
-                .write(&HintType::L2Code.encode_with(&[hash.as_ref()]))
-                .await
-                .map_err(OracleProviderError::Preimage)?;
-
-            self.oracle
-                .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
+            HintType::L2Code
+                .get_preimage(self.oracle.as_ref(), hash, PreimageKeyType::Keccak256)
                 .await
                 .map(Into::into)
-                .map_err(OracleProviderError::Preimage)
         })
     }
 
     fn header_by_hash(&self, hash: B256) -> Result<Header, OracleProviderError> {
         // Fetch the header from the caching oracle.
         crate::block_on(async move {
-            self.oracle
-                .write(&HintType::L2BlockHeader.encode_with(&[hash.as_ref()]))
-                .await
-                .map_err(OracleProviderError::Preimage)?;
+            let header_bytes = HintType::L2BlockHeader
+                .get_preimage(self.oracle.as_ref(), hash, PreimageKeyType::Keccak256)
+                .await?;
 
-            let header_bytes = self
-                .oracle
-                .get(PreimageKey::new(*hash, PreimageKeyType::Keccak256))
-                .await
-                .map_err(OracleProviderError::Preimage)?;
             Header::decode(&mut header_bytes.as_slice()).map_err(OracleProviderError::Rlp)
         })
     }

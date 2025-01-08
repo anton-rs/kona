@@ -14,7 +14,7 @@ use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
 use kona_executor::{ExecutorError, KonaHandleRegister, TrieDBProvider};
 use kona_preimage::{
-    CommsClient, HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient,
+    CommsClient, HintWriterClient, PreimageKeyType, PreimageOracleClient,
 };
 use kona_proof::{
     errors::OracleProviderError,
@@ -150,29 +150,24 @@ where
 
 /// Fetches the safe head of the L2 chain based on the agreed upon L2 output root in the
 /// [BootInfo].
-async fn fetch_safe_head<O>(
+async fn fetch_safe_head<O: CommsClient>(
     caching_oracle: &O,
     boot_info: &BootInfo,
     l2_chain_provider: &mut OracleL2ChainProvider<O>,
-) -> Result<Sealed<Header>, OracleProviderError>
-where
-    O: CommsClient,
-{
-    caching_oracle
-        .write(&HintType::StartingL2Output.encode_with(&[boot_info.agreed_l2_output_root.as_ref()]))
-        .await
-        .map_err(OracleProviderError::Preimage)?;
+) -> Result<Sealed<Header>, OracleProviderError> {
     let mut output_preimage = [0u8; 128];
-    caching_oracle
-        .get_exact(
-            PreimageKey::new(*boot_info.agreed_l2_output_root, PreimageKeyType::Keccak256),
+    HintType::StartingL2Output
+        .get_exact_preimage(
+            caching_oracle,
+            boot_info.agreed_l2_output_root,
+            PreimageKeyType::Keccak256,
             &mut output_preimage,
         )
-        .await
-        .map_err(OracleProviderError::Preimage)?;
+        .await?;
 
     let safe_hash =
         output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
+
     l2_chain_provider
         .header_by_hash(safe_hash)
         .map(|header| Sealed::new_unchecked(header, safe_hash))
