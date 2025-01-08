@@ -74,6 +74,7 @@ kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.2
 
 # Maili
 maili-protocol = { version = "0.1.0", default-features = false }
+maili-registry = { version = "0.1.0", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.10", default-features = false }
@@ -93,7 +94,6 @@ alloy-rpc-types-beacon = { version = "0.9.2", default-features = false }
 
 # OP Alloy
 op-alloy-genesis = { version = "0.9.2", default-features = false }
-op-alloy-registry = { version = "0.9.2", default-features = false }
 op-alloy-consensus = { version = "0.9.2", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.9.2", default-features = false }
 
