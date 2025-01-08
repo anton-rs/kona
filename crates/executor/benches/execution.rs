@@ -129,8 +129,6 @@ fn execution(c: &mut Criterion) {
                 parent_beacon_block_root: Some(b256!(
                     "a4414c4984ce7285b82bd9b21c642af30f0f648fb6f4929b67753e7345a06bab"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),
@@ -173,8 +171,6 @@ fn execution(c: &mut Criterion) {
                 parent_beacon_block_root: Some(b256!(
                     "8ab0d68c0fc4fe40d31baf01bcf73de45ddf15ab58e66738ca6c60648676f9af"
                 )),
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             gas_limit: Some(30_000_000),
             transactions: Some(raw_txs),

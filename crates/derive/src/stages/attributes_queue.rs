@@ -212,8 +212,6 @@ mod tests {
                 prev_randao: B256::default(),
                 withdrawals: None,
                 parent_beacon_block_root: None,
-                target_blobs_per_block: None,
-                max_blobs_per_block: None,
             },
             no_tx_pool: Some(false),
             transactions: None,
