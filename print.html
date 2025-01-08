@@ -811,7 +811,7 @@ of generics away from the downstream consumers. Below we provide an example for 
 the <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.PipelineBuilder.html"><code>PipelineBuilder</code></a> to instantiate a <a href="https://docs.rs/kona-derive/latest/kona_derive/pipeline/struct.DerivationPipeline.html"><code>DerivationPipeline</code></a>.</p>
 <pre><code class="language-rust ignore">// Imports
 use std::sync::Arc;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 use op_alloy_genesis::RollupConfig;
 use hilo_providers_alloy::*;
 
@@ -1048,7 +1048,7 @@ trait is the <a href="https://docs.rs/kona-derive/latest/kona_derive/traits/trai
 </span><span class="boring">fn main() {
 </span>use async_trait::async_trait;
 use alloy_primitives::Bytes;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 use kona_derive::traits::DataAvailabilityProvider;
 use kona_derive::errors::PipelineResult;
 
