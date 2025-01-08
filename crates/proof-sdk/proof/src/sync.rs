@@ -4,12 +4,14 @@ use crate::{
     errors::OracleProviderError, l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo,
     FlushableCache,
 };
+use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
 use core::fmt::Debug;
 use kona_derive::traits::ChainProvider;
 use kona_driver::{PipelineCursor, TipCursor};
 use kona_preimage::CommsClient;
 use op_alloy_protocol::BatchValidationProvider;
+use spin::RwLock;
 
 /// Constructs a [`PipelineCursor`] from the caching oracle, boot info, and providers.
 pub async fn new_pipeline_cursor<O>(
@@ -17,7 +19,7 @@ pub async fn new_pipeline_cursor<O>(
     safe_header: Sealed<Header>,
     chain_provider: &mut OracleL1ChainProvider<O>,
     l2_chain_provider: &mut OracleL2ChainProvider<O>,
-) -> Result<PipelineCursor, OracleProviderError>
+) -> Result<Arc<RwLock<PipelineCursor>>, OracleProviderError>
 where
     O: CommsClient + FlushableCache + FlushableCache + Send + Sync + Debug,
 {
@@ -38,5 +40,7 @@ where
     let mut cursor = PipelineCursor::new(channel_timeout, origin);
     let tip = TipCursor::new(safe_head_info, safe_header, boot_info.agreed_l2_output_root);
     cursor.advance(origin, tip);
-    Ok(cursor)
+
+    // Wrap the cursor in a shared read-write lock
+    Ok(Arc::new(RwLock::new(cursor)))
 }

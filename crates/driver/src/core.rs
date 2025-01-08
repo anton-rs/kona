@@ -1,6 +1,7 @@
 //! The driver of the kona derivation pipeline.
 
-use alloc::vec::Vec;
+use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
+use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::{BlockBody, Sealable};
 use alloy_primitives::B256;
 use alloy_rlp::Decodable;
@@ -14,8 +15,7 @@ use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::L2BlockInfo;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
-
-use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
+use spin::RwLock;
 
 /// The Rollup Driver entrypoint.
 #[derive(Debug)]
@@ -32,7 +32,7 @@ where
     /// A pipeline abstraction.
     pub pipeline: DP,
     /// Cursor to keep track of the L2 tip
-    pub cursor: PipelineCursor,
+    pub cursor: Arc<RwLock<PipelineCursor>>,
     /// The Executor.
     pub executor: E,
 }
@@ -44,7 +44,7 @@ where
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
     /// Creates a new [Driver].
-    pub const fn new(cursor: PipelineCursor, executor: E, pipeline: DP) -> Self {
+    pub const fn new(cursor: Arc<RwLock<PipelineCursor>>, executor: E, pipeline: DP) -> Self {
         Self {
             _marker: core::marker::PhantomData,
             _marker2: core::marker::PhantomData,
@@ -76,19 +76,20 @@ where
     ) -> DriverResult<(u64, B256), E::Error> {
         loop {
             // Check if we have reached the target block number.
+            let cursor = self.cursor.read();
             if let Some(tb) = target {
-                if self.cursor.l2_safe_head().block_info.number >= tb {
+                if cursor.l2_safe_head().block_info.number >= tb {
                     info!(target: "client", "Derivation complete, reached L2 safe head.");
                     return Ok((
-                        self.cursor.l2_safe_head().block_info.number,
-                        *self.cursor.l2_safe_head_output_root(),
+                        cursor.l2_safe_head().block_info.number,
+                        *cursor.l2_safe_head_output_root(),
                     ));
                 }
             }
 
             let OpAttributesWithParent { mut attributes, .. } = match self
                 .pipeline
-                .produce_payload(*self.cursor.l2_safe_head())
+                .produce_payload(*cursor.l2_safe_head())
                 .await
             {
                 Ok(attrs) => attrs,
@@ -98,7 +99,7 @@ where
                     // Adjust the target block number to the current safe head, as no more blocks
                     // can be produced.
                     if target.is_some() {
-                        target = Some(self.cursor.l2_safe_head().block_info.number);
+                        target = Some(cursor.l2_safe_head().block_info.number);
                     };
                     continue;
                 }
@@ -108,7 +109,7 @@ where
                 }
             };
 
-            self.executor.update_safe_head(self.cursor.l2_safe_head_header().clone());
+            self.executor.update_safe_head(cursor.l2_safe_head_header().clone());
             let header = match self.executor.execute_payload(attributes.clone()).await {
                 Ok(header) => header,
                 Err(e) => {
@@ -132,7 +133,7 @@ where
                         });
 
                         // Retry the execution.
-                        self.executor.update_safe_head(self.cursor.l2_safe_head_header().clone());
+                        self.executor.update_safe_head(cursor.l2_safe_head_header().clone());
                         match self.executor.execute_payload(attributes.clone()).await {
                             Ok(header) => header,
                             Err(e) => {
@@ -171,12 +172,15 @@ where
                 &block,
                 &self.pipeline.rollup_config().genesis,
             )?;
-            let cursor = TipCursor::new(
+            let tip_cursor = TipCursor::new(
                 l2_info,
                 header.clone().seal_slow(),
                 self.executor.compute_output_root().map_err(DriverError::Executor)?,
             );
-            self.cursor.advance(origin, cursor);
+
+            // Advance the derivation pipeline cursor
+            drop(cursor);
+            self.cursor.write().advance(origin, tip_cursor);
         }
     }
 }

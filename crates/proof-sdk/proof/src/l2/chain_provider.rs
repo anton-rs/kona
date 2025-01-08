@@ -4,16 +4,18 @@ use crate::{errors::OracleProviderError, BootInfo, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::{BlockBody, Header};
 use alloy_eips::eip2718::Decodable2718;
-use alloy_primitives::{Address, Bytes, B256};
+use alloy_primitives::{Address, Bytes, Sealed, B256};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
+use kona_driver::PipelineCursor;
 use kona_executor::TrieDBProvider;
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
+use spin::RwLock;
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]
@@ -22,19 +24,33 @@ pub struct OracleL2ChainProvider<T: CommsClient> {
     boot_info: Arc<BootInfo>,
     /// The preimage oracle client.
     oracle: Arc<T>,
+    /// The derivation pipeline cursor
+    cursor: Option<Arc<RwLock<PipelineCursor>>>,
 }
 
 impl<T: CommsClient> OracleL2ChainProvider<T> {
     /// Creates a new [OracleL2ChainProvider] with the given boot information and oracle client.
     pub const fn new(boot_info: Arc<BootInfo>, oracle: Arc<T>) -> Self {
-        Self { boot_info, oracle }
+        Self { boot_info, oracle, cursor: None }
     }
-}
 
-impl<T: CommsClient> OracleL2ChainProvider<T> {
-    /// Returns a [Header] corresponding to the given L2 block number, by walking back from the
-    /// L2 safe head.
-    async fn header_by_number(&mut self, block_number: u64) -> Result<Header, OracleProviderError> {
+    /// Updates the derivation pipeline cursor
+    pub fn set_cursor(&mut self, cursor: Arc<RwLock<PipelineCursor>>) {
+        self.cursor = Some(cursor);
+    }
+
+    /// Fetches the latest known safe head block hash according to the derivation pipeline cursor
+    /// or uses the [BootInfo] if none is set.
+    pub async fn l2_safe_head(&self) -> Result<B256, OracleProviderError> {
+        match self.cursor.as_ref() {
+            None => self.agreed_l2_block_hash().await,
+            Some(cursor) => Ok(cursor.read().l2_safe_head().block_info.hash),
+        }
+    }
+
+    /// Fetches the hash of the block used to construct the agreed upon L2 output root in the
+    /// [BootInfo].
+    pub async fn agreed_l2_block_hash(&self) -> Result<B256, OracleProviderError> {
         // Fetch the starting L2 output preimage.
         let mut output_preimage = [0u8; 128];
         HintType::StartingL2Output
@@ -45,10 +61,25 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
                 &mut output_preimage,
             )
             .await?;
+        // Slice out the block hash
+        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)
+    }
 
+    /// Fetches the safe head of the L2 chain based on the agreed upon L2 output root in the
+    /// [BootInfo].
+    pub async fn agreed_l2_block_header(&self) -> Result<Sealed<Header>, OracleProviderError> {
+        let safe_hash = self.agreed_l2_block_hash().await?;
+
+        self.header_by_hash(safe_hash).map(|header| Sealed::new_unchecked(header, safe_hash))
+    }
+}
+
+impl<T: CommsClient> OracleL2ChainProvider<T> {
+    /// Returns a [Header] corresponding to the given L2 block number, by walking back from the
+    /// L2 safe head.
+    async fn header_by_number(&mut self, block_number: u64) -> Result<Header, OracleProviderError> {
         // Fetch the starting block header.
-        let block_hash =
-            output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
+        let block_hash = self.l2_safe_head().await?;
         let mut header = self.header_by_hash(block_hash)?;
 
         // Check if the block number is in range. If not, we can fail early.

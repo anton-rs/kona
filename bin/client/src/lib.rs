@@ -8,21 +8,18 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
-use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
-use kona_executor::{ExecutorError, KonaHandleRegister, TrieDBProvider};
-use kona_preimage::{
-    CommsClient, HintWriterClient, PreimageKeyType, PreimageOracleClient,
-};
+use kona_executor::{ExecutorError, KonaHandleRegister};
+use kona_preimage::{HintWriterClient, PreimageOracleClient};
 use kona_proof::{
     errors::OracleProviderError,
     executor::KonaExecutor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
     l2::OracleL2ChainProvider,
     sync::new_pipeline_cursor,
-    BootInfo, CachingOracle, HintType,
+    BootInfo, CachingOracle,
 };
 use thiserror::Error;
 use tracing::{error, info, warn};
@@ -77,7 +74,7 @@ where
 
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
-    let safe_head = fetch_safe_head(oracle.as_ref(), boot.as_ref(), &mut l2_provider).await?;
+    let safe_head = l2_provider.agreed_l2_block_header().await?;
     if boot.claimed_l2_block_number < safe_head.number {
         error!(
             target: "client",
@@ -107,6 +104,8 @@ where
 
     // Create a new derivation driver with the given boot information and oracle.
     let cursor = new_pipeline_cursor(&boot, safe_head, &mut l1_provider, &mut l2_provider).await?;
+    l2_provider.set_cursor(cursor.clone());
+
     let cfg = Arc::new(boot.rollup_config.clone());
     let pipeline = OraclePipeline::new(
         cfg.clone(),
@@ -146,29 +145,4 @@ where
     );
 
     Ok(())
-}
-
-/// Fetches the safe head of the L2 chain based on the agreed upon L2 output root in the
-/// [BootInfo].
-async fn fetch_safe_head<O: CommsClient>(
-    caching_oracle: &O,
-    boot_info: &BootInfo,
-    l2_chain_provider: &mut OracleL2ChainProvider<O>,
-) -> Result<Sealed<Header>, OracleProviderError> {
-    let mut output_preimage = [0u8; 128];
-    HintType::StartingL2Output
-        .get_exact_preimage(
-            caching_oracle,
-            boot_info.agreed_l2_output_root,
-            PreimageKeyType::Keccak256,
-            &mut output_preimage,
-        )
-        .await?;
-
-    let safe_hash =
-        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
-
-    l2_chain_provider
-        .header_by_hash(safe_hash)
-        .map(|header| Sealed::new_unchecked(header, safe_hash))
 }
