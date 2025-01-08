@@ -7,7 +7,7 @@ use alloy_eips::eip4844::{Blob, IndexedBlobHash};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Display;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 
 /// The BlobProvider trait specifies the functionality of a data source that can provide blobs.
 #[async_trait]

@@ -10,7 +10,7 @@ use crate::{
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_protocol::{Batch, BlockInfo};
+use maili_protocol::{Batch, BlockInfo};
 
 /// A mock provider for the [`BatchStream`] stage.
 ///

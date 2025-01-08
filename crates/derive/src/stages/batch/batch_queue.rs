@@ -9,10 +9,10 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{
+use maili_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch,
 };
+use op_alloy_genesis::RollupConfig;
 
 /// [BatchQueue] is responsible for o rdering unordered batches
 /// and gnerating empty batches when the sequence window has passed.
@@ -51,7 +51,7 @@ where
     pub(crate) batches: Vec<BatchWithInclusionBlock>,
     /// A set of cached [SingleBatch]es derived from [SpanBatch]es.
     ///
-    /// [SpanBatch]: op_alloy_protocol::SpanBatch
+    /// [SpanBatch]: maili_protocol::SpanBatch
     pub(crate) next_spans: Vec<SingleBatch>,
     /// Used to validate the batches.
     pub(crate) fetcher: BF,
@@ -468,9 +468,9 @@ mod tests {
     use alloy_eips::{eip2718::Decodable2718, BlockNumHash};
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
+    use maili_protocol::{BatchReader, L1BlockInfoBedrock, L1BlockInfoTx};
     use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
     use op_alloy_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
-    use op_alloy_protocol::{BatchReader, L1BlockInfoBedrock, L1BlockInfoTx};
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
 

@@ -9,7 +9,7 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 
 /// A mock [FrameQueueProvider] for testing the [FrameQueue] stage.
 ///

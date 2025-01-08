@@ -10,8 +10,8 @@ use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
+use maili_protocol::BlockInfo;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::BlockInfo;
 
 /// The [ChannelProvider] stage is a mux between the [ChannelBank] and [ChannelAssembler] stages.
 ///
@@ -163,8 +163,8 @@ mod test {
         types::ResetSignal,
     };
     use alloc::{sync::Arc, vec};
+    use maili_protocol::BlockInfo;
     use op_alloy_genesis::RollupConfig;
-    use op_alloy_protocol::BlockInfo;
 
     #[test]
     fn test_channel_provider_assembler_active() {

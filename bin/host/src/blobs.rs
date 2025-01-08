@@ -3,7 +3,7 @@
 use alloy_eips::eip4844::{BlobTransactionSidecarItem, IndexedBlobHash};
 use alloy_rpc_types_beacon::sidecar::{BeaconBlobBundle, BlobData};
 use kona_derive::errors::BlobProviderError;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 use reqwest::Client;
 
 /// The config spec engine api method.

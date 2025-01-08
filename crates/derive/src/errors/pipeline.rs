@@ -3,8 +3,8 @@
 use crate::errors::BuilderError;
 use alloc::string::String;
 use alloy_primitives::B256;
+use maili_protocol::{DepositError, SpanBatchError};
 use op_alloy_genesis::SystemConfigUpdateError;
-use op_alloy_protocol::{DepositError, SpanBatchError};
 use thiserror::Error;
 
 /// [crate::ensure] is a short-hand for bubbling up errors in the case of a condition not being met.

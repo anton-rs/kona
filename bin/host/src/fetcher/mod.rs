@@ -18,7 +18,7 @@ use alloy_rpc_types::{
 use anyhow::{anyhow, Result};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_proof::{Hint, HintType};
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
 use tokio::sync::RwLock;

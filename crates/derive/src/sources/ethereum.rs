@@ -9,8 +9,8 @@ use crate::{
 use alloc::{boxed::Box, fmt::Debug};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
+use maili_protocol::BlockInfo;
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::BlockInfo;
 
 /// A factory for creating an Ethereum data source provider.
 #[derive(Debug, Clone)]
@@ -87,8 +87,8 @@ mod tests {
     use alloy_consensus::TxEnvelope;
     use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::{address, Address};
+    use maili_protocol::BlockInfo;
     use op_alloy_genesis::{RollupConfig, SystemConfig};
-    use op_alloy_protocol::BlockInfo;
 
     fn default_test_blob_source() -> BlobSource<TestChainProvider, TestBlobProvider> {
         let chain_provider = TestChainProvider::default();

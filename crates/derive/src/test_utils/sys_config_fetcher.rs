@@ -7,9 +7,9 @@ use crate::{
 use alloc::{boxed::Box, string::ToString, sync::Arc};
 use alloy_primitives::map::HashMap;
 use async_trait::async_trait;
+use maili_protocol::{BatchValidationProvider, L2BlockInfo};
 use op_alloy_consensus::OpBlock;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{BatchValidationProvider, L2BlockInfo};
 use thiserror::Error;
 
 /// A mock implementation of the `SystemConfigL2Fetcher` for testing.

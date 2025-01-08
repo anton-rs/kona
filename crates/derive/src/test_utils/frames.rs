@@ -8,8 +8,8 @@ use crate::{
 };
 use alloc::{sync::Arc, vec, vec::Vec};
 use alloy_primitives::Bytes;
+use maili_protocol::{BlockInfo, Frame, DERIVATION_VERSION_0};
 use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{BlockInfo, Frame, DERIVATION_VERSION_0};
 
 /// A [FrameQueue] builder.
 #[derive(Debug, Default)]

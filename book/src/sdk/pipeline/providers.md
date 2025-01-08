@@ -67,7 +67,7 @@ let pipeline = PipelineBuilder::new()
 ```rust
 use async_trait::async_trait;
 use alloy_primitives::Bytes;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 use kona_derive::traits::DataAvailabilityProvider;
 use kona_derive::errors::PipelineResult;
 

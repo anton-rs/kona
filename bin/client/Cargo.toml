@@ -19,6 +19,9 @@ kona-proof.workspace = true
 kona-std-fpvm.workspace = true
 kona-std-fpvm-proc.workspace = true
 
+# Maili
+maili-protocol.workspace = true
+
 # Alloy
 alloy-rlp.workspace = true
 alloy-eips.workspace = true
@@ -27,7 +30,6 @@ alloy-primitives.workspace = true
 alloy-rpc-types-engine.workspace = true
 
 # Op Alloy
-op-alloy-protocol.workspace = true
 op-alloy-consensus.workspace = true
 op-alloy-genesis = { workspace = true, features = ["serde"] }
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
