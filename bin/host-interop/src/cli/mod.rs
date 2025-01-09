@@ -17,9 +17,10 @@ use clap::{
     ArgAction, Parser,
 };
 use op_alloy_genesis::RollupConfig;
+use parser::parse_key_val;
 use reqwest::Client;
 use serde::Serialize;
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 
 mod parser;
@@ -64,14 +65,16 @@ pub struct HostCli {
         visible_alias = "l2",
         requires = "l1_node_address",
         requires = "l1_beacon_address",
-        env
+        env,
+        value_parser = parse_key_val::<u64, String>,
+        value_delimiter = ','
     )]
-    pub l2_node_address: Option<String>,
+    pub l2_node_addresses: Option<Vec<(u64, String)>>,
     /// Address of L1 JSON-RPC endpoint to use (eth and debug namespace required)
     #[clap(
         long,
         visible_alias = "l1",
-        requires = "l2_node_address",
+        requires = "l2_node_addresses",
         requires = "l1_beacon_address",
         env
     )]
@@ -81,7 +84,7 @@ pub struct HostCli {
         long,
         visible_alias = "beacon",
         requires = "l1_node_address",
-        requires = "l2_node_address",
+        requires = "l2_node_addresses",
         env
     )]
     pub l1_beacon_address: Option<String>,
@@ -125,9 +128,9 @@ pub struct HostCli {
 impl HostCli {
     /// Returns `true` if the host is running in offline mode.
     pub const fn is_offline(&self) -> bool {
-        self.l1_node_address.is_none() &&
-            self.l2_node_address.is_none() &&
-            self.l1_beacon_address.is_none()
+        self.l1_node_address.is_none()
+            && self.l2_node_addresses.is_none()
+            && self.l1_beacon_address.is_none()
     }
 
     /// Returns an HTTP provider for the given URL.
@@ -142,10 +145,10 @@ impl HostCli {
     /// ## Returns
     /// - A [ReqwestProvider] for the L1 node.
     /// - An [OnlineBlobProvider] for the L1 beacon node.
-    /// - A [ReqwestProvider] for the L2 node.
+    /// - A hash map of chain IDs -> [ReqwestProvider]s for the L2 node.
     pub async fn create_providers(
         &self,
-    ) -> Result<(ReqwestProvider, OnlineBlobProvider, ReqwestProvider)> {
+    ) -> Result<(ReqwestProvider, OnlineBlobProvider, HashMap<u64, ReqwestProvider>)> {
         let blob_provider = OnlineBlobProvider::new_http(
             self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
         )
@@ -154,11 +157,15 @@ impl HostCli {
         let l1_provider = Self::http_provider(
             self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
         );
-        let l2_provider = Self::http_provider(
-            self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
-        );
+        let l2_providers = self
+            .l2_node_addresses
+            .as_ref()
+            .ok_or(anyhow!("L2 node addresses must be set"))?
+            .iter()
+            .map(|(chain_id, addr)| Ok((*chain_id, Self::http_provider(addr))))
+            .collect::<Result<HashMap<_, _>>>()?;
 
-        Ok((l1_provider, blob_provider, l2_provider))
+        Ok((l1_provider, blob_provider, l2_providers))
     }
 
     /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is

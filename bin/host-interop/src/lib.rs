@@ -11,7 +11,7 @@ pub mod kv;
 pub mod preimage;
 pub mod server;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use fetcher::Fetcher;
 use kona_preimage::{
     BidirectionalChannel, HintReader, HintWriter, NativeChannel, OracleReader, OracleServer,
@@ -40,6 +40,7 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
             l1_provider,
             blob_provider,
             l2_provider,
+            cfg.l2_chain_id.ok_or_else(|| anyhow!("Missing L2 chain ID."))?,
             cfg.agreed_pre_state,
         ))))
     } else {
@@ -75,6 +76,7 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
             l1_provider,
             blob_provider,
             l2_provider,
+            cfg.l2_chain_id.ok_or_else(|| anyhow!("Missing L2 chain ID."))?,
             cfg.agreed_pre_state,
         ))))
     } else {

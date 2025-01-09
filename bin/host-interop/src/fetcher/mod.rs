@@ -40,10 +40,12 @@ where
     l1_provider: ReqwestProvider,
     /// The blob provider
     blob_provider: OnlineBlobProvider,
-    /// L2 chain provider.
-    l2_provider: ReqwestProvider,
+    /// L2 chain providers, keyed by chain ID.
+    l2_providers: HashMap<u64, ReqwestProvider>,
     /// Pre-state preimage.
     pre_state: Bytes,
+    /// Active L2 chain ID.
+    active_l2_chain_id: u64,
     /// The last hint that was received. [None] if no hint has been received yet.
     last_hint: Option<String>,
 }
@@ -57,10 +59,19 @@ where
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
         blob_provider: OnlineBlobProvider,
-        l2_provider: ReqwestProvider,
+        l2_providers: HashMap<u64, ReqwestProvider>,
+        active_l2_chain_id: u64,
         pre_state: Bytes,
     ) -> Self {
-        Self { kv_store, l1_provider, blob_provider, l2_provider, pre_state, last_hint: None }
+        Self {
+            kv_store,
+            l1_provider,
+            blob_provider,
+            l2_providers,
+            active_l2_chain_id,
+            pre_state,
+            last_hint: None,
+        }
     }
 
     /// Set the last hint to be received.
@@ -288,7 +299,11 @@ where
                     .try_into()
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
                 let raw_header: Bytes = self
-                    .l2_provider
+                    .l2_providers
+                    .get(&self.active_l2_chain_id)
+                    .ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?
                     .client()
                     .request("debug_getRawHeader", [hash])
                     .await
@@ -307,14 +322,18 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
+                let l2_provider =
+                    self.l2_providers.get(&self.active_l2_chain_id).ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?;
+
                 // Fetch the block from the L2 chain provider and store the transactions within its
                 // body in the key-value store.
                 let hash: B256 = hint_data
                     .as_ref()
                     .try_into()
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
-                let Block { transactions, .. } = self
-                    .l2_provider
+                let Block { transactions, .. } = l2_provider
                     .get_block_by_hash(hash, BlockTransactionsKind::Hashes)
                     .await
                     .map_err(|e| anyhow!("Failed to fetch block: {e}"))?
@@ -324,8 +343,7 @@ where
                     BlockTransactions::Hashes(transactions) => {
                         let mut encoded_transactions = Vec::with_capacity(transactions.len());
                         for tx_hash in transactions {
-                            let tx = self
-                                .l2_provider
+                            let tx = l2_provider
                                 .client()
                                 .request::<&[B256; 1], Bytes>("debug_getRawTransaction", &[tx_hash])
                                 .await
@@ -351,10 +369,14 @@ where
                     .try_into()
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
 
+                let l2_provider =
+                    self.l2_providers.get(&self.active_l2_chain_id).ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?;
+
                 // Attempt to fetch the code from the L2 chain provider.
                 let code_hash = [&[CODE_PREFIX], hash.as_slice()].concat();
-                let code = self
-                    .l2_provider
+                let code = l2_provider
                     .client()
                     .request::<&[Bytes; 1], Bytes>("debug_dbGet", &[code_hash.into()])
                     .await;
@@ -363,8 +385,7 @@ where
                 // code hash preimage without the geth hashdb scheme prefix.
                 let code = match code {
                     Ok(code) => code,
-                    Err(_) => self
-                        .l2_provider
+                    Err(_) => l2_provider
                         .client()
                         .request::<&[B256; 1], Bytes>("debug_dbGet", &[hash])
                         .await
@@ -431,10 +452,14 @@ where
                 let block_number =
                     (prestate_timestamp - rollup_config.genesis.l2_time) / rollup_config.block_time;
 
+                let l2_provider = self
+                    .l2_providers
+                    .get(&chain_id)
+                    .ok_or_else(|| anyhow!("L2 provider not found for chain ID: {chain_id}"))?;
+
                 // Reconstruct the output root from the L2 chain provider.
                 // TODO(interop) - Need to fetch provider-by-chain-id
-                let raw_header: Bytes = self
-                    .l2_provider
+                let raw_header: Bytes = l2_provider
                     .client()
                     .request("debug_getRawHeader", &[block_number])
                     .await
@@ -443,8 +468,7 @@ where
                     .map_err(|e| anyhow!("Failed to decode header: {e}"))?;
 
                 // Fetch the storage root for the L2 head block.
-                let l2_to_l1_message_passer = self
-                    .l2_provider
+                let l2_to_l1_message_passer = l2_provider
                     .get_proof(L2_TO_L1_MESSAGE_PASSER_ADDRESS, Default::default())
                     .block_id(BlockId::Number(block_number.into()))
                     .await
@@ -475,7 +499,11 @@ where
 
                 // Fetch the preimage from the L2 chain provider.
                 let preimage: Bytes = self
-                    .l2_provider
+                    .l2_providers
+                    .get(&self.active_l2_chain_id)
+                    .ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?
                     .client()
                     .request("debug_dbGet", &[hash])
                     .await
@@ -500,7 +528,11 @@ where
                 let address = Address::from_slice(&hint_data.as_ref()[8..28]);
 
                 let proof_response = self
-                    .l2_provider
+                    .l2_providers
+                    .get(&self.active_l2_chain_id)
+                    .ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?
                     .get_proof(address, Default::default())
                     .block_id(BlockId::Number(BlockNumberOrTag::Number(block_number)))
                     .await
@@ -530,7 +562,11 @@ where
                 let slot = B256::from_slice(&hint_data.as_ref()[28..]);
 
                 let mut proof_response = self
-                    .l2_provider
+                    .l2_providers
+                    .get(&self.active_l2_chain_id)
+                    .ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?
                     .get_proof(address, vec![slot])
                     .block_id(BlockId::Number(BlockNumberOrTag::Number(block_number)))
                     .await
@@ -564,7 +600,11 @@ where
                     serde_json::from_slice(&hint_data[32..])?;
 
                 let execute_payload_response: ExecutionWitness = self
-                    .l2_provider
+                    .l2_providers
+                    .get(&self.active_l2_chain_id)
+                    .ok_or_else(|| {
+                        anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
+                    })?
                     .client()
                     .request::<(B256, OpPayloadAttributes), ExecutionWitness>(
                         "debug_executePayload",
