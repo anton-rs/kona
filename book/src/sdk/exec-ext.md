@@ -46,7 +46,7 @@ let cfg = RollupConfig::default();
 let provider = ...;
 let hinter = ...;
 
-let executor = StatelessL2BlcokExecutor::builder(&cfg, provider, hinter)
+let executor = StatelessL2BlockExecutor::builder(&cfg, provider, hinter)
    .with_parent_header(...)
    .with_handle_register(custom_handle_register)
    .build();

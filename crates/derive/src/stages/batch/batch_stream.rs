@@ -9,10 +9,10 @@ use crate::{
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use op_alloy_genesis::RollupConfig;
-use op_alloy_protocol::{
+use maili_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch, SpanBatch,
 };
+use op_alloy_genesis::RollupConfig;
 
 /// Provides [Batch]es for the [BatchStream] stage.
 #[async_trait]
@@ -226,7 +226,7 @@ mod test {
     };
     use alloc::vec;
     use alloy_eips::NumHash;
-    use op_alloy_protocol::{SingleBatch, SpanBatchElement};
+    use maili_protocol::{SingleBatch, SpanBatchElement};
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
     #[tokio::test]

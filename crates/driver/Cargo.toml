@@ -15,6 +15,9 @@ workspace = true
 # Workspace
 kona-derive.workspace = true
 
+# Maili
+maili-protocol.workspace = true
+
 # Alloy
 alloy-rlp.workspace = true
 alloy-consensus.workspace = true
@@ -22,7 +25,6 @@ alloy-primitives.workspace = true
 
 # OP Alloy
 op-alloy-genesis.workspace = true
-op-alloy-protocol.workspace = true
 op-alloy-consensus.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 

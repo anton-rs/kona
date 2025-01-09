@@ -9,7 +9,7 @@ use crate::{
 use alloc::boxed::Box;
 use alloy_primitives::Address;
 use async_trait::async_trait;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 
 /// Provides L1 blocks for the [L1Retrieval] stage.
 /// This is the previous stage in the pipeline.

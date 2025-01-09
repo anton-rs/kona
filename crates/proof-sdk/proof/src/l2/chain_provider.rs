@@ -12,9 +12,9 @@ use kona_driver::PipelineCursor;
 use kona_executor::TrieDBProvider;
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use maili_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
 use spin::RwLock;
 
 /// The oracle-backed L2 chain provider for the client program.

@@ -21,7 +21,6 @@
   <a href="#credits">Credits</a>
 </p>
 
-
 ## What's Kona?
 
 Kona is a suite of portable implementations of the OP Stack rollup state transition, namely the [derivation pipeline][g-derivation-pipeline] and

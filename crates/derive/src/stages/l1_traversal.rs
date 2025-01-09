@@ -9,8 +9,8 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Address;
 use async_trait::async_trait;
+use maili_protocol::BlockInfo;
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::BlockInfo;
 
 /// The [L1Traversal] stage of the derivation pipeline.
 ///

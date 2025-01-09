@@ -8,7 +8,7 @@ use crate::{
 };
 use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
-use op_alloy_protocol::{Batch, BlockInfo, L2BlockInfo};
+use maili_protocol::{Batch, BlockInfo, L2BlockInfo};
 
 /// A mock provider for the [BatchQueue] stage.
 #[derive(Debug, Default)]

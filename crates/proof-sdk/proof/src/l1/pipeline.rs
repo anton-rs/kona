@@ -18,8 +18,8 @@ use kona_derive::{
 };
 use kona_driver::{DriverPipeline, PipelineCursor};
 use kona_preimage::CommsClient;
+use maili_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
-use op_alloy_protocol::{BlockInfo, L2BlockInfo};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use spin::RwLock;
 

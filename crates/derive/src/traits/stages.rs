@@ -2,7 +2,7 @@
 
 use alloc::boxed::Box;
 use async_trait::async_trait;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 
 use crate::types::{PipelineResult, Signal};
 

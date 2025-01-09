@@ -12,6 +12,9 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+# Maili
+maili-protocol.workspace = true
+
 # Alloy
 alloy-eips.workspace = true
 alloy-rpc-types-engine.workspace = true
@@ -21,7 +24,6 @@ alloy-primitives = { workspace = true, features = ["rlp", "k256", "map"] }
 
 # Op Alloy
 op-alloy-genesis.workspace = true
-op-alloy-protocol.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 
@@ -38,7 +40,7 @@ tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 spin.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
-op-alloy-registry.workspace = true
+maili-registry.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 tracing = { workspace = true, features = ["std"] }
@@ -47,10 +49,10 @@ alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitr
 [features]
 default = []
 serde = [
+  "maili-protocol/serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
   "op-alloy-consensus/serde",
-  "op-alloy-protocol/serde",
   "op-alloy-genesis/serde",
   "op-alloy-rpc-types-engine/serde",
 ]

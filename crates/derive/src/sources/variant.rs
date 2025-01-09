@@ -42,7 +42,7 @@ where
 mod tests {
     use super::*;
     use crate::test_utils::TestChainProvider;
-    use op_alloy_protocol::BlockInfo;
+    use maili_protocol::BlockInfo;
 
     use crate::{
         sources::{BlobData, EthereumDataSourceVariant},

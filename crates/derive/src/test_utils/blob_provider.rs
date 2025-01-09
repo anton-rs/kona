@@ -5,7 +5,7 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4844::{Blob, IndexedBlobHash};
 use alloy_primitives::{map::HashMap, B256};
 use async_trait::async_trait;
-use op_alloy_protocol::BlockInfo;
+use maili_protocol::BlockInfo;
 
 /// A mock blob provider for testing.
 #[derive(Debug, Clone, Default)]

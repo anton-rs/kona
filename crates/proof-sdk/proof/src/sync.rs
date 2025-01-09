@@ -10,8 +10,7 @@ use core::fmt::Debug;
 use kona_derive::traits::ChainProvider;
 use kona_driver::{PipelineCursor, TipCursor};
 use kona_preimage::CommsClient;
-use op_alloy_protocol::BatchValidationProvider;
-use spin::RwLock;
+use maili_protocol::BatchValidationProvider;
 
 /// Constructs a [`PipelineCursor`] from the caching oracle, boot info, and providers.
 pub async fn new_pipeline_cursor<O>(
