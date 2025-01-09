@@ -73,8 +73,8 @@ kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.2.1", default
 kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.2", default-features = false }
 
 # Maili
-maili-protocol = { version = "0.1.0", default-features = false }
-maili-registry = { version = "0.1.0", default-features = false }
+maili-protocol = { version = "0.1.2", default-features = false }
+maili-registry = { version = "0.1.2", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.10", default-features = false }
