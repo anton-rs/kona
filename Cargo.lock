@@ -2662,9 +2662,9 @@ dependencies = [
 
 [[package]]
 name = "maili-protocol"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5c90d6f75a08d64f2d8588dca7215ae1307b4f1da1a59abac293db89f28d5a4"
+checksum = "bfcd6cd2bab854872c24d551308cb84df4c20db38593b4392d68cacd75d4c60c"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2679,6 +2679,7 @@ dependencies = [
  "miniz_oxide",
  "op-alloy-consensus",
  "op-alloy-genesis",
+ "rand",
  "serde",
  "thiserror 2.0.10",
  "tracing",
@@ -2687,9 +2688,9 @@ dependencies = [
 
 [[package]]
 name = "maili-registry"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4889f4502816a0df62b67a2aa167b0051eb3b2bd398ed85031c67d959f7f010"
+checksum = "1d337c05c34ec926b920bd918d8c9c2b59a49791a0d644fea39db77ade185415"
 dependencies = [
  "alloy-primitives",
  "lazy_static",
