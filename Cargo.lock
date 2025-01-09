@@ -2378,9 +2378,9 @@ dependencies = [
  "alloy-rpc-types-engine",
  "async-trait",
  "maili-protocol",
+ "maili-registry",
  "op-alloy-consensus",
  "op-alloy-genesis",
- "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "proptest",
  "serde_json",
@@ -2522,9 +2522,9 @@ dependencies = [
  "kona-preimage",
  "lru",
  "maili-protocol",
+ "maili-registry",
  "op-alloy-consensus",
  "op-alloy-genesis",
- "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "serde",
  "serde_json",
@@ -2683,6 +2683,19 @@ dependencies = [
  "thiserror 2.0.10",
  "tracing",
  "unsigned-varint",
+]
+
+[[package]]
+name = "maili-registry"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4889f4502816a0df62b67a2aa167b0051eb3b2bd398ed85031c67d959f7f010"
+dependencies = [
+ "alloy-primitives",
+ "lazy_static",
+ "op-alloy-genesis",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2989,19 +3002,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a144b1ed079913b11c0640f4eaa3d2ac1bdb6cc35e3658a1640e88b241e0c32"
 dependencies = [
  "maili-protocol",
-]
-
-[[package]]
-name = "op-alloy-registry"
-version = "0.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94c41c23c452bef5c890269b17459f9f2409f8d083df8a5d978676bcae8b7ce1"
-dependencies = [
- "alloy-primitives",
- "lazy_static",
- "op-alloy-genesis",
- "serde",
- "serde_json",
 ]
 
 [[package]]

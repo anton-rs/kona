@@ -40,7 +40,7 @@ tracing-subscriber = { workspace = true, optional = true, features = ["fmt"] }
 spin.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
-op-alloy-registry.workspace = true
+maili-registry.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 tracing = { workspace = true, features = ["std"] }

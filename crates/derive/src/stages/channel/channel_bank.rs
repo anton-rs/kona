@@ -508,8 +508,8 @@ mod tests {
         let _guard = tracing::subscriber::set_default(subscriber);
 
         let configs: [RollupConfig; 2] = [
-            op_alloy_registry::ROLLUP_CONFIGS.get(&10).cloned().unwrap(),
-            op_alloy_registry::ROLLUP_CONFIGS.get(&8453).cloned().unwrap(),
+            maili_registry::ROLLUP_CONFIGS.get(&10).cloned().unwrap(),
+            maili_registry::ROLLUP_CONFIGS.get(&8453).cloned().unwrap(),
         ];
 
         for cfg in configs {
