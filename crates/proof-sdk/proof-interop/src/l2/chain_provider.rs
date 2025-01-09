@@ -1,7 +1,7 @@
 //! Contains the concrete implementation of the [L2ChainProvider] trait for the client program.
 
 use crate::{errors::OracleProviderError, BootInfo, HintType};
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use alloy_consensus::{BlockBody, Header};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{Address, Bytes, B256};
@@ -9,8 +9,9 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_derive::traits::L2ChainProvider;
 use kona_executor::TrieDBProvider;
+use kona_interop::{SuperRoot, TransitionState};
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieNode, TrieProvider};
-use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use kona_preimage::{errors::PreimageOracleError, CommsClient, PreimageKey, PreimageKeyType};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
@@ -20,6 +21,8 @@ use op_alloy_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
 pub struct OracleL2ChainProvider<T: CommsClient> {
     /// The boot information
     boot_info: Arc<BootInfo>,
+    /// The safe head hash.
+    safe_head_hash: Option<B256>,
     /// The preimage oracle client.
     oracle: Arc<T>,
 }
@@ -27,7 +30,7 @@ pub struct OracleL2ChainProvider<T: CommsClient> {
 impl<T: CommsClient> OracleL2ChainProvider<T> {
     /// Creates a new [OracleL2ChainProvider] with the given boot information and oracle client.
     pub const fn new(boot_info: Arc<BootInfo>, oracle: Arc<T>) -> Self {
-        Self { boot_info, oracle }
+        Self { boot_info, safe_head_hash: None, oracle }
     }
 }
 
@@ -35,24 +38,93 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
     /// Returns a [Header] corresponding to the given L2 block number, by walking back from the
     /// L2 safe head.
     async fn header_by_number(&mut self, block_number: u64) -> Result<Header, OracleProviderError> {
-        // Fetch the starting L2 output preimage.
-        self.oracle
-            .write(
-                &HintType::AgreedPreState.encode_with(&[self.boot_info.agreed_pre_state.as_ref()]),
-            )
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-        let output_preimage = self
-            .oracle
-            .get(PreimageKey::new(*self.boot_info.agreed_pre_state, PreimageKeyType::Keccak256))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        // TODO(interop): Deduplicate this code, it's also in the interop client program.
+        let block_hash = if let Some(safe_head_hash) = self.safe_head_hash {
+            safe_head_hash
+        } else {
+            self.oracle
+                .write(
+                    &HintType::AgreedPreState
+                        .encode_with(&[self.boot_info.agreed_pre_state.as_ref()]),
+                )
+                .await
+                .map_err(OracleProviderError::Preimage)?;
+            let pre = self
+                .oracle
+                .get(PreimageKey::new(*self.boot_info.agreed_pre_state, PreimageKeyType::Keccak256))
+                .await
+                .map_err(OracleProviderError::Preimage)?;
 
-        todo!();
+            if pre.is_empty() {
+                return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+                    "Invalid pre-state preimage".to_string(),
+                )));
+            }
+
+            let block_hash = if pre[0] == kona_interop::SUPER_ROOT_VERSION {
+                let super_root =
+                    SuperRoot::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+                let first_output_root = super_root.output_roots.first().unwrap();
+
+                // Host knows timestamp, host can call `optimsim_outputAtBlock` by converting timestamp to
+                // block number.
+                self.oracle
+                    .write(
+                        &HintType::L2OutputRoot
+                            .encode_with(&[&first_output_root.chain_id.to_be_bytes()]),
+                    )
+                    .await
+                    .map_err(OracleProviderError::Preimage)?;
+                let output_preimage = self
+                    .oracle
+                    .get(PreimageKey::new(
+                        *first_output_root.output_root,
+                        PreimageKeyType::Keccak256,
+                    ))
+                    .await
+                    .map_err(OracleProviderError::Preimage)?;
+
+                output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?
+            } else if pre[0] == kona_interop::TRANSITION_STATE_VERSION {
+                // If the pre-state is the transition state, it means that progress on the broader state
+                // transition has already begun. We can fetch the last block hash from the pending progress
+                // to get the safe head of the .
+                let transition_state = TransitionState::decode(&mut pre[1..].as_ref())
+                    .map_err(OracleProviderError::Rlp)?;
+
+                // Find the output root at the current step.
+                let rich_output = transition_state
+                    .pre_state
+                    .output_roots
+                    .get(transition_state.step as usize)
+                    .unwrap();
+
+                // Host knows timestamp, host can call `optimsim_outputAtBlock` by converting timestamp to
+                // block number.
+                self.oracle
+                    .write(
+                        &HintType::L2OutputRoot.encode_with(&[&rich_output.chain_id.to_be_bytes()]),
+                    )
+                    .await
+                    .map_err(OracleProviderError::Preimage)?;
+                let output_preimage = self
+                    .oracle
+                    .get(PreimageKey::new(*rich_output.output_root, PreimageKeyType::Keccak256))
+                    .await
+                    .map_err(OracleProviderError::Preimage)?;
+
+                output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?
+            } else {
+                return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+                    "Invalid pre-state version".to_string(),
+                )));
+            };
+
+            self.safe_head_hash = Some(block_hash);
+            block_hash
+        };
 
         // Fetch the starting block header.
-        let block_hash =
-            output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
         let mut header = self.header_by_hash(block_hash)?;
 
         // Check if the block number is in range. If not, we can fail early.

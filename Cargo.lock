@@ -2672,6 +2672,7 @@ dependencies = [
  "kona-derive",
  "kona-driver",
  "kona-executor",
+ "kona-interop",
  "kona-mpt",
  "kona-preimage",
  "lru",

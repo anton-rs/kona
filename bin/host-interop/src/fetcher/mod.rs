@@ -432,7 +432,7 @@ where
                     (prestate_timestamp - rollup_config.genesis.l2_time) / rollup_config.block_time;
 
                 // Reconstruct the output root from the L2 chain provider.
-                // TODO - Need to fetch provider-by-chain-id
+                // TODO(interop) - Need to fetch provider-by-chain-id
                 let raw_header: Bytes = self
                     .l2_provider
                     .client()

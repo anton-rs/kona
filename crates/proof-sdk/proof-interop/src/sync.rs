@@ -5,6 +5,7 @@ use crate::{
     FlushableCache,
 };
 use alloy_consensus::{Header, Sealed};
+use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_derive::traits::ChainProvider;
 use kona_driver::{PipelineCursor, TipCursor};
@@ -36,8 +37,8 @@ where
 
     // Construct the cursor.
     let mut cursor = PipelineCursor::new(channel_timeout, origin);
-    // let tip = TipCursor::new(safe_head_info, safe_header, boot_info.agreed_l2_output_root);
-    // cursor.advance(origin, tip);
-    todo!()
-    // Ok(cursor)
+    // TODO(interop): Why does the TipCursor need an output root?
+    let tip = TipCursor::new(safe_head_info, safe_header, B256::ZERO);
+    cursor.advance(origin, tip);
+    Ok(cursor)
 }
