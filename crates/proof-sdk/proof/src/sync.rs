@@ -11,6 +11,7 @@ use kona_derive::traits::ChainProvider;
 use kona_driver::{PipelineCursor, TipCursor};
 use kona_preimage::CommsClient;
 use maili_protocol::BatchValidationProvider;
+use spin::RwLock;
 
 /// Constructs a [`PipelineCursor`] from the caching oracle, boot info, and providers.
 pub async fn new_pipeline_cursor<O>(
