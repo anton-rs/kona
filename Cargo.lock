@@ -2416,15 +2416,17 @@ dependencies = [
  "kona-derive",
  "kona-driver",
  "kona-executor",
+ "kona-interop",
  "kona-mpt",
  "kona-preimage",
- "kona-proof",
+ "kona-proof-interop",
  "kona-std-fpvm",
  "kona-std-fpvm-proc",
  "lru",
  "op-alloy-consensus",
  "op-alloy-genesis",
  "op-alloy-protocol",
+ "op-alloy-registry",
  "op-alloy-rpc-types-engine",
  "revm",
  "serde",
@@ -2537,6 +2539,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-host-interop"
+version = "0.1.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rlp",
+ "alloy-rpc-client",
+ "alloy-rpc-types",
+ "alloy-rpc-types-beacon",
+ "alloy-serde",
+ "alloy-transport-http",
+ "anyhow",
+ "async-trait",
+ "clap",
+ "kona-client-interop",
+ "kona-derive",
+ "kona-interop",
+ "kona-mpt",
+ "kona-preimage",
+ "kona-proof-interop",
+ "kona-std-fpvm",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "op-alloy-registry",
+ "op-alloy-rpc-types-engine",
+ "proptest",
+ "reqwest",
+ "revm",
+ "rocksdb",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "kona-interop"
 version = "0.1.0"
 dependencies = [
@@ -2593,6 +2634,34 @@ dependencies = [
 
 [[package]]
 name = "kona-proof"
+version = "0.2.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rlp",
+ "async-trait",
+ "kona-derive",
+ "kona-driver",
+ "kona-executor",
+ "kona-mpt",
+ "kona-preimage",
+ "lru",
+ "op-alloy-consensus",
+ "op-alloy-genesis",
+ "op-alloy-protocol",
+ "op-alloy-registry",
+ "op-alloy-rpc-types-engine",
+ "serde",
+ "serde_json",
+ "spin",
+ "thiserror 2.0.4",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kona-proof-interop"
 version = "0.2.0"
 dependencies = [
  "alloy-consensus",

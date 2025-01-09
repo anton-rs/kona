@@ -13,4 +13,4 @@ pub const MESSAGE_EXPIRY_WINDOW: u64 = 180 * 24 * 60 * 60;
 pub const SUPER_ROOT_VERSION: u8 = 1;
 
 /// The current [TransitionState] encoding format version.
-pub const TRANSITION_STATE_VERSION: u8 = 2;
+pub const TRANSITION_STATE_VERSION: u8 = 255;

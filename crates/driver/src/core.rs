@@ -66,14 +66,14 @@ where
     /// - `target`: The target block number.
     ///
     /// ## Returns
-    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
-    ///   output root.
+    /// - `Ok((number, output_root, block_hash))` - A tuple containing the number of the produced block and the
+    ///   output root and the block hash that the output root commits to.
     /// - `Err(e)` - An error if the block could not be produced.
     pub async fn advance_to_target(
         &mut self,
         cfg: &RollupConfig,
         mut target: Option<u64>,
-    ) -> DriverResult<(u64, B256), E::Error> {
+    ) -> DriverResult<(u64, B256, B256), E::Error> {
         loop {
             // Check if we have reached the target block number.
             if let Some(tb) = target {
@@ -82,6 +82,7 @@ where
                     return Ok((
                         self.cursor.l2_safe_head().block_info.number,
                         *self.cursor.l2_safe_head_output_root(),
+                        self.cursor.l2_safe_head().block_info.hash,
                     ));
                 }
             }

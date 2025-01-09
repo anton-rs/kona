@@ -1,4 +1,3 @@
-
 //! This module contains the prologue phase of the client program, pulling in the boot information
 //! through the `PreimageOracle` ABI as local keys.
 
@@ -8,18 +7,19 @@ use kona_preimage::{PreimageKey, PreimageOracleClient};
 use op_alloy_genesis::RollupConfig;
 use op_alloy_registry::ROLLUP_CONFIGS;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 /// The local key ident for the L1 head hash.
 pub const L1_HEAD_KEY: U256 = U256::from_be_slice(&[1]);
 
-/// The local key ident for the L2 output root.
-pub const L2_OUTPUT_ROOT_KEY: U256 = U256::from_be_slice(&[2]);
+/// The local key ident for the L2 pre-state claim.
+pub const AGREED_L2_PRE_STATE_KEY: U256 = U256::from_be_slice(&[2]);
 
-/// The local key ident for the L2 output root claim.
-pub const L2_CLAIM_KEY: U256 = U256::from_be_slice(&[3]);
+/// The local key ident for the L2 post-state claim.
+pub const CLAIMED_L2_POST_STATE_KEY: U256 = U256::from_be_slice(&[3]);
 
-/// The local key ident for the L2 claim block number.
-pub const L2_CLAIM_BLOCK_NUMBER_KEY: U256 = U256::from_be_slice(&[4]);
+/// The local key ident for the L2 claim timestamp.
+pub const L2_CLAIM_TIMESTAMP_KEY: U256 = U256::from_be_slice(&[4]);
 
 /// The local key ident for the L2 chain ID.
 pub const L2_CHAIN_ID_KEY: U256 = U256::from_be_slice(&[5]);
@@ -27,27 +27,17 @@ pub const L2_CHAIN_ID_KEY: U256 = U256::from_be_slice(&[5]);
 /// The local key ident for the L2 rollup config.
 pub const L2_ROLLUP_CONFIG_KEY: U256 = U256::from_be_slice(&[6]);
 
-/// The boot information for the client program.
-///
-/// **Verified inputs:**
-/// - `l1_head`: The L1 head hash containing the safe L2 chain data that may reproduce the L2 head
-///   hash.
-/// - `agreed_l2_output_root`:The agreed upon safe L2 output root.
-/// - `chain_id`: The L2 chain ID.
-///
-/// **User submitted inputs:**
-/// - `claimed_l2_output_root`: The L2 output root claim.
-/// - `claimed_l2_block_number`: The L2 claim block number.
+/// The boot information for the interop client program.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BootInfo {
     /// The L1 head hash containing the safe L2 chain data that may reproduce the L2 head hash.
     pub l1_head: B256,
-    /// The agreed upon safe L2 output root.
-    pub agreed_l2_output_root: B256,
-    /// The L2 output root claim.
-    pub claimed_l2_output_root: B256,
-    /// The L2 claim block number.
-    pub claimed_l2_block_number: u64,
+    /// The agreed upon superchain pre-state commitment.
+    pub agreed_pre_state: B256,
+    /// The claimed (disputed) superchain post-state commitment.
+    pub claimed_post_state: B256,
+    /// The L2 claim timestamp.
+    pub claimed_l2_timestamp: u64,
     /// The L2 chain ID.
     pub chain_id: u64,
     /// The rollup config for the L2 chain.
@@ -73,21 +63,21 @@ impl BootInfo {
             .await
             .map_err(OracleProviderError::Preimage)?;
 
-        let mut l2_output_root: B256 = B256::ZERO;
+        let mut l2_pre: B256 = B256::ZERO;
         oracle
-            .get_exact(PreimageKey::new_local(L2_OUTPUT_ROOT_KEY.to()), l2_output_root.as_mut())
+            .get_exact(PreimageKey::new_local(AGREED_L2_PRE_STATE_KEY.to()), l2_pre.as_mut())
             .await
             .map_err(OracleProviderError::Preimage)?;
 
-        let mut l2_claim: B256 = B256::ZERO;
+        let mut l2_post: B256 = B256::ZERO;
         oracle
-            .get_exact(PreimageKey::new_local(L2_CLAIM_KEY.to()), l2_claim.as_mut())
+            .get_exact(PreimageKey::new_local(CLAIMED_L2_POST_STATE_KEY.to()), l2_post.as_mut())
             .await
             .map_err(OracleProviderError::Preimage)?;
 
         let l2_claim_block = u64::from_be_bytes(
             oracle
-                .get(PreimageKey::new_local(L2_CLAIM_BLOCK_NUMBER_KEY.to()))
+                .get(PreimageKey::new_local(L2_CLAIM_TIMESTAMP_KEY.to()))
                 .await
                 .map_err(OracleProviderError::Preimage)?
                 .as_slice()
@@ -123,11 +113,12 @@ impl BootInfo {
 
         Ok(Self {
             l1_head,
-            agreed_l2_output_root: l2_output_root,
-            claimed_l2_output_root: l2_claim,
-            claimed_l2_block_number: l2_claim_block,
+            agreed_pre_state: l2_pre,
+            claimed_post_state: l2_post,
+            claimed_l2_timestamp: l2_claim_block,
             chain_id,
             rollup_config,
         })
     }
 }
+

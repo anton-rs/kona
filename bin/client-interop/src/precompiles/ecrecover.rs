@@ -7,7 +7,7 @@ use kona_preimage::{
     errors::PreimageOracleError, HintWriterClient, PreimageKey, PreimageKeyType,
     PreimageOracleClient,
 };
-use kona_proof::{errors::OracleProviderError, HintType};
+use kona_proof_interop::{errors::OracleProviderError, HintType};
 use revm::{
     precompile::{u64_to_address, Error as PrecompileError, PrecompileWithAddress},
     primitives::{Precompile, PrecompileOutput, PrecompileResult},
@@ -26,7 +26,7 @@ fn fpvm_ecrecover(input: &Bytes, gas_limit: u64) -> PrecompileResult {
         return Err(PrecompileError::OutOfGas.into());
     }
 
-    let result_data = kona_proof::block_on(async move {
+    let result_data = kona_proof_interop::block_on(async move {
         // Write the hint for the ecrecover precompile run.
         let hint_data = &[ECRECOVER_ADDRESS.as_ref(), input.as_ref()];
         HINT_WRITER

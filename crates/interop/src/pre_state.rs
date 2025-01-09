@@ -33,6 +33,13 @@ pub struct OutputRootWithBlockHash {
     pub output_root: B256,
 }
 
+impl OutputRootWithBlockHash {
+    /// Create a new [OutputRootWithBlockHash] with the given block hash and output root hash.
+    pub fn new(block_hash: B256, output_root: B256) -> Self {
+        Self { block_hash, output_root }
+    }
+}
+
 /// The [SuperRoot] is the snapshot of the superchain at a given timestamp.
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
@@ -77,6 +84,7 @@ impl Encodable for SuperRoot {
         8 + 40 * self.output_roots.len()
     }
 }
+
 
 impl Decodable for SuperRoot {
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {

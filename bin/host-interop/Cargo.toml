@@ -1,0 +1,58 @@
+[package]
+name = "kona-host-interop"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# Workspace
+kona-mpt.workspace = true
+kona-derive.workspace = true
+kona-std-fpvm.workspace = true
+kona-preimage = { workspace = true, features = ["std"] }
+kona-proof-interop = { workspace = true, features = ["std"] }
+kona-interop.workspace = true
+kona-client-interop.workspace = true
+
+# Alloy
+alloy-rlp.workspace = true
+alloy-eips = { workspace = true, features = ["kzg"] }
+alloy-serde.workspace = true
+alloy-provider = { workspace = true, features = ["reqwest"] }
+alloy-consensus.workspace = true
+alloy-rpc-client.workspace = true
+alloy-transport-http.workspace = true
+alloy-rpc-types = { workspace = true, features = ["eth", "debug"] }
+alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-rpc-types-beacon.workspace = true
+
+# Op Alloy
+op-alloy-genesis = { workspace = true, features = ["std", "serde"] }
+op-alloy-protocol = { workspace = true, features = ["std", "serde"] }
+op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
+op-alloy-registry.workspace = true
+
+# Revm
+revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }
+
+# General
+anyhow.workspace = true
+tracing.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+rocksdb = { workspace = true, features = ["snappy"] }
+clap = { workspace = true, features = ["derive", "env"] }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
+
+[dev-dependencies]
+proptest.workspace = true

@@ -7,16 +7,19 @@
 
 extern crate alloc;
 
-use alloc::sync::Arc;
+use alloc::{string::ToString, sync::Arc};
 use alloy_consensus::{Header, Sealed};
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
+use alloy_rlp::Decodable;
 use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
 use kona_executor::{ExecutorError, KonaHandleRegister, TrieDBProvider};
+use kona_interop::{OutputRootWithBlockHash, SuperRoot, TransitionState};
 use kona_preimage::{
-    CommsClient, HintWriterClient, PreimageKey, PreimageKeyType, PreimageOracleClient,
+    errors::PreimageOracleError, CommsClient, HintWriterClient, PreimageKey, PreimageKeyType,
+    PreimageOracleClient,
 };
-use kona_proof::{
+use kona_proof_interop::{
     errors::OracleProviderError,
     executor::KonaExecutor,
     l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
@@ -26,8 +29,6 @@ use kona_proof::{
 };
 use thiserror::Error;
 use tracing::{error, info, warn};
-
-mod boot;
 
 /// An error that can occur when running the fault proof program.
 #[derive(Error, Debug)]
@@ -80,22 +81,26 @@ where
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
     let safe_head = fetch_safe_head(oracle.as_ref(), boot.as_ref(), &mut l2_provider).await?;
-    if boot.claimed_l2_block_number < safe_head.number {
+
+    // Translate the claimed timestamp to an L2 block number.
+    let claimed_l2_block_number = (boot.claimed_l2_timestamp - boot.rollup_config.genesis.l2_time)
+        / boot.rollup_config.block_time;
+    if claimed_l2_block_number < safe_head.number {
         error!(
             target: "client",
             "Claimed L2 block number {claimed} is less than the safe head {safe}",
-            claimed = boot.claimed_l2_block_number,
+            claimed = claimed_l2_block_number,
             safe = safe_head.number
         );
         return Err(FaultProofProgramError::InvalidClaim(
-            boot.agreed_l2_output_root,
-            boot.claimed_l2_output_root,
+            boot.agreed_pre_state,
+            boot.claimed_post_state,
         ));
     }
 
     // In the case where the agreed upon L2 output root is the same as the claimed L2 output root,
     // trace extension is detected and we can skip the derivation and execution steps.
-    if boot.agreed_l2_output_root == boot.claimed_l2_output_root {
+    if boot.agreed_pre_state == boot.claimed_post_state {
         info!(
             target: "client",
             "Trace extension detected. State transition is already agreed upon.",
@@ -123,21 +128,44 @@ where
 
     // Run the derivation pipeline until we are able to produce the output root of the claimed
     // L2 block.
-    let (number, output_root) =
-        driver.advance_to_target(&boot.rollup_config, Some(boot.claimed_l2_block_number)).await?;
+    let (number, output_root, block_hash) =
+        driver.advance_to_target(&boot.rollup_config, Some(claimed_l2_block_number)).await?;
+    let output_root_with_hash = OutputRootWithBlockHash::new(block_hash, output_root);
 
     ////////////////////////////////////////////////////////////////
     //                          EPILOGUE                          //
     ////////////////////////////////////////////////////////////////
 
-    if output_root != boot.claimed_l2_output_root {
+    // Check if the pre-state is a TransitionState or SuperRoot.
+    let pre = read_raw_pre_state(oracle.as_ref(), boot.as_ref()).await?;
+    let transition_state = if pre[0] == kona_interop::SUPER_ROOT_VERSION {
+        let super_root =
+            SuperRoot::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+
+        TransitionState::new(super_root, alloc::vec![output_root_with_hash], 1)
+    } else if pre[0] == kona_interop::TRANSITION_STATE_VERSION {
+        let mut transition_state =
+            TransitionState::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+
+        transition_state.pending_progress.push(output_root_with_hash);
+        transition_state.step += 1;
+
+        transition_state
+    } else {
+        return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+            "Invalid pre-state version".to_string(),
+        ))
+        .into());
+    };
+
+    if transition_state.hash() != boot.claimed_post_state {
         error!(
             target: "client",
-            "Failed to validate L2 block #{number} with output root {output_root}",
+            "Failed to validate L2 block #{number} with claim {output_root}",
             number = number,
             output_root = output_root
         );
-        return Err(FaultProofProgramError::InvalidClaim(output_root, boot.claimed_l2_output_root));
+        return Err(FaultProofProgramError::InvalidClaim(output_root, transition_state.hash()));
     }
 
     info!(
@@ -160,22 +188,83 @@ async fn fetch_safe_head<O>(
 where
     O: CommsClient,
 {
-    caching_oracle
-        .write(&HintType::StartingL2Output.encode_with(&[boot_info.agreed_l2_output_root.as_ref()]))
-        .await
-        .map_err(OracleProviderError::Preimage)?;
-    let mut output_preimage = [0u8; 128];
-    caching_oracle
-        .get_exact(
-            PreimageKey::new(*boot_info.agreed_l2_output_root, PreimageKeyType::Keccak256),
-            &mut output_preimage,
-        )
-        .await
-        .map_err(OracleProviderError::Preimage)?;
+    let pre = read_raw_pre_state(caching_oracle, boot_info).await?;
 
-    let safe_hash =
-        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
+    let safe_hash = if pre[0] == kona_interop::SUPER_ROOT_VERSION {
+        let super_root =
+            SuperRoot::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+        let first_output_root = super_root.output_roots.first().unwrap();
+
+        // Host knows timestamp, host can call `optimsim_outputAtBlock` by converting timestamp to
+        // block number.
+        caching_oracle
+            .write(
+                &HintType::L2OutputRoot.encode_with(&[&first_output_root.chain_id.to_be_bytes()]),
+            )
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+        let output_preimage = caching_oracle
+            .get(PreimageKey::new(*first_output_root.output_root, PreimageKeyType::Keccak256))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+
+        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?
+    } else if pre[0] == kona_interop::TRANSITION_STATE_VERSION {
+        // If the pre-state is the transition state, it means that progress on the broader state
+        // transition has already begun. We can fetch the last block hash from the pending progress
+        // to get the safe head of the .
+        let transition_state =
+            TransitionState::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+
+        // Find the output root at the current step.
+        let rich_output =
+            transition_state.pre_state.output_roots.get(transition_state.step as usize).unwrap();
+
+        // Host knows timestamp, host can call `optimsim_outputAtBlock` by converting timestamp to
+        // block number.
+        caching_oracle
+            .write(&HintType::L2OutputRoot.encode_with(&[&rich_output.chain_id.to_be_bytes()]))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+        let output_preimage = caching_oracle
+            .get(PreimageKey::new(*rich_output.output_root, PreimageKeyType::Keccak256))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+
+        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?
+    } else {
+        return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+            "Invalid pre-state version".to_string(),
+        )));
+    };
+
     l2_chain_provider
         .header_by_hash(safe_hash)
         .map(|header| Sealed::new_unchecked(header, safe_hash))
+}
+
+/// Reads the raw pre-state from the preimage oracle.
+async fn read_raw_pre_state<O>(
+    caching_oracle: &O,
+    boot_info: &BootInfo,
+) -> Result<Bytes, OracleProviderError>
+where
+    O: CommsClient,
+{
+    caching_oracle
+        .write(&HintType::AgreedPreState.encode_with(&[boot_info.agreed_pre_state.as_ref()]))
+        .await
+        .map_err(OracleProviderError::Preimage)?;
+    let pre = caching_oracle
+        .get(PreimageKey::new(*boot_info.agreed_pre_state, PreimageKeyType::Keccak256))
+        .await
+        .map_err(OracleProviderError::Preimage)?;
+
+    if pre.is_empty() {
+        return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+            "Invalid pre-state preimage".to_string(),
+        )));
+    }
+
+    Ok(Bytes::from(pre))
 }

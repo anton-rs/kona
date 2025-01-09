@@ -19,7 +19,7 @@ members = [
   "crates/proof-sdk/*",
   "bin/*"
 ]
-default-members = ["bin/host", "bin/client"]
+default-members = ["bin/host", "bin/client", "bin/host-interop", "bin/client-interop"]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -65,10 +65,13 @@ lto = "fat"
 # Workspace
 kona-mpt = { path = "crates/mpt", version = "0.1.1", default-features = false }
 kona-client = { path = "bin/client", version = "0.1.0", default-features = false }
+kona-client-interop = { path = "bin/client-interop", version = "0.1.0", default-features = false }
 kona-derive = { path = "crates/derive", version = "0.2.0", default-features = false }
 kona-driver = { path = "crates/driver", version = "0.2.0", default-features = false }
 kona-executor = { path = "crates/executor", version = "0.2.0", default-features = false }
+kona-interop = { path = "crates/interop", version = "0.1.0", default-features = false }
 kona-proof = { path = "crates/proof-sdk/proof", version = "0.2.0", default-features = false }
+kona-proof-interop = { path = "crates/proof-sdk/proof-interop", version = "0.2.0", default-features = false }
 kona-std-fpvm = { path = "crates/proof-sdk/std-fpvm", version = "0.1.1", default-features = false }
 kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.2.0", default-features = false }
 kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.1", default-features = false }
