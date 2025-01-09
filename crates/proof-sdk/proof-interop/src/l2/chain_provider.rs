@@ -63,7 +63,7 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
 
             let block_hash = if pre[0] == kona_interop::SUPER_ROOT_VERSION {
                 let super_root =
-                    SuperRoot::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+                    SuperRoot::decode(&mut pre[..].as_ref()).map_err(OracleProviderError::Rlp)?;
                 let first_output_root = super_root.output_roots.first().unwrap();
 
                 // Host knows timestamp, host can call `optimsim_outputAtBlock` by converting timestamp to
@@ -89,7 +89,7 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
                 // If the pre-state is the transition state, it means that progress on the broader state
                 // transition has already begun. We can fetch the last block hash from the pending progress
                 // to get the safe head of the .
-                let transition_state = TransitionState::decode(&mut pre[1..].as_ref())
+                let transition_state = TransitionState::decode(&mut pre[..].as_ref())
                     .map_err(OracleProviderError::Rlp)?;
 
                 // Find the output root at the current step.

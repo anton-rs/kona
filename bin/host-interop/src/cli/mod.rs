@@ -17,7 +17,7 @@ use clap::{
     ArgAction, Parser,
 };
 use op_alloy_genesis::RollupConfig;
-use parser::parse_key_val;
+use parser::{parse_bytes, parse_key_val};
 use reqwest::Client;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
@@ -51,7 +51,7 @@ pub struct HostCli {
     #[clap(long, visible_alias = "l2-head", value_parser = parse_b256, env)]
     pub agreed_l2_head_hash: B256,
     /// Agreed safe L2 Output Root to start derivation from.
-    #[clap(long, env)]
+    #[clap(long, env, value_parser = parse_bytes)]
     pub agreed_pre_state: Bytes,
     /// Claimed L2 output root at block # `--claimed-l2-block-number` to validate.
     #[clap(long, visible_alias = "l2-claim", value_parser = parse_b256, env)]

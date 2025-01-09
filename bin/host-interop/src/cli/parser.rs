@@ -1,4 +1,4 @@
-use alloy_primitives::B256;
+use alloy_primitives::{hex, Bytes, B256};
 use std::error::Error;
 use std::str::FromStr;
 
@@ -11,6 +11,10 @@ use std::str::FromStr;
 /// * `Result<B256, String>` - Ok if successful, Err otherwise.
 pub(crate) fn parse_b256(s: &str) -> Result<B256, String> {
     B256::from_str(s).map_err(|_| format!("Invalid B256 value: {}", s))
+}
+
+pub(crate) fn parse_bytes(s: &str) -> Result<Bytes, String> {
+    hex::decode(s).map_err(|e| format!("Invalid hex string: {}", e)).map(Bytes::from)
 }
 
 /// Parse a single key-value pair

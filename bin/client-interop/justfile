@@ -4,8 +4,10 @@ set fallback := true
 default:
   @just --list
 
+# just run-client-native 1736453156 http://stf.clab.by:8546 http://stf.clab.by:5055 http://stf.clab.by:8548 http://stf.clab.by:5059
+
 # Run the client program natively with the host program attached.
-run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc rollup_config_path='' verbosity='':
+run-client-native timestamp l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc rollup_config_path='' verbosity='':
   #!/usr/bin/env bash
   set -o errexit -o nounset -o pipefail
 
@@ -21,7 +23,7 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc rollu
     CHAIN_ID_OR_ROLLUP_CONFIG_ARG="--rollup-config-path $(realpath {{rollup_config_path}})"
   fi
 
-  CLAIMED_L2_BLOCK_NUMBER={{block_number}}
+  CLAIMED_L2_BLOCK_NUMBER=$(cast find-block --rpc-url $L2_NODE_ADDRESS "{{timestamp}}")
   echo "Fetching configuration for block #$CLAIMED_L2_BLOCK_NUMBER..."
 
   # Get output root for block
@@ -36,16 +38,19 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc rollu
   # Move to the workspace root
   cd $(git rev-parse --show-toplevel)
 
+  ENCODED_PRE_STATE="0x010000000067802c220000000000aa37dceaeb38bfaac27182c837ffc70ac92cff1ff368868a4483493b10b4f73a0af402"
+  HASHED_POST_STATE="0xbe8b3d4439c2f4fa60d4e635b57301b739f464802933506a0b84e0471072d67e"
+
   echo "Running host program with native client program..."
-  cargo r --bin kona-host --release -- \
+  cargo r --bin kona-host-interop --release -- \
     --l1-head $L1_HEAD \
     --agreed-l2-head-hash $AGREED_L2_HEAD_HASH \
-    --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
-    --agreed-l2-output-root $AGREED_L2_OUTPUT_ROOT \
-    --claimed-l2-block-number $CLAIMED_L2_BLOCK_NUMBER \
+    --claimed-l2-output-root $HASHED_POST_STATE \
+    --agreed-pre-state $ENCODED_PRE_STATE \
+    --claimed-l2-block-number "{{timestamp}}" \
     --l1-node-address $L1_NODE_ADDRESS \
     --l1-beacon-address $L1_BEACON_ADDRESS \
-    --l2-node-address $L2_NODE_ADDRESS \
+    --l2-node-addresses "$L2_CHAIN_ID=$L2_NODE_ADDRESS" \
     --native \
     --data-dir ./data \
     $CHAIN_ID_OR_ROLLUP_CONFIG_ARG \

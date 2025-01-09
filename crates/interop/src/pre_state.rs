@@ -85,7 +85,6 @@ impl Encodable for SuperRoot {
     }
 }
 
-
 impl Decodable for SuperRoot {
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         if buf.is_empty() {
@@ -201,7 +200,7 @@ mod test {
     use crate::pre_state::OutputRootWithBlockHash;
 
     use super::{OutputRootWithChain, SuperRoot, TransitionState};
-    use alloy_primitives::B256;
+    use alloy_primitives::{b256, hex, B256};
     use alloy_rlp::{Decodable, Encodable};
     use arbitrary::Arbitrary;
     use rand::Rng;
@@ -276,5 +275,32 @@ mod test {
         let mut rlp_buf = Vec::with_capacity(transition_state.length());
         transition_state.encode(&mut rlp_buf);
         assert_eq!(transition_state, TransitionState::decode(&mut rlp_buf.as_slice()).unwrap());
+    }
+
+    #[test]
+    fn testing() {
+        let super_root = SuperRoot::new(
+            1736453154,
+            vec![OutputRootWithChain::new(
+                11155420,
+                b256!("eaeb38bfaac27182c837ffc70ac92cff1ff368868a4483493b10b4f73a0af402"),
+            )],
+        );
+
+        let mut buf = Vec::new();
+        super_root.encode(&mut buf);
+        println!("{}", hex::encode(buf));
+
+        let transition_state = TransitionState::new(
+            super_root,
+            vec![OutputRootWithBlockHash::new(
+                b256!("e22926201cbc7d2039b973a22a475f1dc53cafa00b4eed3947d3fc9824f49194"),
+                b256!("5e20ea68c11554da87d8c2377689b423b578d02a8172374599ab31821784e390"),
+            )],
+            1,
+        );
+        println!("{}", hex::encode(transition_state.hash().as_slice()));
+
+        panic!();
     }
 }

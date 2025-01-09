@@ -80,7 +80,9 @@ where
 
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
+    info!("fetching safe head");
     let safe_head = fetch_safe_head(oracle.as_ref(), boot.as_ref(), &mut l2_provider).await?;
+    info!("safe head fetched");
 
     // Translate the claimed timestamp to an L2 block number.
     let claimed_l2_block_number = (boot.claimed_l2_timestamp - boot.rollup_config.genesis.l2_time)
@@ -140,12 +142,12 @@ where
     let pre = read_raw_pre_state(oracle.as_ref(), boot.as_ref()).await?;
     let transition_state = if pre[0] == kona_interop::SUPER_ROOT_VERSION {
         let super_root =
-            SuperRoot::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+            SuperRoot::decode(&mut pre[..].as_ref()).map_err(OracleProviderError::Rlp)?;
 
         TransitionState::new(super_root, alloc::vec![output_root_with_hash], 1)
     } else if pre[0] == kona_interop::TRANSITION_STATE_VERSION {
         let mut transition_state =
-            TransitionState::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+            TransitionState::decode(&mut pre[..].as_ref()).map_err(OracleProviderError::Rlp)?;
 
         transition_state.pending_progress.push(output_root_with_hash);
         transition_state.step += 1;
@@ -174,6 +176,11 @@ where
         number = number,
         output_root = output_root
     );
+    info!(
+        target: "client",
+        "Transition State: {transition_state:?}",
+        transition_state = transition_state
+    );
 
     Ok(())
 }
@@ -192,7 +199,7 @@ where
 
     let safe_hash = if pre[0] == kona_interop::SUPER_ROOT_VERSION {
         let super_root =
-            SuperRoot::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+            SuperRoot::decode(&mut pre[..].as_ref()).map_err(OracleProviderError::Rlp)?;
         let first_output_root = super_root.output_roots.first().unwrap();
 
         // Host knows timestamp, host can call `optimsim_outputAtBlock` by converting timestamp to
@@ -214,7 +221,7 @@ where
         // transition has already begun. We can fetch the last block hash from the pending progress
         // to get the safe head of the .
         let transition_state =
-            TransitionState::decode(&mut pre[1..].as_ref()).map_err(OracleProviderError::Rlp)?;
+            TransitionState::decode(&mut pre[..].as_ref()).map_err(OracleProviderError::Rlp)?;
 
         // Find the output root at the current step.
         let rich_output =

@@ -2,7 +2,7 @@
 
 use super::KeyValueStore;
 use crate::cli::HostCli;
-use alloy_primitives::B256;
+use alloy_primitives::{keccak256, B256};
 use anyhow::Result;
 use kona_preimage::PreimageKey;
 use kona_proof_interop::boot::{
@@ -31,7 +31,12 @@ impl KeyValueStore for LocalKeyValueStore {
         let preimage_key = PreimageKey::try_from(*key).ok()?;
         match preimage_key.key_value() {
             L1_HEAD_KEY => Some(self.cfg.l1_head.to_vec()),
-            AGREED_L2_PRE_STATE_KEY => Some(self.cfg.agreed_pre_state.to_vec()),
+            AGREED_L2_PRE_STATE_KEY => {
+                let hash = keccak256(self.cfg.agreed_pre_state.as_ref());
+                dbg!(&self.cfg.agreed_pre_state);
+                dbg!(hash);
+                Some(hash.to_vec())
+            },
             CLAIMED_L2_POST_STATE_KEY => Some(self.cfg.claimed_l2_output_root.to_vec()),
             L2_CLAIM_TIMESTAMP_KEY => {
                 Some(self.cfg.claimed_l2_block_number.to_be_bytes().to_vec())

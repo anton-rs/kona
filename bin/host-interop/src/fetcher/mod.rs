@@ -8,7 +8,7 @@ use alloy_eips::{
     eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
     BlockId,
 };
-use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
+use alloy_primitives::{address, hex, keccak256, map::HashMap, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
@@ -406,6 +406,10 @@ where
                     .try_into()
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
 
+                if hash != keccak256(self.pre_state.as_ref()) {
+                    anyhow::bail!("Agreed pre-state hash does not match pre-state.");
+                }
+
                 let mut kv_write_lock = self.kv_store.write().await;
                 kv_write_lock.set(
                     PreimageKey::new(*hash, PreimageKeyType::Keccak256).into(),
@@ -430,14 +434,14 @@ where
 
                 // Decode the prestate into either a [SuperRoot] or a [TransitionState], and
                 // extract the timestamp.
-                let prestate_timestamp = match hint_data[0] {
+                let prestate_timestamp = match self.pre_state[0] {
                     SUPER_ROOT_VERSION => {
-                        SuperRoot::decode(&mut hint_data.as_ref())
+                        SuperRoot::decode(&mut self.pre_state.as_ref())
                             .map_err(|e| anyhow!("Failed to decode SuperRoot: {e}"))?
                             .timestamp
                     }
                     TRANSITION_STATE_VERSION => {
-                        TransitionState::decode(&mut hint_data.as_ref())
+                        TransitionState::decode(&mut self.pre_state.as_ref())
                             .map_err(|e| anyhow!("Failed to decode TransitionState: {e}"))?
                             .pre_state
                             .timestamp
@@ -461,7 +465,7 @@ where
                 // TODO(interop) - Need to fetch provider-by-chain-id
                 let raw_header: Bytes = l2_provider
                     .client()
-                    .request("debug_getRawHeader", &[block_number])
+                    .request("debug_getRawHeader", &[format!("0x{:x}", block_number)])
                     .await
                     .map_err(|e| anyhow!("Failed to fetch header RLP: {e}"))?;
                 let header = Header::decode(&mut raw_header.as_ref())
@@ -484,7 +488,7 @@ where
                 let mut kv_write_lock = self.kv_store.write().await;
                 kv_write_lock.set(
                     PreimageKey::new(*output_root, PreimageKeyType::Keccak256).into(),
-                    output_root.as_slice().into(),
+                    raw_output.as_slice().into(),
                 )?;
             }
             HintType::L2StateNode => {
