@@ -86,7 +86,7 @@ getting started with building your own programs, and a reference for the librari
 [cannon-rs]: https://github.com/op-rs/cannon-rs
 [badboi-cannon-rs]: https://github.com/BadBoiLabs/cannon-rs
 [asterisc]: https://github.com/etheruem-optimism/asterisc
-[fpp-specs]: https://specs.optimism.io/fault-proof/index.html#pre-image-oracle
+[fpp-specs]: https://specs.optimism.io/fault-proof/index.html
 [book]: https://op-rs.github.io/kona/
 [op-succinct]: https://github.com/succinctlabs/op-succinct
 [op-labs]: https://github.com/ethereum-optimism
