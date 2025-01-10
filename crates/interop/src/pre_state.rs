@@ -3,7 +3,7 @@
 
 use crate::{SUPER_ROOT_VERSION, TRANSITION_STATE_VERSION};
 use alloc::vec::Vec;
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{keccak256, B256, U256};
 use alloy_rlp::{Buf, Decodable, Encodable, RlpDecodable, RlpEncodable};
 
 /// A wrapper around an output root hash with the chain ID it belongs to.
@@ -75,13 +75,13 @@ impl Encodable for SuperRoot {
 
         out.put_slice(&self.timestamp.to_be_bytes());
         for output_root in &self.output_roots {
-            out.put_slice(&output_root.chain_id.to_be_bytes());
+            out.put_slice(U256::from(output_root.chain_id).to_be_bytes::<32>().as_slice());
             out.put_slice(output_root.output_root.as_slice());
         }
     }
 
     fn length(&self) -> usize {
-        8 + 40 * self.output_roots.len()
+        8 + 64 * self.output_roots.len()
     }
 }
 
@@ -105,15 +105,15 @@ impl Decodable for SuperRoot {
 
         let mut output_roots = Vec::new();
         while !buf.is_empty() {
-            if buf.len() < 40 {
+            if buf.len() < 64 {
                 return Err(alloy_rlp::Error::UnexpectedLength);
             }
 
-            let chain_id = u64::from_be_bytes(buf[0..8].try_into().unwrap());
-            buf.advance(8);
+            let chain_id = U256::from_be_bytes::<32>(buf[0..32].try_into().unwrap());
+            buf.advance(32);
             let output_root = B256::from_slice(&buf[0..32]);
             buf.advance(32);
-            output_roots.push(OutputRootWithChain::new(chain_id, output_root));
+            output_roots.push(OutputRootWithChain::new(chain_id.to(), output_root));
         }
 
         Ok(Self { timestamp, output_roots })
