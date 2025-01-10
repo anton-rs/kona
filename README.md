@@ -94,4 +94,4 @@ getting started with building your own programs, and a reference for the librari
 [g-output-root]: https://specs.optimism.io/glossary.html#l2-output-root
 [g-derivation-pipeline]: https://specs.optimism.io/protocol/derivation.html#l2-chain-derivation-pipeline
 [g-fault-proof-vm]: https://specs.optimism.io/experimental/fault-proof/index.html#fault-proof-vm
-[g-preimage-oracle]: https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle
+[g-preimage-oracle]: https://specs.optimism.io/fault-proof/index.html#pre-image-oracle
