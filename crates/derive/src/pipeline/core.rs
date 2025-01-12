@@ -177,7 +177,7 @@ where
                     StepResult::AdvancedOrigin
                 }
                 PipelineErrorKind::Temporary(_) => {
-                    debug!(target: "pipeline", "Attributes queue step failed temporarily: {:?}", err);
+                    trace!(target: "pipeline", "Attributes queue step failed temporarily: {:?}", err);
                     StepResult::StepFailed(err)
                 }
                 _ => {

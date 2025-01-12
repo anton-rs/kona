@@ -45,7 +45,7 @@ where
                     // stages can make progress.
                     match e {
                         PipelineErrorKind::Temporary(_) => {
-                            debug!(target: "client_derivation_driver", "Failed to step derivation pipeline temporarily: {:?}", e);
+                            trace!(target: "client_derivation_driver", "Failed to step derivation pipeline temporarily: {:?}", e);
                             continue
                         }
                         PipelineErrorKind::Reset(e) => {
