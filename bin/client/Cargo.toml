@@ -16,6 +16,7 @@ kona-driver.workspace = true
 kona-preimage.workspace = true
 kona-executor.workspace = true
 kona-proof.workspace = true
+kona-proof-interop.workspace = true
 kona-std-fpvm.workspace = true
 kona-std-fpvm-proc.workspace = true
 
@@ -54,3 +55,7 @@ client-tracing = ["kona-std-fpvm/tracing"]
 [[bin]]
 name = "kona"
 path = "src/kona.rs"
+
+[[bin]]
+name = "kona-int"
+path = "src/kona_interop.rs"
