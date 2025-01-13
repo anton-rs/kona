@@ -60,6 +60,7 @@ see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
 - [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
   - [`driver`](./crates/driver): Stateful derivation pipeline driver.
+- [`interop`](./crates/interop): Core functionality and primitives for the [Interop feature](https://specs.optimism.io/interop/overview.html) of the OP Stack.
 
 **Proof SDK**
 

@@ -15,6 +15,7 @@ members = [
   "crates/driver",
   "crates/executor",
   "crates/mpt",
+  "crates/interop",
   "crates/proof-sdk/*",
   "bin/*"
 ]
