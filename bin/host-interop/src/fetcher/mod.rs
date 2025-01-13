@@ -19,6 +19,7 @@ use anyhow::{anyhow, Result};
 use kona_interop::{SuperRoot, TransitionState, SUPER_ROOT_VERSION, TRANSITION_STATE_VERSION};
 use kona_preimage::{PreimageKey, PreimageKeyType};
 use kona_proof_interop::{Hint, HintType};
+use op_alloy_genesis::RollupConfig;
 use op_alloy_protocol::BlockInfo;
 use op_alloy_registry::ROLLUP_CONFIGS;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -46,6 +47,8 @@ where
     pre_state: Bytes,
     /// Active L2 chain ID.
     active_l2_chain_id: u64,
+    /// Rollup configuration.
+    rollup_config: Option<RollupConfig>,
     /// The last hint that was received. [None] if no hint has been received yet.
     last_hint: Option<String>,
 }
@@ -62,6 +65,7 @@ where
         l2_providers: HashMap<u64, ReqwestProvider>,
         active_l2_chain_id: u64,
         pre_state: Bytes,
+        rollup_config: Option<RollupConfig>,
     ) -> Self {
         Self {
             kv_store,
@@ -70,6 +74,7 @@ where
             l2_providers,
             active_l2_chain_id,
             pre_state,
+            rollup_config,
             last_hint: None,
         }
     }
@@ -450,9 +455,10 @@ where
                 };
 
                 // Transform the timestamp into a block number.
-                let rollup_config = ROLLUP_CONFIGS
-                    .get(&chain_id)
-                    .ok_or_else(|| anyhow!("Rollup config not found for chain ID: {chain_id}"))?;
+                let rollup_config = self
+                    .rollup_config
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("Rollup config not found."))?;
                 let block_number =
                     (prestate_timestamp - rollup_config.genesis.l2_time) / rollup_config.block_time;
 
@@ -462,7 +468,6 @@ where
                     .ok_or_else(|| anyhow!("L2 provider not found for chain ID: {chain_id}"))?;
 
                 // Reconstruct the output root from the L2 chain provider.
-                // TODO(interop) - Need to fetch provider-by-chain-id
                 let raw_header: Bytes = l2_provider
                     .client()
                     .request("debug_getRawHeader", &[format!("0x{:x}", block_number)])
@@ -533,7 +538,7 @@ where
 
                 let proof_response = self
                     .l2_providers
-                    .get(&self.active_l2_chain_id)
+                    .get(&self.rollup_config.as_ref().unwrap().l2_chain_id)
                     .ok_or_else(|| {
                         anyhow!("L2 provider not found for chain ID: {}", self.active_l2_chain_id)
                     })?

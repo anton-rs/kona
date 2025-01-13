@@ -18,6 +18,7 @@ use kona_preimage::{
 };
 use kona_std_fpvm::{FileChannel, FileDescriptor};
 use kv::KeyValueStore;
+use op_alloy_registry::ROLLUP_CONFIGS;
 use server::PreimageServer;
 use std::sync::Arc;
 use tokio::{sync::RwLock, task};
@@ -42,6 +43,7 @@ pub async fn start_server(cfg: HostCli) -> Result<()> {
             l2_provider,
             cfg.l2_chain_id.ok_or_else(|| anyhow!("Missing L2 chain ID."))?,
             cfg.agreed_pre_state,
+            None,
         ))))
     } else {
         None
@@ -71,6 +73,15 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
     let kv_store = cfg.construct_kv_store();
     let fetcher = if !cfg.is_offline() {
         let (l1_provider, blob_provider, l2_provider) = cfg.create_providers().await?;
+
+        let rollup_config = if let Some(rollup_cfg_path) = cfg.rollup_config_path.as_ref() {
+            Some(serde_json::from_str(&std::fs::read_to_string(rollup_cfg_path)?)?)
+        } else {
+            ROLLUP_CONFIGS.get(&cfg.l2_chain_id.ok_or_else(|| anyhow!("Missing L2 chain ID."))?).cloned()
+        };
+
+        assert!(cfg.l2_chain_id.ok_or_else(|| anyhow!("Missing L2 chain ID."))? == rollup_config.as_ref().unwrap().l2_chain_id);
+
         Some(Arc::new(RwLock::new(Fetcher::new(
             kv_store.clone(),
             l1_provider,
@@ -78,6 +89,7 @@ pub async fn start_server_and_native_client(cfg: HostCli) -> Result<i32> {
             l2_provider,
             cfg.l2_chain_id.ok_or_else(|| anyhow!("Missing L2 chain ID."))?,
             cfg.agreed_pre_state,
+            rollup_config
         ))))
     } else {
         None

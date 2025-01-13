@@ -93,7 +93,7 @@ pub struct HostCli {
     #[clap(
         long,
         visible_alias = "db",
-        required_unless_present_all = ["l2_node_address", "l1_node_address", "l1_beacon_address"],
+        required_unless_present_all = ["l2_node_addresses", "l1_node_address", "l1_beacon_address"],
         env
     )]
     pub data_dir: Option<PathBuf>,
@@ -108,8 +108,6 @@ pub struct HostCli {
     /// rollup config in the superchain registry.
     #[clap(
         long,
-        conflicts_with = "rollup_config_path",
-        required_unless_present = "rollup_config_path",
         env
     )]
     pub l2_chain_id: Option<u64>,
@@ -118,8 +116,6 @@ pub struct HostCli {
     #[clap(
         long,
         alias = "rollup-cfg",
-        conflicts_with = "l2_chain_id",
-        required_unless_present = "l2_chain_id",
         env
     )]
     pub rollup_config_path: Option<PathBuf>,

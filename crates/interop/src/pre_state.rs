@@ -300,7 +300,5 @@ mod test {
             1,
         );
         println!("{}", hex::encode(transition_state.hash().as_slice()));
-
-        panic!();
     }
 }

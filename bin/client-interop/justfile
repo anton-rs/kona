@@ -38,8 +38,8 @@ run-client-native timestamp l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc rollup_c
   # Move to the workspace root
   cd $(git rev-parse --show-toplevel)
 
-  ENCODED_PRE_STATE="0x010000000067802c220000000000aa37dceaeb38bfaac27182c837ffc70ac92cff1ff368868a4483493b10b4f73a0af402"
-  HASHED_POST_STATE="0xbe8b3d4439c2f4fa60d4e635b57301b739f464802933506a0b84e0471072d67e"
+  ENCODED_PRE_STATE="0x010000000067802c220000000000000000000000000000000000000000000000000000000000aa37dceaeb38bfaac27182c837ffc70ac92cff1ff368868a4483493b10b4f73a0af402"
+  HASHED_POST_STATE="0x498ea80f6c1c8241207dc5f9b0389c25520c4267533ec351bae3314381373b30"
 
   echo "Running host program with native client program..."
   cargo r --bin kona-host-interop --release -- \

@@ -172,6 +172,7 @@ where
                 &block,
                 &self.pipeline.rollup_config().genesis,
             )?;
+            info!(target: "client", "Produced L2 block: {:?}", l2_info);
             let cursor = TipCursor::new(
                 l2_info,
                 header.clone().seal_slow(),

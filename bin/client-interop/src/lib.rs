@@ -133,6 +133,12 @@ where
     let (number, output_root, block_hash) =
         driver.advance_to_target(&boot.rollup_config, Some(claimed_l2_block_number)).await?;
     let output_root_with_hash = OutputRootWithBlockHash::new(block_hash, output_root);
+    info!(
+        target: "client",
+        "Produced L2 block #{number} with output root {output_root}",
+        number = number,
+        output_root = output_root
+    );
 
     ////////////////////////////////////////////////////////////////
     //                          EPILOGUE                          //
