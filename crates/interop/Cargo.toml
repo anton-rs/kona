@@ -19,7 +19,7 @@ tracing.workspace = true
 
 # Alloy
 alloy-primitives = { workspace = true, features = ["rlp"] }
-alloy-sol-types = "0.8.18"
+alloy-sol-types.workspace = true
 alloy-consensus.workspace = true
 alloy-rlp.workspace = true
 op-alloy-consensus.workspace = true
