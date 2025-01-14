@@ -49,6 +49,7 @@ run-client-asterisc block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc ver
     --input $STATE_PATH \
     -- \
     $HOST_BIN_PATH \
+    single \
     --l1-head $L1_HEAD \
     --agreed-l2-head-hash $AGREED_L2_HEAD_HASH \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
@@ -96,6 +97,7 @@ run-client-native block_number l1_rpc l1_beacon_rpc l2_rpc rollup_node_rpc rollu
 
   echo "Running host program with native client program..."
   cargo r --bin kona-host --release -- \
+    single \
     --l1-head $L1_HEAD \
     --agreed-l2-head-hash $AGREED_L2_HEAD_HASH \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
@@ -125,6 +127,7 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
 
   echo "Running host program with native client program..."
   cargo r --bin kona-host --release -- \
+    single \
     --l1-head $L1_HEAD \
     --agreed-l2-head-hash $AGREED_L2_HEAD_HASH \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
@@ -169,6 +172,7 @@ run-client-asterisc-offline block_number l2_claim l2_output_root l2_head l1_head
     --input $STATE_PATH \
     -- \
     $HOST_BIN_PATH \
+    single \
     --l1-head $L1_HEAD \
     --agreed-l2-head-hash $AGREED_L2_HEAD_HASH \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
