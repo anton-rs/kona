@@ -24,10 +24,10 @@ pub enum PreState {
 impl Encodable for PreState {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         match self {
-            PreState::SuperRoot(super_root) => {
+            Self::SuperRoot(super_root) => {
                 super_root.encode(out);
             }
-            PreState::TransitionState(transition_state) => {
+            Self::TransitionState(transition_state) => {
                 transition_state.encode(out);
             }
         }
@@ -43,12 +43,12 @@ impl Decodable for PreState {
         match buf[0] {
             TRANSITION_STATE_VERSION => {
                 let transition_state = TransitionState::decode(buf)?;
-                Ok(PreState::TransitionState(transition_state))
+                Ok(Self::TransitionState(transition_state))
             }
             SUPER_ROOT_VERSION => {
                 let super_root =
                     SuperRoot::decode(buf).map_err(|_| alloy_rlp::Error::UnexpectedString)?;
-                Ok(PreState::SuperRoot(super_root))
+                Ok(Self::SuperRoot(super_root))
             }
             _ => Err(alloy_rlp::Error::Custom("invalid version byte")),
         }
@@ -70,7 +70,11 @@ pub struct TransitionState {
 
 impl TransitionState {
     /// Create a new [TransitionState] with the given pre-state, pending progress, and step number.
-    pub fn new(pre_state: SuperRoot, pending_progress: Vec<OptimisticBlock>, step: u64) -> Self {
+    pub const fn new(
+        pre_state: SuperRoot,
+        pending_progress: Vec<OptimisticBlock>,
+        step: u64,
+    ) -> Self {
         Self { pre_state, pending_progress, step }
     }
 
@@ -138,8 +142,8 @@ pub struct OptimisticBlock {
 }
 
 impl OptimisticBlock {
-    /// Create a new [OutputRootWithBlockHash] with the given block hash and output root hash.
-    pub fn new(block_hash: B256, output_root: B256) -> Self {
+    /// Create a new [OptimisticBlock] with the given block hash and output root hash.
+    pub const fn new(block_hash: B256, output_root: B256) -> Self {
         Self { block_hash, output_root }
     }
 }
@@ -177,7 +181,8 @@ mod test {
     fn test_arbitrary_pre_state_roundtrip() {
         let mut bytes = [0u8; 1024];
         rand::thread_rng().fill(bytes.as_mut_slice());
-        let pre_state = super::PreState::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
+        let pre_state =
+            super::PreState::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 
         let mut rlp_buf = Vec::with_capacity(pre_state.length());
         pre_state.encode(&mut rlp_buf);

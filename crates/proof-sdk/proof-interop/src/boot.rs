@@ -1,11 +1,11 @@
 //! This module contains the prologue phase of the client program, pulling in the boot information
 //! through the `PreimageOracle` ABI as local keys.
 
-use kona_proof::errors::OracleProviderError;
 use alloy_primitives::{B256, U256};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
-use op_alloy_genesis::RollupConfig;
+use kona_proof::errors::OracleProviderError;
 use maili_registry::ROLLUP_CONFIGS;
+use op_alloy_genesis::RollupConfig;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -121,4 +121,3 @@ impl BootInfo {
         })
     }
 }
-

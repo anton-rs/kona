@@ -62,7 +62,8 @@ pub enum HintType {
     L2Code,
     /// A hint that specifies the preimage of the agreed upon pre-state claim.
     AgreedPreState,
-    /// A hint that specifies the preimage of an L2 output root within the agreed upon pre-state, by chain ID.
+    /// A hint that specifies the preimage of an L2 output root within the agreed upon pre-state,
+    /// by chain ID.
     L2OutputRoot,
     /// A hint that specifies the state node in the L2 state trie.
     L2StateNode,
