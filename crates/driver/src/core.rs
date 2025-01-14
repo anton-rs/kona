@@ -73,7 +73,7 @@ where
         &mut self,
         cfg: &RollupConfig,
         mut target: Option<u64>,
-    ) -> DriverResult<(u64, B256), E::Error> {
+    ) -> DriverResult<(u64, B256, B256), E::Error> {
         loop {
             // Check if we have reached the target block number.
             if let Some(tb) = target {
@@ -81,6 +81,7 @@ where
                     info!(target: "client", "Derivation complete, reached L2 safe head.");
                     return Ok((
                         self.cursor.l2_safe_head().block_info.number,
+                        self.cursor.l2_safe_head().block_info.hash,
                         *self.cursor.l2_safe_head_output_root(),
                     ));
                 }

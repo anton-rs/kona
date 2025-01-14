@@ -2355,6 +2355,7 @@ dependencies = [
  "kona-mpt",
  "kona-preimage",
  "kona-proof",
+ "kona-proof-interop",
  "kona-std-fpvm",
  "kona-std-fpvm-proc",
  "lru",
