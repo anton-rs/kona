@@ -40,14 +40,16 @@ where
                     info!(target: "client_derivation_driver", "Advanced origin")
                 }
                 StepResult::OriginAdvanceErr(e) | StepResult::StepFailed(e) => {
-                    warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e);
-
                     // Break the loop unless the error signifies that there is not enough data to
                     // complete the current step. In this case, we retry the step to see if other
                     // stages can make progress.
                     match e {
-                        PipelineErrorKind::Temporary(_) => continue,
+                        PipelineErrorKind::Temporary(_) => {
+                            trace!(target: "client_derivation_driver", "Failed to step derivation pipeline temporarily: {:?}", e);
+                            continue
+                        }
                         PipelineErrorKind::Reset(e) => {
+                            warn!(target: "client_derivation_driver", "Failed to step derivation pipeline due to reset: {:?}", e);
                             let system_config = self
                                 .system_config_by_number(l2_safe_head.block_info.number)
                                 .await?;
@@ -85,7 +87,10 @@ where
                                 .await?;
                             }
                         }
-                        PipelineErrorKind::Critical(_) => return Err(e),
+                        PipelineErrorKind::Critical(_) => {
+                            warn!(target: "client_derivation_driver", "Failed to step derivation pipeline: {:?}", e);
+                            return Err(e)
+                        }
                     }
                 }
             }

@@ -60,6 +60,7 @@ see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
 - [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
 - [`derive`](./crates/derive): `no_std` compatible implementation of the [derivation pipeline][g-derivation-pipeline].
   - [`driver`](./crates/driver): Stateful derivation pipeline driver.
+- [`interop`](./crates/interop): Core functionality and primitives for the [Interop feature](https://specs.optimism.io/interop/overview.html) of the OP Stack.
 
 **Proof SDK**
 
@@ -86,7 +87,7 @@ getting started with building your own programs, and a reference for the librari
 [cannon-rs]: https://github.com/op-rs/cannon-rs
 [badboi-cannon-rs]: https://github.com/BadBoiLabs/cannon-rs
 [asterisc]: https://github.com/etheruem-optimism/asterisc
-[fpp-specs]: https://specs.optimism.io/experimental/fault-proof/index.html
+[fpp-specs]: https://specs.optimism.io/fault-proof/index.html
 [book]: https://op-rs.github.io/kona/
 [op-succinct]: https://github.com/succinctlabs/op-succinct
 [op-labs]: https://github.com/ethereum-optimism
@@ -94,4 +95,4 @@ getting started with building your own programs, and a reference for the librari
 [g-output-root]: https://specs.optimism.io/glossary.html#l2-output-root
 [g-derivation-pipeline]: https://specs.optimism.io/protocol/derivation.html#l2-chain-derivation-pipeline
 [g-fault-proof-vm]: https://specs.optimism.io/experimental/fault-proof/index.html#fault-proof-vm
-[g-preimage-oracle]: https://specs.optimism.io/experimental/fault-proof/index.html#pre-image-oracle
+[g-preimage-oracle]: https://specs.optimism.io/fault-proof/index.html#pre-image-oracle
