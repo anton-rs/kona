@@ -148,7 +148,6 @@ where
     //                          EPILOGUE                          //
     ////////////////////////////////////////////////////////////////
 
-    // TODO(interop): incl. L2 block hash.
     let optimistic_block = OptimisticBlock::new(block_hash, output_root);
     let transition_state = match pre {
         PreState::SuperRoot(super_root) => {
