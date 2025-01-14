@@ -13,7 +13,7 @@ use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
 use clap::{
     builder::styling::{AnsiColor, Color, Style},
-    ArgAction, Parser,
+    Parser,
 };
 use op_alloy_genesis::RollupConfig;
 use reqwest::Client;
@@ -26,9 +26,6 @@ use tracing::error;
 #[derive(Default, Parser, Serialize, Clone, Debug)]
 #[command(styles = cli_styles())]
 pub struct SingleChainHostCli {
-    /// Verbosity level (0-2)
-    #[arg(long, short, action = ArgAction::Count)]
-    pub v: u8,
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256, env)]
     pub l1_head: B256,
@@ -131,9 +128,9 @@ impl SingleChainHostCli {
 
     /// Returns `true` if the host is running in offline mode.
     pub const fn is_offline(&self) -> bool {
-        self.l1_node_address.is_none() &&
-            self.l2_node_address.is_none() &&
-            self.l1_beacon_address.is_none()
+        self.l1_node_address.is_none()
+            && self.l2_node_address.is_none()
+            && self.l1_beacon_address.is_none()
     }
 
     /// Returns an HTTP provider for the given URL.
