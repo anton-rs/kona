@@ -296,8 +296,14 @@ where
                 let excess_blob_gas = if self.config.is_ecotone_active(parent_header.timestamp) {
                     let parent_excess_blob_gas = parent_header.excess_blob_gas.unwrap_or_default();
                     let parent_blob_gas_used = parent_header.blob_gas_used.unwrap_or_default();
-                    // TODO: Calculate actual target
-                    calc_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used, 0)
+                    const TARGET_BLOB_NUMBER_PER_BLOCK: u64 = 3;
+                    const TARGET_BLOB_GAS_PER_BLOCK: u64 =
+                        TARGET_BLOB_NUMBER_PER_BLOCK * revm::primitives::GAS_PER_BLOB;
+                    calc_excess_blob_gas(
+                        parent_excess_blob_gas,
+                        parent_blob_gas_used,
+                        TARGET_BLOB_GAS_PER_BLOCK,
+                    )
                 } else {
                     // For the first post-fork block, both blob gas fields are evaluated to 0.
                     calc_excess_blob_gas(0, 0, 0)
