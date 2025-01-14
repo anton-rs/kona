@@ -2555,6 +2555,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "kona-proof-interop"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "alloy-rlp",
+ "arbitrary",
+ "kona-interop",
+ "kona-preimage",
+ "kona-proof",
+ "maili-registry",
+ "op-alloy-genesis",
+ "rand",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "kona-std-fpvm"
 version = "0.1.2"
 dependencies = [

@@ -1,0 +1,45 @@
+[package]
+name = "kona-proof-interop"
+description = "OP Stack Proof SDK with Interop support"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Workspace
+kona-preimage.workspace = true
+kona-interop.workspace = true
+kona-proof.workspace = true
+
+# Maili
+maili-registry.workspace = true
+
+# Alloy
+alloy-rlp.workspace = true
+alloy-primitives.workspace = true
+
+# Op Alloy
+op-alloy-genesis = { workspace = true, features = ["serde"] }
+
+# General
+serde.workspace = true
+tracing.workspace = true
+serde_json.workspace = true
+
+# Arbitrary
+arbitrary = { version = "1.4", features = ["derive"], optional = true }
+
+[dev-dependencies]
+alloy-primitives = { workspace = true, features = ["rlp", "arbitrary"] }
+kona-interop = { workspace = true, features = ["arbitrary"] }
+arbitrary = { version = "1.4", features = ["derive"] }
+rand.workspace = true
+
+[features]
+arbitrary = ["dep:arbitrary", "alloy-primitives/arbitrary", "kona-interop/arbitrary"]
