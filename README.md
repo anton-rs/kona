@@ -65,6 +65,7 @@ see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
 **Proof SDK**
 
 - [`kona-proof`](./crates/proof-sdk/proof): High level OP Stack state transition proof SDK.
+- [`kona-proof-interop`](./crates/proof-sdk/proof-interop): Extension of `kona-proof` with interop support.
 - [`preimage`](./crates/proof-sdk/preimage): High level interfaces to the [`PreimageOracle`][fpp-specs] ABI.
 - [`std-fpvm`](./crates/proof-sdk/std-fpvm): Platform specific [Fault Proof VM][g-fault-proof-vm] kernel APIs.
 - [`std-fpvm-proc`](./crates/proof-sdk/std-fpvm-proc): Proc macro for [Fault Proof Program][fpp-specs] entrypoints.
