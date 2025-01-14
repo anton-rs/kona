@@ -40,7 +40,7 @@ pub enum FaultProofProgramError {
     Driver(#[from] DriverError<ExecutorError>),
     /// An error occurred during RLP decoding.
     #[error("RLP decoding error: {0}")]
-    RLPDecodingError(#[from] alloy_rlp::Error),
+    RLPDecodingError(alloy_rlp::Error),
 }
 
 /// Executes the fault proof program with the given [PreimageOracleClient] and [HintWriterClient].
@@ -76,7 +76,8 @@ where
 
     // Load in the pre-state from the preimage oracle and fetch the L2 safe head block hash.
     let pre =
-        PreState::decode(&mut read_raw_pre_state(oracle.as_ref(), boot.as_ref()).await?.as_ref())?;
+        PreState::decode(&mut read_raw_pre_state(oracle.as_ref(), boot.as_ref()).await?.as_ref())
+            .map_err(FaultProofProgramError::RLPDecodingError)?;
     let safe_head_hash = fetch_l2_safe_head_hash(oracle.as_ref(), &pre).await?;
 
     // Instantiate the L1 EL + CL provider and the L2 EL provider.
