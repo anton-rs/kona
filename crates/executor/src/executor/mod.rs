@@ -172,8 +172,8 @@ where
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
             let block_available_gas = (gas_limit - cumulative_gas_used) as u128;
-            if (transaction.gas_limit() as u128) > block_available_gas &&
-                (is_regolith || !transaction.is_system_transaction())
+            if (transaction.gas_limit() as u128) > block_available_gas
+                && (is_regolith || !transaction.is_system_transaction())
             {
                 return Err(ExecutorError::BlockGasLimitExceeded);
             }
@@ -296,10 +296,11 @@ where
                 let excess_blob_gas = if self.config.is_ecotone_active(parent_header.timestamp) {
                     let parent_excess_blob_gas = parent_header.excess_blob_gas.unwrap_or_default();
                     let parent_blob_gas_used = parent_header.blob_gas_used.unwrap_or_default();
-                    calc_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used)
+                    // TODO: Calculate actual target
+                    calc_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used, 0)
                 } else {
                     // For the first post-fork block, both blob gas fields are evaluated to 0.
-                    calc_excess_blob_gas(0, 0)
+                    calc_excess_blob_gas(0, 0, 0)
                 };
 
                 (Some(0), Some(excess_blob_gas as u128))
