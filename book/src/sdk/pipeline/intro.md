@@ -182,7 +182,7 @@ use core::iter::Iterator;
 let l2_safe_head = L2BlockInfo::default();
 loop {
    if matches!(pipeline.step(l2_safe_head).await, StepResult::PreparedAttributes) {
-      // The pipeline has succesfully prepared payload attributes, break the loop.
+      // The pipeline has successfully prepared payload attributes, break the loop.
       break;
    }
 }
