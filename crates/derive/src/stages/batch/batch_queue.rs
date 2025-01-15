@@ -15,7 +15,7 @@ use maili_protocol::{
 use op_alloy_genesis::RollupConfig;
 
 /// [BatchQueue] is responsible for o rdering unordered batches
-/// and gnerating empty batches when the sequence window has passed.
+/// and generating empty batches when the sequence window has passed.
 ///
 /// It receives batches that are tagged with the L1 Inclusion block of the batch.
 /// It only considers batches that are inside the sequencing window of a specific L1 Origin.
