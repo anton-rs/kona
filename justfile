@@ -30,7 +30,7 @@ action-tests test_name='Test_ProgramAction' *args='':
 
   if [ ! -d "monorepo/.devnet" ]; then
     echo "Building devnet allocs for the monorepo"
-    (cd monorepo && make devnet-allocs)
+    (cd monorepo/packages/contracts-bedrock && forge build)
   fi
 
   echo "Building host program for the native target"
