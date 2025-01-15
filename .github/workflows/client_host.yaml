@@ -8,12 +8,16 @@ env:
   CARGO_TERM_COLOR: always
 jobs:
   host-client-offline-runs:
-    name: ${{ matrix.target}} | ${{ matrix.name }}
+    name: ${{ matrix.target}} | ${{ matrix.isa }} | ${{ matrix.name }}
     strategy:
       matrix:
         target: ["native", "asterisc"]
         name: ["OP Sepolia (Granite) - Block #16491249"]
+        isa: ["64", "32"]
     runs-on: ubuntu-latest
+    if: "${{ matrix.isa == '32' }}"
+    container:
+      image: "i386/ubuntu:latest"
     timeout-minutes: 20
     steps:
       - name: Checkout sources
