@@ -41,6 +41,7 @@ spin.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
 maili-registry.workspace = true
+maili-consensus.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 tracing = { workspace = true, features = ["std"] }

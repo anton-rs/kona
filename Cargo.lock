@@ -2406,6 +2406,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-rpc-types-engine",
  "async-trait",
+ "maili-consensus",
  "maili-genesis",
  "maili-protocol",
  "maili-registry",

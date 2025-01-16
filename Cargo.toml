@@ -79,6 +79,7 @@ kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.2
 maili-genesis = { version = "0.1.5", default-features = false }
 maili-protocol = { version = "0.1.5", default-features = false }
 maili-registry = { version = "0.1.5", default-features = false }
+maili-consensus = { version = "0.1.5", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.10", default-features = false }
