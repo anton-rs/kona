@@ -6,8 +6,8 @@ use alloy_consensus::{Header, Receipt, TxEnvelope};
 use alloy_primitives::B256;
 use async_trait::async_trait;
 use core::fmt::Display;
+use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{BatchValidationProvider, BlockInfo};
-use op_alloy_genesis::{RollupConfig, SystemConfig};
 
 /// Describes the functionality of a data source that can provide information from the blockchain.
 #[async_trait]

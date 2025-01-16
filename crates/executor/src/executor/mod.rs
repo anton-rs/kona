@@ -12,8 +12,8 @@ use alloy_consensus::{Header, Sealable, Transaction, EMPTY_OMMER_ROOT_HASH, EMPT
 use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::{keccak256, logs_bloom, Bytes, Log, B256, U256};
 use kona_mpt::{ordered_trie_with_encoder, TrieHinter};
+use maili_genesis::RollupConfig;
 use op_alloy_consensus::{OpReceiptEnvelope, OpTxEnvelope};
-use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
@@ -466,7 +466,7 @@ mod test {
     use alloy_rpc_types_engine::PayloadAttributes;
     use anyhow::{anyhow, Result};
     use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
-    use op_alloy_genesis::OP_MAINNET_BASE_FEE_PARAMS;
+    use maili_genesis::OP_MAINNET_BASE_FEE_PARAMS;
     use serde::Deserialize;
     use std::collections::HashMap;
 

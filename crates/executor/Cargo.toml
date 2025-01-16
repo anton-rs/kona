@@ -15,6 +15,9 @@ workspace = true
 # Workspace
 kona-mpt.workspace = true
 
+# Maili
+maili-genesis.workspace = true
+
 # Alloy
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp"] }
@@ -22,7 +25,6 @@ alloy-eips.workspace = true
 alloy-rlp.workspace = true
 
 # Op Alloy
-op-alloy-genesis.workspace = true
 op-alloy-consensus.workspace = true
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 

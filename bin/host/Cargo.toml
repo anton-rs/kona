@@ -36,7 +36,7 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-rpc-types-beacon.workspace = true
 
 # Op Alloy
-op-alloy-genesis = { workspace = true, features = ["std", "serde"] }
+maili-genesis = { workspace = true, features = ["std", "serde"] }
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # Revm

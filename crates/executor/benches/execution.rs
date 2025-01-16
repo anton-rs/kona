@@ -9,7 +9,7 @@ use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use kona_executor::{StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
-use op_alloy_genesis::{RollupConfig, OP_MAINNET_BASE_FEE_PARAMS};
+use maili_genesis::{RollupConfig, OP_MAINNET_BASE_FEE_PARAMS};
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use pprof::criterion::{Output, PProfProfiler};
 use serde::Deserialize;

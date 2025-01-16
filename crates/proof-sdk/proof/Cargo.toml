@@ -22,6 +22,7 @@ kona-executor.workspace = true
 # Maili
 maili-protocol.workspace = true
 maili-registry.workspace = true
+maili-genesis = { workspace = true, features = ["serde"] }
 
 # Alloy
 alloy-rlp.workspace = true
@@ -31,7 +32,6 @@ alloy-primitives.workspace = true
 
 # Op Alloy
 op-alloy-consensus.workspace = true
-op-alloy-genesis = { workspace = true, features = ["serde"] }
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # General

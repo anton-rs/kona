@@ -2,8 +2,8 @@
 
 use alloc::boxed::Box;
 use async_trait::async_trait;
+use maili_genesis::SystemConfig;
 use maili_protocol::BlockInfo;
-use op_alloy_genesis::SystemConfig;
 
 /// Provides the [BlockInfo] and [SystemConfig] for the stack to reset the stages.
 #[async_trait]

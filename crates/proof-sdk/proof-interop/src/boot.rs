@@ -4,8 +4,8 @@
 use alloy_primitives::{B256, U256};
 use kona_preimage::{PreimageKey, PreimageOracleClient};
 use kona_proof::errors::OracleProviderError;
+use maili_genesis::RollupConfig;
 use maili_registry::ROLLUP_CONFIGS;
-use op_alloy_genesis::RollupConfig;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 

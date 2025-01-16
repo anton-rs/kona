@@ -15,7 +15,7 @@ use clap::{
     builder::styling::{AnsiColor, Color, Style},
     Parser,
 };
-use op_alloy_genesis::RollupConfig;
+use maili_genesis::RollupConfig;
 use reqwest::Client;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};

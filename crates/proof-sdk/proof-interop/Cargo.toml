@@ -19,13 +19,11 @@ kona-proof.workspace = true
 
 # Maili
 maili-registry.workspace = true
+maili-genesis = { workspace = true, features = ["serde"] }
 
 # Alloy
 alloy-rlp.workspace = true
 alloy-primitives.workspace = true
-
-# Op Alloy
-op-alloy-genesis = { workspace = true, features = ["serde"] }
 
 # General
 serde.workspace = true

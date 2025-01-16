@@ -9,10 +9,10 @@ use crate::{
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use maili_genesis::RollupConfig;
 use maili_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch, SpanBatch,
 };
-use op_alloy_genesis::RollupConfig;
 
 /// Provides [Batch]es for the [BatchStream] stage.
 #[async_trait]

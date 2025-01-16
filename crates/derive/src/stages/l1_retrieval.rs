@@ -23,7 +23,7 @@ pub trait L1RetrievalProvider {
     /// [L1Traversal]: crate::stages::L1Traversal
     async fn next_l1_block(&mut self) -> PipelineResult<Option<BlockInfo>>;
 
-    /// Returns the batcher [Address] from the [op_alloy_genesis::SystemConfig].
+    /// Returns the batcher [Address] from the [maili_genesis::SystemConfig].
     fn batcher_addr(&self) -> Address;
 }
 

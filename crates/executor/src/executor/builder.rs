@@ -4,7 +4,7 @@ use super::StatelessL2BlockExecutor;
 use crate::db::{TrieDB, TrieDBProvider};
 use alloy_consensus::{Header, Sealable, Sealed};
 use kona_mpt::TrieHinter;
-use op_alloy_genesis::RollupConfig;
+use maili_genesis::RollupConfig;
 use revm::{db::State, handler::register::EvmHandler};
 
 /// A type alias for the [revm::handler::register::HandleRegister] for kona's block executor.

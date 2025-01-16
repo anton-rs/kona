@@ -3,7 +3,7 @@
 use crate::{db::TrieDB, errors::ExecutorResult, TrieDBProvider};
 use alloy_primitives::{address, b256, hex, Address, Bytes, B256};
 use kona_mpt::TrieHinter;
-use op_alloy_genesis::RollupConfig;
+use maili_genesis::RollupConfig;
 use revm::{
     primitives::{Account, Bytecode, HashMap},
     DatabaseCommit, State,
