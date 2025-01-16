@@ -6,8 +6,8 @@ use alloy_consensus::Header;
 use alloy_eips::{eip1559::BaseFeeParams, eip7840::BlobParams};
 use alloy_primitives::{TxKind, U256};
 use kona_mpt::TrieHinter;
+use maili_genesis::RollupConfig;
 use op_alloy_consensus::OpTxEnvelope;
-use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::primitives::{
     BlobExcessGasAndPrice, BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, OptimismFields, SpecId,

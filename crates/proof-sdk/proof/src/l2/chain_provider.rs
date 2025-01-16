@@ -2,7 +2,7 @@
 
 use crate::{errors::OracleProviderError, HintType};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use alloy_consensus::{BlockBody, Header};
+use alloy_consensus::{Block, BlockBody, Header};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
@@ -11,9 +11,9 @@ use kona_derive::traits::L2ChainProvider;
 use kona_executor::TrieDBProvider;
 use kona_mpt::{OrderedListWalker, TrieHinter, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{to_system_config, BatchValidationProvider, L2BlockInfo};
 use op_alloy_consensus::{OpBlock, OpTxEnvelope};
-use op_alloy_genesis::{RollupConfig, SystemConfig};
 
 /// The oracle-backed L2 chain provider for the client program.
 #[derive(Debug, Clone)]
@@ -56,6 +56,7 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
 #[async_trait]
 impl<T: CommsClient + Send + Sync> BatchValidationProvider for OracleL2ChainProvider<T> {
     type Error = OracleProviderError;
+    type Transaction = op_alloy_consensus::OpTxEnvelope;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
         // Get the block at the given number.
@@ -66,7 +67,10 @@ impl<T: CommsClient + Send + Sync> BatchValidationProvider for OracleL2ChainProv
             .map_err(OracleProviderError::BlockInfo)
     }
 
-    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock, Self::Error> {
+    async fn block_by_number(
+        &mut self,
+        number: u64,
+    ) -> Result<Block<Self::Transaction>, Self::Error> {
         // Fetch the header for the given block number.
         let header @ Header { transactions_root, timestamp, .. } =
             self.header_by_number(number).await?;

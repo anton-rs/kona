@@ -10,10 +10,10 @@ use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::{hex, Bytes};
 use async_trait::async_trait;
 use core::fmt::Debug;
-use maili_protocol::{BlockInfo, Channel};
-use op_alloy_genesis::{
+use maili_genesis::{
     RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
 };
+use maili_protocol::{BlockInfo, Channel};
 
 /// The [ChannelAssembler] stage is responsible for assembling the [Frame]s from the [FrameQueue]
 /// stage into a raw compressed [Channel].
@@ -191,10 +191,10 @@ mod test {
         test_utils::{CollectingLayer, TestNextFrameProvider, TraceStorage},
     };
     use alloc::{sync::Arc, vec};
-    use maili_protocol::BlockInfo;
-    use op_alloy_genesis::{
+    use maili_genesis::{
         RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
     };
+    use maili_protocol::BlockInfo;
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
 

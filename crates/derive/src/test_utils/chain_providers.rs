@@ -5,12 +5,12 @@ use crate::{
     traits::{ChainProvider, L2ChainProvider},
 };
 use alloc::{boxed::Box, string::ToString, sync::Arc, vec::Vec};
-use alloy_consensus::{Header, Receipt, TxEnvelope};
+use alloy_consensus::{Block, Header, Receipt, TxEnvelope};
 use alloy_primitives::{map::HashMap, B256};
 use async_trait::async_trait;
+use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 use op_alloy_consensus::OpBlock;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
 use thiserror::Error;
 
 /// A mock chain provider for testing.
@@ -177,6 +177,7 @@ impl TestL2ChainProvider {
 #[async_trait]
 impl BatchValidationProvider for TestL2ChainProvider {
     type Error = TestProviderError;
+    type Transaction = op_alloy_consensus::OpTxEnvelope;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
         if self.short_circuit {
@@ -189,7 +190,10 @@ impl BatchValidationProvider for TestL2ChainProvider {
             .ok_or_else(|| TestProviderError::BlockNotFound)
     }
 
-    async fn block_by_number(&mut self, number: u64) -> Result<OpBlock, Self::Error> {
+    async fn block_by_number(
+        &mut self,
+        number: u64,
+    ) -> Result<Block<Self::Transaction>, Self::Error> {
         self.op_blocks
             .iter()
             .find(|p| p.header.number == number)

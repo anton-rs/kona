@@ -3,8 +3,8 @@
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::iter::Iterator;
+use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::L2BlockInfo;
-use op_alloy_genesis::{RollupConfig, SystemConfig};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 use crate::{errors::PipelineErrorKind, traits::OriginProvider, types::StepResult};
