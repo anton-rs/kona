@@ -5,6 +5,7 @@
 pub mod cli;
 pub use cli::{init_tracing_subscriber, HostCli};
 
+pub mod interop;
 pub mod single;
 
 pub mod eth;

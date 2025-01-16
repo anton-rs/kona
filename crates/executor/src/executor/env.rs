@@ -73,7 +73,7 @@ where
         let blob_excess_gas_and_price = parent_header
             .next_block_excess_blob_gas(BlobParams::cancun())
             .or_else(|| spec_id.is_enabled_in(SpecId::ECOTONE).then_some(0))
-            .map(BlobExcessGasAndPrice::new);
+            .map(|e| BlobExcessGasAndPrice::new(e, spec_id.is_enabled_in(SpecId::PRAGUE)));
         let next_block_base_fee =
             parent_header.next_block_base_fee(*base_fee_params).unwrap_or_default();
 

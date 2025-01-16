@@ -1,4 +1,4 @@
-//! This module contains all CLI-specific code for the host binary.
+//! This module contains all CLI-specific code for the single chain entrypoint.
 
 use super::{start_server, start_server_and_native_client, LocalKeyValueStore};
 use crate::{

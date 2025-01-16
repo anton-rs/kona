@@ -1,6 +1,6 @@
 //! This module contains all CLI-specific code for the host binary.
 
-use crate::single::SingleChainHostCli;
+use crate::{interop::InteropHostCli, single::SingleChainHostCli};
 use clap::{
     builder::styling::{AnsiColor, Color, Style},
     ArgAction, Parser, Subcommand,
@@ -8,7 +8,7 @@ use clap::{
 use serde::Serialize;
 
 mod parser;
-pub(crate) use parser::parse_b256;
+pub(crate) use parser::{parse_b256, parse_bytes};
 
 mod tracing_util;
 pub use tracing_util::init_tracing_subscriber;
@@ -35,9 +35,12 @@ pub struct HostCli {
 
 /// Operation modes for the host binary.
 #[derive(Subcommand, Serialize, Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum HostMode {
     /// Run the host in single-chain mode.
     Single(SingleChainHostCli),
+    /// Run the host in super-chain (interop) mode.
+    Super(InteropHostCli),
 }
 
 /// Styles for the CLI application.

@@ -14,7 +14,7 @@ use maili_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch,
 };
 
-/// [BatchQueue] is responsible for o rdering unordered batches
+/// [BatchQueue] is responsible for ordering unordered batches
 /// and generating empty batches when the sequence window has passed.
 ///
 /// It receives batches that are tagged with the L1 Inclusion block of the batch.

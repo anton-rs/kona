@@ -14,6 +14,9 @@ async fn main() -> Result<()> {
         HostMode::Single(cfg) => {
             cfg.run().await?;
         }
+        HostMode::Super(cfg) => {
+            cfg.run().await?;
+        }
     }
 
     info!("Exiting host program.");

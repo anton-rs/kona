@@ -18,10 +18,13 @@ kona-derive.workspace = true
 kona-std-fpvm.workspace = true
 kona-preimage = { workspace = true, features = ["std"] }
 kona-proof = { workspace = true, features = ["std"] }
+kona-proof-interop.workspace = true
 kona-client.workspace = true
 
 # Maili
 maili-protocol = { workspace = true, features = ["std", "serde"] }
+maili-registry.workspace = true
+maili-genesis = { workspace = true, features = ["std", "serde"] }
 
 # Alloy
 alloy-rlp.workspace = true
@@ -36,7 +39,6 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-rpc-types-beacon.workspace = true
 
 # Op Alloy
-maili-genesis = { workspace = true, features = ["std", "serde"] }
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # Revm

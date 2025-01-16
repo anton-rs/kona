@@ -1,4 +1,4 @@
-//! This module contains the single-chain mode for the host.
+//! This module contains the super-chain (interop) mode for the host.
 
 use crate::{kv::KeyValueStore, server::PreimageServer};
 use anyhow::Result;
@@ -11,17 +11,17 @@ use tokio::{sync::RwLock, task};
 use tracing::info;
 
 mod cli;
-pub use cli::SingleChainHostCli;
+pub use cli::InteropHostCli;
 
 mod local_kv;
 pub use local_kv::LocalKeyValueStore;
 
 mod fetcher;
-pub use fetcher::SingleChainFetcher;
+pub use fetcher::InteropFetcher;
 
 /// Starts the [PreimageServer] in the primary thread. In this mode, the host program has been
 /// invoked by the Fault Proof VM and the client program is running in the parent process.
-pub async fn start_server(cfg: SingleChainHostCli) -> Result<()> {
+pub async fn start_server(cfg: InteropHostCli) -> Result<()> {
     let (preimage_chan, hint_chan) = (
         FileChannel::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
         FileChannel::new(FileDescriptor::HintRead, FileDescriptor::HintWrite),
@@ -30,13 +30,13 @@ pub async fn start_server(cfg: SingleChainHostCli) -> Result<()> {
     let hint_reader = HintReader::new(hint_chan);
     let kv_store = cfg.construct_kv_store();
     let fetcher = if !cfg.is_offline() {
-        let (l1_provider, blob_provider, l2_provider) = cfg.create_providers().await?;
-        Some(Arc::new(RwLock::new(SingleChainFetcher::new(
+        let (l1_provider, blob_provider, l2_providers) = cfg.create_providers().await?;
+        Some(Arc::new(RwLock::new(InteropFetcher::new(
+            cfg,
             kv_store.clone(),
             l1_provider,
             blob_provider,
-            l2_provider,
-            cfg.agreed_l2_head_hash,
+            l2_providers,
         ))))
     } else {
         None
@@ -60,18 +60,18 @@ pub async fn start_server(cfg: SingleChainHostCli) -> Result<()> {
 /// - `Ok(exit_code)` if the client program exits successfully.
 /// - `Err(_)` if the client program failed to execute, was killed by a signal, or the host program
 ///   exited first.
-pub async fn start_server_and_native_client(cfg: SingleChainHostCli) -> Result<i32> {
+pub async fn start_server_and_native_client(cfg: InteropHostCli) -> Result<i32> {
     let hint_chan = BidirectionalChannel::new()?;
     let preimage_chan = BidirectionalChannel::new()?;
     let kv_store = cfg.construct_kv_store();
     let fetcher = if !cfg.is_offline() {
-        let (l1_provider, blob_provider, l2_provider) = cfg.create_providers().await?;
-        Some(Arc::new(RwLock::new(SingleChainFetcher::new(
+        let (l1_provider, blob_provider, l2_providers) = cfg.create_providers().await?;
+        Some(Arc::new(RwLock::new(InteropFetcher::new(
+            cfg,
             kv_store.clone(),
             l1_provider,
             blob_provider,
-            l2_provider,
-            cfg.agreed_l2_head_hash,
+            l2_providers,
         ))))
     } else {
         None
@@ -86,7 +86,7 @@ pub async fn start_server_and_native_client(cfg: SingleChainHostCli) -> Result<i
     ));
 
     // Start the client program in a separate child process.
-    let program_task = task::spawn(kona_client::single::run(
+    let program_task = task::spawn(kona_client::interop::run(
         OracleReader::new(preimage_chan.client),
         HintWriter::new(hint_chan.client),
         None,
@@ -104,7 +104,7 @@ pub async fn start_server_and_native_client(cfg: SingleChainHostCli) -> Result<i
 /// mode.
 pub async fn start_native_preimage_server<KV>(
     kv_store: Arc<RwLock<KV>>,
-    fetcher: Option<Arc<RwLock<SingleChainFetcher<KV>>>>,
+    fetcher: Option<Arc<RwLock<InteropFetcher<KV>>>>,
     hint_chan: NativeChannel,
     preimage_chan: NativeChannel,
 ) -> Result<()>

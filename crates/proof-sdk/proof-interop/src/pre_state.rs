@@ -1,12 +1,19 @@
 //! Types for the pre-state claims used in the interop proof.
 
 use alloc::vec::Vec;
-use alloy_primitives::{keccak256, B256};
-use alloy_rlp::{Buf, Decodable, Encodable, RlpDecodable, RlpEncodable};
-use kona_interop::{SuperRoot, SUPER_ROOT_VERSION};
+use alloy_primitives::{b256, keccak256, Bytes, B256};
+use alloy_rlp::{Buf, Decodable, Encodable, Header, RlpDecodable, RlpEncodable};
+use kona_interop::{OutputRootWithChain, SuperRoot, SUPER_ROOT_VERSION};
 
 /// The current [TransitionState] encoding format version.
-pub const TRANSITION_STATE_VERSION: u8 = 255;
+pub(crate) const TRANSITION_STATE_VERSION: u8 = 255;
+
+/// The maximum number of steps allowed in a [TransitionState].
+pub const TRANSITION_STATE_MAX_STEPS: u64 = 2u64.pow(10) - 1;
+
+/// `keccak256("invalid")`
+pub const INVALID_TRANSITION_HASH: B256 =
+    b256!("ffd7db0f9d5cdeb49c4c9eba649d4dc6d852d64671e65488e57f58584992ac68");
 
 /// The [PreState] of the interop proof program can be one of two types: a [SuperRoot] or a
 /// [TransitionState]. The [SuperRoot] is the canonical state of the superchain, while the
@@ -19,6 +26,59 @@ pub enum PreState {
     SuperRoot(SuperRoot),
     /// The progress of a pending superchain state transition.
     TransitionState(TransitionState),
+}
+
+impl PreState {
+    /// Hashes the encoded [PreState] using [keccak256].
+    pub fn hash(&self) -> B256 {
+        let mut rlp_buf = Vec::with_capacity(self.length());
+        self.encode(&mut rlp_buf);
+        keccak256(&rlp_buf)
+    }
+
+    /// Transitions to the next state, appending the [OptimisticBlock] to the pending progress.
+    pub fn transition(self, optimistic_block: Option<OptimisticBlock>) -> Option<Self> {
+        match self {
+            Self::SuperRoot(super_root) => Some(Self::TransitionState(TransitionState::new(
+                super_root,
+                alloc::vec![optimistic_block?],
+                1,
+            ))),
+            Self::TransitionState(mut transition_state) => {
+                // If the transition state's pending progress contains the same number of states as
+                // the pre-state's output roots already, then we can either no-op
+                // the transition or finalize it.
+                if transition_state.pending_progress.len() ==
+                    transition_state.pre_state.output_roots.len()
+                {
+                    if transition_state.step == TRANSITION_STATE_MAX_STEPS {
+                        let super_root = SuperRoot::new(
+                            transition_state.pre_state.timestamp + 1,
+                            transition_state
+                                .pending_progress
+                                .iter()
+                                .zip(transition_state.pre_state.output_roots.iter())
+                                .map(|(optimistic_block, pre_state_output)| {
+                                    OutputRootWithChain::new(
+                                        pre_state_output.chain_id,
+                                        optimistic_block.output_root,
+                                    )
+                                })
+                                .collect(),
+                        );
+                        return Some(Self::SuperRoot(super_root));
+                    } else {
+                        transition_state.step += 1;
+                        return Some(Self::TransitionState(transition_state));
+                    };
+                }
+
+                transition_state.pending_progress.push(optimistic_block?);
+                transition_state.step += 1;
+                Some(Self::TransitionState(transition_state))
+            }
+        }
+    }
 }
 
 impl Encodable for PreState {
@@ -84,24 +144,30 @@ impl TransitionState {
         self.encode(&mut rlp_buf);
         keccak256(&rlp_buf)
     }
+
+    /// Returns the RLP payload length of the [TransitionState].
+    pub fn payload_length(&self) -> usize {
+        Header { list: false, payload_length: self.pre_state.encoded_length() }.length() +
+            self.pre_state.encoded_length() +
+            self.pending_progress.length() +
+            self.step.length()
+    }
 }
 
 impl Encodable for TransitionState {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         out.put_u8(TRANSITION_STATE_VERSION);
 
+        Header { list: true, payload_length: self.payload_length() }.encode(out);
+
         // The pre-state has special encoding, since it is not RLP. We encode the structure, and
         // then encode it as a RLP string.
-        let mut pre_state_buf = Vec::with_capacity(self.pre_state.encoded_length());
+        let mut pre_state_buf = Vec::new();
         self.pre_state.encode(&mut pre_state_buf);
-        pre_state_buf.encode(out);
+        Bytes::from(pre_state_buf).encode(out);
 
         self.pending_progress.encode(out);
         self.step.encode(out);
-    }
-
-    fn length(&self) -> usize {
-        self.pre_state.encoded_length() + self.pending_progress.length() + self.step.length()
     }
 }
 
@@ -117,10 +183,16 @@ impl Decodable for TransitionState {
         }
         buf.advance(1);
 
+        // Decode the RLP header.
+        let header = Header::decode(buf)?;
+        if !header.list {
+            return Err(alloy_rlp::Error::UnexpectedString);
+        }
+
         // The pre-state has special decoding, since it is not RLP. We decode the RLP string, and
         // then decode the structure.
-        let pre_state_buf = Vec::<u8>::decode(buf)?;
-        let pre_state = SuperRoot::decode(&mut pre_state_buf.as_slice())
+        let pre_state_buf = Bytes::decode(buf)?;
+        let pre_state = SuperRoot::decode(&mut pre_state_buf.as_ref())
             .map_err(|_| alloy_rlp::Error::UnexpectedString)?;
 
         // The rest of the fields are RLP encoded as normal.
