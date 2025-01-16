@@ -8,7 +8,7 @@ env:
   CARGO_TERM_COLOR: always
 jobs:
   host-client-offline-runs:
-    name: ${{ matrix.target}} | ${{ matrix.isa }} | ${{ matrix.name }}
+    name: ${{ matrix.target}} | ${{ matrix.container }} | ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
