@@ -85,15 +85,15 @@ impl HintType {
     pub async fn get_preimage<T: CommsClient>(
         &self,
         oracle: &T,
-        preimage: B256,
+        image: B256,
         preimage_key_type: PreimageKeyType,
     ) -> Result<Vec<u8>, OracleProviderError> {
         oracle
-            .write(&self.encode_with(&[preimage.as_ref()]))
+            .write(&self.encode_with(&[image.as_ref()]))
             .await
             .map_err(OracleProviderError::Preimage)?;
         oracle
-            .get(PreimageKey::new(*preimage, preimage_key_type))
+            .get(PreimageKey::new(*image, preimage_key_type))
             .await
             .map_err(OracleProviderError::Preimage)
     }
@@ -101,16 +101,16 @@ impl HintType {
     pub async fn get_exact_preimage<T: CommsClient>(
         &self,
         oracle: &T,
-        preimage: B256,
+        image: B256,
         preimage_key_type: PreimageKeyType,
         buf: &mut [u8],
     ) -> Result<(), OracleProviderError> {
         oracle
-            .write(&self.encode_with(&[preimage.as_ref()]))
+            .write(&self.encode_with(&[image.as_ref()]))
             .await
             .map_err(OracleProviderError::Preimage)?;
         oracle
-            .get_exact(PreimageKey::new(*preimage, preimage_key_type), buf)
+            .get_exact(PreimageKey::new(*image, preimage_key_type), buf)
             .await
             .map_err(OracleProviderError::Preimage)
     }
