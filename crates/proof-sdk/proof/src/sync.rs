@@ -1,21 +1,23 @@
 //! Sync Start
 
 use crate::{
-    errors::OracleProviderError, l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo,
+    errors::OracleProviderError, l1::OracleL1ChainProvider, l2::OracleL2ChainProvider,
     FlushableCache,
 };
 use alloc::sync::Arc;
 use alloy_consensus::{Header, Sealed};
+use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_derive::traits::ChainProvider;
 use kona_driver::{PipelineCursor, TipCursor};
 use kona_preimage::CommsClient;
 use maili_protocol::BatchValidationProvider;
+use maili_registry::RollupConfig;
 use spin::RwLock;
 
 /// Constructs a [`PipelineCursor`] from the caching oracle, boot info, and providers.
 pub async fn new_pipeline_cursor<O>(
-    boot_info: &BootInfo,
+    rollup_config: &RollupConfig,
     safe_header: Sealed<Header>,
     chain_provider: &mut OracleL1ChainProvider<O>,
     l2_chain_provider: &mut OracleL2ChainProvider<O>,
@@ -28,17 +30,16 @@ where
 
     // Walk back the starting L1 block by `channel_timeout` to ensure that the full channel is
     // captured.
-    let channel_timeout =
-        boot_info.rollup_config.channel_timeout(safe_head_info.block_info.timestamp);
+    let channel_timeout = rollup_config.channel_timeout(safe_head_info.block_info.timestamp);
     let mut l1_origin_number = l1_origin.number.saturating_sub(channel_timeout);
-    if l1_origin_number < boot_info.rollup_config.genesis.l1.number {
-        l1_origin_number = boot_info.rollup_config.genesis.l1.number;
+    if l1_origin_number < rollup_config.genesis.l1.number {
+        l1_origin_number = rollup_config.genesis.l1.number;
     }
     let origin = chain_provider.block_info_by_number(l1_origin_number).await?;
 
     // Construct the cursor.
     let mut cursor = PipelineCursor::new(channel_timeout, origin);
-    let tip = TipCursor::new(safe_head_info, safe_header, boot_info.agreed_l2_output_root);
+    let tip = TipCursor::new(safe_head_info, safe_header, B256::ZERO);
     cursor.advance(origin, tip);
 
     // Wrap the cursor in a shared read-write lock

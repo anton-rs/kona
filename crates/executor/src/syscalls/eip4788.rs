@@ -9,7 +9,7 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::eip4788::BEACON_ROOTS_ADDRESS;
 use alloy_primitives::{Address, Bytes, B256, U256};
 use kona_mpt::TrieHinter;
-use op_alloy_genesis::RollupConfig;
+use maili_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::{
     db::State,

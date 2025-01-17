@@ -1,7 +1,7 @@
-//! This module contains the [Fetcher] struct, which is responsible for fetching preimages from a
-//! remote source.
+//! This module contains the [SingleChainFetcher] struct, which is responsible for fetching
+//! preimages from a remote source serving the single-chain proof mode.
 
-use crate::{blobs::OnlineBlobProvider, kv::KeyValueStore};
+use crate::{eth::OnlineBlobProvider, kv::KeyValueStore};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -16,7 +16,10 @@ use alloy_rpc_types::{
     Transaction,
 };
 use anyhow::{anyhow, Result};
-use kona_preimage::{PreimageKey, PreimageKeyType};
+use kona_preimage::{
+    errors::{PreimageOracleError, PreimageOracleResult},
+    HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
+};
 use kona_proof::{Hint, HintType};
 use maili_protocol::BlockInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -24,11 +27,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, trace, warn};
 
-mod precompiles;
-
-/// The [Fetcher] struct is responsible for fetching preimages from a remote source.
+/// The [SingleChainFetcher] struct is responsible for fetching preimages from a remote source.
 #[derive(Debug)]
-pub struct Fetcher<KV>
+pub struct SingleChainFetcher<KV>
 where
     KV: KeyValueStore + ?Sized,
 {
@@ -43,56 +44,29 @@ where
     /// L2 head
     l2_head: B256,
     /// The last hint that was received. [None] if no hint has been received yet.
-    last_hint: Option<String>,
+    last_hint: Arc<RwLock<Option<String>>>,
 }
 
-impl<KV> Fetcher<KV>
+impl<KV> SingleChainFetcher<KV>
 where
     KV: KeyValueStore + ?Sized,
 {
-    /// Create a new [Fetcher] with the given [KeyValueStore].
-    pub const fn new(
+    /// Create a new [SingleChainFetcher] with the given [KeyValueStore].
+    pub fn new(
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
         blob_provider: OnlineBlobProvider,
         l2_provider: ReqwestProvider,
         l2_head: B256,
     ) -> Self {
-        Self { kv_store, l1_provider, blob_provider, l2_provider, l2_head, last_hint: None }
-    }
-
-    /// Set the last hint to be received.
-    pub fn hint(&mut self, hint: &str) {
-        trace!(target: "fetcher", "Received hint: {hint}");
-        self.last_hint = Some(hint.to_string());
-    }
-
-    /// Get the preimage for the given key.
-    pub async fn get_preimage(&self, key: B256) -> Result<Vec<u8>> {
-        trace!(target: "fetcher", "Pre-image requested. Key: {key}");
-
-        // Acquire a read lock on the key-value store.
-        let kv_lock = self.kv_store.read().await;
-        let mut preimage = kv_lock.get(key);
-
-        // Drop the read lock before beginning the retry loop.
-        drop(kv_lock);
-
-        // Use a loop to keep retrying the prefetch as long as the key is not found
-        while preimage.is_none() && self.last_hint.is_some() {
-            let hint = self.last_hint.as_ref().expect("Cannot be None");
-
-            if let Err(e) = self.prefetch(hint).await {
-                error!(target: "fetcher", "Failed to prefetch hint: {e}");
-                warn!(target: "fetcher", "Retrying hint fetch: {hint}");
-                continue;
-            }
-
-            let kv_lock = self.kv_store.read().await;
-            preimage = kv_lock.get(key);
+        Self {
+            kv_store,
+            l1_provider,
+            blob_provider,
+            l2_provider,
+            l2_head,
+            last_hint: Arc::new(RwLock::new(None)),
         }
-
-        preimage.ok_or_else(|| anyhow!("Preimage not found."))
     }
 
     /// Fetch the preimage for the given hint and insert it into the key-value store.
@@ -252,16 +226,15 @@ where
                 let precompile_input = hint_data[20..].to_vec();
                 let input_hash = keccak256(hint_data.as_ref());
 
-                let result = precompiles::execute(precompile_address, precompile_input)
-                    .map_or_else(
-                        |_| vec![0u8; 1],
-                        |raw_res| {
-                            let mut res = Vec::with_capacity(1 + raw_res.len());
-                            res.push(0x01);
-                            res.extend_from_slice(&raw_res);
-                            res
-                        },
-                    );
+                let result = crate::eth::execute(precompile_address, precompile_input).map_or_else(
+                    |_| vec![0u8; 1],
+                    |raw_res| {
+                        let mut res = Vec::with_capacity(1 + raw_res.len());
+                        res.push(0x01);
+                        res.extend_from_slice(&raw_res);
+                        res
+                    },
+                );
 
                 // Acquire a lock on the key-value store and set the preimages.
                 let mut kv_lock = self.kv_store.write().await;
@@ -592,5 +565,56 @@ where
         }
 
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl<KV> HintRouter for SingleChainFetcher<KV>
+where
+    KV: KeyValueStore + Send + Sync + ?Sized,
+{
+    /// Set the last hint to be received.
+    async fn route_hint(&self, hint: String) -> PreimageOracleResult<()> {
+        trace!(target: "fetcher", "Received hint: {hint}");
+        let mut hint_lock = self.last_hint.write().await;
+        hint_lock.replace(hint);
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl<KV> PreimageFetcher for SingleChainFetcher<KV>
+where
+    KV: KeyValueStore + Send + Sync + ?Sized,
+{
+    /// Get the preimage for the given key.
+    async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
+        trace!(target: "fetcher", "Pre-image requested. Key: {key}");
+
+        // Acquire a read lock on the key-value store.
+        let kv_lock = self.kv_store.read().await;
+        let mut preimage = kv_lock.get(key.into());
+
+        // Drop the read lock before beginning the retry loop.
+        drop(kv_lock);
+
+        // Use a loop to keep retrying the prefetch as long as the key is not found
+        while preimage.is_none() {
+            match self.last_hint.read().await.as_ref() {
+                None => continue,
+                Some(hint) => {
+                    if let Err(e) = self.prefetch(hint).await {
+                        error!(target: "fetcher", "Failed to prefetch hint: {e}");
+                        warn!(target: "fetcher", "Retrying hint fetch: {hint}");
+                        continue;
+                    }
+
+                    let kv_lock = self.kv_store.read().await;
+                    preimage = kv_lock.get(key.into());
+                }
+            }
+        }
+
+        preimage.ok_or(PreimageOracleError::KeyNotFound)
     }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "kona-driver"
 description = "A no_std derivation pipeline driver"
-version = "0.2.2"
+version = "0.2.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -16,6 +16,7 @@ workspace = true
 kona-derive.workspace = true
 
 # Maili
+maili-genesis.workspace = true
 maili-protocol.workspace = true
 
 # Alloy
@@ -24,7 +25,6 @@ alloy-consensus.workspace = true
 alloy-primitives.workspace = true
 
 # OP Alloy
-op-alloy-genesis.workspace = true
 op-alloy-consensus.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 

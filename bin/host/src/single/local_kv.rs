@@ -1,7 +1,8 @@
-//! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk.
+//! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk,
+//! using the [SingleChainHostCli] config.
 
-use super::KeyValueStore;
-use crate::cli::HostCli;
+use super::SingleChainHostCli;
+use crate::kv::KeyValueStore;
 use alloy_primitives::B256;
 use anyhow::Result;
 use kona_preimage::PreimageKey;
@@ -13,15 +14,15 @@ use kona_proof::boot::{
 /// The default chain ID to use if none is provided.
 const DEFAULT_CHAIN_ID: u64 = 0xbeefbabe;
 
-/// A simple, synchronous key-value store that returns data from a [HostCli] config.
+/// A simple, synchronous key-value store that returns data from a [SingleChainHostCli] config.
 #[derive(Debug)]
 pub struct LocalKeyValueStore {
-    cfg: HostCli,
+    cfg: SingleChainHostCli,
 }
 
 impl LocalKeyValueStore {
-    /// Create a new [LocalKeyValueStore] with the given [HostCli] config.
-    pub const fn new(cfg: HostCli) -> Self {
+    /// Create a new [LocalKeyValueStore] with the given [SingleChainHostCli] config.
+    pub const fn new(cfg: SingleChainHostCli) -> Self {
         Self { cfg }
     }
 }

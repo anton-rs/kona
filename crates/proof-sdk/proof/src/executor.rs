@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use kona_driver::Executor;
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::TrieHinter;
-use op_alloy_genesis::RollupConfig;
+use maili_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// An executor wrapper type.

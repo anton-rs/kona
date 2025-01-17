@@ -10,8 +10,8 @@ use crate::{
 };
 use alloc::sync::Arc;
 use core::fmt::Debug;
+use maili_genesis::RollupConfig;
 use maili_protocol::BlockInfo;
-use op_alloy_genesis::RollupConfig;
 
 type L1TraversalStage<P> = L1Traversal<P>;
 type L1RetrievalStage<DAP, P> = L1Retrieval<DAP, L1TraversalStage<P>>;

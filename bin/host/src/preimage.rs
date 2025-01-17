@@ -11,33 +11,30 @@ use tokio::sync::RwLock;
 
 /// A [Fetcher]-backed implementation of the [PreimageFetcher] trait.
 #[derive(Debug)]
-pub struct OnlinePreimageFetcher<KV>
+pub struct OnlinePreimageFetcher<F>
 where
-    KV: KeyValueStore + ?Sized,
+    F: Fetcher,
 {
-    inner: Arc<RwLock<Fetcher<KV>>>,
+    inner: Arc<RwLock<F>>,
 }
 
 #[async_trait]
-impl<KV> PreimageFetcher for OnlinePreimageFetcher<KV>
+impl<F> PreimageFetcher for OnlinePreimageFetcher<F>
 where
-    KV: KeyValueStore + Send + Sync + ?Sized,
+    F: Fetcher + Send + Sync,
 {
     async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {
         let fetcher = self.inner.read().await;
-        fetcher
-            .get_preimage(key.into())
-            .await
-            .map_err(|e| PreimageOracleError::Other(e.to_string()))
+        fetcher.get_preimage(key).await.map_err(|e| PreimageOracleError::Other(e.to_string()))
     }
 }
 
-impl<KV> OnlinePreimageFetcher<KV>
+impl<F> OnlinePreimageFetcher<F>
 where
-    KV: KeyValueStore + ?Sized,
+    F: Fetcher,
 {
     /// Create a new [OnlinePreimageFetcher] from the given [Fetcher].
-    pub const fn new(fetcher: Arc<RwLock<Fetcher<KV>>>) -> Self {
+    pub const fn new(fetcher: Arc<RwLock<F>>) -> Self {
         Self { inner: fetcher }
     }
 }
@@ -74,31 +71,30 @@ where
 
 /// A [Fetcher]-backed implementation of the [HintRouter] trait.
 #[derive(Debug)]
-pub struct OnlineHintRouter<KV>
+pub struct OnlineHintRouter<F>
 where
-    KV: KeyValueStore + ?Sized,
+    F: Fetcher,
 {
-    inner: Arc<RwLock<Fetcher<KV>>>,
+    inner: Arc<RwLock<F>>,
 }
 
 #[async_trait]
-impl<KV> HintRouter for OnlineHintRouter<KV>
+impl<F> HintRouter for OnlineHintRouter<F>
 where
-    KV: KeyValueStore + Send + Sync + ?Sized,
+    F: Fetcher + Send + Sync,
 {
     async fn route_hint(&self, hint: String) -> PreimageOracleResult<()> {
-        let mut fetcher = self.inner.write().await;
-        fetcher.hint(&hint);
-        Ok(())
+        let fetcher = self.inner.write().await;
+        fetcher.route_hint(hint).await
     }
 }
 
-impl<KV> OnlineHintRouter<KV>
+impl<F> OnlineHintRouter<F>
 where
-    KV: KeyValueStore + ?Sized,
+    F: Fetcher,
 {
     /// Create a new [OnlineHintRouter] from the given [Fetcher].
-    pub const fn new(fetcher: Arc<RwLock<Fetcher<KV>>>) -> Self {
+    pub const fn new(fetcher: Arc<RwLock<F>>) -> Self {
         Self { inner: fetcher }
     }
 }

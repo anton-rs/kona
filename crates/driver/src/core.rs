@@ -11,9 +11,9 @@ use kona_derive::{
     traits::{Pipeline, SignalReceiver},
     types::Signal,
 };
+use maili_genesis::RollupConfig;
 use maili_protocol::L2BlockInfo;
 use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
-use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 use spin::RwLock;
 
@@ -73,23 +73,25 @@ where
         &mut self,
         cfg: &RollupConfig,
         mut target: Option<u64>,
-    ) -> DriverResult<(u64, B256), E::Error> {
+    ) -> DriverResult<(u64, B256, B256), E::Error> {
         loop {
             // Check if we have reached the target block number.
-            let cursor = self.cursor.read();
+            let pipeline_cursor = self.cursor.read();
+            let tip_cursor = pipeline_cursor.tip();
             if let Some(tb) = target {
-                if cursor.l2_safe_head().block_info.number >= tb {
+                if tip_cursor.l2_safe_head.block_info.number >= tb {
                     info!(target: "client", "Derivation complete, reached L2 safe head.");
                     return Ok((
-                        cursor.l2_safe_head().block_info.number,
-                        *cursor.l2_safe_head_output_root(),
+                        tip_cursor.l2_safe_head.block_info.number,
+                        tip_cursor.l2_safe_head.block_info.hash,
+                        tip_cursor.l2_safe_head_output_root,
                     ));
                 }
             }
 
             let OpAttributesWithParent { mut attributes, .. } = match self
                 .pipeline
-                .produce_payload(*cursor.l2_safe_head())
+                .produce_payload(tip_cursor.l2_safe_head)
                 .await
             {
                 Ok(attrs) => attrs,
@@ -99,7 +101,7 @@ where
                     // Adjust the target block number to the current safe head, as no more blocks
                     // can be produced.
                     if target.is_some() {
-                        target = Some(cursor.l2_safe_head().block_info.number);
+                        target = Some(tip_cursor.l2_safe_head.block_info.number);
                     };
                     continue;
                 }
@@ -109,7 +111,7 @@ where
                 }
             };
 
-            self.executor.update_safe_head(cursor.l2_safe_head_header().clone());
+            self.executor.update_safe_head(tip_cursor.l2_safe_head_header.clone());
             let header = match self.executor.execute_payload(attributes.clone()).await {
                 Ok(header) => header,
                 Err(e) => {
@@ -133,7 +135,7 @@ where
                         });
 
                         // Retry the execution.
-                        self.executor.update_safe_head(cursor.l2_safe_head_header().clone());
+                        self.executor.update_safe_head(tip_cursor.l2_safe_head_header.clone());
                         match self.executor.execute_payload(attributes.clone()).await {
                             Ok(header) => header,
                             Err(e) => {
@@ -166,7 +168,7 @@ where
                 },
             };
 
-            // Get the pipeline origin and update the cursor.
+            // Get the pipeline origin and update the tip cursor.
             let origin = self.pipeline.origin().ok_or(PipelineError::MissingOrigin.crit())?;
             let l2_info = L2BlockInfo::from_block_and_genesis(
                 &block,
@@ -179,7 +181,7 @@ where
             );
 
             // Advance the derivation pipeline cursor
-            drop(cursor);
+            drop(pipeline_cursor);
             self.cursor.write().advance(origin, tip_cursor);
         }
     }
