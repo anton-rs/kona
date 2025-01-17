@@ -38,7 +38,6 @@ where
     H: HintWriterClient + Send + Sync + Debug + Clone,
 {
     // Check if we can short-circuit the transition, if we are within padding.
-    // TODO: Deduplicate claim check logic.
     if let PreState::TransitionState(ref transition_state) = pre {
         if transition_state.step >= transition_state.pre_state.output_roots.len() as u64 {
             info!(
@@ -85,11 +84,11 @@ where
     }
 
     // In the case where the agreed upon L2 pre-state is the same as the claimed L2 post-state,
-    // trace extension is detected and we can skip the derivation and execution steps.
+    // the state transition is invalid as it does not extend the chain.
     if boot.agreed_pre_state == boot.claimed_post_state {
         info!(
             target: "interop_client",
-            "Trace extension detected. State transition is already agreed upon.",
+            "No-op state transition is invalid; Pre == post.",
         );
         return Err(FaultProofProgramError::InvalidClaim(
             boot.agreed_pre_state,
