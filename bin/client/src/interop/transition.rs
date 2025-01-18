@@ -100,6 +100,8 @@ where
     let cursor =
         new_pipeline_cursor(&boot.rollup_config, safe_head, &mut l1_provider, &mut l2_provider)
             .await?;
+    l2_provider.set_cursor(cursor.clone());
+
     let cfg = Arc::new(boot.rollup_config.clone());
     let pipeline = OraclePipeline::new(
         cfg.clone(),
