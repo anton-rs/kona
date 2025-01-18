@@ -1,12 +1,13 @@
 //! This module contains the [HintType] enum.
 
-use crate::errors::HintParsingError;
+use crate::errors::{HintParsingError, OracleProviderError};
 use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{hex, Bytes};
+use alloy_primitives::{hex, Bytes, B256};
 use core::fmt::Display;
+use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 
 /// A [Hint] is parsed in the format `<hint_type> <hint_data>`, where `<hint_type>` is a string that
 /// represents the type of hint, and `<hint_data>` is the data associated with the hint (bytes
@@ -79,6 +80,39 @@ impl HintType {
     pub fn encode_with(&self, data: &[&[u8]]) -> String {
         let concatenated = hex::encode(data.iter().copied().flatten().copied().collect::<Vec<_>>());
         alloc::format!("{} {}", self, concatenated)
+    }
+    /// Retrieves a preimage through an oracle
+    pub async fn get_preimage<T: CommsClient>(
+        &self,
+        oracle: &T,
+        image: B256,
+        preimage_key_type: PreimageKeyType,
+    ) -> Result<Vec<u8>, OracleProviderError> {
+        oracle
+            .write(&self.encode_with(&[image.as_ref()]))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+        oracle
+            .get(PreimageKey::new(*image, preimage_key_type))
+            .await
+            .map_err(OracleProviderError::Preimage)
+    }
+    /// Retrieves a preimage through an oracle
+    pub async fn get_exact_preimage<T: CommsClient>(
+        &self,
+        oracle: &T,
+        image: B256,
+        preimage_key_type: PreimageKeyType,
+        buf: &mut [u8],
+    ) -> Result<(), OracleProviderError> {
+        oracle
+            .write(&self.encode_with(&[image.as_ref()]))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+        oracle
+            .get_exact(PreimageKey::new(*image, preimage_key_type), buf)
+            .await
+            .map_err(OracleProviderError::Preimage)
     }
 }
 
