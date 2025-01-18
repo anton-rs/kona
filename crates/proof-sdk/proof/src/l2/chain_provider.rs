@@ -74,7 +74,7 @@ impl<T: CommsClient> OracleL2ChainProvider<T> {
 #[async_trait]
 impl<T: CommsClient + Send + Sync> BatchValidationProvider for OracleL2ChainProvider<T> {
     type Error = OracleProviderError;
-    type Transaction = op_alloy_consensus::OpTxEnvelope;
+    type Transaction = OpTxEnvelope;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
         // Get the block at the given number.

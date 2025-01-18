@@ -1,5 +1,6 @@
-//! This module contains the single-chain mode CLI for the host binary.
+//! This module contains the single-chain mode for the host.
 
+use crate::{kv::KeyValueStore, server::PreimageServer};
 use anyhow::Result;
 use kona_preimage::{
     BidirectionalChannel, HintReader, HintWriter, NativeChannel, OracleReader, OracleServer,
@@ -17,8 +18,6 @@ pub use local_kv::LocalKeyValueStore;
 
 mod fetcher;
 pub use fetcher::SingleChainFetcher;
-
-use crate::{kv::KeyValueStore, server::PreimageServer};
 
 /// Starts the [PreimageServer] in the primary thread. In this mode, the host program has been
 /// invoked by the Fault Proof VM and the client program is running in the parent process.

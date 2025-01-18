@@ -19,7 +19,7 @@ pub const L2_AGREED_PRE_STATE_KEY: U256 = U256::from_be_slice(&[2]);
 pub const L2_CLAIMED_POST_STATE_KEY: U256 = U256::from_be_slice(&[3]);
 
 /// The local key ident for the L2 claim timestamp.
-pub const L2_CLAIM_TIMESTAMP_KEY: U256 = U256::from_be_slice(&[4]);
+pub const L2_CLAIMED_TIMESTAMP_KEY: U256 = U256::from_be_slice(&[4]);
 
 /// The local key ident for the L2 chain ID.
 pub const L2_CHAIN_ID_KEY: U256 = U256::from_be_slice(&[5]);
@@ -77,7 +77,7 @@ impl BootInfo {
 
         let l2_claim_block = u64::from_be_bytes(
             oracle
-                .get(PreimageKey::new_local(L2_CLAIM_TIMESTAMP_KEY.to()))
+                .get(PreimageKey::new_local(L2_CLAIMED_TIMESTAMP_KEY.to()))
                 .await
                 .map_err(OracleProviderError::Preimage)?
                 .as_slice()

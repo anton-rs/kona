@@ -10,6 +10,7 @@ use alloy_primitives::map::HashMap;
 use async_trait::async_trait;
 use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{BatchValidationProvider, L2BlockInfo};
+use op_alloy_consensus::OpTxEnvelope;
 use thiserror::Error;
 
 /// A mock implementation of the `SystemConfigL2Fetcher` for testing.
@@ -48,7 +49,7 @@ impl From<TestSystemConfigL2FetcherError> for PipelineErrorKind {
 #[async_trait]
 impl BatchValidationProvider for TestSystemConfigL2Fetcher {
     type Error = TestSystemConfigL2FetcherError;
-    type Transaction = op_alloy_consensus::OpTxEnvelope;
+    type Transaction = OpTxEnvelope;
 
     async fn block_by_number(&mut self, _: u64) -> Result<Block<Self::Transaction>, Self::Error> {
         unimplemented!()

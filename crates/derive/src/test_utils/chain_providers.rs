@@ -10,7 +10,7 @@ use alloy_primitives::{map::HashMap, B256};
 use async_trait::async_trait;
 use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
-use op_alloy_consensus::OpBlock;
+use op_alloy_consensus::{OpBlock, OpTxEnvelope};
 use thiserror::Error;
 
 /// A mock chain provider for testing.
@@ -177,7 +177,7 @@ impl TestL2ChainProvider {
 #[async_trait]
 impl BatchValidationProvider for TestL2ChainProvider {
     type Error = TestProviderError;
-    type Transaction = op_alloy_consensus::OpTxEnvelope;
+    type Transaction = OpTxEnvelope;
 
     async fn l2_block_info_by_number(&mut self, number: u64) -> Result<L2BlockInfo, Self::Error> {
         if self.short_circuit {

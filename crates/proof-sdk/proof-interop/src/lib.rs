@@ -7,7 +7,10 @@
 
 extern crate alloc;
 
-pub mod pre_state;
+mod pre_state;
+pub use pre_state::{
+    OptimisticBlock, PreState, TransitionState, INVALID_TRANSITION_HASH, TRANSITION_STATE_MAX_STEPS,
+};
 
 mod hint;
 pub use hint::{Hint, HintType};
