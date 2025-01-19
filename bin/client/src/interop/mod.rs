@@ -91,7 +91,7 @@ where
             if transition_state.step < TRANSITION_STATE_MAX_STEPS {
                 sub_transition(oracle, handle_register, boot, pre).await
             } else {
-                consolidate_dependencies(oracle, pre).await
+                consolidate_dependencies(oracle, boot, pre).await
             }
         }
     }
