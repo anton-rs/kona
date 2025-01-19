@@ -11,7 +11,9 @@ use kona_interop::InteropProvider;
 use kona_mpt::{OrderedListWalker, TrieNode, TrieProvider};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
+use maili_registry::HashMap;
 use op_alloy_consensus::OpReceiptEnvelope;
+use spin::RwLock;
 
 /// A [CommsClient] backed [InteropProvider] implementation.
 #[derive(Debug, Clone)]
@@ -20,6 +22,8 @@ pub struct OracleInteropProvider<T> {
     oracle: Arc<T>,
     /// The [PreState] for the current program execution.
     pre_state: PreState,
+    /// The safe head block header cache, keyed by chain ID.
+    safe_head_cache: Arc<RwLock<HashMap<u64, Header>>>,
 }
 
 impl<T> OracleInteropProvider<T>
@@ -27,8 +31,8 @@ where
     T: CommsClient + Send + Sync,
 {
     /// Creates a new [OracleInteropProvider] with the given oracle client and [PreState].
-    pub const fn new(oracle: Arc<T>, pre_state: PreState) -> Self {
-        Self { oracle, pre_state }
+    pub fn new(oracle: Arc<T>, pre_state: PreState) -> Self {
+        Self { oracle, pre_state, safe_head_cache: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// Fetch the [Header] for the block with the given hash.
@@ -98,33 +102,40 @@ where
     async fn header_by_number(&self, chain_id: u64, number: u64) -> Result<Header, Self::Error> {
         // Find the safe head for the given chain ID.
         //
-        // TODO: Deduplicate + cache safe head lookups.
-        let pre_state = match &self.pre_state {
-            PreState::SuperRoot(super_root) => super_root,
-            PreState::TransitionState(transition_state) => &transition_state.pre_state,
-        };
-        let output = pre_state
-            .output_roots
-            .iter()
-            .find(|o| o.chain_id == chain_id)
-            .ok_or(OracleProviderError::UnknownChainId(chain_id))?;
-        self.oracle
-            .write(&HintType::L2OutputRoot.encode_with(&[
-                output.output_root.as_slice(),
-                output.chain_id.to_be_bytes().as_slice(),
-            ]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-        let output_preimage = self
-            .oracle
-            .get(PreimageKey::new(*output.output_root, PreimageKeyType::Keccak256))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-        let safe_head_hash =
-            output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
+        // If the safe head is not in the cache, we need to fetch it from the oracle.
+        let mut header = if let Some(header) = self.safe_head_cache.read().get(&chain_id) {
+            header.clone()
+        } else {
+            let pre_state = match &self.pre_state {
+                PreState::SuperRoot(super_root) => super_root,
+                PreState::TransitionState(transition_state) => &transition_state.pre_state,
+            };
+            let output = pre_state
+                .output_roots
+                .iter()
+                .find(|o| o.chain_id == chain_id)
+                .ok_or(OracleProviderError::UnknownChainId(chain_id))?;
+            self.oracle
+                .write(&HintType::L2OutputRoot.encode_with(&[
+                    output.output_root.as_slice(),
+                    output.chain_id.to_be_bytes().as_slice(),
+                ]))
+                .await
+                .map_err(OracleProviderError::Preimage)?;
+            let output_preimage = self
+                .oracle
+                .get(PreimageKey::new(*output.output_root, PreimageKeyType::Keccak256))
+                .await
+                .map_err(OracleProviderError::Preimage)?;
+            let safe_head_hash = output_preimage[96..128]
+                .try_into()
+                .map_err(OracleProviderError::SliceConversion)?;
 
-        // Fetch the starting block header.
-        let mut header = self.header_by_hash(chain_id, safe_head_hash).await?;
+            // Fetch the starting block header.
+            let header = self.header_by_hash(chain_id, safe_head_hash).await?;
+            self.safe_head_cache.write().insert(chain_id, header.clone());
+            header
+        };
 
         // Check if the block number is in range. If not, we can fail early.
         if number > header.number {
