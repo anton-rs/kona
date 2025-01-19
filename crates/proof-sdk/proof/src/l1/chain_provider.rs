@@ -77,7 +77,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
         let trie_walker = OrderedListWalker::try_new_hydrated(header.receipts_root, self)
             .map_err(OracleProviderError::TrieWalker)?;
 
-        // Decode the receipts within the transactions trie.
+        // Decode the receipts within the receipts trie.
         let receipts = trie_walker
             .into_iter()
             .map(|(_, rlp)| {

@@ -25,10 +25,7 @@ mod traits;
 pub use traits::InteropProvider;
 
 mod errors;
-pub use errors::{
-    InteropProviderError, InteropProviderResult, MessageGraphError, MessageGraphResult,
-    SuperRootError, SuperRootResult,
-};
+pub use errors::{MessageGraphError, MessageGraphResult, SuperRootError, SuperRootResult};
 
 mod super_root;
 pub use super_root::{OutputRootWithChain, SuperRoot};

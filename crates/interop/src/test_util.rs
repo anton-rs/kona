@@ -2,10 +2,7 @@
 
 #![allow(missing_docs, unreachable_pub)]
 
-use crate::{
-    errors::InteropProviderResult, traits::InteropProvider, ExecutingMessage, MessageIdentifier,
-    CROSS_L2_INBOX_ADDRESS,
-};
+use crate::{traits::InteropProvider, ExecutingMessage, MessageIdentifier, CROSS_L2_INBOX_ADDRESS};
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom, Sealed};
 use alloy_primitives::{map::HashMap, Address, Bytes, Log, LogData, B256, U256};
 use alloy_sol_types::{SolEvent, SolValue};
@@ -27,25 +24,20 @@ impl MockInteropProvider {
     }
 }
 
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+#[error("Mock interop provider error")]
+pub struct InteropProviderError;
+
 #[async_trait]
 impl InteropProvider for MockInteropProvider {
+    type Error = InteropProviderError;
+
     /// Fetch a [Header] by its number.
-    async fn header_by_number(&self, chain_id: u64, number: u64) -> InteropProviderResult<Header> {
+    async fn header_by_number(&self, chain_id: u64, number: u64) -> Result<Header, Self::Error> {
         Ok(self
             .headers
             .get(&chain_id)
             .and_then(|headers| headers.get(&number))
-            .unwrap()
-            .inner()
-            .clone())
-    }
-
-    /// Fetch a [Header] by its hash.
-    async fn header_by_hash(&self, chain_id: u64, hash: B256) -> InteropProviderResult<Header> {
-        Ok(self
-            .headers
-            .get(&chain_id)
-            .and_then(|headers| headers.values().find(|header| header.hash() == hash))
             .unwrap()
             .inner()
             .clone())
@@ -56,7 +48,7 @@ impl InteropProvider for MockInteropProvider {
         &self,
         chain_id: u64,
         number: u64,
-    ) -> InteropProviderResult<Vec<OpReceiptEnvelope>> {
+    ) -> Result<Vec<OpReceiptEnvelope>, Self::Error> {
         Ok(self.receipts.get(&chain_id).and_then(|receipts| receipts.get(&number)).unwrap().clone())
     }
 
@@ -65,7 +57,7 @@ impl InteropProvider for MockInteropProvider {
         &self,
         chain_id: u64,
         block_hash: B256,
-    ) -> InteropProviderResult<Vec<OpReceiptEnvelope>> {
+    ) -> Result<Vec<OpReceiptEnvelope>, Self::Error> {
         Ok(self
             .receipts
             .get(&chain_id)

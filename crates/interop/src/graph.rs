@@ -47,7 +47,10 @@ where
     /// blocks and searching for [ExecutingMessage]s.
     ///
     /// [ExecutingMessage]: crate::ExecutingMessage
-    pub async fn derive(blocks: &[(u64, Sealed<Header>)], provider: P) -> MessageGraphResult<Self> {
+    pub async fn derive(
+        blocks: &[(u64, Sealed<Header>)],
+        provider: P,
+    ) -> MessageGraphResult<Self, P> {
         info!(
             target: "message-graph",
             "Deriving message graph from {} blocks.",
@@ -84,7 +87,7 @@ where
     }
 
     /// Checks the validity of all messages within the graph.
-    pub async fn resolve(mut self) -> MessageGraphResult<()> {
+    pub async fn resolve(mut self) -> MessageGraphResult<(), P> {
         info!(
             target: "message-graph",
             "Checking the message graph for invalid messages."
@@ -120,7 +123,7 @@ where
     /// Attempts to remove as many edges from the graph as possible by resolving the dependencies
     /// of each message. If a message cannot be resolved, it is considered invalid. After this
     /// function is called, any outstanding messages are invalid.
-    async fn reduce(&mut self) -> MessageGraphResult<()> {
+    async fn reduce(&mut self) -> MessageGraphResult<(), P> {
         // Create a new vector to store invalid edges
         let mut invalid_messages = Vec::with_capacity(self.messages.len());
 
@@ -155,7 +158,7 @@ where
     async fn check_single_dependency(
         &self,
         message: &EnrichedExecutingMessage,
-    ) -> MessageGraphResult<()> {
+    ) -> MessageGraphResult<(), P> {
         // ChainID Invariant: The chain id of the initiating message MUST be in the dependency set
         // This is enforced implicitly by the graph constructor and the provider.
 

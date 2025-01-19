@@ -16,6 +16,7 @@ workspace = true
 kona-preimage.workspace = true
 kona-interop.workspace = true
 kona-proof.workspace = true
+kona-mpt.workspace = true
 
 # Maili
 maili-registry.workspace = true
@@ -24,11 +25,17 @@ maili-genesis = { workspace = true, features = ["serde"] }
 # Alloy
 alloy-rlp.workspace = true
 alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-eips.workspace = true
+
+# OP Alloy
+op-alloy-consensus.workspace = true
 
 # General
 serde.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
+async-trait.workspace = true
 
 # Arbitrary
 arbitrary = { version = "1.4", features = ["derive"], optional = true }

@@ -256,19 +256,31 @@ where
             }
             HintType::L2BlockHeader => {
                 // Validate the hint data length.
-                if hint_data.len() != 32 {
+                if hint_data.len() < 32 || hint_data.len() > 40 {
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
                 // Fetch the raw header from the L2 chain provider.
-                let hash: B256 = hint_data
+                let hash: B256 = hint_data[0..32]
                     .as_ref()
                     .try_into()
                     .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
+
+                let active_l2_chain_id = if hint_data.len() == 40 {
+                    u64::from_be_bytes(
+                        hint_data[32..40]
+                            .as_ref()
+                            .try_into()
+                            .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
+                    )
+                } else {
+                    self.active_l2_chain_id
+                };
+
                 let raw_header: Bytes = self
                     .l2_providers
-                    .get(&self.active_l2_chain_id)
-                    .ok_or(anyhow!("No active L2 chain ID"))?
+                    .get(&active_l2_chain_id)
+                    .ok_or(anyhow!("No provider for active L2 chain ID"))?
                     .client()
                     .request("debug_getRawHeader", [hash])
                     .await
@@ -321,6 +333,35 @@ where
                     }
                     _ => anyhow::bail!("Only BlockTransactions::Hashes are supported."),
                 };
+            }
+            HintType::L2Receipts => {
+                // Validate the hint data length.
+                if hint_data.len() != 40 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                // Fetch the receipts from the L1 chain provider and store the receipts within the
+                // key-value store.
+                let hash: B256 = hint_data[0..32]
+                    .as_ref()
+                    .try_into()
+                    .map_err(|e| anyhow!("Failed to convert bytes to B256: {e}"))?;
+                let chain_id = u64::from_be_bytes(
+                    hint_data[32..40]
+                        .as_ref()
+                        .try_into()
+                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
+                );
+
+                let raw_receipts: Vec<Bytes> = self
+                    .l2_providers
+                    .get(&chain_id)
+                    .ok_or(anyhow!("Provider for chain ID {chain_id} not found"))?
+                    .client()
+                    .request("debug_getRawReceipts", [hash])
+                    .await
+                    .map_err(|e| anyhow!(e))?;
+                self.store_trie_nodes(raw_receipts.as_slice()).await?;
             }
             HintType::L2Code => {
                 // geth hashdb scheme code hash key prefix

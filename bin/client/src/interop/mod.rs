@@ -3,6 +3,7 @@
 use alloc::sync::Arc;
 use alloy_primitives::B256;
 use alloy_rlp::Decodable;
+use consolidate::consolidate_dependencies;
 use core::fmt::Debug;
 use kona_driver::DriverError;
 use kona_executor::{ExecutorError, KonaHandleRegister};
@@ -11,6 +12,7 @@ use kona_proof::{errors::OracleProviderError, l2::OracleL2ChainProvider, Caching
 use kona_proof_interop::{BootInfo, PreState, INVALID_TRANSITION_HASH, TRANSITION_STATE_MAX_STEPS};
 use thiserror::Error;
 use tracing::{error, info};
+use transition::sub_transition;
 use util::read_raw_pre_state;
 
 pub(crate) mod consolidate;
@@ -66,7 +68,7 @@ where
         }
     };
 
-    // If the pre state is invalid, short-circuit and check if the post-state is also invalid.
+    // If the pre state is invalid, short-circuit and check if the post-state claim is also invalid.
     if boot.agreed_pre_state == INVALID_TRANSITION_HASH &&
         boot.claimed_post_state == INVALID_TRANSITION_HASH
     {
@@ -81,15 +83,15 @@ where
     match pre {
         PreState::SuperRoot(_) => {
             // If the pre-state is a super root, the first sub-problem is always selected.
-            transition::sub_transition(oracle, handle_register, boot, pre).await
+            sub_transition(oracle, handle_register, boot, pre).await
         }
         PreState::TransitionState(ref transition_state) => {
             // If the pre-state is a transition state, the sub-problem is selected based on the
             // current step.
             if transition_state.step < TRANSITION_STATE_MAX_STEPS {
-                transition::sub_transition(oracle, handle_register, boot, pre).await
+                sub_transition(oracle, handle_register, boot, pre).await
             } else {
-                unimplemented!("Consolidation step")
+                consolidate_dependencies(oracle, pre).await
             }
         }
     }
