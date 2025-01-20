@@ -44,7 +44,7 @@ pub type MessageGraphResult<T, P: InteropProvider> =
 /// An error type for the [SuperRoot] struct's serialization and deserialization.
 ///
 /// [SuperRoot]: crate::SuperRoot
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum SuperRootError {
     /// Invalid super root version byte
     #[error("Invalid super root version byte")]
@@ -52,6 +52,9 @@ pub enum SuperRootError {
     /// Unexpected encoded super root length
     #[error("Unexpected encoded super root length")]
     UnexpectedLength,
+    /// Slice conversion error
+    #[error("Slice conversion error: {0}")]
+    SliceConversionError(#[from] core::array::TryFromSliceError),
 }
 
 /// A [Result] alias for the [SuperRootError] type.

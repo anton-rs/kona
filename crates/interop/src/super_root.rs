@@ -43,7 +43,7 @@ impl SuperRoot {
         if buf.len() < 8 {
             return Err(SuperRootError::UnexpectedLength);
         }
-        let timestamp = u64::from_be_bytes(buf[0..8].try_into().unwrap());
+        let timestamp = u64::from_be_bytes(buf[0..8].try_into()?);
         buf.advance(8);
 
         let mut output_roots = Vec::new();
@@ -52,7 +52,7 @@ impl SuperRoot {
                 return Err(SuperRootError::UnexpectedLength);
             }
 
-            let chain_id = U256::from_be_bytes::<32>(buf[0..32].try_into().unwrap());
+            let chain_id = U256::from_be_bytes::<32>(buf[0..32].try_into()?);
             buf.advance(32);
             let output_root = B256::from_slice(&buf[0..32]);
             buf.advance(32);
@@ -129,37 +129,37 @@ mod test {
     #[test]
     fn test_super_root_empty_buf() {
         let buf: Vec<u8> = Vec::new();
-        assert_eq!(
+        assert!(matches!(
             SuperRoot::decode(&mut buf.as_slice()).unwrap_err(),
             SuperRootError::UnexpectedLength
-        );
+        ));
     }
 
     #[test]
     fn test_super_root_invalid_version() {
         let buf = vec![0xFF];
-        assert_eq!(
+        assert!(matches!(
             SuperRoot::decode(&mut buf.as_slice()).unwrap_err(),
             SuperRootError::InvalidVersionByte
-        );
+        ));
     }
 
     #[test]
     fn test_super_root_invalid_length_at_timestamp() {
         let buf = vec![SUPER_ROOT_VERSION, 0x00];
-        assert_eq!(
+        assert!(matches!(
             SuperRoot::decode(&mut buf.as_slice()).unwrap_err(),
             SuperRootError::UnexpectedLength
-        );
+        ));
     }
 
     #[test]
     fn test_super_root_invalid_length_malformed_output_roots() {
         let buf = [&[SUPER_ROOT_VERSION], 64u64.to_be_bytes().as_ref(), &[0xbe, 0xef]].concat();
-        assert_eq!(
+        assert!(matches!(
             SuperRoot::decode(&mut buf.as_slice()).unwrap_err(),
             SuperRootError::UnexpectedLength
-        );
+        ));
     }
 
     #[test]
