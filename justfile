@@ -30,7 +30,7 @@ action-tests test_name='Test_ProgramAction' *args='':
 
   if [ ! -d "monorepo/.devnet" ]; then
     echo "Building devnet allocs for the monorepo"
-    (cd monorepo && make devnet-allocs)
+    (cd monorepo/packages/contracts-bedrock && forge build)
   fi
 
   echo "Building host program for the native target"
@@ -38,7 +38,6 @@ action-tests test_name='Test_ProgramAction' *args='':
 
   echo "Running action tests for the client program on the native target"
   export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"
-  export KONA_CLIENT_PATH="{{justfile_directory()}}/target/release-client-lto/kona"
 
   cd monorepo/op-e2e/actions/proofs && \
     gotestsum --format=short-verbose -- -run "{{test_name}}" {{args}} -count=1 ./...

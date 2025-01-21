@@ -9,13 +9,13 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use maili_genesis::RollupConfig;
 use maili_protocol::{
     Batch, BatchValidity, BatchWithInclusionBlock, BlockInfo, L2BlockInfo, SingleBatch,
 };
-use op_alloy_genesis::RollupConfig;
 
-/// [BatchQueue] is responsible for o rdering unordered batches
-/// and gnerating empty batches when the sequence window has passed.
+/// [BatchQueue] is responsible for ordering unordered batches
+/// and generating empty batches when the sequence window has passed.
 ///
 /// It receives batches that are tagged with the L1 Inclusion block of the batch.
 /// It only considers batches that are inside the sequencing window of a specific L1 Origin.
@@ -468,9 +468,10 @@ mod tests {
     use alloy_eips::{eip2718::Decodable2718, BlockNumHash};
     use alloy_primitives::{address, b256, Address, Bytes, TxKind, B256, U256};
     use alloy_rlp::{BytesMut, Encodable};
+    use maili_consensus::TxDeposit;
+    use maili_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
     use maili_protocol::{BatchReader, L1BlockInfoBedrock, L1BlockInfoTx};
-    use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType, TxDeposit};
-    use op_alloy_genesis::{ChainGenesis, MAX_RLP_BYTES_PER_CHANNEL_FJORD};
+    use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
     use tracing::Level;
     use tracing_subscriber::layer::SubscriberExt;
 

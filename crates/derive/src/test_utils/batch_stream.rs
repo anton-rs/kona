@@ -21,9 +21,9 @@ pub struct TestBatchStreamProvider {
     pub origin: Option<BlockInfo>,
     /// A list of batches to return.
     pub batches: Vec<PipelineResult<Batch>>,
-    /// Wether the reset method was called.
+    /// Whether the reset method was called.
     pub reset: bool,
-    /// Wether the provider was flushed.
+    /// Whether the provider was flushed.
     pub flushed: bool,
 }
 

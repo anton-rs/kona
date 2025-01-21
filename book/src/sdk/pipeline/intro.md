@@ -94,7 +94,7 @@ the [`PipelineBuilder`][builder] to instantiate a [`DerivationPipeline`][dp].
 // Imports
 use std::sync::Arc;
 use maili_protocol::BlockInfo;
-use op_alloy_genesis::RollupConfig;
+use maili_genesis::RollupConfig;
 use hilo_providers_alloy::*;
 
 // Use a default rollup config.
@@ -182,7 +182,7 @@ use core::iter::Iterator;
 let l2_safe_head = L2BlockInfo::default();
 loop {
    if matches!(pipeline.step(l2_safe_head).await, StepResult::PreparedAttributes) {
-      // The pipeline has succesfully prepared payload attributes, break the loop.
+      // The pipeline has successfully prepared payload attributes, break the loop.
       break;
    }
 }

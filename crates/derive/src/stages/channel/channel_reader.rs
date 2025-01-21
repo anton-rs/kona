@@ -10,10 +10,10 @@ use alloc::{boxed::Box, sync::Arc};
 use alloy_primitives::Bytes;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use maili_protocol::{Batch, BatchReader, BlockInfo};
-use op_alloy_genesis::{
+use maili_genesis::{
     RollupConfig, MAX_RLP_BYTES_PER_CHANNEL_BEDROCK, MAX_RLP_BYTES_PER_CHANNEL_FJORD,
 };
+use maili_protocol::{Batch, BatchReader, BlockInfo};
 use tracing::{debug, warn};
 
 /// The [ChannelReader] provider trait.

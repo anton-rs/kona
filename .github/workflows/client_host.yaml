@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         target: ["native", "asterisc"]
-        name: ["OP Sepolia (Granite) - Block #16491249"]
+        name: ["OP Sepolia (Holocene) - Block #22012816"]
         isa: ["64", "32"]
     runs-on: ubuntu-latest
     if: "${{ matrix.isa == '32' }}"
@@ -49,19 +49,19 @@ jobs:
       - name: Build `asterisc`
         if: "!contains(matrix.target, 'native')"
         run: |
-          cd asterisc && git checkout v1.1.2 && make build-rvgo
+          cd asterisc && git checkout v1.2.0 && make build-rvgo
           mv ./rvgo/bin/asterisc /usr/local/bin/
       - name: Set run environment
         run: |
-          if [[ ${{ contains(matrix.name, 16491249) }} == true ]]; then
-            BLOCK_NUMBER=16491249
+          if [[ ${{ contains(matrix.name, 22012816) }} == true ]]; then
+            BLOCK_NUMBER=22012816
             echo "BLOCK_NUMBER=$BLOCK_NUMBER" >> $GITHUB_ENV
-            echo "L2_CLAIM=0x82da7204148ba4d8d59e587b6b3fdde5561dc31d9e726220f7974bf9f2158d75" >> $GITHUB_ENV
-            echo "L2_OUTPUT_ROOT=0xa548f22e1aa590de7ed271e3eab5b66c6c3db9b8cb0e3f91618516ea9ececde4" >> $GITHUB_ENV
-            echo "L2_HEAD=0x09b298a83baf4c2e3c6a2e355bb09e27e3fdca435080e8754f8749233d7333b2" >> $GITHUB_ENV
-            echo "L1_HEAD=0x33a3e5721faa4dc6f25e75000d9810fd6c41320868f3befcc0c261a71da398e1" >> $GITHUB_ENV
+            echo "L2_CLAIM=0x42ff78e504c207c3786cb30ecb74fe915984b48649165f95bbf6f9248584be69" >> $GITHUB_ENV
+            echo "L2_OUTPUT_ROOT=0x9084f101b85cd1c7c624946feca169768896d88b3ecf4eea3a7760bfceb9cd73" >> $GITHUB_ENV
+            echo "L2_HEAD=0x6a34183664b9ad39de024a8d4077c78abf05198148b6dbfc6e39fbe4a70de299" >> $GITHUB_ENV
+            echo "L1_HEAD=0x02a50d0b5a3226758a6e9b2bdeb5deb5f0779ab55b2b34a52331d0eac48c9389" >> $GITHUB_ENV
             echo "L2_CHAIN_ID=11155420" >> $GITHUB_ENV
-            echo "WITNESS_TAR_NAME=granite-op-sepolia-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
+            echo "WITNESS_TAR_NAME=holocene-op-sepolia-$BLOCK_NUMBER-witness.tar.zst" >> $GITHUB_ENV
           fi
       - name: Decompress witness data directory
         run: |

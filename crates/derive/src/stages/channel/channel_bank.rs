@@ -11,8 +11,8 @@ use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use alloy_primitives::{hex, map::HashMap, Bytes};
 use async_trait::async_trait;
 use core::fmt::Debug;
+use maili_genesis::RollupConfig;
 use maili_protocol::{BlockInfo, Channel, ChannelId, Frame};
-use op_alloy_genesis::RollupConfig;
 
 /// The maximum size of a channel bank.
 pub(crate) const MAX_CHANNEL_BANK_SIZE: usize = 100_000_000;

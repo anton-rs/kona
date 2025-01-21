@@ -80,7 +80,10 @@ getting started with building your own programs, and a reference for the librari
 `kona` is inspired by the work of several teams, namely [OP Labs][op-labs] and other contributors' work on the
 [`op-program`][op-program] and [BadBoiLabs][bad-boi-labs]'s work on [Cannon-rs][badboi-cannon-rs].
 
+`kona` is also built on rust types in [alloy][alloy], [op-alloy][op-alloy], and [maili][maili].
+
 [alloy]: https://github.com/alloy-rs/alloy
+[maili]: https://github.com/op-rs/maili
 [op-alloy]: https://github.com/alloy-rs/op-alloy
 [op-stack]: https://github.com/ethereum-optimism/optimism
 [op-program]: https://github.com/ethereum-optimism/optimism/tree/develop/op-program

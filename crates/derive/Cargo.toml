@@ -1,7 +1,7 @@
 [package]
 name = "kona-derive"
 description = "A no_std derivation pipeline implementation for the OP Stack"
-version = "0.2.2"
+version = "0.2.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 # Maili
+maili-genesis.workspace = true
 maili-protocol.workspace = true
 
 # Alloy
@@ -23,7 +24,6 @@ alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-primitives = { workspace = true, features = ["rlp", "k256", "map"] }
 
 # Op Alloy
-op-alloy-genesis.workspace = true
 op-alloy-rpc-types-engine.workspace = true
 op-alloy-consensus = { workspace = true, features = ["k256"] }
 
@@ -41,6 +41,7 @@ spin.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
 maili-registry.workspace = true
+maili-consensus.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 tracing = { workspace = true, features = ["std"] }
@@ -50,10 +51,10 @@ alloy-primitives = { workspace = true, features = ["rlp", "k256", "map", "arbitr
 default = []
 serde = [
   "maili-protocol/serde",
+  "maili-genesis/serde",
   "alloy-primitives/serde",
   "alloy-consensus/serde",
   "op-alloy-consensus/serde",
-  "op-alloy-genesis/serde",
   "op-alloy-rpc-types-engine/serde",
 ]
 test-utils = [

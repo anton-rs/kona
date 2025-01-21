@@ -6,8 +6,8 @@ use alloy_consensus::Header;
 use alloy_eips::{eip1559::BaseFeeParams, eip7840::BlobParams};
 use alloy_primitives::{TxKind, U256};
 use kona_mpt::TrieHinter;
+use maili_genesis::RollupConfig;
 use op_alloy_consensus::OpTxEnvelope;
-use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use revm::primitives::{
     BlobExcessGasAndPrice, BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, OptimismFields, SpecId,
@@ -73,7 +73,7 @@ where
         let blob_excess_gas_and_price = parent_header
             .next_block_excess_blob_gas(BlobParams::cancun())
             .or_else(|| spec_id.is_enabled_in(SpecId::ECOTONE).then_some(0))
-            .map(BlobExcessGasAndPrice::new);
+            .map(|e| BlobExcessGasAndPrice::new(e, spec_id.is_enabled_in(SpecId::PRAGUE)));
         let next_block_base_fee =
             parent_header.next_block_base_fee(*base_fee_params).unwrap_or_default();
 

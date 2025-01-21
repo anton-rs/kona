@@ -20,7 +20,7 @@ pub struct TestFrameQueueProvider {
     pub data: Vec<PipelineResult<Bytes>>,
     /// The origin to return.
     pub origin: Option<BlockInfo>,
-    /// Wether the reset method was called.
+    /// Whether the reset method was called.
     pub reset: bool,
 }
 

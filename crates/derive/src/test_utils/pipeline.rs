@@ -7,8 +7,8 @@ use crate::{
     types::PipelineResult,
 };
 use alloc::{boxed::Box, sync::Arc};
+use maili_genesis::RollupConfig;
 use maili_protocol::{BlockInfo, L2BlockInfo};
-use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
 
 // Re-export these types used internally to the test pipeline.

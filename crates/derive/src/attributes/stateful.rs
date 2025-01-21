@@ -13,9 +13,11 @@ use alloy_primitives::{address, Address, Bytes, B256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
-use maili_protocol::{decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH};
+use maili_genesis::RollupConfig;
+use maili_protocol::{
+    closing_deposit_context_tx, decode_deposit, L1BlockInfoTx, L2BlockInfo, DEPOSIT_EVENT_ABI_HASH,
+};
 use op_alloy_consensus::{Hardfork, Hardforks};
-use op_alloy_genesis::RollupConfig;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 
 /// The sequencer fee vault address.
@@ -142,7 +144,7 @@ where
         }
 
         // Build and encode the L1 info transaction for the current payload.
-        let (_, l1_info_tx_envelope) = L1BlockInfoTx::try_new_with_deposit_tx(
+        let (l1_info, l1_info_tx_envelope) = L1BlockInfoTx::try_new_with_deposit_tx(
             &self.rollup_cfg,
             &sys_config,
             sequence_number,
@@ -159,6 +161,15 @@ where
             Vec::with_capacity(1 + deposit_transactions.len() + upgrade_transactions.len());
         txs.push(encoded_l1_info_tx.into());
         txs.extend(deposit_transactions);
+
+        if self.rollup_cfg.is_interop_active(next_l2_time) {
+            let close_deposit_context_tx = closing_deposit_context_tx(&l1_info, sequence_number);
+
+            let mut rlp_buf = Vec::with_capacity(close_deposit_context_tx.length());
+            close_deposit_context_tx.encode_2718(&mut rlp_buf);
+            txs.push(rlp_buf.into());
+        }
+
         txs.extend(upgrade_transactions);
 
         let mut withdrawals = None;
@@ -236,8 +247,8 @@ mod tests {
     use alloc::vec;
     use alloy_consensus::Header;
     use alloy_primitives::{Log, LogData, B256, U256, U64};
+    use maili_genesis::SystemConfig;
     use maili_protocol::{BlockInfo, DepositError};
-    use op_alloy_genesis::SystemConfig;
 
     fn generate_valid_log() -> Log {
         let deposit_contract = address!("1111111111111111111111111111111111111111");
