@@ -15,5 +15,8 @@ pub use pre_state::{
 mod hint;
 pub use hint::{Hint, HintType};
 
+mod provider;
+pub use provider::OracleInteropProvider;
+
 pub mod boot;
 pub use boot::BootInfo;

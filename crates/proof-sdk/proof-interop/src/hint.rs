@@ -58,6 +58,8 @@ pub enum HintType {
     L2BlockHeader,
     /// A hint that specifies the transactions of a layer 2 block.
     L2Transactions,
+    /// A hint that specifies the receipts of a layer 2 block.
+    L2Receipts,
     /// A hint that specifies the code of a contract on layer 2.
     L2Code,
     /// A hint that specifies the preimage of the agreed upon pre-state claim.
@@ -97,6 +99,7 @@ impl TryFrom<&str> for HintType {
             "l1-precompile" => Ok(Self::L1Precompile),
             "l2-block-header" => Ok(Self::L2BlockHeader),
             "l2-transactions" => Ok(Self::L2Transactions),
+            "l2-receipts" => Ok(Self::L2Receipts),
             "l2-code" => Ok(Self::L2Code),
             "agreed-pre-state" => Ok(Self::AgreedPreState),
             "l2-output-root" => Ok(Self::L2OutputRoot),
@@ -119,6 +122,7 @@ impl From<HintType> for &str {
             HintType::L1Precompile => "l1-precompile",
             HintType::L2BlockHeader => "l2-block-header",
             HintType::L2Transactions => "l2-transactions",
+            HintType::L2Receipts => "l2-receipts",
             HintType::L2Code => "l2-code",
             HintType::AgreedPreState => "agreed-pre-state",
             HintType::L2OutputRoot => "l2-output-root",

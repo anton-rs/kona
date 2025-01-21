@@ -1,5 +1,6 @@
 //! Error types for the `kona-interop` crate.
 
+use crate::InteropProvider;
 use alloc::vec::Vec;
 use alloy_primitives::{Address, B256};
 use thiserror::Error;
@@ -8,7 +9,7 @@ use thiserror::Error;
 ///
 /// [MessageGraph]: crate::MessageGraph
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum MessageGraphError {
+pub enum MessageGraphError<E> {
     /// Dependency set is impossibly empty
     #[error("Dependency set is impossibly empty")]
     EmptyDependencySet,
@@ -32,32 +33,18 @@ pub enum MessageGraphError {
     InvalidMessages(Vec<u64>),
     /// Interop provider error
     #[error("Interop provider: {0}")]
-    InteropProviderError(#[from] InteropProviderError),
+    InteropProviderError(#[from] E),
 }
 
 /// A [Result] alias for the [MessageGraphError] type.
-pub type MessageGraphResult<T> = core::result::Result<T, MessageGraphError>;
-
-/// An error type for the [InteropProvider] trait.
-///
-/// [InteropProvider]: crate::InteropProvider
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum InteropProviderError {
-    /// Unknown Chain ID
-    #[error("Unknown Chain ID")]
-    UnknownChainId,
-    /// Not found
-    #[error("Not found")]
-    NotFound,
-}
-
-/// A [Result] alias for the [InteropProviderError] type.
-pub type InteropProviderResult<T> = core::result::Result<T, InteropProviderError>;
+#[allow(type_alias_bounds)]
+pub type MessageGraphResult<T, P: InteropProvider> =
+    core::result::Result<T, MessageGraphError<P::Error>>;
 
 /// An error type for the [SuperRoot] struct's serialization and deserialization.
 ///
 /// [SuperRoot]: crate::SuperRoot
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum SuperRootError {
     /// Invalid super root version byte
     #[error("Invalid super root version byte")]
@@ -65,6 +52,9 @@ pub enum SuperRootError {
     /// Unexpected encoded super root length
     #[error("Unexpected encoded super root length")]
     UnexpectedLength,
+    /// Slice conversion error
+    #[error("Slice conversion error: {0}")]
+    SliceConversionError(#[from] core::array::TryFromSliceError),
 }
 
 /// A [Result] alias for the [SuperRootError] type.

@@ -42,7 +42,7 @@ where
         if transition_state.step >= transition_state.pre_state.output_roots.len() as u64 {
             info!(
                 target: "interop_client",
-                "No state transition required, transition state is already saturated."
+                "No derivation/execution required, transition state is already saturated."
             );
 
             return transition_and_check(pre, None, boot.claimed_post_state);

@@ -2577,17 +2577,23 @@ dependencies = [
 name = "kona-proof-interop"
 version = "0.1.1"
 dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
  "alloy-primitives",
  "alloy-rlp",
  "arbitrary",
+ "async-trait",
  "kona-interop",
+ "kona-mpt",
  "kona-preimage",
  "kona-proof",
  "maili-genesis",
  "maili-registry",
+ "op-alloy-consensus",
  "rand",
  "serde",
  "serde_json",
+ "spin",
  "tracing",
 ]
 

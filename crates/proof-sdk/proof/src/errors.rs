@@ -15,7 +15,7 @@ pub enum OracleProviderError {
     BlockNumberPastHead(u64, u64),
     /// Preimage oracle error.
     #[error("Preimage oracle error: {0}")]
-    Preimage(PreimageOracleError),
+    Preimage(#[from] PreimageOracleError),
     /// List walker error.
     #[error("Trie walker error: {0}")]
     TrieWalker(OrderedListWalkerError),
@@ -34,6 +34,9 @@ pub enum OracleProviderError {
     /// Serde error.
     #[error("Serde error: {0}")]
     Serde(serde_json::Error),
+    /// Unknown Chain ID
+    #[error("Unknown chain ID: {0}")]
+    UnknownChainId(u64),
 }
 
 impl From<OracleProviderError> for PipelineErrorKind {
