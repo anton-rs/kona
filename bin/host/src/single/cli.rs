@@ -1,26 +1,12 @@
 //! This module contains all CLI-specific code for the single chain entrypoint.
 
-use super::{start_server, start_server_and_native_client, LocalKeyValueStore};
-use crate::{
-    cli::parse_b256,
-    eth::OnlineBlobProvider,
-    kv::{DiskKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore, SplitKeyValueStore},
-};
+use crate::cli::{cli_styles, parse_b256};
 use alloy_primitives::B256;
-use alloy_provider::ReqwestProvider;
-use alloy_rpc_client::RpcClient;
-use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
-use clap::{
-    builder::styling::{AnsiColor, Color, Style},
-    Parser,
-};
+use clap::Parser;
 use maili_genesis::RollupConfig;
-use reqwest::Client;
 use serde::Serialize;
-use std::{path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
-use tracing::error;
+use std::path::PathBuf;
 
 /// The host binary CLI application arguments.
 #[derive(Default, Parser, Serialize, Clone, Debug)]
@@ -106,80 +92,11 @@ pub struct SingleChainHostCli {
 }
 
 impl SingleChainHostCli {
-    /// Runs the host binary in single-chain mode.
-    pub async fn run(self) -> Result<()> {
-        if self.server {
-            start_server(self).await?;
-        } else {
-            let status = match start_server_and_native_client(self).await {
-                Ok(status) => status,
-                Err(e) => {
-                    error!(target: "kona_host", "Exited with an error: {:?}", e);
-                    panic!("{e}");
-                }
-            };
-
-            // Bubble up the exit status of the client program.
-            std::process::exit(status as i32);
-        }
-
-        Ok(())
-    }
-
     /// Returns `true` if the host is running in offline mode.
     pub const fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() &&
             self.l2_node_address.is_none() &&
             self.l1_beacon_address.is_none()
-    }
-
-    /// Returns an HTTP provider for the given URL.
-    fn http_provider(url: &str) -> ReqwestProvider {
-        let url = url.parse().unwrap();
-        let http = Http::<Client>::new(url);
-        ReqwestProvider::new(RpcClient::new(http, true))
-    }
-
-    /// Creates the providers associated with the [SingleChainHostCli] configuration.
-    ///
-    /// ## Returns
-    /// - A [ReqwestProvider] for the L1 node.
-    /// - An [OnlineBlobProvider] for the L1 beacon node.
-    /// - A [ReqwestProvider] for the L2 node.
-    pub async fn create_providers(
-        &self,
-    ) -> Result<(ReqwestProvider, OnlineBlobProvider, ReqwestProvider)> {
-        let blob_provider = OnlineBlobProvider::new_http(
-            self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
-        )
-        .await
-        .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
-        let l1_provider = Self::http_provider(
-            self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
-        );
-        let l2_provider = Self::http_provider(
-            self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
-        );
-
-        Ok((l1_provider, blob_provider, l2_provider))
-    }
-
-    /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is
-    /// configured to be created.
-    pub fn construct_kv_store(&self) -> SharedKeyValueStore {
-        let local_kv_store = LocalKeyValueStore::new(self.clone());
-
-        let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = self.data_dir {
-            let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
-            let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
-            Arc::new(RwLock::new(split_kv_store))
-        } else {
-            let mem_kv_store = MemoryKeyValueStore::new();
-            let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
-            Arc::new(RwLock::new(split_kv_store))
-        };
-
-        kv_store
     }
 
     /// Reads the [RollupConfig] from the file system and returns it as a string.
@@ -198,18 +115,6 @@ impl SingleChainHostCli {
         serde_json::from_str(&ser_config)
             .map_err(|e| anyhow!("Error deserializing RollupConfig: {e}"))
     }
-}
-
-/// Styles for the CLI application.
-const fn cli_styles() -> clap::builder::Styles {
-    clap::builder::Styles::styled()
-        .usage(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
-        .header(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
-        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green))))
-        .invalid(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
-        .error(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
-        .valid(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Green))))
-        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::White))))
 }
 
 #[cfg(test)]

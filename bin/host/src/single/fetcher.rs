@@ -1,7 +1,7 @@
 //! This module contains the [SingleChainFetcher] struct, which is responsible for fetching
 //! preimages from a remote source serving the single-chain proof mode.
 
-use crate::{eth::OnlineBlobProvider, kv::KeyValueStore};
+use crate::eth::OnlineBlobProvider;
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -16,6 +16,7 @@ use alloy_rpc_types::{
     Transaction,
 };
 use anyhow::{anyhow, Result};
+use kona_host::KeyValueStore;
 use kona_preimage::{
     errors::{PreimageOracleError, PreimageOracleResult},
     HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,

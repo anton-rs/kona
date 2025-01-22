@@ -50,9 +50,9 @@ tracing.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 async-trait.workspace = true
+rocksdb = { workspace = true, features = ["snappy"] }
 tokio = { workspace = true, features = ["full"] }
 serde = { workspace = true, features = ["derive"] }
-rocksdb = { workspace = true, features = ["snappy"] }
 clap = { workspace = true, features = ["derive", "env"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 

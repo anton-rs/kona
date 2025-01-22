@@ -1,30 +1,15 @@
 //! This module contains all CLI-specific code for the interop entrypoint.
 
-use super::{
-    local_kv::DEFAULT_CHAIN_ID, start_server, start_server_and_native_client, LocalKeyValueStore,
-};
-use crate::{
-    cli::{parse_b256, parse_bytes},
-    eth::OnlineBlobProvider,
-    kv::{DiskKeyValueStore, MemoryKeyValueStore, SharedKeyValueStore, SplitKeyValueStore},
-};
+use super::local_kv::DEFAULT_CHAIN_ID;
+use crate::cli::{cli_styles, parse_b256, parse_bytes};
 use alloy_primitives::{Bytes, B256};
-use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::Decodable;
-use alloy_rpc_client::RpcClient;
-use alloy_transport_http::Http;
 use anyhow::{anyhow, Result};
-use clap::{
-    builder::styling::{AnsiColor, Color, Style},
-    Parser,
-};
+use clap::Parser;
 use kona_proof_interop::PreState;
 use maili_genesis::RollupConfig;
-use reqwest::Client;
 use serde::Serialize;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
-use tracing::error;
+use std::{collections::HashMap, path::PathBuf};
 
 /// The host binary CLI application arguments.
 #[derive(Default, Parser, Serialize, Clone, Debug)]
@@ -97,26 +82,6 @@ pub struct InteropHostCli {
 }
 
 impl InteropHostCli {
-    /// Runs the host binary in single-chain mode.
-    pub async fn run(self) -> Result<()> {
-        if self.server {
-            start_server(self).await?;
-        } else {
-            let status = match start_server_and_native_client(self).await {
-                Ok(status) => status,
-                Err(e) => {
-                    error!(target: "kona_host", "Exited with an error: {:?}", e);
-                    panic!("{e}");
-                }
-            };
-
-            // Bubble up the exit status of the client program.
-            std::process::exit(status as i32);
-        }
-
-        Ok(())
-    }
-
     /// Returns `true` if the host is running in offline mode.
     pub const fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() &&
@@ -150,57 +115,6 @@ impl InteropHostCli {
         }
     }
 
-    /// Creates the providers associated with the [InteropHostCli] configuration.
-    ///
-    /// ## Returns
-    /// - A [ReqwestProvider] for the L1 node.
-    /// - An [OnlineBlobProvider] for the L1 beacon node.
-    /// - A hash map of chain ID -> [ReqwestProvider] for the L2 nodes.
-    pub async fn create_providers(
-        &self,
-    ) -> Result<(ReqwestProvider, OnlineBlobProvider, HashMap<u64, ReqwestProvider>)> {
-        let l1_provider = Self::http_provider(
-            self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?,
-        );
-
-        let blob_provider = OnlineBlobProvider::new_http(
-            self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
-        )
-        .await
-        .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
-
-        // Resolve all chain IDs to their corresponding providers.
-        let l2_node_addresses =
-            self.l2_node_addresses.as_ref().ok_or(anyhow!("L2 node addresses must be set"))?;
-        let mut l2_providers = HashMap::with_capacity(l2_node_addresses.len());
-        for l2_node_address in l2_node_addresses {
-            let l2_provider = Self::http_provider(l2_node_address);
-            let chain_id = l2_provider.get_chain_id().await?;
-
-            l2_providers.insert(chain_id, l2_provider);
-        }
-
-        Ok((l1_provider, blob_provider, l2_providers))
-    }
-
-    /// Parses the CLI arguments and returns a new instance of a [SharedKeyValueStore], as it is
-    /// configured to be created.
-    pub fn construct_kv_store(&self) -> SharedKeyValueStore {
-        let local_kv_store = LocalKeyValueStore::new(self.clone());
-
-        let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = self.data_dir {
-            let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
-            let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
-            Arc::new(RwLock::new(split_kv_store))
-        } else {
-            let mem_kv_store = MemoryKeyValueStore::new();
-            let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
-            Arc::new(RwLock::new(split_kv_store))
-        };
-
-        kv_store
-    }
-
     /// Reads the [RollupConfig]s from the file system and returns a map of L2 chain ID ->
     /// [RollupConfig]s.
     pub fn read_rollup_configs(&self) -> Result<HashMap<u64, RollupConfig>> {
@@ -226,23 +140,4 @@ impl InteropHostCli {
             },
         )
     }
-
-    /// Returns an HTTP provider for the given URL.
-    fn http_provider(url: &str) -> ReqwestProvider {
-        let url = url.parse().unwrap();
-        let http = Http::<Client>::new(url);
-        ReqwestProvider::new(RpcClient::new(http, true))
-    }
-}
-
-/// Styles for the CLI application.
-const fn cli_styles() -> clap::builder::Styles {
-    clap::builder::Styles::styled()
-        .usage(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
-        .header(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Yellow))))
-        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green))))
-        .invalid(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
-        .error(Style::new().bold().fg_color(Some(Color::Ansi(AnsiColor::Red))))
-        .valid(Style::new().bold().underline().fg_color(Some(Color::Ansi(AnsiColor::Green))))
-        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::White))))
 }
