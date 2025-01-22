@@ -1,0 +1,29 @@
+[package]
+name = "kona-preimage-server"
+description = "Preimage server for Kona proofs"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Workspace
+kona-preimage = { workspace = true, features = ["std"] }
+
+# Alloy
+alloy-primitives = { workspace = true, features = ["serde"] }
+
+# General
+anyhow.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+tokio = { workspace = true, features = ["full"] }
+rocksdb = { workspace = true, features = ["snappy"] }
+
+[dev-dependencies]
+proptest.workspace = true

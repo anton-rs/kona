@@ -1,4 +1,4 @@
-//! Fetcher trait definition.
+//! [Fetcher] trait definition.
 
 use kona_preimage::{HintRouter, PreimageFetcher};
 

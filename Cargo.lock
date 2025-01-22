@@ -2473,6 +2473,7 @@ dependencies = [
  "kona-derive",
  "kona-mpt",
  "kona-preimage",
+ "kona-preimage-server",
  "kona-proof",
  "kona-proof-interop",
  "kona-std-fpvm",
@@ -2483,7 +2484,6 @@ dependencies = [
  "proptest",
  "reqwest",
  "revm",
- "rocksdb",
  "serde",
  "serde_json",
  "tokio",
@@ -2541,6 +2541,20 @@ dependencies = [
  "rkyv",
  "serde",
  "thiserror 2.0.11",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kona-preimage-server"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "async-trait",
+ "kona-preimage",
+ "proptest",
+ "rocksdb",
  "tokio",
  "tracing",
 ]

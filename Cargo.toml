@@ -74,6 +74,7 @@ kona-proof-interop = { path = "crates/proof-sdk/proof-interop", version = "0.1.1
 kona-std-fpvm = { path = "crates/proof-sdk/std-fpvm", version = "0.1.2", default-features = false }
 kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.2.1", default-features = false }
 kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.2", default-features = false }
+kona-preimage-server = { path = "crates/proof-sdk/preimage-server", version = "0.1.0", default-features = false }
 
 # Maili
 maili-consensus = { version = "0.1.6", default-features = false }

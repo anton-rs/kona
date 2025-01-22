@@ -20,6 +20,7 @@ kona-preimage = { workspace = true, features = ["std"] }
 kona-proof = { workspace = true, features = ["std"] }
 kona-proof-interop.workspace = true
 kona-client.workspace = true
+kona-preimage-server.workspace = true
 
 # Maili
 maili-protocol = { workspace = true, features = ["std", "serde"] }
@@ -52,7 +53,6 @@ serde_json.workspace = true
 async-trait.workspace = true
 tokio = { workspace = true, features = ["full"] }
 serde = { workspace = true, features = ["derive"] }
-rocksdb = { workspace = true, features = ["snappy"] }
 clap = { workspace = true, features = ["derive", "env"] }
 tracing-subscriber = { workspace = true, features = ["fmt"] }
 

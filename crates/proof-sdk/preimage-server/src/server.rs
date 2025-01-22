@@ -66,7 +66,8 @@ where
         ));
         let hint_router = spawn(Self::start_hint_router(self.hint_reader, self.fetcher));
 
-        // Spawn tasks for the futures and wait for them to complete.
+        // Spawn tasks for the futures and wait for them to complete. If one of the tasks closes
+        // before the other, cancel the other task.
         tokio::select! {
             s = server => s.map_err(|e| anyhow!(e))?,
             h = hint_router => h.map_err(|e| anyhow!(e))?,
@@ -87,6 +88,8 @@ where
             P: PreimageOracleServer,
         {
             loop {
+                // Serve the next preimage request. This `await` will yield to the runtime
+                // if no progress can be made.
                 match server.next_preimage_request(fetcher).await {
                     Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),
@@ -98,7 +101,7 @@ where
             }
         }
 
-        info!("Starting oracle server");
+        info!(target: "host-server", "Starting oracle server");
         if let Some(fetcher) = fetcher.as_ref() {
             do_loop(&OnlinePreimageFetcher::new(Arc::clone(fetcher)), &oracle_server).await
         } else {
@@ -116,6 +119,7 @@ where
             H: HintReaderServer,
         {
             loop {
+                // Route the next hint. This `await` will yield to the runtime if no progress can be made.
                 match server.next_hint(router).await {
                     Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),
@@ -127,7 +131,7 @@ where
             }
         }
 
-        info!("Starting hint router");
+        info!(target: "host-server", "Starting hint router");
         if let Some(fetcher) = fetcher.as_ref() {
             do_loop(&OnlineHintRouter::new(Arc::clone(fetcher)), &hint_reader).await
         } else {
