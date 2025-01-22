@@ -23,3 +23,6 @@ pub use db::{NoopTrieDBProvider, TrieAccount, TrieDB, TrieDBProvider};
 
 mod constants;
 mod syscalls;
+
+#[cfg(test)]
+mod test_utils;
