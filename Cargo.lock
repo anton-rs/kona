@@ -2510,7 +2510,6 @@ dependencies = [
  "alloy-rpc-types",
  "alloy-transport-http",
  "alloy-trie",
- "anyhow",
  "criterion",
  "pprof",
  "proptest",
@@ -2604,7 +2603,6 @@ dependencies = [
 name = "kona-std-fpvm-proc"
 version = "0.1.2"
 dependencies = [
- "anyhow",
  "cfg-if",
  "kona-std-fpvm",
  "proc-macro2",
