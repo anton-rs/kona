@@ -13,8 +13,8 @@ use tracing::info;
 pub mod cli;
 pub mod eth;
 pub mod interop;
-pub mod single;
 pub mod orchestrator;
+pub mod single;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {

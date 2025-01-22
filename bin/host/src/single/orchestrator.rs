@@ -30,7 +30,11 @@ pub struct SingleChainProviders {
 impl HostOrchestrator for SingleChainHostCli {
     type Providers = SingleChainProviders;
 
-    async fn create_providers(&self) -> Result<Self::Providers> {
+    async fn create_providers(&self) -> Result<Option<Self::Providers>> {
+        if self.is_offline() {
+            return Ok(None);
+        }
+
         let blob_provider = OnlineBlobProvider::new_http(
             self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
         )
@@ -42,15 +46,15 @@ impl HostOrchestrator for SingleChainHostCli {
             self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
         );
 
-        Ok(SingleChainProviders { l1_provider, blob_provider, l2_provider })
+        Ok(Some(SingleChainProviders { l1_provider, blob_provider, l2_provider }))
     }
 
     fn create_fetcher(
         &self,
-        providers: Self::Providers,
+        providers: Option<Self::Providers>,
         kv_store: SharedKeyValueStore,
     ) -> Option<Arc<RwLock<impl Fetcher + Send + Sync + 'static>>> {
-        (!self.is_offline()).then(|| {
+        providers.map(|providers| {
             Arc::new(RwLock::new(SingleChainFetcher::new(
                 kv_store,
                 providers.l1_provider,

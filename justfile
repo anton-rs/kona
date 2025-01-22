@@ -105,7 +105,7 @@ build-cannon *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/op-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
+    ghcr.io/op-rs/kona/cannon-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-preimage-server --exclude kona-host
 
 # Build for the `asterisc` target. Any crates that require the stdlib are excluded from the build for this target.
 build-asterisc *args='':
@@ -114,7 +114,7 @@ build-asterisc *args='':
     --platform linux/amd64 \
     -v `pwd`/:/workdir \
     -w="/workdir" \
-    ghcr.io/op-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
+    ghcr.io/op-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-preimage-server --exclude kona-host
 
 # Build the `kona-client` prestate artifacts for the latest release.
 build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-artifacts-asterisc':

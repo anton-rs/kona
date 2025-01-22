@@ -30,7 +30,11 @@ pub struct InteropProviders {
 impl HostOrchestrator for InteropHostCli {
     type Providers = InteropProviders;
 
-    async fn create_providers(&self) -> Result<Self::Providers> {
+    async fn create_providers(&self) -> Result<Option<Self::Providers>> {
+        if self.is_offline() {
+            return Ok(None);
+        }
+
         let l1_provider =
             http_provider(self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?);
 
@@ -51,15 +55,15 @@ impl HostOrchestrator for InteropHostCli {
             l2_providers.insert(chain_id, l2_provider);
         }
 
-        Ok(InteropProviders { l1_provider, blob_provider, l2_providers })
+        Ok(Some(InteropProviders { l1_provider, blob_provider, l2_providers }))
     }
 
     fn create_fetcher(
         &self,
-        providers: Self::Providers,
+        providers: Option<Self::Providers>,
         kv_store: SharedKeyValueStore,
     ) -> Option<Arc<RwLock<impl Fetcher + Send + Sync + 'static>>> {
-        (!self.is_offline()).then(|| {
+        providers.map(|providers| {
             // TODO: Don't pass the whole cfg to the interop fetcher.
             Arc::new(RwLock::new(InteropFetcher::new(
                 self.clone(),

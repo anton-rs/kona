@@ -119,7 +119,8 @@ where
             H: HintReaderServer,
         {
             loop {
-                // Route the next hint. This `await` will yield to the runtime if no progress can be made.
+                // Route the next hint. This `await` will yield to the runtime if no progress can be
+                // made.
                 match server.next_hint(router).await {
                     Ok(_) => continue,
                     Err(PreimageOracleError::IOError(_)) => return Ok(()),

@@ -4,8 +4,8 @@
 use super::InteropHostCli;
 use alloy_primitives::{keccak256, B256};
 use anyhow::Result;
-use kona_preimage_server::KeyValueStore;
 use kona_preimage::PreimageKey;
+use kona_preimage_server::KeyValueStore;
 use kona_proof_interop::boot::{
     L1_HEAD_KEY, L2_AGREED_PRE_STATE_KEY, L2_CHAIN_ID_KEY, L2_CLAIMED_POST_STATE_KEY,
     L2_CLAIMED_TIMESTAMP_KEY, L2_ROLLUP_CONFIG_KEY,

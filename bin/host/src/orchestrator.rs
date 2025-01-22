@@ -1,4 +1,5 @@
-//! Contains the [HostOrchestrator] trait, which defines entry points for the host to run a given module.
+//! Contains the [HostOrchestrator] trait, which defines entry points for the host to run a given
+//! module.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -41,15 +42,17 @@ pub trait HostOrchestrator {
     type Providers;
 
     /// Instantiates the providers for the host's fetcher.
-    async fn create_providers(&self) -> Result<Self::Providers>;
+    async fn create_providers(&self) -> Result<Option<Self::Providers>>;
 
     /// Constructs the [KeyValueStore] for the host.
+    ///
+    /// [KeyValueStore]: kona_preimage_server::KeyValueStore
     fn create_key_value_store(&self) -> Result<SharedKeyValueStore>;
 
     /// Creates a [Fetcher] for the host program's preimage server.
     fn create_fetcher(
         &self,
-        providers: Self::Providers,
+        providers: Option<Self::Providers>,
         kv_store: SharedKeyValueStore,
     ) -> Option<Arc<RwLock<impl Fetcher + Send + Sync + 'static>>>;
 
