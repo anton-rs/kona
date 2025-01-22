@@ -1,12 +1,12 @@
 //! Contains the [HostOrchestrator] trait, which defines entry points for the host to run a given
 //! module.
 
+use crate::{Fetcher, PreimageServer, SharedKeyValueStore};
 use anyhow::Result;
 use async_trait::async_trait;
 use kona_preimage::{
     BidirectionalChannel, HintReader, HintWriter, NativeChannel, OracleReader, OracleServer,
 };
-use kona_preimage_server::{Fetcher, PreimageServer, SharedKeyValueStore};
 use kona_std_fpvm::{FileChannel, FileDescriptor};
 use std::sync::Arc;
 use tokio::{sync::RwLock, task};
@@ -46,7 +46,7 @@ pub trait HostOrchestrator {
 
     /// Constructs the [KeyValueStore] for the host.
     ///
-    /// [KeyValueStore]: kona_preimage_server::KeyValueStore
+    /// [KeyValueStore]: crate::KeyValueStore
     fn create_key_value_store(&self) -> Result<SharedKeyValueStore>;
 
     /// Creates a [Fetcher] for the host program's preimage server.

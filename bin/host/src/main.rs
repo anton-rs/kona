@@ -7,13 +7,12 @@
 use crate::cli::{init_tracing_subscriber, HostCli, HostMode};
 use anyhow::Result;
 use clap::Parser;
-use orchestrator::DetachedHostOrchestrator;
+use kona_host::DetachedHostOrchestrator;
 use tracing::info;
 
 pub mod cli;
 pub mod eth;
 pub mod interop;
-pub mod orchestrator;
 pub mod single;
 
 #[tokio::main(flavor = "multi_thread")]

@@ -16,11 +16,11 @@ use alloy_rpc_types::{
     Transaction,
 };
 use anyhow::{anyhow, Result};
+use kona_host::KeyValueStore;
 use kona_preimage::{
     errors::{PreimageOracleError, PreimageOracleResult},
     HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
 };
-use kona_preimage_server::KeyValueStore;
 use kona_proof::{Hint, HintType};
 use maili_protocol::BlockInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;

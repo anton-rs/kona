@@ -4,8 +4,8 @@
 use super::SingleChainHostCli;
 use alloy_primitives::B256;
 use anyhow::Result;
+use kona_host::KeyValueStore;
 use kona_preimage::PreimageKey;
-use kona_preimage_server::KeyValueStore;
 use kona_proof::boot::{
     L1_HEAD_KEY, L2_CHAIN_ID_KEY, L2_CLAIM_BLOCK_NUMBER_KEY, L2_CLAIM_KEY, L2_OUTPUT_ROOT_KEY,
     L2_ROLLUP_CONFIG_KEY,

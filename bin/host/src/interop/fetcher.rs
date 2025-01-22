@@ -18,11 +18,11 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use kona_host::KeyValueStore;
 use kona_preimage::{
     errors::{PreimageOracleError, PreimageOracleResult},
     HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
 };
-use kona_preimage_server::KeyValueStore;
 use kona_proof_interop::{Hint, HintType, PreState};
 use maili_protocol::BlockInfo;
 use maili_registry::ROLLUP_CONFIGS;
