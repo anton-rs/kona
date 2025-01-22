@@ -1,11 +1,11 @@
-#![allow(missing_docs)]
 //! Benches for the [StatelessL2BlockExecutor] implementation.
+
+#![allow(missing_docs)]
 
 use alloy_consensus::{Header, Sealable};
 use alloy_primitives::{address, b256, hex, Bytes, B256};
 use alloy_rlp::Decodable;
 use alloy_rpc_types_engine::PayloadAttributes;
-use anyhow::{anyhow, Result};
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use kona_executor::{StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::{NoopTrieHinter, TrieNode, TrieProvider};
@@ -22,6 +22,14 @@ struct TestdataTrieProvider {
     preimages: HashMap<B256, Bytes>,
 }
 
+#[derive(Debug, thiserror::Error)]
+enum TestdataTrieProviderError {
+    #[error("RLP error: {0}")]
+    Rlp(alloy_rlp::Error),
+    #[error("Preimage not found for key: {0}")]
+    PreimageNotFound(B256),
+}
+
 impl TestdataTrieProvider {
     /// Constructs a new [TestdataTrieProvider] with the given testdata folder.
     pub(crate) fn new(testdata_folder: &str) -> Self {
@@ -35,35 +43,33 @@ impl TestdataTrieProvider {
 }
 
 impl TrieProvider for TestdataTrieProvider {
-    type Error = anyhow::Error;
+    type Error = TestdataTrieProviderError;
 
-    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode> {
+    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, Self::Error> {
         TrieNode::decode(
             &mut self
                 .preimages
                 .get(&key)
                 .cloned()
-                .ok_or_else(|| anyhow!("Preimage not found for key: {}", key))?
+                .ok_or(TestdataTrieProviderError::PreimageNotFound(key))?
                 .as_ref(),
         )
-        .map_err(Into::into)
+        .map_err(TestdataTrieProviderError::Rlp)
     }
 }
 
 impl TrieDBProvider for TestdataTrieProvider {
-    fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes> {
+    fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes, TestdataTrieProviderError> {
         self.preimages
             .get(&code_hash)
             .cloned()
-            .ok_or_else(|| anyhow!("Bytecode not found for hash: {}", code_hash))
+            .ok_or(TestdataTrieProviderError::PreimageNotFound(code_hash))
     }
 
-    fn header_by_hash(&self, hash: B256) -> Result<Header> {
-        let encoded_header = self
-            .preimages
-            .get(&hash)
-            .ok_or_else(|| anyhow!("Header not found for hash: {}", hash))?;
-        Header::decode(&mut encoded_header.as_ref()).map_err(|e| anyhow!(e))
+    fn header_by_hash(&self, hash: B256) -> Result<Header, TestdataTrieProviderError> {
+        let encoded_header =
+            self.preimages.get(&hash).ok_or(TestdataTrieProviderError::PreimageNotFound(hash))?;
+        Header::decode(&mut encoded_header.as_ref()).map_err(TestdataTrieProviderError::Rlp)
     }
 }
 
