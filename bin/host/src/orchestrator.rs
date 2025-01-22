@@ -101,7 +101,7 @@ pub trait DetachedHostOrchestrator: HostOrchestrator {
     fn is_detached(&self) -> bool;
 
     /// Starts the host in detached mode, with the client program running in a separate process.
-    async fn start_detached(&self) -> Result<()> {
+    async fn run_detached(&self) -> Result<()> {
         let comms = DetachedHostComms {
             hint: FileChannel::new(FileDescriptor::HintRead, FileDescriptor::HintWrite),
             preimage: FileChannel::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite),
@@ -122,9 +122,9 @@ pub trait DetachedHostOrchestrator: HostOrchestrator {
 
     /// Override for [HostOrchestrator::start] that starts the host in detached mode,
     /// if [DetachedHostOrchestrator::is_detached] returns `true`.
-    async fn start(&self) -> Result<()> {
+    async fn run(&self) -> Result<()> {
         if self.is_detached() {
-            self.start_detached().await
+            self.run_detached().await
         } else {
             HostOrchestrator::start(self).await
         }

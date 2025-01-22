@@ -22,10 +22,10 @@ async fn main() -> Result<()> {
 
     match cfg.mode {
         HostMode::Single(cfg) => {
-            cfg.start().await?;
+            cfg.run().await?;
         }
         HostMode::Super(cfg) => {
-            cfg.start().await?;
+            cfg.run().await?;
         }
     }
 
