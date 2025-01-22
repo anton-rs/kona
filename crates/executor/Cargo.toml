@@ -43,7 +43,11 @@ alloy-rpc-types-engine.workspace = true
 serde = { workspace = true, features = ["derive"] }
 criterion = { workspace = true, features = ["html_reports"] }
 pprof = { workspace = true, features = ["criterion", "flamegraph", "frame-pointer"] }
-
-[[bench]]
-name = "execution"
-harness = false
+tokio = { workspace = true, features = ["full"] }
+rstest.workspace = true
+maili-registry.workspace = true
+alloy-provider = { workspace = true, features = ["reqwest"] }
+alloy-rpc-client.workspace = true
+alloy-transport.workspace = true
+alloy-transport-http.workspace = true
+kona-host.workspace = true

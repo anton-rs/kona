@@ -462,3 +462,38 @@ where
         ordered_trie_with_encoder(transactions, |tx, buf| buf.put_slice(tx.as_ref())).root()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::test_utils::run_test_fixture;
+    use rstest::rstest;
+    use std::path::PathBuf;
+
+    // To create new test fixtures, uncomment the following test and run it with parameters filled.
+    //
+    // #[tokio::test(flavor = "multi_thread")]
+    // async fn create_fixture() {
+    //     let fixture_creator = crate::test_utils::ExecutorTestFixtureCreator::new(
+    //         "<l2_archive_el_rpc_url>",
+    //         <block_number>,
+    //         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata"),
+    //     );
+    //     fixture_creator.create_static_fixture().await;
+    // }
+
+    #[rstest]
+    #[case::small_block(22884230)]
+    #[case::small_block_2(22880574)]
+    #[case::small_block_3(22887258)]
+    #[case::medium_block(22886464)]
+    #[case::medium_block_2(22886311)]
+    #[case::medium_block_3(22880944)]
+    #[tokio::test]
+    async fn test_statelessly_execute_block(#[case] block_number: u64) {
+        let fixture_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("testdata")
+            .join(format!("block-{block_number}"));
+
+        run_test_fixture(fixture_dir).await;
+    }
+}
