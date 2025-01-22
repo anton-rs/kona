@@ -2428,7 +2428,6 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-rpc-types-engine",
- "anyhow",
  "criterion",
  "kona-mpt",
  "maili-genesis",
