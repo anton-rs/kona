@@ -120,7 +120,7 @@ impl ExecutorTestFixtureCreator {
             payload_attributes: PayloadAttributes {
                 timestamp: executing_header.timestamp,
                 parent_beacon_block_root: parent_header.parent_beacon_block_root,
-                prev_randao: parent_header.mix_hash.into(),
+                prev_randao: parent_header.mix_hash,
                 withdrawals: Default::default(),
                 suggested_fee_recipient: FEE_RECIPIENT,
             },
@@ -144,7 +144,7 @@ impl ExecutorTestFixtureCreator {
             expected_block_hash: executing_header.hash_slow(),
         };
 
-        let mut executor = StatelessL2BlockExecutor::builder(&rollup_config, self, NoopTrieHinter)
+        let mut executor = StatelessL2BlockExecutor::builder(rollup_config, self, NoopTrieHinter)
             .with_parent_header(parent_header)
             .build();
         let produced_header =
@@ -258,7 +258,7 @@ struct DiskTrieNodeProvider {
 }
 
 impl DiskTrieNodeProvider {
-    pub(crate) fn new(kv_store: DiskKeyValueStore) -> Self {
+    pub(crate) const fn new(kv_store: DiskKeyValueStore) -> Self {
         Self { kv_store }
     }
 }
