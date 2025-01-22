@@ -30,7 +30,6 @@ alloy-rpc-types = { workspace = true, features = ["eth", "debug"] }
 
 # General
 rand.workspace = true
-anyhow.workspace = true
 reqwest.workspace = true
 proptest.workspace = true
 tokio = { workspace = true, features = ["full"] }

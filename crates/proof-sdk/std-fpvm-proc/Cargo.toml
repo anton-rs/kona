@@ -13,7 +13,6 @@ proc-macro = true
 
 [dependencies]
 # General
-anyhow.workspace = true
 cfg-if.workspace = true
 
 # Workspace

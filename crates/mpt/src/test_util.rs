@@ -7,14 +7,17 @@ use alloy_primitives::{keccak256, Bytes, Log, B256};
 use alloy_provider::{network::eip2718::Encodable2718, Provider, ProviderBuilder};
 use alloy_rlp::Decodable;
 use alloy_rpc_types::{BlockTransactions, BlockTransactionsKind};
-use anyhow::{anyhow, Result};
 use reqwest::Url;
 
 const RPC_URL: &str = "https://docs-demo.quiknode.pro/";
 
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+#[error("TestTrieProviderError: {0}")]
+pub(crate) struct TestTrieProviderError(&'static str);
+
 /// Grabs a live merkleized receipts list within a block header.
 pub(crate) async fn get_live_derivable_receipts_list(
-) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<ReceiptEnvelope>)> {
+) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<ReceiptEnvelope>), TestTrieProviderError> {
     // Initialize the provider.
     let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
 
@@ -22,13 +25,13 @@ pub(crate) async fn get_live_derivable_receipts_list(
     let block = provider
         .get_block(block_number.into(), BlockTransactionsKind::Full)
         .await
-        .map_err(anyhow::Error::from)?
-        .ok_or_else(|| anyhow!("Missing block"))?;
+        .map_err(|_| TestTrieProviderError("Missing block"))?
+        .ok_or(TestTrieProviderError("Missing block"))?;
     let receipts = provider
         .get_block_receipts(block_number.into())
         .await
-        .map_err(anyhow::Error::from)?
-        .ok_or_else(|| anyhow!("Missing receipts"))?;
+        .map_err(|_| TestTrieProviderError("Missing receipts"))?
+        .ok_or(TestTrieProviderError("Missing receipts"))?;
 
     let consensus_receipts = receipts
         .into_iter()
@@ -82,7 +85,7 @@ pub(crate) async fn get_live_derivable_receipts_list(
 
 /// Grabs a live merkleized transactions list within a block header.
 pub(crate) async fn get_live_derivable_transactions_list(
-) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<TxEnvelope>)> {
+) -> Result<(B256, BTreeMap<B256, Bytes>, Vec<TxEnvelope>), TestTrieProviderError> {
     // Initialize the provider.
     let provider = ProviderBuilder::new().on_http(Url::parse(RPC_URL).expect("invalid rpc url"));
 
@@ -90,11 +93,11 @@ pub(crate) async fn get_live_derivable_transactions_list(
     let block = provider
         .get_block(block_number.into(), BlockTransactionsKind::Full)
         .await
-        .map_err(anyhow::Error::from)?
-        .ok_or_else(|| anyhow!("Missing block"))?;
+        .map_err(|_| TestTrieProviderError("Missing block"))?
+        .ok_or(TestTrieProviderError("Missing block"))?;
 
     let BlockTransactions::Full(txs) = block.transactions else {
-        anyhow::bail!("Did not fetch full block");
+        return Err(TestTrieProviderError("Did not fetch full block"));
     };
     let consensus_txs = txs.into_iter().map(TxEnvelope::from).collect::<Vec<_>>();
 
@@ -131,17 +134,17 @@ impl TrieNodeProvider {
 }
 
 impl TrieProvider for TrieNodeProvider {
-    type Error = anyhow::Error;
+    type Error = TestTrieProviderError;
 
-    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode> {
+    fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, TestTrieProviderError> {
         TrieNode::decode(
             &mut self
                 .preimages
                 .get(&key)
                 .cloned()
-                .ok_or_else(|| anyhow!("Key not found"))?
+                .ok_or(TestTrieProviderError("key not found in trie"))?
                 .as_ref(),
         )
-        .map_err(Into::into)
+        .map_err(|_| TestTrieProviderError("failed to decode trie node"))
     }
 }

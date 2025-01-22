@@ -18,7 +18,7 @@ pub trait TrieProvider {
     ///
     /// ## Returns
     /// - Ok(TrieNode): The trie node preimage.
-    /// - Err(anyhow::Error): If the trie node preimage could not be fetched.
+    /// - Err(Self::Error): If the trie node preimage could not be fetched.
     fn trie_node_by_hash(&self, key: B256) -> Result<TrieNode, Self::Error>;
 }
 
@@ -45,7 +45,7 @@ pub trait TrieHinter {
     ///
     /// ## Returns
     /// - Ok(()): If the hint was successful.
-    /// - Err(anyhow::Error): If the hint was unsuccessful.
+    /// - Err(Self::Error): If the hint was unsuccessful.
     fn hint_account_proof(&self, address: Address, block_number: u64) -> Result<(), Self::Error>;
 
     /// Hints the host to fetch the trie node preimages on the path to the storage slot within the
@@ -58,7 +58,7 @@ pub trait TrieHinter {
     ///
     /// ## Returns
     /// - Ok(()): If the hint was successful.
-    /// - Err(anyhow::Error): If the hint was unsuccessful.
+    /// - Err(Self::Error): If the hint was unsuccessful.
     fn hint_storage_proof(
         &self,
         address: Address,

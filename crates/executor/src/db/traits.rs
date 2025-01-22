@@ -16,7 +16,7 @@ pub trait TrieDBProvider: TrieProvider {
     ///
     /// ## Returns
     /// - Ok(Bytes): The bytecode of the contract.
-    /// - Err(anyhow::Error): If the bytecode hash could not be fetched.
+    /// - Err(Self::Error): If the bytecode hash could not be fetched.
     ///
     /// [TrieDB]: crate::TrieDB
     fn bytecode_by_hash(&self, code_hash: B256) -> Result<Bytes, Self::Error>;
@@ -28,7 +28,7 @@ pub trait TrieDBProvider: TrieProvider {
     ///
     /// ## Returns
     /// - Ok(Bytes): The [Header].
-    /// - Err(anyhow::Error): If the [Header] could not be fetched.
+    /// - Err(Self::Error): If the [Header] could not be fetched.
     ///
     /// [TrieDB]: crate::TrieDB
     fn header_by_hash(&self, hash: B256) -> Result<Header, Self::Error>;

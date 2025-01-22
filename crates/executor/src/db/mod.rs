@@ -48,7 +48,6 @@ pub use traits::{NoopTrieDBProvider, TrieDBProvider};
 /// ```rust
 /// use alloy_consensus::{Header, Sealable};
 /// use alloy_primitives::{Bytes, B256};
-/// use anyhow::Result;
 /// use kona_executor::{NoopTrieDBProvider, TrieDB};
 /// use kona_mpt::NoopTrieHinter;
 /// use revm::{db::states::bundle_state::BundleRetention, EvmBuilder, StateBuilder};
