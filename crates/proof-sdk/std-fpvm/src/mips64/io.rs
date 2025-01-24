@@ -1,11 +1,11 @@
-use crate::{errors::IOResult, mips32::syscall, BasicKernelInterface, FileDescriptor};
+use crate::{errors::IOResult, mips64::syscall, BasicKernelInterface, FileDescriptor};
 
-/// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS32rel1` target
+/// Concrete implementation of the [BasicKernelInterface] trait for the `MIPS64r2` target
 /// architecture. Exposes a safe interface for performing IO operations within the kernel.
 #[derive(Debug)]
-pub(crate) struct Mips32IO;
+pub(crate) struct Mips64IO;
 
-/// Relevant system call numbers for the `MIPS32rel1` target architecture.
+/// Relevant system call numbers for the `MIPS64r2` target architecture.
 ///
 /// See [Cannon System Call Specification](https://specs.optimism.io/experimental/fault-proof/cannon-fault-proof-vm.html#syscalls)
 ///
@@ -23,7 +23,7 @@ pub(crate) enum SyscallNumber {
     Write = 5001,
 }
 
-impl BasicKernelInterface for Mips32IO {
+impl BasicKernelInterface for Mips64IO {
     fn write(fd: FileDescriptor, buf: &[u8]) -> IOResult<usize> {
         unsafe {
             crate::linux::from_ret(syscall::syscall3(

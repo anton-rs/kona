@@ -40,7 +40,7 @@ experience by standardizing and streamlining the process of developing and compi
 **4. Performance**
 
 Kona is opinionated in that it favors `no_std` Rust programs for embedded FPVM development, for both performance and portability. In contrast with alternative approaches, such
-as the [`op-program`][op-program] using the Golang `MIPS32` target, `no_std` Rust programs produce much smaller binaries, resulting in fewer instructions
+as the [`op-program`][op-program] using the Golang `MIPS64` target, `no_std` Rust programs produce much smaller binaries, resulting in fewer instructions
 that need to be executed on the FPVM. In addition, this offers developers more low-level control over interactions with the FPVM kernel, which can be useful
 for optimizing performance-critical code.
 

@@ -30,7 +30,7 @@ pub use channel::FileChannel;
 pub(crate) mod linux;
 
 #[cfg(target_arch = "mips64")]
-pub(crate) mod mips32;
+pub(crate) mod mips64;
 
 #[cfg(target_arch = "riscv64")]
 pub(crate) mod riscv64;
