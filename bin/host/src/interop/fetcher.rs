@@ -2,7 +2,6 @@
 //! preimages from a remote source serving the super-chain (interop) proof mode.
 
 use super::InteropHostCli;
-use crate::eth::OnlineBlobProvider;
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -24,6 +23,7 @@ use kona_preimage::{
     HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
 };
 use kona_proof_interop::{Hint, HintType, PreState};
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use maili_protocol::BlockInfo;
 use maili_registry::ROLLUP_CONFIGS;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
@@ -44,7 +44,7 @@ where
     /// L1 chain provider.
     l1_provider: ReqwestProvider,
     /// The blob provider
-    blob_provider: OnlineBlobProvider,
+    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// L2 chain providers, keyed by chain ID.
     l2_providers: HashMap<u64, ReqwestProvider>,
     /// The cached active L2 chain ID.
@@ -62,7 +62,7 @@ where
         cfg: InteropHostCli,
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
-        blob_provider: OnlineBlobProvider,
+        blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
         l2_providers: HashMap<u64, ReqwestProvider>,
     ) -> Self {
         let active_l2_chain_id = cfg.active_l2_chain_id().expect("No active L2 chain ID");

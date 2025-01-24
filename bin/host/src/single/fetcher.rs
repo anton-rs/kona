@@ -1,7 +1,7 @@
 //! This module contains the [SingleChainFetcher] struct, which is responsible for fetching
 //! preimages from a remote source serving the single-chain proof mode.
 
-use crate::eth::OnlineBlobProvider;
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -39,7 +39,7 @@ where
     /// L1 chain provider.
     l1_provider: ReqwestProvider,
     /// The blob provider
-    blob_provider: OnlineBlobProvider,
+    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// L2 chain provider.
     l2_provider: ReqwestProvider,
     /// L2 head
@@ -56,7 +56,7 @@ where
     pub fn new(
         kv_store: Arc<RwLock<KV>>,
         l1_provider: ReqwestProvider,
-        blob_provider: OnlineBlobProvider,
+        blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
         l2_provider: ReqwestProvider,
         l2_head: B256,
     ) -> Self {

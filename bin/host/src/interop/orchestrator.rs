@@ -1,7 +1,7 @@
 //! [SingleChainHostCli]'s [HostOrchestrator] + [DetachedHostOrchestrator] implementations.
 
 use super::{InteropFetcher, InteropHostCli, LocalKeyValueStore};
-use crate::eth::{http_provider, OnlineBlobProvider};
+use crate::eth::http_provider;
 use alloy_provider::{Provider, ReqwestProvider};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -10,6 +10,7 @@ use kona_host::{
     SharedKeyValueStore, SplitKeyValueStore,
 };
 use kona_preimage::{HintWriter, NativeChannel, OracleReader};
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
@@ -19,7 +20,7 @@ pub struct InteropProviders {
     /// The L1 EL provider.
     l1_provider: ReqwestProvider,
     /// The L1 beacon node provider.
-    blob_provider: OnlineBlobProvider,
+    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL providers, keyed by chain ID.
     l2_providers: HashMap<u64, ReqwestProvider>,
 }
@@ -36,11 +37,10 @@ impl HostOrchestrator for InteropHostCli {
         let l1_provider =
             http_provider(self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?);
 
-        let blob_provider = OnlineBlobProvider::new_http(
+        let blob_provider = OnlineBlobProvider::init(OnlineBeaconClient::new_http(
             self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
-        )
-        .await
-        .map_err(|e| anyhow!("Failed to load blob provider configuration: {e}"))?;
+        ))
+        .await;
 
         // Resolve all chain IDs to their corresponding providers.
         let l2_node_addresses =

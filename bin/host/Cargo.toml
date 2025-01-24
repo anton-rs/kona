@@ -20,6 +20,7 @@ kona-preimage = { workspace = true, features = ["std"] }
 kona-proof = { workspace = true, features = ["std"] }
 kona-proof-interop.workspace = true
 kona-client.workspace = true
+kona-providers-alloy.workspace = true
 
 # Maili
 maili-protocol = { workspace = true, features = ["std", "serde"] }
