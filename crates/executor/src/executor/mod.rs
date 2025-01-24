@@ -29,7 +29,6 @@ mod env;
 mod util;
 use util::encode_holocene_eip_1559_params;
 
-
 /// Empty SHA-256 hash.
 const SHA256_EMPTY: B256 =
     b256!("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
