@@ -14,6 +14,9 @@ pub trait InteropProvider {
     /// The error type for the provider.
     type Error: Error + Display;
 
+    /// Fetch a [Header] by its hash.
+    async fn header_by_hash(&self, chain_id: u64, hash: B256) -> Result<Header, Self::Error>;
+
     /// Fetch a [Header] by its number.
     async fn header_by_number(&self, chain_id: u64, number: u64) -> Result<Header, Self::Error>;
 

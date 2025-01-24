@@ -35,29 +35,6 @@ where
         Self { oracle, pre_state, safe_head_cache: Arc::new(RwLock::new(HashMap::new())) }
     }
 
-    /// Fetch the [Header] for the block with the given hash.
-    pub async fn header_by_hash(
-        &self,
-        chain_id: u64,
-        block_hash: B256,
-    ) -> Result<Header, <Self as InteropProvider>::Error> {
-        self.oracle
-            .write(
-                &HintType::L2BlockHeader
-                    .encode_with(&[block_hash.as_slice(), chain_id.to_be_bytes().as_ref()]),
-            )
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-
-        let header_rlp = self
-            .oracle
-            .get(PreimageKey::new(*block_hash, PreimageKeyType::Keccak256))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-
-        Header::decode(&mut header_rlp.as_ref()).map_err(OracleProviderError::Rlp)
-    }
-
     /// Fetch the [OpReceiptEnvelope]s for the block with the given hash.
     async fn derive_receipts(
         &self,
@@ -98,7 +75,28 @@ where
 {
     type Error = OracleProviderError;
 
-    /// Fetch a [Header] by its number.
+    async fn header_by_hash(
+        &self,
+        chain_id: u64,
+        block_hash: B256,
+    ) -> Result<Header, <Self as InteropProvider>::Error> {
+        self.oracle
+            .write(
+                &HintType::L2BlockHeader
+                    .encode_with(&[block_hash.as_slice(), chain_id.to_be_bytes().as_ref()]),
+            )
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+
+        let header_rlp = self
+            .oracle
+            .get(PreimageKey::new(*block_hash, PreimageKeyType::Keccak256))
+            .await
+            .map_err(OracleProviderError::Preimage)?;
+
+        Header::decode(&mut header_rlp.as_ref()).map_err(OracleProviderError::Rlp)
+    }
+
     async fn header_by_number(&self, chain_id: u64, number: u64) -> Result<Header, Self::Error> {
         // Find the safe head for the given chain ID.
         //
@@ -150,7 +148,6 @@ where
         Ok(header)
     }
 
-    /// Fetch all receipts for a given block by number.
     async fn receipts_by_number(
         &self,
         chain_id: u64,
@@ -160,7 +157,6 @@ where
         self.derive_receipts(chain_id, header.hash_slow(), &header).await
     }
 
-    /// Fetch all receipts for a given block by hash.
     async fn receipts_by_hash(
         &self,
         chain_id: u64,

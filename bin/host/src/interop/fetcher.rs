@@ -8,7 +8,7 @@ use alloy_eips::{
     eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
     BlockId,
 };
-use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
+use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, Sealable, B256};
 use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
@@ -17,6 +17,7 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use kona_driver::{PipelineCursor, TipCursor};
 use kona_host::KeyValueStore;
 use kona_preimage::{
     errors::{PreimageOracleError, PreimageOracleResult},
@@ -26,6 +27,7 @@ use kona_proof_interop::{Hint, HintType, PreState};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use maili_protocol::BlockInfo;
 use maili_registry::ROLLUP_CONFIGS;
+use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -335,6 +337,101 @@ where
                     _ => anyhow::bail!("Only BlockTransactions::Hashes are supported."),
                 };
             }
+            HintType::L2OptimisticTransactions => {
+                // Validate the hint data length.
+                if hint_data.len() != 16 {
+                    anyhow::bail!("Invalid hint data length: {}", hint_data.len());
+                }
+
+                let chain_id = u64::from_be_bytes(
+                    hint_data[0..8]
+                        .as_ref()
+                        .try_into()
+                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
+                );
+                let block_number = u64::from_be_bytes(
+                    hint_data[8..16]
+                        .as_ref()
+                        .try_into()
+                        .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
+                );
+
+                // Get the rollup config for the chain ID.
+                let rollup_config = ROLLUP_CONFIGS
+                    .get(&chain_id)
+                    .cloned()
+                    .or_else(|| {
+                        let local_cfgs = self.cfg.read_rollup_configs().ok()?;
+                        local_cfgs.get(&chain_id).cloned()
+                    })
+                    .ok_or(anyhow!("No rollup config found for chain ID: {chain_id}"))?;
+
+                // Fetch the parent block to validate the hint.
+                let parent_block = self
+                    .l2_providers
+                    .get(&chain_id)
+                    .ok_or(anyhow!("No provider for chain ID"))?
+                    .get_block_by_number((block_number - 1).into(), BlockTransactionsKind::Hashes)
+                    .await?
+                    .ok_or(anyhow!("Parent block not found."))?;
+                let parent_block_transactions = match parent_block.transactions {
+                    BlockTransactions::Hashes(transactions) => {
+                        let mut l2_transactions = Vec::with_capacity(transactions.len());
+                        for tx_hash in transactions {
+                            let tx = self
+                                .l2_providers
+                                .get(&self.active_l2_chain_id)
+                                .ok_or(anyhow!("No active L2 chain ID"))?
+                                .client()
+                                .request::<&[B256; 1], Bytes>("debug_getRawTransaction", &[tx_hash])
+                                .await
+                                .map_err(|e| anyhow!("Error fetching transaction: {e}"))?;
+                            l2_transactions.push(OpTxEnvelope::decode(&mut tx.as_ref()).map_err(
+                                |e| anyhow!("Failed to decode transaction envelope: {e}"),
+                            )?);
+                        }
+                        l2_transactions
+                    }
+                    _ => anyhow::bail!("Only BlockTransactions::Hashes are supported."),
+                };
+
+                let safe_head = L2BlockInfo::from_block_and_genesis(
+                    &op_alloy_consensus::OpBlock {
+                        header: parent_block.header.inner.clone(),
+                        body: BlockBody {
+                            transactions: parent_block_transactions,
+                            ..Default::default()
+                        },
+                    },
+                    &rollup_config.genesis,
+                )?;
+
+                let l1_origin_block = self
+                    .l1_provider
+                    .get_block_by_hash(
+                        safe_head.l1_origin.hash.into(),
+                        BlockTransactionsKind::Hashes,
+                    )
+                    .await?
+                    .map(|b| BlockInfo {
+                        hash: b.header.hash,
+                        number: b.header.number,
+                        parent_hash: b.header.parent_hash,
+                        timestamp: b.header.timestamp,
+                    })
+                    .ok_or(anyhow!("L1 origin block not found."))?;
+
+                // Derive the payload for the block that the hint is for.
+                let mut cursor =
+                    PipelineCursor::new(rollup_config.channel_timeout, l1_origin_block);
+                let tip = TipCursor::new(
+                    safe_head,
+                    parent_block.header.inner.seal_slow(),
+                    EMPTY_ROOT_HASH,
+                );
+                cursor.advance(l1_origin_block, tip);
+            }
+
             HintType::L2Receipts => {
                 // Validate the hint data length.
                 if hint_data.len() != 40 {
