@@ -52,7 +52,7 @@ see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
 
 **Build Pipelines**
 
-- [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips-unknown-none` target.
+- [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips64-unknown-none` target.
 - [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64imac-unknown-none-elf` target.
 
 **Protocol**

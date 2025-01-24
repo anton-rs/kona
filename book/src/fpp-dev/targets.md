@@ -35,9 +35,9 @@ programs to directly invoke a select few syscalls:
 
 [asterisc-syscalls]: https://github.com/ethereum-optimism/asterisc/blob/master/docs/golang.md#linux-syscalls-used-by-go
 
-## Cannon (MIPS32r2)
+## Cannon (MIPS64r2)
 
-Cannon is based off of the `mips32r2` target architecture, specified in [_MIPS32™ Architecture For Programmers Volume III: The MIPS32™ Privileged Resource Architecture_](https://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf)
+Cannon is based off of the `mips64r2` target architecture, specified in [MIPS® Architecture For Programmers Volume II-A: The MIPS64® Instruction Set Reference Manual](https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MIPS_Architecture_MIPS64_InstructionSet_%20AFP_P_MD00087_06.05.pdf)
 
 ### Syscalls
 

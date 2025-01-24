@@ -5,7 +5,7 @@
 //! well-known and widely used allocator software such as OS Kernels.
 
 /// The global allocator for the program in embedded environments.
-#[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
+#[cfg(any(target_arch = "mips64", target_arch = "riscv64"))]
 pub mod global_allocator {
     use linked_list_allocator::LockedHeap;
 
@@ -32,17 +32,17 @@ pub mod global_allocator {
 ///
 /// # Safety
 #[cfg_attr(
-    any(target_arch = "mips", target_arch = "riscv64"),
+    any(target_arch = "mips64", target_arch = "riscv64"),
     doc = "See [global_allocator::init_allocator] safety comment."
 )]
 #[cfg_attr(
-    not(any(target_arch = "mips", target_arch = "riscv64")),
+    not(any(target_arch = "mips64", target_arch = "riscv64")),
     doc = "This macro is entirely safe to invoke in non-MIPS and non-RISC-V64 profiles, and functions as a no-op."
 )]
 #[macro_export]
 macro_rules! alloc_heap {
     ($size:expr) => {{
-        #[cfg(any(target_arch = "mips", target_arch = "riscv64"))]
+        #[cfg(any(target_arch = "mips64", target_arch = "riscv64"))]
         {
             use $crate::malloc::global_allocator::init_allocator;
 
