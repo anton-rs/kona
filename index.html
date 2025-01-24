@@ -218,7 +218,7 @@ required to build on top of a FPVM.</p>
 experience by standardizing and streamlining the process of developing and compiling verifiable Rust programs, targeted at supported FPVMs.</p>
 <p><strong>4. Performance</strong></p>
 <p>Kona is opinionated in that it favors <code>no_std</code> Rust programs for embedded FPVM development, for both performance and portability. In contrast with alternative approaches, such
-as the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> using the Golang <code>MIPS32</code> target, <code>no_std</code> Rust programs produce much smaller binaries, resulting in fewer instructions
+as the <a href="https://github.com/ethereum-optimism/optimism/tree/develop/op-program"><code>op-program</code></a> using the Golang <code>MIPS64</code> target, <code>no_std</code> Rust programs produce much smaller binaries, resulting in fewer instructions
 that need to be executed on the FPVM. In addition, this offers developers more low-level control over interactions with the FPVM kernel, which can be useful
 for optimizing performance-critical code.</p>
 <h2 id="development-status"><a class="header" href="#development-status">Development Status</a></h2>
