@@ -39,18 +39,18 @@ docker buildx bake \
 
 ## Cutting a Release (for maintainers / forks)
 
-To cut a release for any of the targets, first cut a new annotated tag for the target like so:
+To cut a release of the docker image for any of the targets, cut a new annotated tag for the target like so:
 
 ```sh
 # Example formats:
-# - `kona-host-v0.1.0-beta.8`
-# - `cannon-builder-v1.2.0`
-TAG="<target_name>-<version>"
-git tag -a $TAG "<tag description>" && git push origin tag $TAG
+# - `kona-host/v0.1.0-beta.8`
+# - `cannon-builder/v1.2.0`
+TAG="<target_name>/<version>"
+git tag -a $TAG -m "<tag description>" && git push origin tag $TAG
 ```
 
-Then, navigate over to the ["Build and Publish Docker Image"](https://github.com/op-rs/kona/actions/workflows/docker.yaml) action.
-From there, run a `workflow_dispatch` trigger, select the tag you just pushed, and then finally select the image to release.
+To run the workflow manually, navigate over to the ["Build and Publish Docker Image"](https://github.com/op-rs/kona/actions/workflows/docker.yaml)
+action. From there, run a `workflow_dispatch` trigger, select the tag you just pushed, and then finally select the image to release.
 
 Or, if you prefer to use the `gh` CLI, you can run:
 ```sh

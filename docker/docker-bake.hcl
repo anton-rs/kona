@@ -61,7 +61,7 @@ target "cannon-builder" {
 target "kona-asterisc-prestate" {
   inherits = ["docker-metadata-action"]
   context = "."
-  dockerfile = "docker/asterisc/asterisc-repro.dockerfile"
+  dockerfile = "docker/fpvm-prestates/asterisc-repro.dockerfile"
   args = {
     CLIENT_TAG = "${GIT_REF_NAME}"
     ASTERISC_TAG = "${ASTERISC_TAG}"

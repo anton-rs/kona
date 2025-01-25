@@ -116,25 +116,6 @@ build-asterisc *args='':
     -w="/workdir" \
     ghcr.io/op-rs/kona/asterisc-builder:main cargo build --workspace -Zbuild-std=core,alloc $@ --exclude kona-host
 
-# Build the `kona-client` prestate artifacts for the latest release.
-build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
-  #!/bin/bash
-  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
-  OUTPUT_DIR={{out}}
-
-  # Docker bake env
-  export GIT_REF_NAME="{{kona_tag}}"
-  export DEFAULT_TAG="kona-asterisc-prestate:local"
-
-  mkdir -p $OUTPUT_DIR
-
-  echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
-  docker buildx bake \
-    --progress plain \
-    --set "*.output=$OUTPUT_DIR" \
-    -f docker/docker-bake.hcl \
-    kona-asterisc-prestate
-
 # Clones and checks out the monorepo at the commit present in `.monorepo`
 monorepo:
   ([ ! -d monorepo ] && git clone https://github.com/ethereum-optimism/monorepo) || exit 0
