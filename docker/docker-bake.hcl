@@ -18,11 +18,11 @@ variable "PLATFORMS" {
 }
 
 variable "GIT_REF_NAME" {
-  default = "dev"
+  default = "main"
 }
 
 variable "ASTERISC_TAG" {
-  // The tag of `asterisc` to use in the `kona-fpp-asterisc` target.
+  // The tag of `asterisc` to use in the `kona-asterisc-prestate` target.
   //
   // You can override this if you'd like to use a different tag to generate the prestate.
   // https://github.com/ethereum-optimism/asterisc/releases
@@ -34,27 +34,38 @@ target "docker-metadata-action" {
   tags = ["${DEFAULT_TAG}"]
 }
 
+target "kona-host" {
+  inherits = ["docker-metadata-action"]
+  context = "."
+  dockerfile = "docker/apps/kona_host.dockerfile"
+  args = {
+    CLIENT_TAG = "${GIT_REF_NAME}"
+  }
+  platforms = split(",", PLATFORMS)
+}
+
 target "asterisc-builder" {
   inherits = ["docker-metadata-action"]
-  context = "build/asterisc"
+  context = "docker/asterisc"
   dockerfile = "asterisc.dockerfile"
   platforms = split(",", PLATFORMS)
 }
 
 target "cannon-builder" {
   inherits = ["docker-metadata-action"]
-  context = "build/cannon"
+  context = "docker/cannon"
   dockerfile = "cannon.dockerfile"
   platforms = split(",", PLATFORMS)
 }
 
-target "kona-fpp-asterisc" {
+target "kona-asterisc-prestate" {
   inherits = ["docker-metadata-action"]
   context = "."
-  dockerfile = "build/asterisc/asterisc-repro.dockerfile"
+  dockerfile = "docker/asterisc/asterisc-repro.dockerfile"
   args = {
     CLIENT_TAG = "${GIT_REF_NAME}"
     ASTERISC_TAG = "${ASTERISC_TAG}"
   }
-  platforms = split(",", PLATFORMS)
+  # Only build on linux/amd64 for reproducibility.
+  platforms = ["linux/amd64"]
 }

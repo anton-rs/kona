@@ -122,30 +122,18 @@ build-client-prestate-asterisc-artifacts kona_tag asterisc_tag out='./prestate-a
   PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
   OUTPUT_DIR={{out}}
 
-  echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
-  docker build \
-    -f $PATH_TO_REPRO_BUILDER \
-    --output $OUTPUT_DIR \
-    --build-arg CLIENT_TAG={{kona_tag}} \
-    --build-arg ASTERISC_TAG={{asterisc_tag}} \
-    --platform linux/amd64 \
-    .
+  # Docker bake env
+  export GIT_REF_NAME="{{kona_tag}}"
+  export DEFAULT_TAG="kona-asterisc-prestate:local"
 
-# Build the `kona-client` prestate artifacts for the latest release, with an image containing the resulting
-# binaries.
-build-client-prestate-asterisc-image kona_tag asterisc_tag out='./prestate-artifacts-asterisc':
-  #!/bin/bash
-  PATH_TO_REPRO_BUILDER=./build/asterisc/asterisc-repro.dockerfile
-  OUTPUT_DIR={{out}}
+  mkdir -p $OUTPUT_DIR
 
   echo "Building kona-client prestate artifacts for the asterisc target. 🐚 Kona Tag: {{kona_tag}} | 🎇 Asterisc Tag: {{asterisc_tag}}"
-  docker build \
-    -f $PATH_TO_REPRO_BUILDER \
-    -t kona-fpp-asterisc:latest \
-    --build-arg CLIENT_TAG={{kona_tag}} \
-    --build-arg ASTERISC_TAG={{asterisc_tag}} \
-    --platform linux/amd64 \
-    .
+  docker buildx bake \
+    --progress plain \
+    --set "*.output=$OUTPUT_DIR" \
+    -f docker/docker-bake.hcl \
+    kona-asterisc-prestate
 
 # Clones and checks out the monorepo at the commit present in `.monorepo`
 monorepo:

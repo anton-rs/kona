@@ -8,9 +8,15 @@ on:
         description: Which image to release
         required: true
         options:
-          - cannon-builder
+          - kona-host
           - asterisc-builder
-          - kona-fpp-asterisc
+          - cannon-builder
+          - kona-asterisc-prestate
+      override_tag:
+        type: string
+        description: A custom tag for the image
+        required: false
+        default: ""
 
 env:
   REGISTRY: ghcr.io
@@ -29,7 +35,7 @@ jobs:
       - name: Create matrix
         id: platforms
         run: |
-          echo "matrix=$(docker buildx bake ${{ inputs.image_to_release }} --print | jq -cr '.target."${{ inputs.image_to_release }}".platforms')" >>${GITHUB_OUTPUT}
+          echo "matrix=$(docker buildx bake -f docker/docker-bake.hcl ${{ inputs.image_to_release }} --print | jq -cr '.target."${{ inputs.image_to_release }}".platforms')" >>${GITHUB_OUTPUT}
       - name: Show matrix
         run: |
           echo ${{ steps.platforms.outputs.matrix }}
@@ -81,7 +87,7 @@ jobs:
         uses: docker/bake-action@v6
         with:
           files: |
-            ./docker-bake.hcl
+            ./docker/docker-bake.hcl
             cwd://${{ runner.temp }}/bake-meta.json
           targets: ${{ inputs.image_to_release }}
           set: |
