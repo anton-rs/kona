@@ -2,7 +2,7 @@
 //! preimages from a remote source serving the super-chain (interop) proof mode.
 
 use super::InteropHostCli;
-use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
+use alloy_consensus::{BlockBody, Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
     eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
@@ -25,7 +25,7 @@ use kona_preimage::{
 };
 use kona_proof_interop::{Hint, HintType, PreState};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
-use maili_protocol::BlockInfo;
+use maili_protocol::{BlockInfo, L2BlockInfo};
 use maili_registry::ROLLUP_CONFIGS;
 use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
