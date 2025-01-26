@@ -14,9 +14,9 @@ pub struct OnlineBlobProvider<B: BeaconClient> {
     /// The Beacon API client.
     beacon_client: B,
     /// Beacon Genesis time used for the time to slot conversion.
-    pub genesis_time: Option<u64>,
+    pub genesis_time: u64,
     /// Slot interval used for the time to slot conversion.
-    pub slot_interval: Option<u64>,
+    pub slot_interval: u64,
 }
 
 impl<B: BeaconClient> OnlineBlobProvider<B> {
@@ -25,20 +25,23 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
     /// The `genesis_time` and `slot_interval` arguments are _optional_ and the
     /// [OnlineBlobProvider] will attempt to load them dynamically at runtime if they are not
     /// provided.
+    ///
+    /// ## Panics
+    /// Panics if the genesis time or slot interval cannot be loaded from the beacon client.
     pub async fn init(beacon_client: B) -> Self {
         let genesis_time = beacon_client
             .beacon_genesis()
             .await
             .map(|r| r.data.genesis_time)
             .map_err(|e| BlobProviderError::Backend(e.to_string()))
-            .unwrap();
+            .expect("Failed to load genesis time from beacon client");
         let slot_interval = beacon_client
             .config_spec()
             .await
             .map(|r| r.data.seconds_per_slot)
             .map_err(|e| BlobProviderError::Backend(e.to_string()))
-            .unwrap();
-        Self { beacon_client, genesis_time: Some(genesis_time), slot_interval: Some(slot_interval) }
+            .expect("Failed to load slot interval from beacon client");
+        Self { beacon_client, genesis_time, slot_interval }
     }
 
     /// Fetches blob sidecars for the given slot and blob hashes.
@@ -75,12 +78,8 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
             return Ok(Vec::new());
         }
 
-        // Extract the genesis timestamp and slot interval from the loaded configs.
-        let genesis_time = self.genesis_time.expect("Genesis Config Loaded");
-        let interval = self.slot_interval.expect("Config Spec Loaded");
-
         // Calculate the slot for the given timestamp.
-        let slot = Self::slot(genesis_time, interval, block_ref.timestamp)?;
+        let slot = Self::slot(self.genesis_time, self.slot_interval, block_ref.timestamp)?;
 
         // Fetch blob sidecars for the slot using the given blob hashes.
         let sidecars = self.fetch_sidecars(slot, blob_hashes).await?;
@@ -94,19 +93,16 @@ impl<B: BeaconClient> OnlineBlobProvider<B> {
 
         // Validate the correct number of blob sidecars were retrieved.
         if blob_hashes.len() != filtered.len() {
-            return Err(BlobProviderError::SidecarLengthMismatch(
-                blob_hashes.len(),
-                filtered.len(),
-            ));
+            return Err(BlobProviderError::SidecarLengthMismatch(blob_hashes.len(), filtered.len()));
         }
 
         Ok(filtered
             .into_iter()
-            .map(|s| BlobTransactionSidecarItem {
-                index: s.index,
-                blob: s.blob,
-                kzg_commitment: s.kzg_commitment,
-                kzg_proof: s.kzg_proof,
+            .map(|bs| BlobTransactionSidecarItem {
+                index: bs.index,
+                blob: bs.blob,
+                kzg_commitment: bs.kzg_commitment,
+                kzg_proof: bs.kzg_proof,
             })
             .collect::<Vec<BlobTransactionSidecarItem>>())
     }
@@ -138,10 +134,10 @@ where
                 let hash = blob_hashes
                     .get(i)
                     .ok_or(BlobProviderError::Backend("Missing blob hash".to_string()))?;
-                match sidecar.verify_blob(&IndexedBlobHash { hash: hash.hash, index: hash.index }) {
-                    Ok(_) => Ok(sidecar.blob),
-                    Err(e) => Err(BlobProviderError::Backend(e.to_string())),
-                }
+                sidecar
+                    .verify_blob(&IndexedBlobHash { hash: hash.hash, index: hash.index })
+                    .map(|_| sidecar.blob)
+                    .map_err(|e| BlobProviderError::Backend(e.to_string()))
             })
             .collect::<Result<Vec<Box<Blob>>, BlobProviderError>>()
             .map_err(|e| BlobProviderError::Backend(e.to_string()))?;

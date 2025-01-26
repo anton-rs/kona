@@ -34,11 +34,8 @@ maili-genesis.workspace = true
 maili-protocol.workspace = true
 
 # Misc
-tokio = { workspace = true, features = ["full"] }
-tracing.workspace = true
 lru.workspace = true
 serde.workspace = true
-anyhow.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true
 reqwest = { workspace = true, features = ["json"] }

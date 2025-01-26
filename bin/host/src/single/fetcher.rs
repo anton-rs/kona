@@ -1,7 +1,6 @@
 //! This module contains the [SingleChainFetcher] struct, which is responsible for fetching
 //! preimages from a remote source serving the single-chain proof mode.
 
-use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
@@ -22,6 +21,7 @@ use kona_preimage::{
     HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
 };
 use kona_proof::{Hint, HintType};
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use maili_protocol::BlockInfo;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;

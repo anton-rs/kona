@@ -28,9 +28,7 @@ pub struct AlloyChainProvider {
     inner: ReqwestProvider,
     /// `header_by_hash` LRU cache.
     header_by_hash_cache: LruCache<B256, Header>,
-    /// `block_info_by_number` LRU cache.
-    block_info_by_number_cache: LruCache<u64, BlockInfo>,
-    /// `block_info_by_number` LRU cache.
+    /// `receipts_by_hash_cache` LRU cache.
     receipts_by_hash_cache: LruCache<B256, Vec<Receipt>>,
     /// `block_info_and_transactions_by_hash` LRU cache.
     block_info_and_transactions_by_hash_cache: LruCache<B256, (BlockInfo, Vec<TxEnvelope>)>,
@@ -42,7 +40,6 @@ impl AlloyChainProvider {
         Self {
             inner,
             header_by_hash_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
-            block_info_by_number_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
             receipts_by_hash_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
             block_info_and_transactions_by_hash_cache: LruCache::new(
                 NonZeroUsize::new(CACHE_SIZE).unwrap(),
@@ -118,31 +115,22 @@ impl ChainProvider for AlloyChainProvider {
             .raw_request("debug_getRawHeader".into(), [hash])
             .await
             .map_err(|_| AlloyChainProviderError::RawHeaderFetch(hash))?;
-        match Header::decode(&mut raw_header.as_ref()) {
-            Ok(header) => {
-                self.header_by_hash_cache.put(hash, header.clone());
-                Ok(header)
-            }
-            Err(_) => Err(AlloyChainProviderError::RawHeaderDecoding(hash)),
-        }
+
+        let header = Header::decode(&mut raw_header.as_ref())
+            .map_err(|_| AlloyChainProviderError::RawHeaderDecoding(hash))?;
+        self.header_by_hash_cache.put(hash, header.clone());
+
+        Ok(header)
     }
 
     async fn block_info_by_number(&mut self, number: u64) -> Result<BlockInfo, Self::Error> {
-        if let Some(block_info) = self.block_info_by_number_cache.get(&number) {
-            return Ok(*block_info);
-        }
-
         let raw_header: Bytes = self
             .inner
             .raw_request("debug_getRawHeader".into(), [U64::from(number)])
             .await
             .map_err(|_| AlloyChainProviderError::RawHeaderFetch(B256::default()))?;
-        let header = match Header::decode(&mut raw_header.as_ref()) {
-            Ok(h) => h,
-            Err(_) => {
-                return Err(AlloyChainProviderError::RawHeaderDecoding(B256::default()));
-            }
-        };
+        let header = Header::decode(&mut raw_header.as_ref())
+            .map_err(|_| AlloyChainProviderError::RawHeaderDecoding(B256::default()))?;
 
         let block_info = BlockInfo {
             hash: header.hash_slow(),
@@ -150,7 +138,6 @@ impl ChainProvider for AlloyChainProvider {
             parent_hash: header.parent_hash,
             timestamp: header.timestamp,
         };
-        self.block_info_by_number_cache.put(number, block_info);
         Ok(block_info)
     }
 
@@ -171,7 +158,7 @@ impl ChainProvider for AlloyChainProvider {
                 let r = &mut r.as_ref();
 
                 // Skip the transaction type byte if it exists
-                if !r.is_empty() && r[0] <= TxType::Eip4844 as u8 {
+                if !r.is_empty() && r[0] <= TxType::Eip7702 as u8 {
                     r.advance(1);
                 }
 
@@ -198,12 +185,8 @@ impl ChainProvider for AlloyChainProvider {
             .raw_request("debug_getRawBlock".into(), [hash])
             .await
             .map_err(|_| AlloyChainProviderError::RawHeaderFetch(hash))?;
-        let block: Block<TxEnvelope> = match Block::decode(&mut raw_block.as_ref()) {
-            Ok(b) => b,
-            Err(_) => {
-                return Err(AlloyChainProviderError::RawHeaderDecoding(hash));
-            }
-        };
+        let block: Block<TxEnvelope> = Block::decode(&mut raw_block.as_ref())
+            .map_err(|_| AlloyChainProviderError::RawHeaderDecoding(hash))?;
 
         let block_info = BlockInfo {
             hash: block.header.hash_slow(),
@@ -214,30 +197,5 @@ impl ChainProvider for AlloyChainProvider {
         self.block_info_and_transactions_by_hash_cache
             .put(hash, (block_info, block.body.transactions.clone()));
         Ok((block_info, block.body.transactions))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn default_provider() -> ReqwestProvider {
-        ReqwestProvider::new_http("https://docs-demo.quiknode.pro/".try_into().unwrap())
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_alloy_chain_provider_latest_block_number() {
-        let mut provider = AlloyChainProvider::new(default_provider());
-        let number = provider.latest_block_number().await.unwrap();
-        assert!(number > 0);
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_alloy_chain_provider_chain_id() {
-        let mut provider = AlloyChainProvider::new(default_provider());
-        let chain_id = provider.chain_id().await.unwrap();
-        assert_eq!(chain_id, 1);
     }
 }
