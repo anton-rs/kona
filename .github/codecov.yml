@@ -24,6 +24,7 @@ ignore:
   - "**/test_util*"
   - "**/tests*"
   - "crates/proof-sdk/proof"
+  - "crates/providers-alloy"
   - "crates/mpt/src/noop.rs"
 
 # Make comments less noisy

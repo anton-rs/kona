@@ -5,12 +5,6 @@ use alloy_rpc_client::RpcClient;
 use alloy_transport_http::Http;
 use reqwest::Client;
 
-mod blobs;
-pub use blobs::{
-    APIConfigResponse, APIGenesisResponse, OnlineBlobProvider, ReducedConfigData,
-    ReducedGenesisData,
-};
-
 mod precompiles;
 pub(crate) use precompiles::execute;
 
