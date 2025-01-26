@@ -5,16 +5,17 @@
 FROM ubuntu:22.04 AS asterisc-build
 SHELL ["/bin/bash", "-c"]
 
+ARG TARGETARCH
 ARG ASTERISC_TAG
 
 # Install deps
 RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates make
 
-ENV GO_VERSION=1.21.1
+ENV GO_VERSION=1.22.7
 
 # Fetch go manually, rather than using a Go base image, so we can copy the installation into the final stage
-RUN curl -sL https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz -o go$GO_VERSION.linux-amd64.tar.gz && \
-  tar -C /usr/local/ -xzf go$GO_VERSION.linux-amd64.tar.gz
+RUN curl -sL https://go.dev/dl/go$GO_VERSION.linux-$TARGETARCH.tar.gz -o go$GO_VERSION.linux-$TARGETARCH.tar.gz && \
+  tar -C /usr/local/ -xzf go$GO_VERSION.linux-$TARGETARCH.tar.gz
 ENV GOPATH=/go
 ENV PATH=/usr/local/go/bin:$GOPATH/bin:$PATH
 
@@ -34,56 +35,17 @@ SHELL ["/bin/bash", "-c"]
 
 ARG CLIENT_TAG
 
-# Copy the Rust workspace from the host
-COPY ./.git ./.git
-COPY ./Cargo.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./crates ./crates
-COPY ./bin ./bin
-
 # Install deps
 RUN apt-get update && apt-get install -y --no-install-recommends git
 
+# Clone kona at the specified tag
+RUN git clone https://github.com/op-rs/kona
+
 # Build kona-client on the selected tag
-RUN git checkout $CLIENT_TAG && \
+RUN cd kona && \
+  git checkout $CLIENT_TAG && \
   cargo build -Zbuild-std=core,alloc --workspace --bin kona --locked --profile release-client-lto --exclude kona-host && \
   mv ./target/riscv64imac-unknown-none-elf/release-client-lto/kona /kona-client-elf
-
-################################################################
-#                Build kona-host @ `CLIENT_TAG`                #
-################################################################
-
-FROM ubuntu:22.04 AS host-build
-SHELL ["/bin/bash", "-c"]
-
-ARG CLIENT_TAG
-
-# Copy the Rust workspace from the host
-COPY ./.git ./.git
-COPY ./Cargo.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./crates ./crates
-COPY ./bin ./bin
-
-# Install deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  build-essential \
-  git \
-  curl \
-  ca-certificates \
-  libssl-dev \
-  clang \
-  pkg-config
-
-# Install rust
-ENV RUST_VERSION=1.81.0
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain ${RUST_VERSION} --component rust-src
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Build kona-host on the selected tag
-RUN git checkout $CLIENT_TAG && \
-  cargo build --workspace --bin kona-host --release && \
-  mv ./target/release/kona-host /kona-host
 
 ################################################################
 #      Create `prestate.bin.gz` + `prestate-proof.json`        #
@@ -123,10 +85,9 @@ RUN $ASTERISC_BIN_PATH run \
 #                       Export Artifacts                       #
 ################################################################
 
-FROM ubuntu:22.04 AS export-stage
+FROM scratch AS export-stage
 
 COPY --from=prestate-build /asterisc .
 COPY --from=prestate-build /kona-client-elf .
 COPY --from=prestate-build /prestate.bin.gz .
 COPY --from=prestate-build /prestate-proof.json .
-COPY --from=host-build /kona-host .

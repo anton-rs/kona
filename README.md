@@ -50,11 +50,6 @@ see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
 - [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
 - [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
 
-**Build Pipelines**
-
-- [`cannon`](./build/cannon): Docker image for compiling to the bare-metal `mips64-unknown-none` target.
-- [`asterisc`](./build/asterisc): Docker image for compiling to the bare-metal `riscv64imac-unknown-none-elf` target.
-
 **Protocol**
 - [`mpt`](./crates/mpt): Utilities for interacting with the Merkle Patricia Trie in the client program.
 - [`executor`](./crates/executor): `no_std` stateless block executor for the [OP Stack][op-stack].
