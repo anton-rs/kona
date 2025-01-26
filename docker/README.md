@@ -10,7 +10,7 @@ used to define this repository's docker build configuration.
 
 ## Building Locally
 
-To build any image in the bake file locally, use `docker bake`:
+To build any image in the bake file locally, use `docker buildx bake`:
 
 ```sh
 export TARGET="<target_name>"
