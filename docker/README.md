@@ -37,6 +37,22 @@ docker buildx bake \
   $TARGET
 ```
 
+#### Troubleshooting
+
+If you receive an error like the following:
+
+```
+ERROR: Multi-platform build is not supported for the docker driver.
+Switch to a different driver, or turn on the containerd image store, and try again.
+Learn more at https://docs.docker.com/go/build-multi-platform/
+```
+
+Create and activate a new builder and retry the bake command.
+
+```sh
+docker buildx create --name kona-builder --use
+```
+
 ## Cutting a Release (for maintainers / forks)
 
 To cut a release of the docker image for any of the targets, cut a new annotated tag for the target like so:
