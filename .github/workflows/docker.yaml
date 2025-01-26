@@ -15,7 +15,7 @@ on:
   push:
     tags:
       # matches tags like `service/v1.0.0`
-      - '*/*'
+      - '*/v*'
 
 env:
   REGISTRY: ghcr.io
