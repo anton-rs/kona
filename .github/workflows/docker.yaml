@@ -53,6 +53,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY_IMAGE }}/${{ steps.target-spec.outputs.target }}
+          tags: |
+            type=ref,event=branch
+            type=match,pattern=v(.*),group=1,event=tag
+            type=ref,event=pr
       - name: Rename meta bake definition file
         run: |
           mv "${{ steps.meta.outputs.bake-file }}" "${{ runner.temp }}/bake-meta.json"
