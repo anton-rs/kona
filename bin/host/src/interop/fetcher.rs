@@ -17,6 +17,7 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use kona_derive::prelude::PipelineBuilder;
 use kona_driver::{PipelineCursor, TipCursor};
 use kona_host::KeyValueStore;
 use kona_preimage::{
@@ -364,6 +365,7 @@ where
                         let local_cfgs = self.cfg.read_rollup_configs().ok()?;
                         local_cfgs.get(&chain_id).cloned()
                     })
+                    .map(Arc::new)
                     .ok_or(anyhow!("No rollup config found for chain ID: {chain_id}"))?;
 
                 // Fetch the parent block to validate the hint.
@@ -430,6 +432,8 @@ where
                     EMPTY_ROOT_HASH,
                 );
                 cursor.advance(l1_origin_block, tip);
+
+                let pipeline = PipelineBuilder::new().rollup_config(rollup_config.clone()).build();
             }
 
             HintType::L2Receipts => {
