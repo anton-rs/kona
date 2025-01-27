@@ -35,6 +35,7 @@ Kona's libraries were built with alternative backend support and extensibility i
 program! Kona is also used by:
 
 - [`op-succinct`][op-succinct]
+- [`kailua`][kailua]
 
 To build your own backend for kona, or build a new application on top of its libraries,
 see the [SDK section of the book](https://op-rs.github.io/kona/sdk/intro.html).
@@ -89,6 +90,7 @@ getting started with building your own programs, and a reference for the librari
 [fpp-specs]: https://specs.optimism.io/fault-proof/index.html
 [book]: https://op-rs.github.io/kona/
 [op-succinct]: https://github.com/succinctlabs/op-succinct
+[kailua]: https://github.com/risc0/kailua
 [op-labs]: https://github.com/ethereum-optimism
 [bad-boi-labs]: https://github.com/BadBoiLabs
 [g-output-root]: https://specs.optimism.io/glossary.html#l2-output-root
