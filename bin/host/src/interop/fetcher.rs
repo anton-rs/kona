@@ -2,7 +2,7 @@
 //! preimages from a remote source serving the super-chain (interop) proof mode.
 
 use super::InteropHostCli;
-use crate::single::SingleChainFetcher;
+use crate::{single::SingleChainFetcher, KeyValueStore};
 use alloy_consensus::{Header, Sealed, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
