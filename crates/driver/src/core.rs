@@ -1,6 +1,6 @@
 //! The driver of the kona derivation pipeline.
 
-use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
+use crate::{DriverError, DriverResult, Executor, PipelineCursor, TipCursor};
 use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::{BlockBody, Sealable};
 use alloy_primitives::B256;
@@ -19,16 +19,11 @@ use spin::RwLock;
 
 /// The Rollup Driver entrypoint.
 #[derive(Debug)]
-pub struct Driver<E, DP, P>
+pub struct Driver<E, DP>
 where
     E: Executor + Send + Sync + Debug,
-    DP: DriverPipeline<P> + Send + Sync + Debug,
-    P: Pipeline + SignalReceiver + Send + Sync + Debug,
+    DP: Pipeline + Send + Sync + Debug,
 {
-    /// Marker for the executor.
-    _marker: core::marker::PhantomData<E>,
-    /// Marker for the pipeline.
-    _marker2: core::marker::PhantomData<P>,
     /// A pipeline abstraction.
     pub pipeline: DP,
     /// Cursor to keep track of the L2 tip
@@ -37,21 +32,14 @@ where
     pub executor: E,
 }
 
-impl<E, DP, P> Driver<E, DP, P>
+impl<E, DP> Driver<E, DP>
 where
     E: Executor + Send + Sync + Debug,
-    DP: DriverPipeline<P> + Send + Sync + Debug,
-    P: Pipeline + SignalReceiver + Send + Sync + Debug,
+    DP: Pipeline + Send + Sync + Debug,
 {
     /// Creates a new [Driver].
     pub const fn new(cursor: Arc<RwLock<PipelineCursor>>, executor: E, pipeline: DP) -> Self {
-        Self {
-            _marker: core::marker::PhantomData,
-            _marker2: core::marker::PhantomData,
-            pipeline,
-            cursor,
-            executor,
-        }
+        Self { pipeline, cursor, executor }
     }
 
     /// Waits until the executor is ready.

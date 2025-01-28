@@ -8,6 +8,9 @@ use reqwest::Client;
 mod precompiles;
 pub(crate) use precompiles::execute;
 
+mod witness;
+pub(crate) use witness::WitnessCollector;
+
 /// Returns an HTTP provider for the given URL.
 pub fn http_provider(url: &str) -> ReqwestProvider {
     let url = url.parse().unwrap();

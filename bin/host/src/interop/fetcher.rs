@@ -1,8 +1,10 @@
 //! This module contains the [InteropFetcher] struct, which is responsible for fetching
 //! preimages from a remote source serving the super-chain (interop) proof mode.
 
+use crate::eth::WitnessCollector;
+
 use super::InteropHostCli;
-use alloy_consensus::{BlockBody, Header, TxEnvelope, EMPTY_ROOT_HASH};
+use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
     eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
@@ -17,7 +19,11 @@ use alloy_rpc_types::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_derive::prelude::PipelineBuilder;
+use kona_derive::{
+    prelude::{PipelineBuilder, StatefulAttributesBuilder},
+    sources::EthereumDataSource,
+    traits::{ChainProvider, Pipeline},
+};
 use kona_driver::{PipelineCursor, TipCursor};
 use kona_host::KeyValueStore;
 use kona_preimage::{
@@ -25,10 +31,11 @@ use kona_preimage::{
     HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
 };
 use kona_proof_interop::{Hint, HintType, PreState};
-use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
-use maili_protocol::{BlockInfo, L2BlockInfo};
+use kona_providers_alloy::{
+    AlloyChainProvider, AlloyL2ChainProvider, OnlineBeaconClient, OnlineBlobProvider,
+};
+use maili_protocol::{BatchValidationProvider, BlockInfo, L2BlockInfo};
 use maili_registry::ROLLUP_CONFIGS;
-use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -344,6 +351,7 @@ where
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
+                // Fetch the hint inputs.
                 let chain_id = u64::from_be_bytes(
                     hint_data[0..8]
                         .as_ref()
@@ -357,7 +365,7 @@ where
                         .map_err(|e| anyhow!("Failed to convert bytes to u64: {e}"))?,
                 );
 
-                // Get the rollup config for the chain ID.
+                // Get the rollup config and providers for the chain ID.
                 let rollup_config = ROLLUP_CONFIGS
                     .get(&chain_id)
                     .cloned()
@@ -367,73 +375,59 @@ where
                     })
                     .map(Arc::new)
                     .ok_or(anyhow!("No rollup config found for chain ID: {chain_id}"))?;
+                let mut l2_chain_provider = AlloyL2ChainProvider::new(
+                    self.l2_providers
+                        .get(&chain_id)
+                        .ok_or(anyhow!("No provider for chain ID"))?
+                        .clone(),
+                    rollup_config.clone(),
+                );
+                let mut l1_chain_provider = AlloyChainProvider::new(self.l1_provider.clone());
 
-                // Fetch the parent block to validate the hint.
-                let parent_block = self
-                    .l2_providers
-                    .get(&chain_id)
-                    .ok_or(anyhow!("No provider for chain ID"))?
-                    .get_block_by_number((block_number - 1).into(), BlockTransactionsKind::Hashes)
-                    .await?
-                    .ok_or(anyhow!("Parent block not found."))?;
-                let parent_block_transactions = match parent_block.transactions {
-                    BlockTransactions::Hashes(transactions) => {
-                        let mut l2_transactions = Vec::with_capacity(transactions.len());
-                        for tx_hash in transactions {
-                            let tx = self
-                                .l2_providers
-                                .get(&self.active_l2_chain_id)
-                                .ok_or(anyhow!("No active L2 chain ID"))?
-                                .client()
-                                .request::<&[B256; 1], Bytes>("debug_getRawTransaction", &[tx_hash])
-                                .await
-                                .map_err(|e| anyhow!("Error fetching transaction: {e}"))?;
-                            l2_transactions.push(OpTxEnvelope::decode(&mut tx.as_ref()).map_err(
-                                |e| anyhow!("Failed to decode transaction envelope: {e}"),
-                            )?);
-                        }
-                        l2_transactions
-                    }
-                    _ => anyhow::bail!("Only BlockTransactions::Hashes are supported."),
-                };
+                // Fetch the parent block to use as the safe head for the derivation pipeline.
+                let parent_block = l2_chain_provider.block_by_number(block_number - 1).await?;
+                let safe_head =
+                    L2BlockInfo::from_block_and_genesis(&parent_block, &rollup_config.genesis)?;
 
-                let safe_head = L2BlockInfo::from_block_and_genesis(
-                    &op_alloy_consensus::OpBlock {
-                        header: parent_block.header.inner.clone(),
-                        body: BlockBody {
-                            transactions: parent_block_transactions,
-                            ..Default::default()
-                        },
-                    },
-                    &rollup_config.genesis,
-                )?;
+                // Fetch the L1 origin block of the safe head.
+                let l1_origin_block =
+                    l1_chain_provider.block_info_by_number(safe_head.l1_origin.number).await?;
 
-                let l1_origin_block = self
-                    .l1_provider
-                    .get_block_by_hash(
-                        safe_head.l1_origin.hash.into(),
-                        BlockTransactionsKind::Hashes,
-                    )
-                    .await?
-                    .map(|b| BlockInfo {
-                        hash: b.header.hash,
-                        number: b.header.number,
-                        parent_hash: b.header.parent_hash,
-                        timestamp: b.header.timestamp,
-                    })
-                    .ok_or(anyhow!("L1 origin block not found."))?;
-
-                // Derive the payload for the block that the hint is for.
+                // Instantiate the derivation pipeline, starting with the parent block as the L2 safe head.
                 let mut cursor =
                     PipelineCursor::new(rollup_config.channel_timeout, l1_origin_block);
-                let tip = TipCursor::new(
-                    safe_head,
-                    parent_block.header.inner.seal_slow(),
-                    EMPTY_ROOT_HASH,
-                );
+                let tip =
+                    TipCursor::new(safe_head, parent_block.header.seal_slow(), EMPTY_ROOT_HASH);
                 cursor.advance(l1_origin_block, tip);
+                let dap = EthereumDataSource::new_from_parts(
+                    l1_chain_provider.clone(),
+                    self.blob_provider.clone(),
+                    rollup_config.as_ref(),
+                );
+                let attributes = StatefulAttributesBuilder::new(
+                    rollup_config.clone(),
+                    l2_chain_provider.clone(),
+                    l1_chain_provider.clone(),
+                );
+                let mut pipeline = PipelineBuilder::new()
+                    .rollup_config(rollup_config.clone())
+                    .dap_source(dap)
+                    .chain_provider(l1_chain_provider)
+                    .l2_chain_provider(l2_chain_provider)
+                    .builder(attributes)
+                    .origin(cursor.origin())
+                    .build();
 
-                let pipeline = PipelineBuilder::new().rollup_config(rollup_config.clone()).build();
+                // Produce the payload for the block and store the transactions trie preimages within the KV store.
+                let payload = pipeline.produce_payload(safe_head).await?;
+                self.store_trie_nodes(
+                    payload
+                        .attributes
+                        .transactions
+                        .ok_or(anyhow!("Payload does not have transactions"))?
+                        .as_slice(),
+                )
+                .await?;
             }
 
             HintType::L2Receipts => {
@@ -703,38 +697,50 @@ where
                 })?;
             }
             HintType::L2PayloadWitness => {
-                if hint_data.len() < 32 {
+                if hint_data.len() < 16 {
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
-                let parent_block_hash = B256::from_slice(&hint_data.as_ref()[..32]);
+
+                let chain_id = u64::from_be_bytes(
+                    hint_data.as_ref()[..8]
+                        .try_into()
+                        .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
+                );
+                let block_number = u64::from_be_bytes(
+                    hint_data.as_ref()[8..16]
+                        .try_into()
+                        .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
+                );
                 let payload_attributes: OpPayloadAttributes =
-                    serde_json::from_slice(&hint_data[32..])?;
+                    serde_json::from_slice(hint_data[16..].as_ref())
+                        .map_err(|e| anyhow!("Failed to deserialize payload attributes: {e}"))?;
 
-                let execute_payload_response: ExecutionWitness = self
+                let l2_chain_provider = self
                     .l2_providers
-                    .get(&self.active_l2_chain_id)
-                    .ok_or(anyhow!("No active L2 chain ID"))?
-                    .client()
-                    .request::<(B256, OpPayloadAttributes), ExecutionWitness>(
-                        "debug_executePayload",
-                        (parent_block_hash, payload_attributes),
-                    )
-                    .await
-                    .map_err(|e| anyhow!("Failed to fetch preimage: {e}"))?;
+                    .get(&chain_id)
+                    .ok_or(anyhow!("No provider for chain ID"))?
+                    .clone();
+                let rollup_config = ROLLUP_CONFIGS
+                    .get(&chain_id)
+                    .cloned()
+                    .or_else(|| {
+                        let local_cfgs = self.cfg.read_rollup_configs().ok()?;
+                        local_cfgs.get(&chain_id).cloned()
+                    })
+                    .ok_or(anyhow!("No rollup config found for chain ID: {chain_id}"))?;
+                let parent_block = l2_chain_provider
+                    .get_block_by_number((block_number - 1).into(), BlockTransactionsKind::Hashes)
+                    .await?
+                    .ok_or(anyhow!("Block not found."))?;
 
-                let mut merged = HashMap::<B256, Bytes>::default();
-                merged.extend(execute_payload_response.state);
-                merged.extend(execute_payload_response.codes);
-                merged.extend(execute_payload_response.keys);
-
-                let mut kv_write_lock = self.kv_store.write().await;
-                for (hash, preimage) in merged.into_iter() {
-                    let computed_hash = keccak256(preimage.as_ref());
-                    assert_eq!(computed_hash, hash, "Preimage hash does not match expected hash");
-
-                    let key = PreimageKey::new(*hash, PreimageKeyType::Keccak256);
-                    kv_write_lock.set(key.into(), preimage.into())?;
-                }
+                let payload_executor = WitnessCollector::new(
+                    &rollup_config,
+                    parent_block.header.inner.seal(parent_block.header.hash),
+                    self.l1_provider.clone(),
+                    l2_chain_provider,
+                    self.kv_store.clone(),
+                );
+                payload_executor.execute_payload(payload_attributes)?;
             }
         }
 

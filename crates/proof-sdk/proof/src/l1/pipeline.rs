@@ -16,7 +16,7 @@ use kona_derive::{
     traits::{BlobProvider, OriginProvider, Pipeline, SignalReceiver},
     types::{PipelineResult, Signal, StepResult},
 };
-use kona_driver::{DriverPipeline, PipelineCursor};
+use kona_driver::PipelineCursor;
 use kona_preimage::CommsClient;
 use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{BlockInfo, L2BlockInfo};
@@ -96,17 +96,6 @@ where
             .origin(sync_start.read().origin())
             .build();
         Self { pipeline, caching_oracle }
-    }
-}
-
-impl<O, B> DriverPipeline<OracleDerivationPipeline<O, B>> for OraclePipeline<O, B>
-where
-    O: CommsClient + FlushableCache + Send + Sync + Debug,
-    B: BlobProvider + Send + Sync + Debug + Clone,
-{
-    /// Flushes the cache on re-org.
-    fn flush(&mut self) {
-        self.caching_oracle.flush();
     }
 }
 

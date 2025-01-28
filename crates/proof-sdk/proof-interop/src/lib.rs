@@ -15,6 +15,9 @@ pub use pre_state::{
 mod hint;
 pub use hint::{Hint, HintType};
 
+mod consolidation;
+pub use consolidation::SuperchainConsolidator;
+
 mod provider;
 pub use provider::OracleInteropProvider;
 

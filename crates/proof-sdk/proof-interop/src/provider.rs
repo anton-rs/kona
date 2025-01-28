@@ -4,7 +4,7 @@ use crate::{HintType, PreState};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use alloy_consensus::Header;
 use alloy_eips::eip2718::Decodable2718;
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_interop::InteropProvider;
@@ -33,6 +33,29 @@ where
     /// Creates a new [OracleInteropProvider] with the given oracle client and [PreState].
     pub fn new(oracle: Arc<T>, pre_state: PreState) -> Self {
         Self { oracle, pre_state, safe_head_cache: Arc::new(RwLock::new(HashMap::new())) }
+    }
+
+    /// Traverses a non-canonical block's transactions root to fetch the transactions. The host will
+    /// re-derive the original execution payload from L1 and fill the key-value store with the preimages
+    /// required for traversal.
+    pub async fn raw_non_canonical_transactions(
+        &self,
+        chain_id: u64,
+        transactions_root: B256,
+        block_number: u64,
+    ) -> Result<Vec<Bytes>, <Self as InteropProvider>::Error> {
+        self.oracle
+            .write(&HintType::L2OptimisticTransactions.encode_with(&[
+                chain_id.to_be_bytes().as_slice(),
+                block_number.to_be_bytes().as_slice(),
+            ]))
+            .await?;
+
+        let trie_walker = OrderedListWalker::try_new_hydrated(transactions_root, self)
+            .map_err(OracleProviderError::TrieWalker)?;
+
+        // Decode the receipts within the receipts trie.
+        Ok(trie_walker.into_iter().map(|(_, rlp)| rlp).collect::<Vec<_>>())
     }
 
     /// Fetch the [OpReceiptEnvelope]s for the block with the given hash.
