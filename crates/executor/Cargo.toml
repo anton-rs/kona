@@ -51,3 +51,4 @@ alloy-rpc-client.workspace = true
 alloy-transport.workspace = true
 alloy-transport-http.workspace = true
 kona-host.workspace = true
+tempfile.workspace = true
