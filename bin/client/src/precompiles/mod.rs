@@ -44,7 +44,7 @@ pub(crate) fn fpvm_handle_register<F, H>(
             ctx_precompiles.extend([bn128_pair::FPVM_ECPAIRING_GRANITE]);
         }
 
-        if spec_id.is_enabled_in(SpecId::ISTANBUL) {
+        if spec_id.is_enabled_in(SpecId::ISTHMUS) {
             ctx_precompiles.extend([bls12::FPVM_BLS12_PAIRING_ISTHMUS]);
         }
 
