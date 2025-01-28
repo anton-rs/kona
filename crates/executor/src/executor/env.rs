@@ -27,7 +27,9 @@ where
     /// ## Returns
     /// The active [SpecId] for the executor.
     pub(crate) fn revm_spec_id(&self, timestamp: u64) -> SpecId {
-        if self.config.is_holocene_active(timestamp) {
+        if self.config.is_isthmus_active(timestamp) {
+            SpecId::ISTHMUS
+        } else if self.config.is_holocene_active(timestamp) {
             SpecId::HOLOCENE
         } else if self.config.is_fjord_active(timestamp) {
             SpecId::FJORD
