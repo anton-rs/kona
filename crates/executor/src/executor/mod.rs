@@ -7,6 +7,7 @@ use crate::{
     syscalls::{
         ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call,
         pre_block_withdrawals_request_contract_call,
+        pre_block_block_hash_contract_call,
     },
     ExecutorError, ExecutorResult, TrieDBProvider,
 };
@@ -123,6 +124,8 @@ where
             tx_len = transactions.len(),
         );
 
+        let parent_block_hash: B256 = self.trie_db.parent_block_header().seal();
+
         let mut state =
             State::builder().with_database(&mut self.trie_db).with_bundle_update().build();
 
@@ -136,6 +139,17 @@ where
             &payload,
         )?;
 
+        // Apply the pre-block EIP-2935 contract call.
+        pre_block_block_hash_contract_call(
+            &mut state,
+            self.config,
+            block_number,
+            &initialized_cfg,
+            &initialized_block_env,
+            parent_block_hash,
+            &payload,
+        )?;
+      
         // Apply the pre-block EIP-7002 contract call.
         pre_block_withdrawals_request_contract_call(
             &mut state,
