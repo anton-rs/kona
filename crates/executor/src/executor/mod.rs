@@ -517,8 +517,9 @@ mod test {
 
     #[rstest]
     #[case::small_block(22884230)]
-    #[case::small_block_2(22880574)]
-    #[case::small_block_3(22887258)]
+    #[case::small_block_2(22884231)]
+    #[case::small_block_3(22880574)]
+    #[case::small_block_4(22887258)]
     #[case::medium_block(22886464)]
     #[case::medium_block_2(22886311)]
     #[case::medium_block_3(22880944)]
@@ -526,7 +527,7 @@ mod test {
     async fn test_statelessly_execute_block(#[case] block_number: u64) {
         let fixture_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("testdata")
-            .join(format!("block-{block_number}"));
+            .join(format!("block-{block_number}.tar.gz"));
 
         run_test_fixture(fixture_dir).await;
     }

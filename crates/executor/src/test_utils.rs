@@ -19,7 +19,7 @@ use maili_genesis::RollupConfig;
 use maili_registry::ROLLUP_CONFIGS;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use std::{env::temp_dir, path::PathBuf, sync::Arc};
 use tokio::{fs, runtime::Handle, sync::Mutex};
 
 #[derive(Debug, thiserror::Error)]
@@ -154,7 +154,21 @@ impl ExecutorTestFixtureCreator {
             produced_header, executing_header.inner,
             "Produced header does not match the expected header"
         );
-        fs::write(fixture_path, serde_json::to_vec(&fixture).unwrap()).await.unwrap();
+        fs::write(fixture_path.as_path(), serde_json::to_vec(&fixture).unwrap()).await.unwrap();
+
+        // Tar the fixture.
+        let data_dir = fixture_path.parent().unwrap();
+        tokio::process::Command::new("tar")
+            .arg("-czf")
+            .arg(data_dir.with_extension("tar.gz").file_name().unwrap())
+            .arg(data_dir.file_name().unwrap())
+            .current_dir(data_dir.parent().unwrap())
+            .output()
+            .await
+            .expect("Failed to tar fixture");
+
+        // Remove the leftover directory.
+        fs::remove_dir_all(data_dir).await.expect("Failed to remove temporary directory");
     }
 }
 
@@ -301,10 +315,22 @@ impl TrieDBProvider for DiskTrieNodeProvider {
 /// Executes a [ExecutorTestFixture] stored at the passed `fixture_path` and asserts that the
 /// produced block hash matches the expected block hash.
 pub(crate) async fn run_test_fixture(fixture_path: PathBuf) {
-    let kv_store = DiskKeyValueStore::new(fixture_path.join("kv"));
+    // First, untar the fixture.
+    let mut fixture_dir = tempfile::tempdir().expect("Failed to create temporary directory");
+    let untar = tokio::process::Command::new("tar")
+        .arg("-xvf")
+        .arg(fixture_path.as_path())
+        .arg("-C")
+        .arg(fixture_dir.path())
+        .arg("--strip-components=1")
+        .output()
+        .await
+        .expect("Failed to untar fixture");
+
+    let kv_store = DiskKeyValueStore::new(fixture_dir.path().join("kv"));
     let provider = DiskTrieNodeProvider::new(kv_store);
     let fixture: ExecutorTestFixture =
-        serde_json::from_slice(&fs::read(fixture_path.join("fixture.json")).await.unwrap())
+        serde_json::from_slice(&fs::read(fixture_dir.path().join("fixture.json")).await.unwrap())
             .expect("Failed to deserialize fixture");
 
     let mut executor =
