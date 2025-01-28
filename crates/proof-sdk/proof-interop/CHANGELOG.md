@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/op-rs/kona/compare/kona-proof-interop-v0.1.1...kona-proof-interop-v0.1.2) - 2025-01-28
+
+### Added
+
+- allow 7702 receipts after Isthmus active (#959)
+- *(client)* Interop consolidation sub-problem (#913)
+- *(host)* Interop proof support (part 1) (#910)
+
 ## [0.1.1](https://github.com/op-rs/kona/compare/kona-proof-interop-v0.1.0...kona-proof-interop-v0.1.1) - 2025-01-16
 
 ### Other
