@@ -2,7 +2,7 @@
 
 use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
 use alloc::{sync::Arc, vec::Vec};
-use alloy_consensus::{BlockBody, Sealable};
+use alloy_consensus::BlockBody;
 use alloy_primitives::B256;
 use alloy_rlp::Decodable;
 use core::fmt::Debug;
@@ -119,7 +119,7 @@ where
             };
 
             self.executor.update_safe_head(tip_cursor.l2_safe_head_header.clone());
-            let header = match self.executor.execute_payload(attributes.clone()).await {
+            let execution_result = match self.executor.execute_payload(attributes.clone()).await {
                 Ok(header) => header,
                 Err(e) => {
                     error!(target: "client", "Failed to execute L2 block: {}", e);
@@ -162,7 +162,7 @@ where
 
             // Construct the block.
             let block = OpBlock {
-                header: header.clone(),
+                header: execution_result.block_header.inner().clone(),
                 body: BlockBody {
                     transactions: attributes
                         .transactions
@@ -183,7 +183,7 @@ where
             )?;
             let tip_cursor = TipCursor::new(
                 l2_info,
-                header.clone().seal_slow(),
+                execution_result.block_header,
                 self.executor.compute_output_root().map_err(DriverError::Executor)?,
             );
 

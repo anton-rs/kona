@@ -16,7 +16,10 @@ mod errors;
 pub use errors::{ExecutorError, ExecutorResult, TrieDBError, TrieDBResult};
 
 mod executor;
-pub use executor::{KonaHandleRegister, StatelessL2BlockExecutor, StatelessL2BlockExecutorBuilder};
+pub use executor::{
+    ExecutionArtifacts, KonaHandleRegister, StatelessL2BlockExecutor,
+    StatelessL2BlockExecutorBuilder,
+};
 
 mod db;
 pub use db::{NoopTrieDBProvider, TrieAccount, TrieDB, TrieDBProvider};
