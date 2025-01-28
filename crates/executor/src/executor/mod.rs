@@ -6,7 +6,7 @@ use crate::{
     errors::TrieDBError,
     syscalls::{
         ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call,
-        pre_block_block_hash_contract_call,
+        pre_block_block_hash_contract_call, pre_block_withdrawals_request_contract_call,
     },
     ExecutorError, ExecutorResult, TrieDBProvider,
 };
@@ -146,6 +146,15 @@ where
             &initialized_cfg,
             &initialized_block_env,
             parent_block_hash,
+            &payload,
+        )?;
+
+        // Apply the pre-block EIP-7002 contract call.
+        pre_block_withdrawals_request_contract_call(
+            &mut state,
+            self.config,
+            &initialized_cfg,
+            &initialized_block_env,
             &payload,
         )?;
 
