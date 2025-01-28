@@ -147,11 +147,12 @@ impl ExecutorTestFixtureCreator {
         let mut executor = StatelessL2BlockExecutor::builder(rollup_config, self, NoopTrieHinter)
             .with_parent_header(parent_header)
             .build();
-        let produced_header =
+        let exec_artifacts =
             executor.execute_payload(payload_attrs).expect("Failed to execute block").clone();
 
         assert_eq!(
-            produced_header, executing_header.inner,
+            exec_artifacts.block_header.inner(),
+            &executing_header.inner,
             "Produced header does not match the expected header"
         );
         fs::write(fixture_path.as_path(), serde_json::to_vec(&fixture).unwrap()).await.unwrap();
@@ -338,10 +339,10 @@ pub(crate) async fn run_test_fixture(fixture_path: PathBuf) {
             .with_parent_header(fixture.parent_header.seal_slow())
             .build();
 
-    let produced_header = executor.execute_payload(fixture.executing_payload).unwrap();
+    let exec_artifacts = executor.execute_payload(fixture.executing_payload).unwrap();
 
     assert_eq!(
-        produced_header.hash_slow(),
+        exec_artifacts.block_header.hash(),
         fixture.expected_block_hash,
         "Produced header does not match the expected header"
     );
