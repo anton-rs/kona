@@ -1057,9 +1057,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.16.0"
+version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
+checksum = "1628fb46dfa0b37568d12e5edd512553eccf6a22a78e8bde00bb4aed84d5bdbf"
 
 [[package]]
 name = "byte-slice-cast"
@@ -1290,6 +1290,26 @@ name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
+
+[[package]]
+name = "const_format"
+version = "0.2.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "126f97965c8ad46d6d9163268ff28432e8f6a1196a55578867832e3049df63dd"
+dependencies = [
+ "const_format_proc_macros",
+]
+
+[[package]]
+name = "const_format_proc_macros"
+version = "0.2.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d57c2eccfb16dbac1f4e61e206105db5820c9d26c3c472bc17c774259ef7744"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
+]
 
 [[package]]
 name = "core-foundation"
@@ -2870,9 +2890,9 @@ dependencies = [
 
 [[package]]
 name = "maili-genesis"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b555c1fab6c4f01f4defc6543b52377c3ee904a712dd1e21efbc0d7843c6207"
+checksum = "b247c993ac2d89a7171eac22086cf18e2d6e5a0a654d6902d9ee834772af1b25"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2886,9 +2906,9 @@ dependencies = [
 
 [[package]]
 name = "maili-protocol"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db659969c6618849ee212e7425c35bcd88cdc7cd7b9d10dcb9b1ae00d01a8cdd"
+checksum = "2a7d7fdcf313d5671a931c7c5a7969dfa8c4d6d3fb34da29ea731eb2364560c9"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2914,9 +2934,9 @@ dependencies = [
 
 [[package]]
 name = "maili-registry"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d6a3435074b73cdaf1c4e468ed4508e08cb21aa5dba88082914bdadac60e2b3"
+checksum = "c2b4709306d9532c7a0c84de7765f4bc5ed7068350e54444e28aaad4d7c88dc2"
 dependencies = [
  "alloy-primitives",
  "lazy_static",
@@ -2929,9 +2949,9 @@ dependencies = [
 
 [[package]]
 name = "maili-rpc"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b6651c695539b1e31a1c8e7eae2c301a6a70200675483a9490086e991efd8a4"
+checksum = "79c62dbe6d8b8765d5dda1a798cefb702bebd59038a8eb95a9e2275db973589e"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -2942,9 +2962,9 @@ dependencies = [
 
 [[package]]
 name = "maili-serde"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06f2217f2efdc5132167512db12ce9bf0a087d20f8d5ebf0f2a2a0b836a668d8"
+checksum = "908a6a1352249f55d8c982dbf868d54c86e2aa461c94d56c4e1bd0f74cae9714"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -2953,9 +2973,9 @@ dependencies = [
 
 [[package]]
 name = "maili-superchain"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b99c2c73b9bd8d28dbbf490dd3566193e857fbbeea28574e618a7335f006bac"
+checksum = "552cbfa042beb2ee9b283ac54d97f8ec0cb38d929fe2ec60c329e84cfe8181c4"
 dependencies = [
  "alloy-primitives",
  "maili-genesis",
@@ -3329,28 +3349,30 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "3.6.12"
+version = "3.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "306800abfa29c7f16596b5970a588435e3d5b3149683d00c12b699cc19f895ee"
+checksum = "b91c2d9a6a6004e205b7e881856fb1a0f5022d382acc2c01b52185f7b6f65997"
 dependencies = [
  "arrayvec",
  "bitvec",
  "byte-slice-cast",
+ "const_format",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
+ "rustversion",
  "serde",
 ]
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "3.6.12"
+version = "3.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d830939c76d294956402033aee57a6da7b438f2294eb94864c37b0569053a42c"
+checksum = "77555fd9d578b6470470463fded832619a5fec5ad6cbc551fe4d7507ce50cd3a"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.96",
 ]
 
 [[package]]
@@ -4324,9 +4346,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.137"
+version = "1.0.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "930cfb6e6abf99298aaad7d29abbef7a9999a9a8806a40088f55f0dcec03146b"
+checksum = "d434192e7da787e94a6ea7e9670b26a036d0ca41e0b7efb2676dd32bae872949"
 dependencies = [
  "indexmap",
  "itoa",

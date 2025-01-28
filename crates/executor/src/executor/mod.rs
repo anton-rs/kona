@@ -4,7 +4,10 @@ use crate::{
     constants::{L2_TO_L1_BRIDGE, OUTPUT_ROOT_VERSION},
     db::TrieDB,
     errors::TrieDBError,
-    syscalls::{ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call},
+    syscalls::{
+        ensure_create2_deployer_canyon, pre_block_beacon_root_contract_call,
+        pre_block_withdrawals_request_contract_call,
+    },
     ExecutorError, ExecutorResult, TrieDBProvider,
 };
 use alloc::vec::Vec;
@@ -128,6 +131,15 @@ where
             &mut state,
             self.config,
             block_number,
+            &initialized_cfg,
+            &initialized_block_env,
+            &payload,
+        )?;
+
+        // Apply the pre-block EIP-7002 contract call.
+        pre_block_withdrawals_request_contract_call(
+            &mut state,
+            self.config,
             &initialized_cfg,
             &initialized_block_env,
             &payload,
