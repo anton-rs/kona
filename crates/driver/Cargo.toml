@@ -23,6 +23,7 @@ maili-protocol.workspace = true
 alloy-rlp.workspace = true
 alloy-consensus.workspace = true
 alloy-primitives.workspace = true
+alloy-rpc-types-engine.workspace = true
 
 # OP Alloy
 op-alloy-consensus.workspace = true
@@ -33,3 +34,14 @@ async-trait.workspace = true
 spin.workspace = true
 thiserror .workspace = true
 tracing.workspace = true
+
+# `serde` feature dependencies
+serde = { workspace = true, optional = true }
+
+# `std` feature dependencies
+tokio = { workspace = true, features = ["full"], optional = true }
+
+[features]
+default = ["serde"]
+std = ["dep:tokio"]
+serde = ["dep:serde"]

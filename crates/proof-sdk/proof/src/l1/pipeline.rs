@@ -8,15 +8,12 @@ use kona_derive::{
     attributes::StatefulAttributesBuilder,
     errors::PipelineErrorKind,
     pipeline::{DerivationPipeline, PipelineBuilder},
+    prelude::AttributesQueueStage,
     sources::EthereumDataSource,
-    stages::{
-        AttributesQueue, BatchProvider, BatchStream, ChannelProvider, ChannelReader, FrameQueue,
-        L1Retrieval, L1Traversal,
-    },
     traits::{BlobProvider, OriginProvider, Pipeline, SignalReceiver},
     types::{PipelineResult, Signal, StepResult},
 };
-use kona_driver::{DriverPipeline, PipelineCursor};
+use kona_driver::PipelineCursor;
 use kona_preimage::CommsClient;
 use maili_genesis::{RollupConfig, SystemConfig};
 use maili_protocol::{BlockInfo, L2BlockInfo};
@@ -25,32 +22,13 @@ use spin::RwLock;
 
 /// An oracle-backed derivation pipeline.
 pub type OracleDerivationPipeline<O, B> = DerivationPipeline<
-    OracleAttributesQueue<OracleDataProvider<O, B>, O>,
-    OracleL2ChainProvider<O>,
->;
-
-/// An oracle-backed Ethereum data source.
-pub type OracleDataProvider<O, B> = EthereumDataSource<OracleL1ChainProvider<O>, B>;
-
-/// An oracle-backed payload attributes builder for the `AttributesQueue` stage of the derivation
-/// pipeline.
-pub type OracleAttributesBuilder<O> =
-    StatefulAttributesBuilder<OracleL1ChainProvider<O>, OracleL2ChainProvider<O>>;
-
-/// An oracle-backed attributes queue for the derivation pipeline.
-pub type OracleAttributesQueue<DAP, O> = AttributesQueue<
-    BatchProvider<
-        BatchStream<
-            ChannelReader<
-                ChannelProvider<
-                    FrameQueue<L1Retrieval<DAP, L1Traversal<OracleL1ChainProvider<O>>>>,
-                >,
-            >,
-            OracleL2ChainProvider<O>,
-        >,
+    AttributesQueueStage<
+        EthereumDataSource<OracleL1ChainProvider<O>, B>,
+        OracleL1ChainProvider<O>,
         OracleL2ChainProvider<O>,
+        StatefulAttributesBuilder<OracleL1ChainProvider<O>, OracleL2ChainProvider<O>>,
     >,
-    OracleAttributesBuilder<O>,
+    OracleL2ChainProvider<O>,
 >;
 
 /// An oracle-backed derivation pipeline.
@@ -96,17 +74,6 @@ where
             .origin(sync_start.read().origin())
             .build();
         Self { pipeline, caching_oracle }
-    }
-}
-
-impl<O, B> DriverPipeline<OracleDerivationPipeline<O, B>> for OraclePipeline<O, B>
-where
-    O: CommsClient + FlushableCache + Send + Sync + Debug,
-    B: BlobProvider + Send + Sync + Debug + Clone,
-{
-    /// Flushes the cache on re-org.
-    fn flush(&mut self) {
-        self.caching_oracle.flush();
     }
 }
 

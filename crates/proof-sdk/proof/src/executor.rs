@@ -4,7 +4,7 @@ use alloc::{boxed::Box, sync::Arc};
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use async_trait::async_trait;
-use kona_driver::Executor;
+use kona_driver::EngineController;
 use kona_executor::{KonaHandleRegister, StatelessL2BlockExecutor, TrieDBProvider};
 use kona_mpt::TrieHinter;
 use maili_genesis::RollupConfig;
@@ -47,7 +47,7 @@ where
 }
 
 #[async_trait]
-impl<P, H> Executor for KonaExecutor<'_, P, H>
+impl<P, H> EngineController for KonaExecutor<'_, P, H>
 where
     P: TrieDBProvider + Send + Sync + Clone,
     H: TrieHinter + Send + Sync + Clone,

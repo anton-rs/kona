@@ -16,9 +16,11 @@ where
     /// Pipeline error.
     #[error("Pipeline error: {0}")]
     Pipeline(#[from] PipelineErrorKind),
-    /// An error returned by the executor.
+    /// An error returned by the [EngineController].
+    ///
+    /// [EngineController]: crate::EngineController
     #[error("Executor error: {0}")]
-    Executor(E),
+    Engine(E),
     /// An error returned by the conversion from a block to an [maili_protocol::L2BlockInfo].
     #[error("From block error: {0}")]
     FromBlock(#[from] FromBlockError),

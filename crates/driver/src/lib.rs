@@ -12,20 +12,14 @@ extern crate alloc;
 #[macro_use]
 extern crate tracing;
 
-mod errors;
-pub use errors::{DriverError, DriverResult};
-
-mod pipeline;
-pub use pipeline::DriverPipeline;
-
-mod executor;
-pub use executor::Executor;
-
 mod core;
 pub use core::Driver;
 
-mod cursor;
-pub use cursor::PipelineCursor;
+mod heads;
+pub use heads::{L2ChainHeads, SafetyLabel};
 
-mod tip;
-pub use tip::TipCursor;
+mod errors;
+pub use errors::{DriverError, DriverResult};
+
+mod engine;
+pub use engine::{EngineController, OpExecutionPayloadEnvelope};

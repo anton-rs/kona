@@ -1,195 +1,212 @@
 //! The driver of the kona derivation pipeline.
 
-use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
-use alloc::{sync::Arc, vec::Vec};
-use alloy_consensus::{BlockBody, Sealable};
-use alloy_primitives::B256;
+use crate::{DriverError, DriverResult, EngineController, L2ChainHeads, SafetyLabel};
+use alloc::vec::Vec;
+use alloy_consensus::{BlockBody, Header, Sealed};
 use alloy_rlp::Decodable;
+use alloy_rpc_types_engine::{PayloadStatus, PayloadStatusEnum};
 use core::fmt::Debug;
-use kona_derive::{
-    errors::{PipelineError, PipelineErrorKind},
-    traits::{Pipeline, SignalReceiver},
-    types::Signal,
-};
-use maili_genesis::RollupConfig;
+use kona_derive::{traits::Pipeline, types::Signal};
 use maili_protocol::L2BlockInfo;
 use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
 use op_alloy_rpc_types_engine::OpAttributesWithParent;
-use spin::RwLock;
 
-/// The Rollup Driver entrypoint.
+/// The Rollup Driver.
+///
+/// The [Driver] is a low-level interface, responsible for progressing and tracking the L2 chain. It exposes interfaces
+/// to the subroutines that drive the extension of both the (local view of the) unsafe and safe L2 chain.
+///
+/// The sub-routines for the driver are:
+/// 1. Safe chain derivation
+/// 2. Payload execution (unsafe + safe)
+/// 3. Local [L2ChainHeads] state updates
+///
+/// Currently does not support:
+/// - [L1 consolidation](https://specs.optimism.io/protocol/derivation.html#l1-consolidation-payload-attributes-matching)
+/// - [Ingesting + processing unsafe payload attributes](https://specs.optimism.io/protocol/derivation.html#processing-unsafe-payload-attributes)
 #[derive(Debug)]
-pub struct Driver<E, DP, P>
+pub struct Driver<DP, EC>
 where
-    E: Executor + Send + Sync + Debug,
-    DP: DriverPipeline<P> + Send + Sync + Debug,
-    P: Pipeline + SignalReceiver + Send + Sync + Debug,
+    DP: Pipeline + Send + Sync + Debug,
+    EC: EngineController + Send + Sync + Debug,
 {
-    /// Marker for the executor.
-    _marker: core::marker::PhantomData<E>,
-    /// Marker for the pipeline.
-    _marker2: core::marker::PhantomData<P>,
-    /// A pipeline abstraction.
+    /// The derivation [Pipeline]
     pub pipeline: DP,
-    /// Cursor to keep track of the L2 tip
-    pub cursor: Arc<RwLock<PipelineCursor>>,
-    /// The Executor.
-    pub executor: E,
+    /// The [EngineController]
+    pub engine: EC,
+    /// Local L2 chain heads
+    pub heads: L2ChainHeads,
 }
 
-impl<E, DP, P> Driver<E, DP, P>
+impl<DP, EC> Driver<DP, EC>
 where
-    E: Executor + Send + Sync + Debug,
-    DP: DriverPipeline<P> + Send + Sync + Debug,
-    P: Pipeline + SignalReceiver + Send + Sync + Debug,
+    DP: Pipeline + Send + Sync + Debug,
+    EC: EngineController + Send + Sync + Debug,
 {
     /// Creates a new [Driver].
-    pub const fn new(cursor: Arc<RwLock<PipelineCursor>>, executor: E, pipeline: DP) -> Self {
-        Self {
-            _marker: core::marker::PhantomData,
-            _marker2: core::marker::PhantomData,
-            pipeline,
-            cursor,
-            executor,
-        }
+    pub const fn new(pipeline: DP, engine: EC, heads: L2ChainHeads) -> Self {
+        Self { pipeline, engine, heads }
     }
 
-    /// Waits until the executor is ready.
-    pub async fn wait_for_executor(&mut self) {
-        self.executor.wait_until_ready().await;
-    }
-
-    /// Advances the derivation pipeline to the target block number.
-    ///
-    /// ## Takes
-    /// - `cfg`: The rollup configuration.
-    /// - `target`: The target block number.
-    ///
-    /// ## Returns
-    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
-    ///   output root.
-    /// - `Err(e)` - An error if the block could not be produced.
-    pub async fn advance_to_target(
+    /// Produces the next [OpAttributesWithParent], derived from L1 via the [Pipeline], that extends the current L2
+    /// safe chain.
+    pub async fn produce_safe_extension_payload(
         &mut self,
-        cfg: &RollupConfig,
-        mut target: Option<u64>,
-    ) -> DriverResult<(u64, B256, B256), E::Error> {
-        loop {
-            // Check if we have reached the target block number.
-            let pipeline_cursor = self.cursor.read();
-            let tip_cursor = pipeline_cursor.tip();
-            if let Some(tb) = target {
-                if tip_cursor.l2_safe_head.block_info.number >= tb {
-                    info!(target: "client", "Derivation complete, reached L2 safe head.");
-                    return Ok((
-                        tip_cursor.l2_safe_head.block_info.number,
-                        tip_cursor.l2_safe_head.block_info.hash,
-                        tip_cursor.l2_safe_head_output_root,
-                    ));
+    ) -> DriverResult<OpAttributesWithParent, EC::Error> {
+        // Important TODO to address before merge: We removed some code here that handled halting derivation
+        // when the pipeline is exhausted. This is proofs-specific, and this crate shouldn't care. It needs
+        // to be handled in upstream proof oracle pipeline.
+        self.pipeline.produce_extension_payload(*self.heads.safe_head()).await.map_err(Into::into)
+    }
+
+    /// Executes an [OpAttributesWithParent] payload using the [Executor] interface. The consumer is responsible for
+    /// forwarding the sealed block and its [SafetyLabel] to [Self::update_cursor].
+    ///
+    /// Steps:
+    /// 1. Attempt initial execution of the [OpAttributesWithParent] verbatim.
+    /// 2. If execution fails:
+    ///     2.a. If Holocene is active, strip the payload down to only [TxDeposit] transactions, and retry.
+    ///     2.b. If Holocene is not active, discard the [OpAttributesWithParent] gracefully and continue to the next.
+    ///
+    /// [TxDeposit]: maili_consensus::TxDeposit
+    pub async fn execute_payload(
+        &mut self,
+        mut attributes_with_parent: OpAttributesWithParent,
+    ) -> DriverResult<Option<Sealed<OpBlock>>, EC::Error> {
+        // Attempt to build the block verbatim. If this round succeeds, immediately return the sealed header.
+        if let Ok(fcu_resp) = self
+            .engine
+            .forkchoice_updated(self.heads.into(), Some(attributes_with_parent.attributes.clone()))
+            .await
+        {
+            // Handle the FCU response.
+            match fcu_resp.payload_status.status {
+                PayloadStatusEnum::Valid => {}
+                PayloadStatusEnum::Invalid { validation_error } => todo!("Throw error"),
+                PayloadStatusEnum::Syncing | PayloadStatusEnum::Accepted => {
+                    unimplemented!("Syncing and Accepted are not supported responses yet.")
                 }
             }
 
-            let OpAttributesWithParent { mut attributes, .. } = match self
-                .pipeline
-                .produce_payload(tip_cursor.l2_safe_head)
+            let payload_id = fcu_resp.payload_id.ok_or(DriverError::Engine(todo!()));
+
+            // return Ok(Some(payload_and_header_to_block::<EC>(attributes_with_parent, header)?));
+            todo!()
+        }
+
+        if self
+            .pipeline
+            .rollup_config()
+            .is_holocene_active(attributes_with_parent.attributes.payload_attributes.timestamp)
+        {
+            // Retry with a deposit-only block.
+            warn!(target: "driver", "Flushing current channel and retrying execution of deposit only block");
+
+            // Flush the current batch and channel - if a block was replaced with a
+            // deposit-only block due to execution failure, the
+            // batch and channel it is contained in is forwards
+            // invalidated.
+            self.pipeline.signal(Signal::FlushChannel).await?;
+
+            // Strip out all transactions that are not deposits.
+            attributes_with_parent.attributes.transactions =
+                attributes_with_parent.attributes.transactions.map(|txs| {
+                    txs.into_iter()
+                        .filter(|tx| (!tx.is_empty() && tx[0] == OpTxType::Deposit as u8))
+                        .collect::<Vec<_>>()
+                });
+
+            // Retry building the block. If this fails, throw a critical error.
+            match self
+                .engine
+                .forkchoice_updated(
+                    self.heads.into(),
+                    Some(attributes_with_parent.attributes.clone()),
+                )
                 .await
             {
-                Ok(attrs) => attrs,
-                Err(PipelineErrorKind::Critical(PipelineError::EndOfSource)) => {
-                    warn!(target: "client", "Exhausted data source; Halting derivation and using current safe head.");
-
-                    // Adjust the target block number to the current safe head, as no more blocks
-                    // can be produced.
-                    if target.is_some() {
-                        target = Some(tip_cursor.l2_safe_head.block_info.number);
-                    };
-
-                    // If we are in interop mode, this error must be handled by the caller.
-                    // Otherwise, we continue the loop to halt derivation on the next iteration.
-                    if cfg.is_interop_active(self.cursor.read().l2_safe_head().block_info.number) {
-                        return Err(PipelineError::EndOfSource.crit().into());
-                    } else {
-                        continue;
-                    }
+                Ok(header) => {
+                    Ok(Some(payload_and_header_to_block::<EC>(attributes_with_parent, header)?))
                 }
                 Err(e) => {
-                    error!(target: "client", "Failed to produce payload: {:?}", e);
-                    return Err(DriverError::Pipeline(e));
+                    error!(
+                        target: "driver",
+                        "Critical - Failed to execute deposit-only block: {e}",
+                    );
+                    Err(DriverError::Engine(e))
                 }
-            };
-
-            self.executor.update_safe_head(tip_cursor.l2_safe_head_header.clone());
-            let header = match self.executor.execute_payload(attributes.clone()).await {
-                Ok(header) => header,
-                Err(e) => {
-                    error!(target: "client", "Failed to execute L2 block: {}", e);
-
-                    if cfg.is_holocene_active(attributes.payload_attributes.timestamp) {
-                        // Retry with a deposit-only block.
-                        warn!(target: "client", "Flushing current channel and retrying deposit only block");
-
-                        // Flush the current batch and channel - if a block was replaced with a
-                        // deposit-only block due to execution failure, the
-                        // batch and channel it is contained in is forwards
-                        // invalidated.
-                        self.pipeline.signal(Signal::FlushChannel).await?;
-
-                        // Strip out all transactions that are not deposits.
-                        attributes.transactions = attributes.transactions.map(|txs| {
-                            txs.into_iter()
-                                .filter(|tx| (!tx.is_empty() && tx[0] == OpTxType::Deposit as u8))
-                                .collect::<Vec<_>>()
-                        });
-
-                        // Retry the execution.
-                        self.executor.update_safe_head(tip_cursor.l2_safe_head_header.clone());
-                        match self.executor.execute_payload(attributes.clone()).await {
-                            Ok(header) => header,
-                            Err(e) => {
-                                error!(
-                                    target: "client",
-                                    "Critical - Failed to execute deposit-only block: {e}",
-                                );
-                                return Err(DriverError::Executor(e));
-                            }
-                        }
-                    } else {
-                        // Pre-Holocene, discard the block if execution fails.
-                        continue;
-                    }
-                }
-            };
-
-            // Construct the block.
-            let block = OpBlock {
-                header: header.clone(),
-                body: BlockBody {
-                    transactions: attributes
-                        .transactions
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()).map_err(DriverError::Rlp))
-                        .collect::<DriverResult<Vec<OpTxEnvelope>, E::Error>>()?,
-                    ommers: Vec::new(),
-                    withdrawals: None,
-                },
-            };
-
-            // Get the pipeline origin and update the tip cursor.
-            let origin = self.pipeline.origin().ok_or(PipelineError::MissingOrigin.crit())?;
-            let l2_info = L2BlockInfo::from_block_and_genesis(
-                &block,
-                &self.pipeline.rollup_config().genesis,
-            )?;
-            let tip_cursor = TipCursor::new(
-                l2_info,
-                header.clone().seal_slow(),
-                self.executor.compute_output_root().map_err(DriverError::Executor)?,
-            );
-
-            // Advance the derivation pipeline cursor
-            drop(pipeline_cursor);
-            self.cursor.write().advance(origin, tip_cursor);
+            }
+        } else {
+            // Discard the payload if holocene is not active and the initial execution of the payload attributes fails.
+            Ok(None)
         }
     }
+
+    /// Updates the local [L2ChainHeads] with the new block for the given [SafetyLabel].
+    ///
+    /// ## Safety
+    /// - Assumes that the block has already been validated.
+    pub async fn advance_head(
+        &mut self,
+        block: Sealed<OpBlock>,
+        safety_label: SafetyLabel,
+    ) -> DriverResult<(), EC::Error> {
+        let l2_info =
+            L2BlockInfo::from_block_and_genesis(&block, &self.pipeline.rollup_config().genesis)?;
+        self.heads.advance(safety_label, l2_info);
+        Ok(())
+    }
+
+    async fn build_block(
+        &mut self,
+        attributes_with_parent: OpAttributesWithParent,
+    ) -> DriverResult<Sealed<OpBlock>, EC::Error> {
+        let fcu_response = self
+            .engine
+            .forkchoice_updated(
+                self.heads.clone().into(),
+                Some(attributes_with_parent.attributes.clone()),
+            )
+            .await
+            .unwrap();
+
+        match fcu_response.payload_status.status {
+            PayloadStatusEnum::Valid => { /* continue */ }
+            PayloadStatusEnum::Invalid { validation_error } => todo!(),
+            PayloadStatusEnum::Syncing | PayloadStatusEnum::Accepted => {
+                unimplemented!(
+                    "`Syncing` and `Accepted` are not supported Engine API responses yet."
+                )
+            }
+        }
+
+        let payload_id =
+            fcu_response.payload_id.expect("Must have a payload ID; Attributes were sent.");
+
+        let payload_response = self.engine.get_payload(payload_id).await.unwrap();
+
+        todo!()
+    }
+}
+
+/// Converts a [OpAttributesWithParent] and sealed [Header] into an [OpBlock].
+fn payload_and_header_to_block<EC: EngineController>(
+    attributes_with_parent: OpAttributesWithParent,
+    new_head: Sealed<Header>,
+) -> DriverResult<Sealed<OpBlock>, EC::Error> {
+    let block = OpBlock {
+        header: new_head.inner().clone(),
+        body: BlockBody {
+            transactions: attributes_with_parent
+                .attributes
+                .transactions
+                .unwrap_or_default()
+                .into_iter()
+                .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()).map_err(DriverError::Rlp))
+                .collect::<DriverResult<Vec<OpTxEnvelope>, EC::Error>>()?,
+            ommers: Vec::new(),
+            withdrawals: None,
+        },
+    };
+    Ok(Sealed::new_unchecked(block, new_head.hash()))
 }

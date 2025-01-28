@@ -9,7 +9,7 @@ use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_derive::traits::ChainProvider;
-use kona_driver::{PipelineCursor, TipCursor};
+use kona_driver::{L2SafeBlock, PipelineCursor};
 use kona_preimage::CommsClient;
 use maili_protocol::BatchValidationProvider;
 use maili_registry::RollupConfig;
@@ -39,7 +39,7 @@ where
 
     // Construct the cursor.
     let mut cursor = PipelineCursor::new(channel_timeout, origin);
-    let tip = TipCursor::new(safe_head_info, safe_header, B256::ZERO);
+    let tip = L2SafeBlock::new(safe_head_info, safe_header);
     cursor.advance(origin, tip);
 
     // Wrap the cursor in a shared read-write lock

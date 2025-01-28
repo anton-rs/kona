@@ -1,10 +1,7 @@
 //! Contains the L1 constructs of the proof, backed by the preimage oracle ABI as a data source.
 
 mod pipeline;
-pub use pipeline::{
-    OracleAttributesBuilder, OracleAttributesQueue, OracleDataProvider, OracleDerivationPipeline,
-    OraclePipeline,
-};
+pub use pipeline::{OracleDerivationPipeline, OraclePipeline};
 
 mod blob_provider;
 pub use blob_provider::OracleBlobProvider;
