@@ -3,7 +3,7 @@
 use crate::{DriverError, DriverPipeline, DriverResult, Executor, PipelineCursor, TipCursor};
 use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::BlockBody;
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use core::fmt::Debug;
 use kona_derive::{
@@ -11,6 +11,7 @@ use kona_derive::{
     traits::{Pipeline, SignalReceiver},
     types::Signal,
 };
+use kona_executor::ExecutionArtifacts;
 use maili_genesis::RollupConfig;
 use maili_protocol::L2BlockInfo;
 use maili_rpc::OpAttributesWithParent;
@@ -25,16 +26,16 @@ where
     DP: DriverPipeline<P> + Send + Sync + Debug,
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
 {
-    /// Marker for the executor.
-    _marker: core::marker::PhantomData<E>,
     /// Marker for the pipeline.
-    _marker2: core::marker::PhantomData<P>,
-    /// A pipeline abstraction.
-    pub pipeline: DP,
+    _marker: core::marker::PhantomData<P>,
     /// Cursor to keep track of the L2 tip
     pub cursor: Arc<RwLock<PipelineCursor>>,
     /// The Executor.
     pub executor: E,
+    /// A pipeline abstraction.
+    pub pipeline: DP,
+    /// The safe head's execution artifacts + Transactions
+    pub safe_head_artifacts: Option<(ExecutionArtifacts, Vec<Bytes>)>,
 }
 
 impl<E, DP, P> Driver<E, DP, P>
@@ -47,10 +48,10 @@ where
     pub const fn new(cursor: Arc<RwLock<PipelineCursor>>, executor: E, pipeline: DP) -> Self {
         Self {
             _marker: core::marker::PhantomData,
-            _marker2: core::marker::PhantomData,
-            pipeline,
             cursor,
             executor,
+            pipeline,
+            safe_head_artifacts: None,
         }
     }
 
@@ -66,8 +67,8 @@ where
     /// - `target`: The target block number.
     ///
     /// ## Returns
-    /// - `Ok((number, output_root))` - A tuple containing the number of the produced block and the
-    ///   output root.
+    /// - `Ok((l2_safe_head, output_root))` - A tuple containing the [L2BlockInfo] of the produced
+    ///   block and the output root.
     /// - `Err(e)` - An error if the block could not be produced.
     pub async fn advance_to_target(
         &mut self,
@@ -162,8 +163,9 @@ where
                 body: BlockBody {
                     transactions: attributes
                         .transactions
-                        .unwrap_or_default()
-                        .into_iter()
+                        .as_ref()
+                        .unwrap_or(&Vec::new())
+                        .iter()
                         .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()).map_err(DriverError::Rlp))
                         .collect::<DriverResult<Vec<OpTxEnvelope>, E::Error>>()?,
                     ommers: Vec::new(),
@@ -179,13 +181,17 @@ where
             )?;
             let tip_cursor = TipCursor::new(
                 l2_info,
-                execution_result.block_header,
+                execution_result.block_header.clone(),
                 self.executor.compute_output_root().map_err(DriverError::Executor)?,
             );
 
             // Advance the derivation pipeline cursor
             drop(pipeline_cursor);
             self.cursor.write().advance(origin, tip_cursor);
+
+            // Update the latest safe head artifacts.
+            self.safe_head_artifacts =
+                Some((execution_result, attributes.transactions.unwrap_or_default()));
         }
     }
 }

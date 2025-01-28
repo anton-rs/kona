@@ -2626,6 +2626,8 @@ dependencies = [
  "clap",
  "kona-client",
  "kona-derive",
+ "kona-driver",
+ "kona-executor",
  "kona-mpt",
  "kona-preimage",
  "kona-proof",
