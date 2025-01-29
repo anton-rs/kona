@@ -11,6 +11,7 @@ use revm::{
 pub(crate) const ACCELERATED_PRECOMPILES: &[PrecompileWithAddress] = &[
     precompile::secp256k1::ECRECOVER,                   // ecRecover
     precompile::bn128::pair::ISTANBUL,                  // ecPairing
+    precompile::bls12_381::pairing::PRECOMPILE,         // BLS12-381 pairing
     precompile::kzg_point_evaluation::POINT_EVALUATION, // KZG point evaluation
 ];
 
