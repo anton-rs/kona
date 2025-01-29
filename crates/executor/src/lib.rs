@@ -22,7 +22,7 @@ pub use executor::{
 };
 
 mod db;
-pub use db::{NoopTrieDBProvider, TrieAccount, TrieDB, TrieDBProvider};
+pub use db::{NoopTrieDBProvider, TrieDB, TrieDBProvider};
 
 mod constants;
 mod syscalls;

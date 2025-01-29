@@ -6,15 +6,13 @@ use alloc::{string::ToString, vec::Vec};
 use alloy_consensus::{Header, Sealed, EMPTY_ROOT_HASH};
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
+use alloy_trie::TrieAccount;
 use kona_mpt::{Nibbles, TrieHinter, TrieNode, TrieNodeError};
 use revm::{
     db::{states::StorageSlot, BundleState},
     primitives::{AccountInfo, Bytecode, HashMap, BLOCK_HASH_HISTORY},
     Database,
 };
-
-mod account;
-pub use account::TrieAccount;
 
 mod traits;
 pub use traits::{NoopTrieDBProvider, TrieDBProvider};
