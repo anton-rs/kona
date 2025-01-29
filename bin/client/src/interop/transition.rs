@@ -5,7 +5,7 @@ use crate::interop::util::fetch_l2_safe_head_hash;
 use alloc::sync::Arc;
 use alloy_consensus::Sealed;
 use alloy_primitives::B256;
-use core::fmt::Debug;
+use core::{cmp::Ordering, fmt::Debug};
 use kona_derive::errors::{PipelineError, PipelineErrorKind};
 use kona_driver::{Driver, DriverError};
 use kona_executor::{KonaHandleRegister, TrieDBProvider};
@@ -45,7 +45,7 @@ where
                 "No derivation/execution required, transition state is already saturated."
             );
 
-            return transition_and_check(pre, None, boot.claimed_post_state);
+            return transition_and_check(pre, None, boot.claimed_post_state, None);
         }
     }
 
@@ -70,30 +70,27 @@ where
 
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
-    if claimed_l2_block_number < safe_head.number {
-        error!(
-            target: "interop_client",
-            "Claimed L2 block number {claimed} is less than the safe head {safe}",
-            claimed = claimed_l2_block_number,
-            safe = safe_head.number
-        );
-        return Err(FaultProofProgramError::InvalidClaim(
-            boot.agreed_pre_state,
-            boot.claimed_post_state,
-        ));
-    }
-
-    // In the case where the agreed upon L2 pre-state is the same as the claimed L2 post-state,
-    // the state transition is invalid as it does not extend the chain.
-    if boot.agreed_pre_state == boot.claimed_post_state {
-        info!(
-            target: "interop_client",
-            "No-op state transition is invalid; Pre == post.",
-        );
-        return Err(FaultProofProgramError::InvalidClaim(
-            boot.agreed_pre_state,
-            boot.claimed_post_state,
-        ));
+    match claimed_l2_block_number.cmp(&safe_head.number) {
+        Ordering::Less => {
+            error!(
+                target: "interop_client",
+                "Claimed L2 block number {claimed} is less than the safe head {safe}",
+                claimed = claimed_l2_block_number,
+                safe = safe_head.number
+            );
+            return Err(FaultProofProgramError::InvalidClaim(
+                boot.agreed_pre_state,
+                boot.claimed_post_state,
+            ));
+        }
+        Ordering::Equal => {
+            info!(
+                target: "interop_client",
+                "Claimed L2 block is already safe."
+            );
+            return Ok(());
+        }
+        _ => { /* Continue */ }
     }
 
     // Create a new derivation driver with the given boot information and oracle.
@@ -117,9 +114,14 @@ where
     // Run the derivation pipeline until we are able to produce the output root of the claimed
     // L2 block.
     match driver.advance_to_target(&boot.rollup_config, Some(claimed_l2_block_number)).await {
-        Ok((_, block_hash, output_root)) => {
-            let optimistic_block = OptimisticBlock::new(block_hash, output_root);
-            transition_and_check(pre, Some(optimistic_block), boot.claimed_post_state)?;
+        Ok((safe_head, output_root)) => {
+            let optimistic_block = OptimisticBlock::new(safe_head.block_info.hash, output_root);
+            transition_and_check(
+                pre,
+                Some(optimistic_block),
+                boot.claimed_post_state,
+                Some((boot.claimed_l2_timestamp, safe_head.block_info.timestamp)),
+            )?;
 
             info!(
                 target: "interop_client",
@@ -160,7 +162,8 @@ where
 fn transition_and_check(
     pre_state: PreState,
     optimistic_block: Option<OptimisticBlock>,
-    expected: B256,
+    expected_post_state: B256,
+    timestamps: Option<(u64, u64)>,
 ) -> Result<(), FaultProofProgramError> {
     let did_append = optimistic_block.is_some();
     let post_state = pre_state
@@ -175,15 +178,18 @@ fn transition_and_check(
         );
     }
 
-    if post_state_commitment != expected {
+    if post_state_commitment != expected_post_state || timestamps.is_some_and(|(a, b)| a != b) {
         error!(
             target: "interop_client",
             "Failed to validate progressed transition state. Expected post-state commitment: {expected}, actual: {actual}",
-            expected = expected,
+            expected = expected_post_state,
             actual = post_state_commitment
         );
 
-        return Err(FaultProofProgramError::InvalidClaim(expected, post_state_commitment));
+        return Err(FaultProofProgramError::InvalidClaim(
+            expected_post_state,
+            post_state_commitment,
+        ));
     }
 
     info!(
