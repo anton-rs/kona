@@ -76,13 +76,16 @@ where
     }
 
     /// Fetches the L2 to L1 message passer account from the cache or underlying trie.
-    fn message_passer_account(db: &mut TrieDB<F, H>) -> Result<B256, TrieDBError> {
+    fn message_passer_account(
+        db: &mut TrieDB<F, H>,
+        block_number: u64,
+    ) -> Result<B256, TrieDBError> {
         match db.storage_roots().get(&L2_TO_L1_BRIDGE) {
             Some(storage_root) => {
                 storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)
             }
             None => Ok(db
-                .get_trie_account(&L2_TO_L1_BRIDGE)?
+                .get_trie_account(&L2_TO_L1_BRIDGE, block_number)?
                 .ok_or(TrieDBError::MissingAccountInfo)?
                 .storage_root),
         }
@@ -339,12 +342,8 @@ where
 
         // If the Isthmus hardfork is active, the withdrawals root is the L2 to L1 message passer
         // account.
-        // TEMP: The go clients don't yet have this feature. Interop comes after Isthmus, but this
-        // feature is excluded from interop for now for early-stage testing purposes.
-        if self.config.is_isthmus_active(payload.payload_attributes.timestamp) &&
-            !self.config.is_interop_active(payload.payload_attributes.timestamp)
-        {
-            withdrawals_root = Some(Self::message_passer_account(state.database)?);
+        if self.config.is_isthmus_active(payload.payload_attributes.timestamp) {
+            withdrawals_root = Some(Self::message_passer_account(state.database, block_number)?);
         }
 
         // Compute logs bloom filter for the block.
@@ -445,7 +444,8 @@ where
     /// - `Ok(output_root)`: The computed output root.
     /// - `Err(_)`: If an error occurred while computing the output root.
     pub fn compute_output_root(&mut self) -> ExecutorResult<B256> {
-        let storage_root = Self::message_passer_account(&mut self.trie_db)?;
+        let parent_number = self.trie_db.parent_block_header().number;
+        let storage_root = Self::message_passer_account(&mut self.trie_db, parent_number)?;
         let parent_header = self.trie_db.parent_block_header();
 
         info!(
@@ -467,7 +467,7 @@ where
         info!(
             target: "client_executor",
             "Computed output root for block # {block_number} | Output root: {output_root}",
-            block_number = parent_header.number,
+            block_number = parent_number,
         );
 
         // Hash the output and return
