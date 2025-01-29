@@ -2587,6 +2587,7 @@ dependencies = [
  "alloy-rpc-types-engine",
  "alloy-transport",
  "alloy-transport-http",
+ "alloy-trie",
  "criterion",
  "kona-host",
  "kona-mpt",
