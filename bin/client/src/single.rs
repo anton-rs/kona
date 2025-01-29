@@ -123,7 +123,7 @@ where
 
     // Run the derivation pipeline until we are able to produce the output root of the claimed
     // L2 block.
-    let (number, _, output_root) =
+    let (safe_head, output_root) =
         driver.advance_to_target(&boot.rollup_config, Some(boot.claimed_l2_block_number)).await?;
 
     ////////////////////////////////////////////////////////////////
@@ -134,7 +134,7 @@ where
         error!(
             target: "client",
             "Failed to validate L2 block #{number} with output root {output_root}",
-            number = number,
+            number = safe_head.block_info.number,
             output_root = output_root
         );
         return Err(FaultProofProgramError::InvalidClaim(output_root, boot.claimed_l2_output_root));
@@ -143,7 +143,7 @@ where
     info!(
         target: "client",
         "Successfully validated L2 block #{number} with output root {output_root}",
-        number = number,
+        number = safe_head.block_info.number,
         output_root = output_root
     );
 
