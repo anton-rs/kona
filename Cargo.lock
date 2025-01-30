@@ -518,7 +518,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74e60b084fe1aef8acecda2743ff2d93c18ff3eb67a2d3b12f62582a1e66ef5e"
 dependencies = [
  "serde",
- "winnow",
+ "winnow 0.6.26",
 ]
 
 [[package]]
@@ -2885,8 +2885,9 @@ dependencies = [
 
 [[package]]
 name = "maili-genesis"
-version = "0.1.10"
-source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "768927c57b7b345e05f11762bec4c0338dea99dba1f3954a9d762998e9fc8c5f"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2901,8 +2902,9 @@ dependencies = [
 
 [[package]]
 name = "maili-protocol"
-version = "0.1.10"
-source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91207581f38f02ed815f23bcb8457b1d0b9506212139cf54f4b35e89cac9560f"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2928,8 +2930,9 @@ dependencies = [
 
 [[package]]
 name = "maili-registry"
-version = "0.1.10"
-source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01189e3ca0c4c04f3a1228af969350b0501ae1dd052dec3538939399d1f412be"
 dependencies = [
  "alloy-primitives",
  "lazy_static",
@@ -2942,8 +2945,9 @@ dependencies = [
 
 [[package]]
 name = "maili-rpc"
-version = "0.1.10"
-source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c508f63e1d0fd1e5c51cda4cedaf8a73ec4ab4fb3fbc4815d9d6033a90c9662"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -2954,8 +2958,9 @@ dependencies = [
 
 [[package]]
 name = "maili-serde"
-version = "0.1.10"
-source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d1de634cf1a237843cab05c84f5fcbc95106ce7754b5e66c4b5a43f2c0aef13"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -2964,8 +2969,9 @@ dependencies = [
 
 [[package]]
 name = "maili-superchain"
-version = "0.1.10"
-source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c15aed5565dc34a47dc82d6cf624c5cf8e129e7c821e56e14f31d7a1ae48470d"
 dependencies = [
  "alloy-primitives",
  "maili-genesis",
@@ -4148,9 +4154,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.21"
+version = "0.23.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f287924602bf649d949c63dc8ac8b235fa5387d394020705b80c4eb597ce5b8"
+checksum = "9fb9263ab4eb695e42321db096e3b8fbd715a59b154d5c88d82db2175b681ba7"
 dependencies = [
  "once_cell",
  "ring",
@@ -4980,15 +4986,15 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.22.22"
+version = "0.22.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
+checksum = "02a8b472d1a3d7c18e2d61a489aee3453fd9031c33e4f55bd533f4a7adca1bee"
 dependencies = [
  "indexmap",
  "serde",
  "serde_spanned",
  "toml_datetime",
- "winnow",
+ "winnow 0.7.0",
 ]
 
 [[package]]
@@ -5513,9 +5519,18 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"
-version = "0.6.25"
+version = "0.6.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad699df48212c6cc6eb4435f35500ac6fd3b9913324f938aea302022ce19d310"
+checksum = "1e90edd2ac1aa278a5c4599b1d89cf03074b610800f866d4026dc199d7929a28"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "winnow"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e49d2d35d3fad69b39b94139037ecfb4f359f08958b9c11e7315ce770462419"
 dependencies = [
  "memchr",
 ]
