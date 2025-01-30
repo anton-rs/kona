@@ -71,19 +71,16 @@ impl BootInfo {
             .get_exact(PreimageKey::new_local(L1_HEAD_KEY.to()), l1_head.as_mut())
             .await
             .map_err(OracleProviderError::Preimage)?;
-
         let mut l2_output_root: B256 = B256::ZERO;
         oracle
             .get_exact(PreimageKey::new_local(L2_OUTPUT_ROOT_KEY.to()), l2_output_root.as_mut())
             .await
             .map_err(OracleProviderError::Preimage)?;
-
         let mut l2_claim: B256 = B256::ZERO;
         oracle
             .get_exact(PreimageKey::new_local(L2_CLAIM_KEY.to()), l2_claim.as_mut())
             .await
             .map_err(OracleProviderError::Preimage)?;
-
         let l2_claim_block = u64::from_be_bytes(
             oracle
                 .get(PreimageKey::new_local(L2_CLAIM_BLOCK_NUMBER_KEY.to()))
@@ -102,7 +99,6 @@ impl BootInfo {
                 .try_into()
                 .map_err(OracleProviderError::SliceConversion)?,
         );
-
         // Attempt to load the rollup config from the chain ID. If there is no config for the chain,
         // fall back to loading the config from the preimage oracle.
         let rollup_config = if let Some(config) = ROLLUP_CONFIGS.get(&chain_id) {
