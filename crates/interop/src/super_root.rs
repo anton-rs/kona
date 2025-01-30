@@ -87,7 +87,7 @@ impl SuperRoot {
 }
 
 /// A wrapper around an output root hash with the chain ID it belongs to.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
 pub struct OutputRootWithChain {
     /// The chain ID of the output root.

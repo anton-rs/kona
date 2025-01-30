@@ -57,15 +57,27 @@ where
         }
     };
 
+    fetch_output_block_hash(caching_oracle, rich_output.output_root, rich_output.chain_id).await
+}
+
+/// Fetches the block hash that the passed output root commits to.
+pub(crate) async fn fetch_output_block_hash<O>(
+    caching_oracle: &O,
+    output_root: B256,
+    chain_id: u64,
+) -> Result<B256, OracleProviderError>
+where
+    O: CommsClient,
+{
     caching_oracle
-        .write(&HintType::L2OutputRoot.encode_with(&[
-            rich_output.output_root.as_slice(),
-            rich_output.chain_id.to_be_bytes().as_slice(),
-        ]))
+        .write(
+            &HintType::L2OutputRoot
+                .encode_with(&[output_root.as_slice(), chain_id.to_be_bytes().as_slice()]),
+        )
         .await
         .map_err(OracleProviderError::Preimage)?;
     let output_preimage = caching_oracle
-        .get(PreimageKey::new(*rich_output.output_root, PreimageKeyType::Keccak256))
+        .get(PreimageKey::new(*output_root, PreimageKeyType::Keccak256))
         .await
         .map_err(OracleProviderError::Preimage)?;
 
