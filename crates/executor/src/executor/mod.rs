@@ -37,7 +37,7 @@ use util::encode_holocene_eip_1559_params;
 
 /// The [ExecutionArtifacts] holds the produced block header and receipts from the execution of a
 /// block.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct ExecutionArtifacts {
     /// The block header.
     pub block_header: Sealed<Header>,

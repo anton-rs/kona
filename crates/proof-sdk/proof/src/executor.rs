@@ -1,6 +1,6 @@
 //! An executor constructor.
 
-use alloc::{boxed::Box, sync::Arc};
+use alloc::boxed::Box;
 use alloy_consensus::{Header, Sealed};
 use alloy_primitives::B256;
 use async_trait::async_trait;
@@ -20,7 +20,7 @@ where
     H: TrieHinter + Send + Sync + Clone,
 {
     /// The rollup config for the executor.
-    rollup_config: &'a Arc<RollupConfig>,
+    rollup_config: &'a RollupConfig,
     /// The trie provider for the executor.
     trie_provider: P,
     /// The trie hinter for the executor.
@@ -38,7 +38,7 @@ where
 {
     /// Creates a new executor.
     pub const fn new(
-        rollup_config: &'a Arc<RollupConfig>,
+        rollup_config: &'a RollupConfig,
         trie_provider: P,
         trie_hinter: H,
         handle_register: Option<KonaHandleRegister<P, H>>,

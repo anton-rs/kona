@@ -2,7 +2,8 @@
 //! preimages from a remote source serving the super-chain (interop) proof mode.
 
 use super::InteropHostCli;
-use alloy_consensus::{Header, TxEnvelope, EMPTY_ROOT_HASH};
+use crate::single::SingleChainFetcher;
+use alloy_consensus::{Header, Sealed, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
     eip2718::Encodable2718,
     eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
@@ -10,29 +11,37 @@ use alloy_eips::{
 };
 use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
+use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
-    debug::ExecutionWitness, Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind,
-    Transaction,
+    Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kona_host::KeyValueStore;
+use kona_driver::Driver;
+use kona_executor::TrieDBProvider;
+use kona_host::{KeyValueStore, PreimageServer};
 use kona_preimage::{
     errors::{PreimageOracleError, PreimageOracleResult},
-    HintRouter, PreimageFetcher, PreimageKey, PreimageKeyType,
+    BidirectionalChannel, HintReader, HintRouter, HintWriter, OracleReader, OracleServer,
+    PreimageFetcher, PreimageKey, PreimageKeyType,
+};
+use kona_proof::{
+    executor::KonaExecutor,
+    l1::{OracleBlobProvider, OracleL1ChainProvider, OraclePipeline},
+    l2::OracleL2ChainProvider,
+    sync::new_pipeline_cursor,
+    CachingOracle,
 };
 use kona_proof_interop::{Hint, HintType, PreState};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use maili_protocol::BlockInfo;
 use maili_registry::ROLLUP_CONFIGS;
-use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, task};
 use tracing::{error, trace, warn};
 
 /// The [InteropFetcher] struct is responsible for fetching preimages from a remote source.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InteropFetcher<KV>
 where
     KV: KeyValueStore + ?Sized,
@@ -55,7 +64,7 @@ where
 
 impl<KV> InteropFetcher<KV>
 where
-    KV: KeyValueStore + ?Sized,
+    KV: KeyValueStore + Send + Sync + ?Sized + 'static,
 {
     /// Create a new [InteropFetcher] with the given [KeyValueStore].
     pub fn new(
@@ -601,39 +610,154 @@ where
                     Ok::<(), anyhow::Error>(())
                 })?;
             }
-            HintType::L2PayloadWitness => {
-                if hint_data.len() < 32 {
+            HintType::L2BlockData => {
+                if hint_data.len() != 72 {
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
-                let parent_block_hash = B256::from_slice(&hint_data.as_ref()[..32]);
-                let payload_attributes: OpPayloadAttributes =
-                    serde_json::from_slice(&hint_data[32..])?;
 
-                let execute_payload_response: ExecutionWitness = self
+                let agreed_block_hash = B256::from_slice(&hint_data.as_ref()[..32]);
+                let disputed_block_hash = B256::from_slice(&hint_data.as_ref()[32..64]);
+                let chain_id = u64::from_be_bytes(
+                    hint_data.as_ref()[64..72]
+                        .try_into()
+                        .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
+                );
+
+                let l2_provider = self
                     .l2_providers
-                    .get(&self.active_l2_chain_id)
-                    .ok_or(anyhow!("No active L2 chain ID"))?
-                    .client()
-                    .request::<(B256, OpPayloadAttributes), ExecutionWitness>(
-                        "debug_executePayload",
-                        (parent_block_hash, payload_attributes),
+                    .get(&chain_id)
+                    .ok_or(anyhow!("No provider found for chain ID {chain_id}"))?;
+                let rollup_config = ROLLUP_CONFIGS
+                    .get(&chain_id)
+                    .cloned()
+                    .or_else(|| {
+                        let local_cfgs = self.cfg.read_rollup_configs().ok()?;
+                        local_cfgs.get(&chain_id).cloned()
+                    })
+                    .map(Arc::new)
+                    .ok_or(anyhow!("No rollup config found for chain ID: {chain_id}"))?;
+
+                // Check if the block is canonical before continuing.
+                let parent_block = l2_provider
+                    .get_block_by_hash(agreed_block_hash, BlockTransactionsKind::Hashes)
+                    .await?
+                    .ok_or(anyhow!("Block not found."))?;
+                let disputed_block = l2_provider
+                    .get_block_by_number(
+                        (parent_block.header.number + 1).into(),
+                        BlockTransactionsKind::Hashes,
                     )
-                    .await
-                    .map_err(|e| anyhow!("Failed to fetch preimage: {e}"))?;
+                    .await?
+                    .ok_or(anyhow!("Block not found."))?;
 
-                let mut merged = HashMap::<B256, Bytes>::default();
-                merged.extend(execute_payload_response.state);
-                merged.extend(execute_payload_response.codes);
-                merged.extend(execute_payload_response.keys);
-
-                let mut kv_write_lock = self.kv_store.write().await;
-                for (hash, preimage) in merged.into_iter() {
-                    let computed_hash = keccak256(preimage.as_ref());
-                    assert_eq!(computed_hash, hash, "Preimage hash does not match expected hash");
-
-                    let key = PreimageKey::new(*hash, PreimageKeyType::Keccak256);
-                    kv_write_lock.set(key.into(), preimage.into())?;
+                // Return early if the disputed block is canonical.
+                if disputed_block.header.hash == disputed_block_hash {
+                    return Ok(());
                 }
+
+                // Reproduce the preimages for the optimistic block's derivation + execution and
+                // store them in the key-value store.
+                let hint = BidirectionalChannel::new()?;
+                let preimage = BidirectionalChannel::new()?;
+                let fetcher = SingleChainFetcher::new(
+                    self.kv_store.clone(),
+                    self.l1_provider.clone(),
+                    self.blob_provider.clone(),
+                    l2_provider.clone(),
+                    agreed_block_hash,
+                );
+                let server_task = task::spawn(
+                    PreimageServer::new(
+                        OracleServer::new(preimage.host),
+                        HintReader::new(hint.host),
+                        self.kv_store.clone(),
+                        Some(Arc::new(RwLock::new(fetcher))),
+                    )
+                    .start(),
+                );
+                let client_task = task::spawn({
+                    let InteropHostCli { l1_head, .. } = self.cfg;
+                    async move {
+                        let oracle = Arc::new(CachingOracle::new(
+                            1024,
+                            OracleReader::new(preimage.client),
+                            HintWriter::new(hint.client),
+                        ));
+
+                        let mut l1_provider = OracleL1ChainProvider::new(l1_head, oracle.clone());
+                        let mut l2_provider = OracleL2ChainProvider::new(
+                            agreed_block_hash,
+                            rollup_config.as_ref().clone(),
+                            oracle.clone(),
+                        );
+                        let beacon = OracleBlobProvider::new(oracle.clone());
+
+                        let safe_head = l2_provider
+                            .header_by_hash(agreed_block_hash)
+                            .map(|header| Sealed::new_unchecked(header, agreed_block_hash))?;
+                        let target_block = safe_head.number + 1;
+
+                        let cursor = new_pipeline_cursor(
+                            rollup_config.as_ref(),
+                            safe_head,
+                            &mut l1_provider,
+                            &mut l2_provider,
+                        )
+                        .await?;
+                        l2_provider.set_cursor(cursor.clone());
+
+                        let pipeline = OraclePipeline::new(
+                            rollup_config.clone(),
+                            cursor.clone(),
+                            oracle,
+                            beacon,
+                            l1_provider,
+                            l2_provider.clone(),
+                        );
+                        let executor = KonaExecutor::new(
+                            rollup_config.as_ref(),
+                            l2_provider.clone(),
+                            l2_provider,
+                            None,
+                            None,
+                        );
+                        let mut driver = Driver::new(cursor, executor, pipeline);
+
+                        driver
+                            .advance_to_target(rollup_config.as_ref(), Some(target_block))
+                            .await?;
+
+                        Ok::<_, anyhow::Error>(driver.safe_head_artifacts.unwrap_or_default())
+                    }
+                });
+
+                // Wait on both the server and client tasks to complete.
+                let (_, client_result) = tokio::try_join!(server_task, client_task)?;
+                let (execution_artifacts, raw_transactions) = client_result?;
+
+                // Store optimistic block hash preimage.
+                let mut kv_lock = self.kv_store.write().await;
+                let mut rlp_buf = Vec::with_capacity(execution_artifacts.block_header.length());
+                execution_artifacts.block_header.encode(&mut rlp_buf);
+                kv_lock.set(
+                    PreimageKey::new(
+                        *execution_artifacts.block_header.hash(),
+                        PreimageKeyType::Keccak256,
+                    )
+                    .into(),
+                    rlp_buf,
+                )?;
+
+                // Store receipts root preimages.
+                let raw_receipts = execution_artifacts
+                    .receipts
+                    .into_iter()
+                    .map(|receipt| Ok::<_, anyhow::Error>(receipt.encoded_2718()))
+                    .collect::<Result<Vec<_>>>()?;
+                self.store_trie_nodes(raw_receipts.as_slice()).await?;
+
+                // Store tx root preimages.
+                self.store_trie_nodes(raw_transactions.as_slice()).await?;
             }
         }
 
@@ -706,7 +830,7 @@ where
 #[async_trait]
 impl<KV> PreimageFetcher for InteropFetcher<KV>
 where
-    KV: KeyValueStore + Send + Sync + ?Sized,
+    KV: KeyValueStore + Send + Sync + ?Sized + 'static,
 {
     /// Get the preimage for the given key.
     async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>> {

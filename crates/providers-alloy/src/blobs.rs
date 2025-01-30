@@ -12,7 +12,7 @@ use std::{boxed::Box, string::ToString, vec::Vec};
 #[derive(Debug, Clone)]
 pub struct OnlineBlobProvider<B: BeaconClient> {
     /// The Beacon API client.
-    beacon_client: B,
+    pub beacon_client: B,
     /// Beacon Genesis time used for the time to slot conversion.
     pub genesis_time: u64,
     /// Slot interval used for the time to slot conversion.

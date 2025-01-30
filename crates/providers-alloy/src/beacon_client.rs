@@ -92,9 +92,9 @@ pub trait BeaconClient {
 #[derive(Debug, Clone)]
 pub struct OnlineBeaconClient {
     /// The base URL of the beacon API.
-    base: String,
+    pub base: String,
     /// The inner reqwest client.
-    inner: Client,
+    pub inner: Client,
 }
 
 impl OnlineBeaconClient {
