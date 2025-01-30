@@ -62,6 +62,12 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
+[patch.crates-io]
+maili-rpc = { git = "https://github.com/op-rs/maili", branch = "main" }
+maili-protocol = { git = "https://github.com/op-rs/maili", branch = "main" }
+maili-registry = { git = "https://github.com/op-rs/maili", branch = "main" }
+maili-genesis = { git = "https://github.com/op-rs/maili", branch = "main" }
+
 [workspace.dependencies]
 # Workspace
 kona-host = { path = "bin/host", version = "0.1.0", default-features = false }

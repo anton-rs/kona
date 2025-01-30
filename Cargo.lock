@@ -1292,26 +1292,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
-name = "const_format"
-version = "0.2.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "126f97965c8ad46d6d9163268ff28432e8f6a1196a55578867832e3049df63dd"
-dependencies = [
- "const_format_proc_macros",
-]
-
-[[package]]
-name = "const_format_proc_macros"
-version = "0.2.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d57c2eccfb16dbac1f4e61e206105db5820c9d26c3c472bc17c774259ef7744"
-dependencies = [
- "proc-macro2",
- "quote",
- "unicode-xid",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2906,8 +2886,7 @@ dependencies = [
 [[package]]
 name = "maili-genesis"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e791646cff844a9530d447b6a029f4195bcaaf6af67196a7d5a67ab3ee8e60ff"
+source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2923,8 +2902,7 @@ dependencies = [
 [[package]]
 name = "maili-protocol"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db4e18204263b87cda449d7d7d41264997659bdd08188cdae588f94b190ad0f2"
+source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2951,8 +2929,7 @@ dependencies = [
 [[package]]
 name = "maili-registry"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "383dc2929f86aa100a49dc437eaa1dcd4d79ebdbcb810e3c5459d546b7583dea"
+source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
 dependencies = [
  "alloy-primitives",
  "lazy_static",
@@ -2966,23 +2943,19 @@ dependencies = [
 [[package]]
 name = "maili-rpc"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1dfa4a28f0a0b0a6685fda82150d4a39a36542025ba2e8f24c1b1564b722ae3"
+source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
- "alloy-sol-types",
  "derive_more",
  "maili-protocol",
  "op-alloy-rpc-types-engine",
- "thiserror 2.0.11",
 ]
 
 [[package]]
 name = "maili-serde"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "665f29e5b609a7823e6529c066e0ccccfa867b3b7f8cdc6bbeb1cc70681eae66"
+source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -2992,8 +2965,7 @@ dependencies = [
 [[package]]
 name = "maili-superchain"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea4924ed5a7f24980cea22d303103aff3a24a39faa46e07acec31c0edf0e73e5"
+source = "git+https://github.com/op-rs/maili?branch=main#27dfa3226d35e0dad30b2ff8cb84f4ecd1d2473a"
 dependencies = [
  "alloy-primitives",
  "maili-genesis",
@@ -3367,30 +3339,28 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "3.7.2"
+version = "3.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b91c2d9a6a6004e205b7e881856fb1a0f5022d382acc2c01b52185f7b6f65997"
+checksum = "306800abfa29c7f16596b5970a588435e3d5b3149683d00c12b699cc19f895ee"
 dependencies = [
  "arrayvec",
  "bitvec",
  "byte-slice-cast",
- "const_format",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
- "rustversion",
  "serde",
 ]
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "3.7.2"
+version = "3.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77555fd9d578b6470470463fded832619a5fec5ad6cbc551fe4d7507ce50cd3a"
+checksum = "d830939c76d294956402033aee57a6da7b438f2294eb94864c37b0569053a42c"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.96",
+ "syn 1.0.109",
 ]
 
 [[package]]
