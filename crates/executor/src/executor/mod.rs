@@ -118,7 +118,7 @@ where
             &payload,
         )?;
         let initialized_block_env = Self::prepare_block_env(
-            self.revm_spec_id(payload.payload_attributes.timestamp),
+            self.config.spec_id(payload.payload_attributes.timestamp),
             self.trie_db.parent_block_header(),
             &payload,
             &base_fee_params,

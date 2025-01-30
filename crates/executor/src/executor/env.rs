@@ -19,31 +19,6 @@ where
     P: TrieDBProvider,
     H: TrieHinter,
 {
-    /// Returns the active [SpecId] for the executor.
-    ///
-    /// ## Takes
-    /// - `timestamp`: The timestamp of the executing block.
-    ///
-    /// ## Returns
-    /// The active [SpecId] for the executor.
-    pub(crate) fn revm_spec_id(&self, timestamp: u64) -> SpecId {
-        if self.config.is_isthmus_active(timestamp) {
-            SpecId::ISTHMUS
-        } else if self.config.is_holocene_active(timestamp) {
-            SpecId::HOLOCENE
-        } else if self.config.is_fjord_active(timestamp) {
-            SpecId::FJORD
-        } else if self.config.is_ecotone_active(timestamp) {
-            SpecId::ECOTONE
-        } else if self.config.is_canyon_active(timestamp) {
-            SpecId::CANYON
-        } else if self.config.is_regolith_active(timestamp) {
-            SpecId::REGOLITH
-        } else {
-            SpecId::BEDROCK
-        }
-    }
-
     /// Returns the active [CfgEnvWithHandlerCfg] for the executor.
     ///
     /// ## Takes
@@ -54,7 +29,7 @@ where
     pub(crate) fn evm_cfg_env(&self, timestamp: u64) -> CfgEnvWithHandlerCfg {
         let cfg_env = CfgEnv::default().with_chain_id(self.config.l2_chain_id);
         let mut cfg_handler_env =
-            CfgEnvWithHandlerCfg::new_with_spec_id(cfg_env, self.revm_spec_id(timestamp));
+            CfgEnvWithHandlerCfg::new_with_spec_id(cfg_env, self.config.spec_id(timestamp));
         cfg_handler_env.enable_optimism();
         cfg_handler_env
     }

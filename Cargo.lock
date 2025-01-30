@@ -2914,6 +2914,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
  "maili-serde",
+ "revm",
  "serde",
  "serde_repr",
  "thiserror 2.0.11",
