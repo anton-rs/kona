@@ -195,7 +195,7 @@ mod test {
     #[test]
     fn test_arbitrary_super_root_roundtrip() {
         let mut bytes = [0u8; 1024];
-        rand::thread_rng().fill(bytes.as_mut_slice());
+        rand::rng().fill(bytes.as_mut_slice());
         let super_root = SuperRoot::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 
         let mut rlp_buf = Vec::with_capacity(super_root.encoded_length());
