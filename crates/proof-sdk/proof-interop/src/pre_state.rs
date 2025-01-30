@@ -252,7 +252,7 @@ mod test {
     #[test]
     fn test_arbitrary_pre_state_roundtrip() {
         let mut bytes = [0u8; 1024];
-        rand::thread_rng().fill(bytes.as_mut_slice());
+        rand::rng().fill(bytes.as_mut_slice());
         let pre_state =
             super::PreState::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 
@@ -264,7 +264,7 @@ mod test {
     #[test]
     fn test_arbitrary_transition_state_roundtrip() {
         let mut bytes = [0u8; 1024];
-        rand::thread_rng().fill(bytes.as_mut_slice());
+        rand::rng().fill(bytes.as_mut_slice());
         let transition_state =
             TransitionState::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 

@@ -674,7 +674,7 @@ mod test {
     use alloy_primitives::{b256, bytes, hex, keccak256};
     use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};
     use alloy_trie::{HashBuilder, Nibbles};
-    use rand::prelude::SliceRandom;
+    use rand::prelude::IteratorRandom;
 
     #[test]
     fn test_empty_blinded() {
@@ -869,9 +869,9 @@ mod test {
             let mut hb = HashBuilder::default();
             let mut node = TrieNode::Empty;
 
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let deleted_keys =
-            keys.choose_multiple(&mut rng, 5.min(keys.len())).copied().collect::<Vec<_>>();
+            keys.clone().into_iter().choose_multiple(&mut rng, 5.min(keys.len()));
 
             // Insert the keys into the `HashBuilder` and `TrieNode`.
             for key in keys {

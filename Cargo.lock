@@ -27,7 +27,7 @@ dependencies = [
  "getrandom 0.2.15",
  "once_cell",
  "version_check",
- "zerocopy",
+ "zerocopy 0.7.35",
 ]
 
 [[package]]
@@ -240,7 +240,7 @@ dependencies = [
  "paste",
  "proptest",
  "proptest-derive",
- "rand",
+ "rand 0.8.5",
  "ruint",
  "rustc-hash 2.1.0",
  "serde",
@@ -274,7 +274,7 @@ dependencies = [
  "dashmap",
  "futures",
  "futures-utils-wasm",
- "lru",
+ "lru 0.12.5",
  "parking_lot",
  "pin-project",
  "reqwest",
@@ -804,7 +804,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1df2c09229cbc5a028b1d70e00fdb2acee28b1055dfb5ca73eea49c5a25c4e7c"
 dependencies = [
  "num-traits",
- "rand",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -814,7 +814,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
 dependencies = [
  "num-traits",
- "rand",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -1419,7 +1419,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76"
 dependencies = [
  "generic-array",
- "rand_core",
+ "rand_core 0.6.4",
  "subtle",
  "zeroize",
 ]
@@ -1643,7 +1643,7 @@ dependencies = [
  "generic-array",
  "group",
  "pkcs8",
- "rand_core",
+ "rand_core 0.6.4",
  "sec1",
  "subtle",
  "zeroize",
@@ -1749,7 +1749,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
 dependencies = [
- "rand_core",
+ "rand_core 0.6.4",
  "subtle",
 ]
 
@@ -1772,7 +1772,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835c052cb0c08c1acf6ffd71c022172e18723949c8282f2b9f27efbc51e64534"
 dependencies = [
  "byteorder",
- "rand",
+ "rand 0.8.5",
  "rustc-hex",
  "static_assertions",
 ]
@@ -1973,7 +1973,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
 dependencies = [
  "ff",
- "rand_core",
+ "rand_core 0.6.4",
  "subtle",
 ]
 
@@ -2516,7 +2516,7 @@ dependencies = [
  "kona-proof-interop",
  "kona-std-fpvm",
  "kona-std-fpvm-proc",
- "lru",
+ "lru 0.13.0",
  "maili-genesis",
  "maili-protocol",
  "op-alloy-consensus",
@@ -2596,7 +2596,7 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-rpc-types-engine",
  "pprof",
- "rand",
+ "rand 0.9.0",
  "revm",
  "rstest",
  "serde",
@@ -2659,7 +2659,7 @@ dependencies = [
  "arbitrary",
  "async-trait",
  "op-alloy-consensus",
- "rand",
+ "rand 0.9.0",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -2679,7 +2679,7 @@ dependencies = [
  "criterion",
  "pprof",
  "proptest",
- "rand",
+ "rand 0.9.0",
  "reqwest",
  "serde",
  "thiserror 2.0.11",
@@ -2715,7 +2715,7 @@ dependencies = [
  "kona-executor",
  "kona-mpt",
  "kona-preimage",
- "lru",
+ "lru 0.13.0",
  "maili-genesis",
  "maili-protocol",
  "maili-registry",
@@ -2747,7 +2747,7 @@ dependencies = [
  "maili-genesis",
  "maili-registry",
  "op-alloy-consensus",
- "rand",
+ "rand 0.9.0",
  "serde",
  "serde_json",
  "spin",
@@ -2768,7 +2768,7 @@ dependencies = [
  "alloy-transport",
  "async-trait",
  "kona-derive",
- "lru",
+ "lru 0.13.0",
  "maili-genesis",
  "maili-protocol",
  "op-alloy-consensus",
@@ -2904,10 +2904,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "maili-genesis"
-version = "0.1.9"
+name = "lru"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b247c993ac2d89a7171eac22086cf18e2d6e5a0a654d6902d9ee834772af1b25"
+checksum = "227748d55f2f0ab4735d87fd623798cb6b664512fe979705f829c9f81c934465"
+dependencies = [
+ "hashbrown 0.15.2",
+]
+
+[[package]]
+name = "maili-genesis"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e791646cff844a9530d447b6a029f4195bcaaf6af67196a7d5a67ab3ee8e60ff"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2921,9 +2930,9 @@ dependencies = [
 
 [[package]]
 name = "maili-protocol"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a7d7fdcf313d5671a931c7c5a7969dfa8c4d6d3fb34da29ea731eb2364560c9"
+checksum = "db4e18204263b87cda449d7d7d41264997659bdd08188cdae588f94b190ad0f2"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus",
@@ -2939,7 +2948,7 @@ dependencies = [
  "miniz_oxide",
  "op-alloy-consensus",
  "op-alloy-flz",
- "rand",
+ "rand 0.9.0",
  "serde",
  "thiserror 2.0.11",
  "tracing",
@@ -2949,9 +2958,9 @@ dependencies = [
 
 [[package]]
 name = "maili-registry"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2b4709306d9532c7a0c84de7765f4bc5ed7068350e54444e28aaad4d7c88dc2"
+checksum = "383dc2929f86aa100a49dc437eaa1dcd4d79ebdbcb810e3c5459d546b7583dea"
 dependencies = [
  "alloy-primitives",
  "lazy_static",
@@ -2964,22 +2973,24 @@ dependencies = [
 
 [[package]]
 name = "maili-rpc"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79c62dbe6d8b8765d5dda1a798cefb702bebd59038a8eb95a9e2275db973589e"
+checksum = "c1dfa4a28f0a0b0a6685fda82150d4a39a36542025ba2e8f24c1b1564b722ae3"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
+ "alloy-sol-types",
  "derive_more",
  "maili-protocol",
  "op-alloy-rpc-types-engine",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
 name = "maili-serde"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "908a6a1352249f55d8c982dbf868d54c86e2aa461c94d56c4e1bd0f74cae9714"
+checksum = "665f29e5b609a7823e6529c066e0ccccfa867b3b7f8cdc6bbeb1cc70681eae66"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -2988,9 +2999,9 @@ dependencies = [
 
 [[package]]
 name = "maili-superchain"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "552cbfa042beb2ee9b283ac54d97f8ec0cb38d929fe2ec60c329e84cfe8181c4"
+checksum = "ea4924ed5a7f24980cea22d303103aff3a24a39faa46e07acec31c0edf0e73e5"
 dependencies = [
  "alloy-primitives",
  "maili-genesis",
@@ -3563,7 +3574,7 @@ version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
 dependencies = [
- "zerocopy",
+ "zerocopy 0.7.35",
 ]
 
 [[package]]
@@ -3637,8 +3648,8 @@ dependencies = [
  "bitflags 2.8.0",
  "lazy_static",
  "num-traits",
- "rand",
- "rand_chacha",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
  "rand_xorshift",
  "regex-syntax",
  "rusty-fork",
@@ -3723,9 +3734,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
 dependencies = [
  "libc",
- "rand_chacha",
- "rand_core",
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.4",
  "serde",
+]
+
+[[package]]
+name = "rand"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3779b94aeb87e8bd4e834cee3650289ee9e0d5677f976ecdb6d219e5f4f6cd94"
+dependencies = [
+ "rand_chacha 0.9.0",
+ "rand_core 0.9.0",
+ "zerocopy 0.8.14",
 ]
 
 [[package]]
@@ -3735,7 +3757,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
 dependencies = [
  "ppv-lite86",
- "rand_core",
+ "rand_core 0.6.4",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.9.0",
 ]
 
 [[package]]
@@ -3748,12 +3780,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_core"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b08f3c9802962f7e1b25113931d94f43ed9725bebc59db9d0c3e9a23b67e15ff"
+dependencies = [
+ "getrandom 0.3.1",
+ "zerocopy 0.8.14",
+]
+
+[[package]]
 name = "rand_xorshift"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
 dependencies = [
- "rand_core",
+ "rand_core 0.6.4",
 ]
 
 [[package]]
@@ -4085,7 +4127,7 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "proptest",
- "rand",
+ "rand 0.8.5",
  "rlp",
  "ruint-macro",
  "serde",
@@ -4273,7 +4315,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "rand",
+ "rand 0.8.5",
  "secp256k1-sys",
 ]
 
@@ -4505,7 +4547,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
 dependencies = [
  "digest 0.10.7",
- "rand_core",
+ "rand_core 0.6.4",
 ]
 
 [[package]]
@@ -4625,7 +4667,7 @@ dependencies = [
  "byteorder",
  "crunchy",
  "lazy_static",
- "rand",
+ "rand 0.8.5",
  "rustc-hex",
 ]
 
@@ -5102,7 +5144,7 @@ dependencies = [
  "http",
  "httparse",
  "log",
- "rand",
+ "rand 0.8.5",
  "rustls",
  "rustls-pki-types",
  "sha1",
@@ -5608,7 +5650,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
 dependencies = [
  "byteorder",
- "zerocopy-derive",
+ "zerocopy-derive 0.7.35",
+]
+
+[[package]]
+name = "zerocopy"
+version = "0.8.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a367f292d93d4eab890745e75a778da40909cab4d6ff8173693812f79c4a2468"
+dependencies = [
+ "zerocopy-derive 0.8.14",
 ]
 
 [[package]]
@@ -5616,6 +5667,17 @@ name = "zerocopy-derive"
 version = "0.7.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.96",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.8.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3931cb58c62c13adec22e38686b559c86a30565e16ad6e8510a337cedc611e1"
 dependencies = [
  "proc-macro2",
  "quote",
