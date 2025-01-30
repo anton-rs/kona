@@ -611,13 +611,14 @@ where
                 })?;
             }
             HintType::L2BlockData => {
-                if hint_data.len() != 40 {
+                if hint_data.len() != 72 {
                     anyhow::bail!("Invalid hint data length: {}", hint_data.len());
                 }
 
                 let agreed_block_hash = B256::from_slice(&hint_data.as_ref()[..32]);
+                let disputed_block_hash = B256::from_slice(&hint_data.as_ref()[32..64]);
                 let chain_id = u64::from_be_bytes(
-                    hint_data.as_ref()[32..40]
+                    hint_data.as_ref()[64..72]
                         .try_into()
                         .map_err(|e| anyhow!("Error converting hint data to u64: {e}"))?,
                 );
@@ -635,6 +636,24 @@ where
                     })
                     .map(Arc::new)
                     .ok_or(anyhow!("No rollup config found for chain ID: {chain_id}"))?;
+
+                // Check if the block is canonical before continuing.
+                let parent_block = l2_provider
+                    .get_block_by_hash(agreed_block_hash, BlockTransactionsKind::Hashes)
+                    .await?
+                    .ok_or(anyhow!("Block not found."))?;
+                let disputed_block = l2_provider
+                    .get_block_by_number(
+                        (parent_block.header.number + 1).into(),
+                        BlockTransactionsKind::Hashes,
+                    )
+                    .await?
+                    .ok_or(anyhow!("Block not found."))?;
+
+                // Return early if the disputed block is canonical.
+                if disputed_block.header.hash == disputed_block_hash {
+                    return Ok(());
+                }
 
                 // Reproduce the preimages for the optimistic block's derivation + execution and
                 // store them in the key-value store.
