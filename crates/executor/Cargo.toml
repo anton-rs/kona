@@ -16,7 +16,7 @@ workspace = true
 kona-mpt.workspace = true
 
 # Maili
-maili-genesis.workspace = true
+maili-genesis = { workspace = true, features = ["revm"] }
 
 # Alloy
 alloy-consensus = { workspace = true, features = ["k256"] }
