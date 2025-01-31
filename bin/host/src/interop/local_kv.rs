@@ -10,7 +10,6 @@ use kona_proof_interop::boot::{
     L1_HEAD_KEY, L2_AGREED_PRE_STATE_KEY, L2_CLAIMED_POST_STATE_KEY, L2_CLAIMED_TIMESTAMP_KEY,
     L2_ROLLUP_CONFIG_KEY,
 };
-use maili_registry::HashMap;
 
 /// The default chain ID to use if none is provided.
 pub(crate) const DEFAULT_CHAIN_ID: u64 = 0xbeef_babe;
@@ -40,10 +39,7 @@ impl KeyValueStore for LocalKeyValueStore {
             L2_CLAIMED_TIMESTAMP_KEY => Some(self.cfg.claimed_l2_timestamp.to_be_bytes().to_vec()),
             L2_ROLLUP_CONFIG_KEY => {
                 let rollup_configs = self.cfg.read_rollup_configs().ok()?;
-                let serialized =
-                    serde_json::to_vec(&rollup_configs.into_iter().collect::<HashMap<_, _>>())
-                        .ok()?;
-                Some(serialized)
+                serde_json::to_vec(&rollup_configs).ok()
             }
             _ => None,
         }

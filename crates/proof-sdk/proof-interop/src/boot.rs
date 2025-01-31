@@ -127,6 +127,12 @@ impl BootInfo {
             claimed_l2_timestamp: l2_claim_block,
         })
     }
+
+    /// Returns the [RollupConfig] corresponding to the [PreState::active_l2_chain_id].
+    pub fn active_rollup_config(&self) -> Option<RollupConfig> {
+        let active_l2_chain_id = self.agreed_pre_state.active_l2_chain_id()?;
+        self.rollup_configs.get(&active_l2_chain_id).cloned()
+    }
 }
 
 /// Reads the raw pre-state from the preimage oracle.

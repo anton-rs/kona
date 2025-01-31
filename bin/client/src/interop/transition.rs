@@ -52,14 +52,8 @@ where
     let safe_head_hash = fetch_l2_safe_head_hash(oracle.as_ref(), &boot.agreed_pre_state).await?;
 
     // Determine the active L2 chain ID and the fetch rollup configuration.
-    let active_l2_chain_id = boot
-        .agreed_pre_state
-        .active_l2_chain_id()
-        .ok_or(FaultProofProgramError::StateTransitionFailed)?;
     let rollup_config = boot
-        .rollup_configs
-        .get(&active_l2_chain_id)
-        .cloned()
+        .active_rollup_config()
         .map(Arc::new)
         .ok_or(FaultProofProgramError::StateTransitionFailed)?;
 
