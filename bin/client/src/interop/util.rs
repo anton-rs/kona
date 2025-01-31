@@ -1,39 +1,12 @@
 //! Utilities for the interop proof program
 
 use alloc::string::ToString;
-use alloy_primitives::{Bytes, B256};
+use alloy_primitives::B256;
 use kona_preimage::{errors::PreimageOracleError, CommsClient, PreimageKey, PreimageKeyType};
 use kona_proof::errors::OracleProviderError;
-use kona_proof_interop::{BootInfo, HintType, PreState};
+use kona_proof_interop::{HintType, PreState};
 
-/// Reads the raw pre-state from the preimage oracle.
-pub(crate) async fn read_raw_pre_state<O>(
-    caching_oracle: &O,
-    boot_info: &BootInfo,
-) -> Result<Bytes, OracleProviderError>
-where
-    O: CommsClient,
-{
-    caching_oracle
-        .write(&HintType::AgreedPreState.encode_with(&[boot_info.agreed_pre_state.as_ref()]))
-        .await
-        .map_err(OracleProviderError::Preimage)?;
-    let pre = caching_oracle
-        .get(PreimageKey::new(*boot_info.agreed_pre_state, PreimageKeyType::Keccak256))
-        .await
-        .map_err(OracleProviderError::Preimage)?;
-
-    if pre.is_empty() {
-        return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
-            "Invalid pre-state preimage".to_string(),
-        )));
-    }
-
-    Ok(Bytes::from(pre))
-}
-
-/// Fetches the safe head hash of the L2 chain based on the agreed upon L2 output root in the
-/// [BootInfo].
+/// Fetches the safe head hash of the L2 chain, using the active L2 chain in the [PreState].
 pub(crate) async fn fetch_l2_safe_head_hash<O>(
     caching_oracle: &O,
     pre: &PreState,

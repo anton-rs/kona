@@ -687,7 +687,7 @@ where
                         let mut l1_provider = OracleL1ChainProvider::new(l1_head, oracle.clone());
                         let mut l2_provider = OracleL2ChainProvider::new(
                             agreed_block_hash,
-                            rollup_config.as_ref().clone(),
+                            rollup_config.clone(),
                             oracle.clone(),
                         );
                         let beacon = OracleBlobProvider::new(oracle.clone());

@@ -23,7 +23,7 @@ pub struct OracleL2ChainProvider<T: CommsClient> {
     /// The L2 safe head block hash.
     l2_head: B256,
     /// The rollup configuration.
-    rollup_config: RollupConfig,
+    rollup_config: Arc<RollupConfig>,
     /// The preimage oracle client.
     oracle: Arc<T>,
     /// The derivation pipeline cursor
@@ -32,7 +32,7 @@ pub struct OracleL2ChainProvider<T: CommsClient> {
 
 impl<T: CommsClient> OracleL2ChainProvider<T> {
     /// Creates a new [OracleL2ChainProvider] with the given boot information and oracle client.
-    pub const fn new(l2_head: B256, rollup_config: RollupConfig, oracle: Arc<T>) -> Self {
+    pub const fn new(l2_head: B256, rollup_config: Arc<RollupConfig>, oracle: Arc<T>) -> Self {
         Self { l2_head, rollup_config, oracle, cursor: None }
     }
 

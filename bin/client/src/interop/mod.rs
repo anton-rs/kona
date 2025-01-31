@@ -2,7 +2,6 @@
 
 use alloc::sync::Arc;
 use alloy_primitives::B256;
-use alloy_rlp::Decodable;
 use consolidate::consolidate_dependencies;
 use core::fmt::Debug;
 use kona_driver::DriverError;
@@ -13,7 +12,6 @@ use kona_proof_interop::{BootInfo, PreState, INVALID_TRANSITION_HASH, TRANSITION
 use thiserror::Error;
 use tracing::{error, info};
 use transition::sub_transition;
-use util::read_raw_pre_state;
 
 pub(crate) mod consolidate;
 pub(crate) mod transition;
@@ -69,7 +67,7 @@ where
     };
 
     // If the pre state is invalid, short-circuit and check if the post-state claim is also invalid.
-    if boot.agreed_pre_state == INVALID_TRANSITION_HASH &&
+    if boot.agreed_pre_state_commitment == INVALID_TRANSITION_HASH &&
         boot.claimed_post_state == INVALID_TRANSITION_HASH
     {
         info!(target: "client_interop", "Invalid pre and post state, short-circuiting.");
@@ -78,20 +76,18 @@ where
 
     // Load in the agreed pre-state from the preimage oracle in order to determine the active
     // sub-problem.
-    let pre = PreState::decode(&mut read_raw_pre_state(oracle.as_ref(), &boot).await?.as_ref())
-        .map_err(FaultProofProgramError::RLPDecodingError)?;
-    match pre {
+    match boot.agreed_pre_state {
         PreState::SuperRoot(_) => {
             // If the pre-state is a super root, the first sub-problem is always selected.
-            sub_transition(oracle, handle_register, boot, pre).await
+            sub_transition(oracle, handle_register, boot).await
         }
         PreState::TransitionState(ref transition_state) => {
             // If the pre-state is a transition state, the sub-problem is selected based on the
             // current step.
             if transition_state.step < TRANSITION_STATE_MAX_STEPS {
-                sub_transition(oracle, handle_register, boot, pre).await
+                sub_transition(oracle, handle_register, boot).await
             } else {
-                consolidate_dependencies(oracle, boot, pre).await
+                consolidate_dependencies(oracle, boot).await
             }
         }
     }

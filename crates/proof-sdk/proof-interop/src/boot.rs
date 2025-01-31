@@ -1,11 +1,17 @@
 //! This module contains the prologue phase of the client program, pulling in the boot information
 //! through the `PreimageOracle` ABI as local keys.
 
-use alloy_primitives::{B256, U256};
-use kona_preimage::{PreimageKey, PreimageOracleClient};
+use crate::{HintType, PreState};
+use alloc::{string::ToString, vec::Vec};
+use alloy_primitives::{Bytes, B256, U256};
+use alloy_rlp::Decodable;
+use kona_preimage::{
+    errors::PreimageOracleError, CommsClient, HintWriterClient, PreimageKey, PreimageKeyType,
+    PreimageOracleClient,
+};
 use kona_proof::errors::OracleProviderError;
 use maili_genesis::RollupConfig;
-use maili_registry::ROLLUP_CONFIGS;
+use maili_registry::{HashMap, ROLLUP_CONFIGS};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -21,9 +27,6 @@ pub const L2_CLAIMED_POST_STATE_KEY: U256 = U256::from_be_slice(&[3]);
 /// The local key ident for the L2 claim timestamp.
 pub const L2_CLAIMED_TIMESTAMP_KEY: U256 = U256::from_be_slice(&[4]);
 
-/// The local key ident for the L2 chain ID.
-pub const L2_CHAIN_ID_KEY: U256 = U256::from_be_slice(&[5]);
-
 /// The local key ident for the L2 rollup config.
 pub const L2_ROLLUP_CONFIG_KEY: U256 = U256::from_be_slice(&[6]);
 
@@ -33,15 +36,15 @@ pub struct BootInfo {
     /// The L1 head hash containing the safe L2 chain data that may reproduce the post-state claim.
     pub l1_head: B256,
     /// The agreed upon superchain pre-state commitment.
-    pub agreed_pre_state: B256,
+    pub agreed_pre_state_commitment: B256,
+    /// The agreed upon superchain pre-state.
+    pub agreed_pre_state: PreState,
     /// The claimed (disputed) superchain post-state commitment.
     pub claimed_post_state: B256,
     /// The L2 claim timestamp.
     pub claimed_l2_timestamp: u64,
-    /// The L2 chain ID.
-    pub chain_id: u64,
     /// The rollup config for the L2 chain.
-    pub rollup_config: RollupConfig,
+    pub rollup_configs: HashMap<u64, RollupConfig>,
 }
 
 impl BootInfo {
@@ -55,7 +58,7 @@ impl BootInfo {
     /// - `Err(_)`: Failed to load the boot information.
     pub async fn load<O>(oracle: &O) -> Result<Self, OracleProviderError>
     where
-        O: PreimageOracleClient + Send,
+        O: PreimageOracleClient + HintWriterClient + Clone + Send,
     {
         let mut l1_head: B256 = B256::ZERO;
         oracle
@@ -84,25 +87,29 @@ impl BootInfo {
                 .try_into()
                 .map_err(OracleProviderError::SliceConversion)?,
         );
-        let chain_id = u64::from_be_bytes(
-            oracle
-                .get(PreimageKey::new_local(L2_CHAIN_ID_KEY.to()))
-                .await
-                .map_err(OracleProviderError::Preimage)?
-                .as_slice()
-                .try_into()
-                .map_err(OracleProviderError::SliceConversion)?,
-        );
+
+        let agreed_pre_state =
+            PreState::decode(&mut read_raw_pre_state(oracle, l2_pre).await?.as_ref())
+                .map_err(OracleProviderError::Rlp)?;
+
+        let chain_ids: Vec<_> = match agreed_pre_state {
+            PreState::SuperRoot(ref super_root) => {
+                super_root.output_roots.iter().map(|r| r.chain_id).collect()
+            }
+            PreState::TransitionState(ref transition_state) => {
+                transition_state.pre_state.output_roots.iter().map(|r| r.chain_id).collect()
+            }
+        };
 
         // Attempt to load the rollup config from the chain ID. If there is no config for the chain,
         // fall back to loading the config from the preimage oracle.
-        let rollup_config = if let Some(config) = ROLLUP_CONFIGS.get(&chain_id) {
-            config.clone()
+        let rollup_configs = if chain_ids.iter().all(|id| ROLLUP_CONFIGS.contains_key(id)) {
+            chain_ids.iter().map(|id| (*id, ROLLUP_CONFIGS[id].clone())).collect()
         } else {
             warn!(
                 target: "boot-loader",
-                "No rollup config found for chain ID {}, falling back to preimage oracle. This is insecure in production without additional validation!",
-                chain_id
+                "No rollup config found for chain IDs {:?}, falling back to preimage oracle. This is insecure in production without additional validation!",
+                chain_ids
             );
             let ser_cfg = oracle
                 .get(PreimageKey::new_local(L2_ROLLUP_CONFIG_KEY.to()))
@@ -113,11 +120,43 @@ impl BootInfo {
 
         Ok(Self {
             l1_head,
-            agreed_pre_state: l2_pre,
+            rollup_configs,
+            agreed_pre_state_commitment: l2_pre,
+            agreed_pre_state,
             claimed_post_state: l2_post,
             claimed_l2_timestamp: l2_claim_block,
-            chain_id,
-            rollup_config,
         })
     }
+
+    /// Returns the [RollupConfig] corresponding to the [PreState::active_l2_chain_id].
+    pub fn active_rollup_config(&self) -> Option<RollupConfig> {
+        let active_l2_chain_id = self.agreed_pre_state.active_l2_chain_id()?;
+        self.rollup_configs.get(&active_l2_chain_id).cloned()
+    }
+}
+
+/// Reads the raw pre-state from the preimage oracle.
+pub(crate) async fn read_raw_pre_state<O>(
+    caching_oracle: &O,
+    agreed_pre_state_commitment: B256,
+) -> Result<Bytes, OracleProviderError>
+where
+    O: CommsClient,
+{
+    caching_oracle
+        .write(&HintType::AgreedPreState.encode_with(&[agreed_pre_state_commitment.as_ref()]))
+        .await
+        .map_err(OracleProviderError::Preimage)?;
+    let pre = caching_oracle
+        .get(PreimageKey::new(*agreed_pre_state_commitment, PreimageKeyType::Keccak256))
+        .await
+        .map_err(OracleProviderError::Preimage)?;
+
+    if pre.is_empty() {
+        return Err(OracleProviderError::Preimage(PreimageOracleError::Other(
+            "Invalid pre-state preimage".to_string(),
+        )));
+    }
+
+    Ok(Bytes::from(pre))
 }

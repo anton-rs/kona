@@ -20,18 +20,17 @@ use tracing::info;
 pub(crate) async fn consolidate_dependencies<P, H>(
     oracle: Arc<CachingOracle<P, H>>,
     boot: BootInfo,
-    pre: PreState,
 ) -> Result<(), FaultProofProgramError>
 where
     P: PreimageOracleClient + Send + Sync + Debug + Clone,
     H: HintWriterClient + Send + Sync + Debug + Clone,
 {
-    let provider = OracleInteropProvider::new(oracle, pre.clone());
+    let provider = OracleInteropProvider::new(oracle, boot.agreed_pre_state.clone());
 
     info!(target: "client_interop", "Deriving local-safe headers from prestate");
 
     // Ensure that the pre-state is a transition state.
-    let PreState::TransitionState(ref transition_state) = pre else {
+    let PreState::TransitionState(ref transition_state) = boot.agreed_pre_state else {
         return Err(FaultProofProgramError::StateTransitionFailed);
     };
 
@@ -58,7 +57,10 @@ where
     //
     // TODO: This won't work if we replace blocks, `transition` doesn't allow replacement of pending
     // progress just yet.
-    let post = pre.transition(None).ok_or(FaultProofProgramError::StateTransitionFailed)?;
+    let post = boot
+        .agreed_pre_state
+        .transition(None)
+        .ok_or(FaultProofProgramError::StateTransitionFailed)?;
     let post_commitment = post.hash();
 
     // Ensure that the post-state matches the claimed post-state.
