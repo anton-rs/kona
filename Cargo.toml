@@ -62,12 +62,6 @@ panic = "abort"
 codegen-units = 1
 lto = "fat"
 
-[patch.crates-io]
-maili-rpc = { git = "https://github.com/op-rs/maili", branch = "matt/bump-alloy11" }
-maili-protocol = { git = "https://github.com/op-rs/maili", branch = "matt/bump-alloy11" }
-maili-registry = { git = "https://github.com/op-rs/maili", branch = "matt/bump-alloy11" }
-maili-genesis = { git = "https://github.com/op-rs/maili", branch = "matt/bump-alloy11" }
-
 [workspace.dependencies]
 # Workspace
 kona-host = { path = "bin/host", version = "0.1.0", default-features = false }
@@ -85,10 +79,10 @@ kona-preimage = { path = "crates/proof-sdk/preimage", version = "0.2.1", default
 kona-std-fpvm-proc = { path = "crates/proof-sdk/std-fpvm-proc", version = "0.1.2", default-features = false }
 
 # Maili
-maili-rpc = { version = "0.1.11", default-features = false }
-maili-protocol = { version = "0.1.11", default-features = false }
-maili-registry = { version = "0.1.11", default-features = false }
-maili-genesis = { version = "0.1.11", default-features = false }
+maili-rpc = { version = "0.2.0", default-features = false }
+maili-protocol = { version = "0.2.0", default-features = false }
+maili-registry = { version = "0.2.0", default-features = false }
+maili-genesis = { version = "0.2.0", default-features = false }
 
 # Alloy
 alloy-rlp = { version = "0.3.11", default-features = false }
