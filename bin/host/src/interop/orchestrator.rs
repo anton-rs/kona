@@ -3,7 +3,7 @@
 use super::{InteropFetcher, InteropHostCli, LocalKeyValueStore};
 use crate::eth::http_provider;
 use alloy_primitives::map::HashMap;
-use alloy_provider::{Provider, ReqwestProvider};
+use alloy_provider::{Provider, RootProvider};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_host::{
@@ -19,11 +19,11 @@ use tokio::sync::RwLock;
 #[derive(Debug)]
 pub struct InteropProviders {
     /// The L1 EL provider.
-    l1_provider: ReqwestProvider,
+    l1_provider: RootProvider,
     /// The L1 beacon node provider.
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL providers, keyed by chain ID.
-    l2_providers: HashMap<u64, ReqwestProvider>,
+    l2_providers: HashMap<u64, RootProvider>,
 }
 
 #[async_trait]

@@ -2,7 +2,7 @@
 
 use alloy_consensus::{Block, Header, Receipt, ReceiptWithBloom, TxEnvelope, TxType};
 use alloy_primitives::{Bytes, B256, U64};
-use alloy_provider::{Provider, ReqwestProvider};
+use alloy_provider::{Provider, RootProvider};
 use alloy_rlp::{Buf, Decodable};
 use alloy_transport::{RpcError, TransportErrorKind};
 use async_trait::async_trait;
@@ -25,7 +25,7 @@ const CACHE_SIZE: usize = 16;
 #[derive(Debug, Clone)]
 pub struct AlloyChainProvider {
     /// The inner Ethereum JSON-RPC provider.
-    inner: ReqwestProvider,
+    inner: RootProvider,
     /// `header_by_hash` LRU cache.
     header_by_hash_cache: LruCache<B256, Header>,
     /// `receipts_by_hash_cache` LRU cache.
@@ -36,7 +36,7 @@ pub struct AlloyChainProvider {
 
 impl AlloyChainProvider {
     /// Creates a new [AlloyChainProvider] with the given alloy provider.
-    pub fn new(inner: ReqwestProvider) -> Self {
+    pub fn new(inner: RootProvider) -> Self {
         Self {
             inner,
             header_by_hash_cache: LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap()),
@@ -49,7 +49,7 @@ impl AlloyChainProvider {
 
     /// Creates a new [AlloyChainProvider] from the provided [reqwest::Url].
     pub fn new_http(url: reqwest::Url) -> Self {
-        let inner = ReqwestProvider::new_http(url);
+        let inner = RootProvider::new_http(url);
         Self::new(inner)
     }
 

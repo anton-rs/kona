@@ -8,7 +8,7 @@ use alloy_eips::{
     BlockId,
 };
 use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
-use alloy_provider::{Provider, ReqwestProvider};
+use alloy_provider::{Provider, RootProvider};
 use alloy_rlp::{Decodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
     debug::ExecutionWitness, Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind,
@@ -37,11 +37,11 @@ where
     /// Key-value store for preimages.
     kv_store: Arc<RwLock<KV>>,
     /// L1 chain provider.
-    l1_provider: ReqwestProvider,
+    l1_provider: RootProvider,
     /// The blob provider
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// L2 chain provider.
-    l2_provider: ReqwestProvider,
+    l2_provider: RootProvider,
     /// L2 head
     l2_head: B256,
     /// The last hint that was received. [None] if no hint has been received yet.
@@ -55,9 +55,9 @@ where
     /// Create a new [SingleChainFetcher] with the given [KeyValueStore].
     pub fn new(
         kv_store: Arc<RwLock<KV>>,
-        l1_provider: ReqwestProvider,
+        l1_provider: RootProvider,
         blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
-        l2_provider: ReqwestProvider,
+        l2_provider: RootProvider,
         l2_head: B256,
     ) -> Self {
         Self {

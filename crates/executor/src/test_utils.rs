@@ -7,7 +7,7 @@ use alloy_consensus::Header;
 use alloy_primitives::{Bytes, Sealable, B256};
 use alloy_provider::{
     network::primitives::{BlockTransactions, BlockTransactionsKind},
-    Provider, ReqwestProvider,
+    Provider, RootProvider,
 };
 use alloy_rlp::Decodable;
 use alloy_rpc_client::RpcClient;
@@ -47,7 +47,7 @@ pub(crate) struct ExecutorTestFixture {
 #[derive(Debug)]
 pub(crate) struct ExecutorTestFixtureCreator {
     /// The RPC provider for the L2 execution layer.
-    pub(crate) provider: ReqwestProvider,
+    pub(crate) provider: RootProvider,
     /// The block number to create the test fixture for.
     pub(crate) block_number: u64,
     /// The key value store for the test fixture.
@@ -66,7 +66,7 @@ impl ExecutorTestFixtureCreator {
 
         let url = provider_url.parse().expect("Invalid provider URL");
         let http = Http::<Client>::new(url);
-        let provider = ReqwestProvider::new(RpcClient::new(http, false));
+        let provider = RootProvider::new(RpcClient::new(http, false));
 
         Self {
             provider,
