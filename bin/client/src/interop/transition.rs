@@ -31,31 +31,42 @@ pub(crate) async fn sub_transition<P, H>(
         >,
     >,
     boot: BootInfo,
-    pre: PreState,
 ) -> Result<(), FaultProofProgramError>
 where
     P: PreimageOracleClient + Send + Sync + Debug + Clone,
     H: HintWriterClient + Send + Sync + Debug + Clone,
 {
     // Check if we can short-circuit the transition, if we are within padding.
-    if let PreState::TransitionState(ref transition_state) = pre {
+    if let PreState::TransitionState(ref transition_state) = boot.agreed_pre_state {
         if transition_state.step >= transition_state.pre_state.output_roots.len() as u64 {
             info!(
                 target: "interop_client",
                 "No derivation/execution required, transition state is already saturated."
             );
 
-            return transition_and_check(pre, None, boot.claimed_post_state, None);
+            return transition_and_check(boot.agreed_pre_state, None, boot.claimed_post_state, None);
         }
     }
 
     // Fetch the L2 block hash of the current safe head.
-    let safe_head_hash = fetch_l2_safe_head_hash(oracle.as_ref(), &pre).await?;
+    let safe_head_hash = fetch_l2_safe_head_hash(oracle.as_ref(), &boot.agreed_pre_state).await?;
+
+    // Determine the active L2 chain ID and the fetch rollup configuration.
+    let active_l2_chain_id = boot
+        .agreed_pre_state
+        .active_l2_chain_id()
+        .ok_or(FaultProofProgramError::StateTransitionFailed)?;
+    let rollup_config = boot
+        .rollup_configs
+        .get(&active_l2_chain_id)
+        .cloned()
+        .map(Arc::new)
+        .ok_or(FaultProofProgramError::StateTransitionFailed)?;
 
     // Instantiate the L1 EL + CL provider and the L2 EL provider.
     let mut l1_provider = OracleL1ChainProvider::new(boot.l1_head, oracle.clone());
     let mut l2_provider =
-        OracleL2ChainProvider::new(safe_head_hash, boot.rollup_config.clone(), oracle.clone());
+        OracleL2ChainProvider::new(safe_head_hash, rollup_config.clone(), oracle.clone());
     let beacon = OracleBlobProvider::new(oracle.clone());
 
     // Fetch the safe head's block header.
@@ -64,9 +75,8 @@ where
         .map(|header| Sealed::new_unchecked(header, safe_head_hash))?;
 
     // Translate the claimed timestamp to an L2 block number.
-    let claimed_l2_block_number = boot.rollup_config.genesis.l2.number +
-        ((boot.claimed_l2_timestamp - boot.rollup_config.genesis.l2_time) /
-            boot.rollup_config.block_time);
+    let claimed_l2_block_number = rollup_config.genesis.l2.number +
+        ((boot.claimed_l2_timestamp - rollup_config.genesis.l2_time) / rollup_config.block_time);
 
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
@@ -79,7 +89,7 @@ where
                 safe = safe_head.number
             );
             return Err(FaultProofProgramError::InvalidClaim(
-                boot.agreed_pre_state,
+                boot.agreed_pre_state_commitment,
                 boot.claimed_post_state,
             ));
         }
@@ -95,29 +105,34 @@ where
 
     // Create a new derivation driver with the given boot information and oracle.
     let cursor =
-        new_pipeline_cursor(&boot.rollup_config, safe_head, &mut l1_provider, &mut l2_provider)
+        new_pipeline_cursor(rollup_config.as_ref(), safe_head, &mut l1_provider, &mut l2_provider)
             .await?;
     l2_provider.set_cursor(cursor.clone());
 
-    let cfg = Arc::new(boot.rollup_config.clone());
     let pipeline = OraclePipeline::new(
-        cfg.clone(),
+        rollup_config.clone(),
         cursor.clone(),
         oracle.clone(),
         beacon,
         l1_provider.clone(),
         l2_provider.clone(),
     );
-    let executor = KonaExecutor::new(&cfg, l2_provider.clone(), l2_provider, handle_register, None);
+    let executor = KonaExecutor::new(
+        rollup_config.as_ref(),
+        l2_provider.clone(),
+        l2_provider,
+        handle_register,
+        None,
+    );
     let mut driver = Driver::new(cursor, executor, pipeline);
 
     // Run the derivation pipeline until we are able to produce the output root of the claimed
     // L2 block.
-    match driver.advance_to_target(&boot.rollup_config, Some(claimed_l2_block_number)).await {
+    match driver.advance_to_target(rollup_config.as_ref(), Some(claimed_l2_block_number)).await {
         Ok((safe_head, output_root)) => {
             let optimistic_block = OptimisticBlock::new(safe_head.block_info.hash, output_root);
             transition_and_check(
-                pre,
+                boot.agreed_pre_state,
                 Some(optimistic_block),
                 boot.claimed_post_state,
                 Some((boot.claimed_l2_timestamp, safe_head.block_info.timestamp)),
@@ -137,14 +152,12 @@ where
                 "Exhausted data source; Transitioning to invalid state."
             );
 
-            if boot.claimed_post_state == INVALID_TRANSITION_HASH {
-                Ok(())
-            } else {
-                Err(FaultProofProgramError::InvalidClaim(
+            (boot.claimed_post_state == INVALID_TRANSITION_HASH).then_some(()).ok_or(
+                FaultProofProgramError::InvalidClaim(
                     INVALID_TRANSITION_HASH,
                     boot.claimed_post_state,
-                ))
-            }
+                ),
+            )
         }
         Err(e) => {
             error!(

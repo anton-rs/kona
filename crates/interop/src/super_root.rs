@@ -13,6 +13,7 @@ use alloy_rlp::{Buf, BufMut};
 /// The [SuperRoot] is the snapshot of the superchain at a given timestamp.
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SuperRoot {
     /// The timestamp of the superchain snapshot, in seconds.
     pub timestamp: u64,
@@ -89,6 +90,7 @@ impl SuperRoot {
 /// A wrapper around an output root hash with the chain ID it belongs to.
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OutputRootWithChain {
     /// The chain ID of the output root.
     pub chain_id: u64,

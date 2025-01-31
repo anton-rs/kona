@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 # Workspace
 kona-preimage.workspace = true
-kona-interop.workspace = true
+kona-interop = { workspace = true, features = ["serde"] }
 kona-proof.workspace = true
 kona-mpt.workspace = true
 

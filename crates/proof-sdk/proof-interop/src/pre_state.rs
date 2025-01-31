@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use alloy_primitives::{b256, keccak256, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Header, RlpDecodable, RlpEncodable};
 use kona_interop::{OutputRootWithChain, SuperRoot, SUPER_ROOT_VERSION};
+use serde::{Deserialize, Serialize};
 
 /// The current [TransitionState] encoding format version.
 pub(crate) const TRANSITION_STATE_VERSION: u8 = 255;
@@ -19,7 +20,7 @@ pub const INVALID_TRANSITION_HASH: B256 =
 /// [TransitionState]. The [SuperRoot] is the canonical state of the superchain, while the
 /// [TransitionState] is a super-structure of the [SuperRoot] that represents the progress of a
 /// pending superchain state transition from one [SuperRoot] to the next.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
 pub enum PreState {
     /// The canonical state of the superchain.
@@ -34,6 +35,22 @@ impl PreState {
         let mut rlp_buf = Vec::with_capacity(self.length());
         self.encode(&mut rlp_buf);
         keccak256(&rlp_buf)
+    }
+
+    /// Returns the active L2 chain ID of the [PreState]. This is the chain ID of the output root
+    /// that is to be committed to in the next transition step, or `0xDEAD` if the [PreState]
+    /// has already been fully saturated.
+    pub fn active_l2_chain_id(&self) -> Option<u64> {
+        match self {
+            Self::SuperRoot(super_root) => {
+                super_root.output_roots.first().map(|output_root| output_root.chain_id)
+            }
+            Self::TransitionState(transition_state) => transition_state
+                .pre_state
+                .output_roots
+                .get(transition_state.step as usize)
+                .map(|output_root| output_root.chain_id),
+        }
     }
 
     /// Transitions to the next state, appending the [OptimisticBlock] to the pending progress.
@@ -117,7 +134,7 @@ impl Decodable for PreState {
 
 /// The [TransitionState] is a super-structure of the [SuperRoot] that represents the progress of a
 /// pending superchain state transition from one [SuperRoot] to the next.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
 pub struct TransitionState {
     /// The canonical pre-state super root commitment.
@@ -204,7 +221,9 @@ impl Decodable for TransitionState {
 }
 
 /// A wrapper around a pending output root hash with the block hash it commits to.
-#[derive(Default, Debug, Clone, Eq, PartialEq, RlpEncodable, RlpDecodable)]
+#[derive(
+    Default, Debug, Clone, Eq, PartialEq, RlpEncodable, RlpDecodable, Serialize, Deserialize,
+)]
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
 pub struct OptimisticBlock {
     /// The block hash of the output root.

@@ -27,6 +27,9 @@ op-alloy-consensus.workspace = true
 # Arbitrary
 arbitrary = { version = "1.4", features = ["derive"], optional = true }
 
+# Serde
+serde = { workspace = true, optional = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
 alloy-primitives = { workspace = true, features = ["rlp", "arbitrary"] }
@@ -35,3 +38,4 @@ rand.workspace = true
 
 [features]
 arbitrary = ["dep:arbitrary", "alloy-primitives/arbitrary"]
+serde = ["dep:serde", "alloy-primitives/serde"]
