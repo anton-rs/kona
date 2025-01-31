@@ -2,7 +2,7 @@
 
 use super::{LocalKeyValueStore, SingleChainFetcher, SingleChainHostCli};
 use crate::eth::http_provider;
-use alloy_provider::ReqwestProvider;
+use alloy_provider::RootProvider;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_host::{
@@ -18,11 +18,11 @@ use tokio::sync::RwLock;
 #[derive(Debug)]
 pub struct SingleChainProviders {
     /// The L1 EL provider.
-    l1_provider: ReqwestProvider,
+    l1_provider: RootProvider,
     /// The L1 beacon node provider.
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL provider.
-    l2_provider: ReqwestProvider,
+    l2_provider: RootProvider,
 }
 
 #[async_trait]

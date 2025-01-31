@@ -10,7 +10,7 @@ use alloy_eips::{
     BlockId,
 };
 use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
-use alloy_provider::{Provider, ReqwestProvider};
+use alloy_provider::{Provider, RootProvider};
 use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{
     Block, BlockNumberOrTag, BlockTransactions, BlockTransactionsKind, Transaction,
@@ -51,11 +51,11 @@ where
     /// Key-value store for preimages.
     kv_store: Arc<RwLock<KV>>,
     /// L1 chain provider.
-    l1_provider: ReqwestProvider,
+    l1_provider: RootProvider,
     /// The blob provider
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// L2 chain providers, keyed by chain ID.
-    l2_providers: HashMap<u64, ReqwestProvider>,
+    l2_providers: HashMap<u64, RootProvider>,
     /// The cached active L2 chain ID.
     active_l2_chain_id: u64,
     /// The last hint that was received. [None] if no hint has been received yet.
@@ -70,9 +70,9 @@ where
     pub fn new(
         cfg: InteropHostCli,
         kv_store: Arc<RwLock<KV>>,
-        l1_provider: ReqwestProvider,
+        l1_provider: RootProvider,
         blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
-        l2_providers: HashMap<u64, ReqwestProvider>,
+        l2_providers: HashMap<u64, RootProvider>,
     ) -> Self {
         let active_l2_chain_id = cfg.active_l2_chain_id().expect("No active L2 chain ID");
         Self {

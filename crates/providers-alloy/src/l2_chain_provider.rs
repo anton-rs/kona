@@ -1,7 +1,7 @@
 //! Providers that use alloy provider types on the backend.
 
 use alloy_primitives::{Bytes, U64};
-use alloy_provider::{Provider, ReqwestProvider};
+use alloy_provider::{Provider, RootProvider};
 use alloy_rlp::Decodable;
 use alloy_transport::{RpcError, TransportErrorKind};
 use async_trait::async_trait;
@@ -23,14 +23,14 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct AlloyL2ChainProvider {
     /// The inner Ethereum JSON-RPC provider.
-    inner: ReqwestProvider,
+    inner: RootProvider,
     /// The rollup configuration.
     rollup_config: Arc<RollupConfig>,
 }
 
 impl AlloyL2ChainProvider {
     /// Creates a new [AlloyL2ChainProvider] with the given alloy provider and [RollupConfig].
-    pub fn new(inner: ReqwestProvider, rollup_config: Arc<RollupConfig>) -> Self {
+    pub fn new(inner: RootProvider, rollup_config: Arc<RollupConfig>) -> Self {
         Self { inner, rollup_config }
     }
 
@@ -46,7 +46,7 @@ impl AlloyL2ChainProvider {
 
     /// Creates a new [AlloyL2ChainProvider] from the provided [reqwest::Url].
     pub fn new_http(url: reqwest::Url, rollup_config: Arc<RollupConfig>) -> Self {
-        let inner = ReqwestProvider::new_http(url);
+        let inner = RootProvider::new_http(url);
         Self::new(inner, rollup_config)
     }
 }
