@@ -19,3 +19,13 @@ pub use preimage::{
 
 mod server;
 pub use server::PreimageServer;
+
+pub mod cli;
+
+pub mod eth;
+
+#[cfg(feature = "single")]
+pub mod single;
+
+#[cfg(feature = "interop")]
+pub mod interop;

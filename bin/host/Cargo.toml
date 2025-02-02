@@ -62,3 +62,12 @@ tracing-subscriber = { workspace = true, features = ["fmt"] }
 
 [dev-dependencies]
 proptest.workspace = true
+
+[features]
+default = ["single", "interop"]
+single = []
+interop = []
+
+[[bin]]
+name = "kona-host"
+path = "src/bin/host.rs"
