@@ -1,7 +1,7 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk,
-//! using the [InteropHostCli] config.
+//! using the [InteropHost] config.
 
-use super::InteropHostCli;
+use super::InteropHost;
 use crate::KeyValueStore;
 use alloy_primitives::{keccak256, B256};
 use anyhow::Result;
@@ -11,23 +11,20 @@ use kona_proof_interop::boot::{
     L2_ROLLUP_CONFIG_KEY,
 };
 
-/// The default chain ID to use if none is provided.
-pub(crate) const DEFAULT_CHAIN_ID: u64 = 0xbeef_babe;
-
-/// A simple, synchronous key-value store that returns data from a [InteropHostCli] config.
+/// A simple, synchronous key-value store that returns data from a [InteropHost] config.
 #[derive(Debug)]
-pub struct LocalKeyValueStore {
-    cfg: InteropHostCli,
+pub struct InteropLocalInputs {
+    cfg: InteropHost,
 }
 
-impl LocalKeyValueStore {
-    /// Create a new [LocalKeyValueStore] with the given [InteropHostCli] config.
-    pub const fn new(cfg: InteropHostCli) -> Self {
+impl InteropLocalInputs {
+    /// Create a new [InteropLocalInputs] with the given [InteropHost] config.
+    pub const fn new(cfg: InteropHost) -> Self {
         Self { cfg }
     }
 }
 
-impl KeyValueStore for LocalKeyValueStore {
+impl KeyValueStore for InteropLocalInputs {
     fn get(&self, key: B256) -> Option<Vec<u8>> {
         let preimage_key = PreimageKey::try_from(*key).ok()?;
         match preimage_key.key_value() {

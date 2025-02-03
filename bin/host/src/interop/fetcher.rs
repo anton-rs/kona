@@ -1,7 +1,7 @@
 //! This module contains the [InteropFetcher] struct, which is responsible for fetching
 //! preimages from a remote source serving the super-chain (interop) proof mode.
 
-use super::InteropHostCli;
+use super::InteropHost;
 use crate::{single::SingleChainFetcher, KeyValueStore, PreimageServer};
 use alloy_consensus::{Header, Sealed, TxEnvelope, EMPTY_ROOT_HASH};
 use alloy_eips::{
@@ -35,7 +35,7 @@ use kona_proof_interop::{Hint, HintType, PreState};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use maili_protocol::BlockInfo;
 use maili_registry::ROLLUP_CONFIGS;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, task};
 use tracing::{error, trace, warn};
 
@@ -46,7 +46,7 @@ where
     KV: KeyValueStore + ?Sized,
 {
     /// Configuration
-    cfg: InteropHostCli,
+    cfg: InteropHost,
     /// Key-value store for preimages.
     kv_store: Arc<RwLock<KV>>,
     /// L1 chain provider.
@@ -67,7 +67,7 @@ where
 {
     /// Create a new [InteropFetcher] with the given [KeyValueStore].
     pub fn new(
-        cfg: InteropHostCli,
+        cfg: InteropHost,
         kv_store: Arc<RwLock<KV>>,
         l1_provider: RootProvider,
         blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
@@ -669,13 +669,12 @@ where
                     PreimageServer::new(
                         OracleServer::new(preimage.host),
                         HintReader::new(hint.host),
-                        self.kv_store.clone(),
-                        Some(Arc::new(RwLock::new(fetcher))),
+                        Arc::new(fetcher),
                     )
                     .start(),
                 );
                 let client_task = task::spawn({
-                    let InteropHostCli { l1_head, .. } = self.cfg;
+                    let InteropHost { l1_head, .. } = self.cfg;
                     async move {
                         let oracle = Arc::new(CachingOracle::new(
                             1024,

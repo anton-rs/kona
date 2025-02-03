@@ -1,13 +1,10 @@
 //! This module contains the super-chain (interop) mode for the host.
 
-mod cli;
-pub use cli::InteropHostCli;
+mod cfg;
+pub use cfg::{InteropHost, InteropProviders};
 
 mod local_kv;
-pub use local_kv::LocalKeyValueStore;
+pub use local_kv::InteropLocalInputs;
 
 mod fetcher;
 pub use fetcher::InteropFetcher;
-
-mod orchestrator;
-pub use orchestrator::InteropProviders;
