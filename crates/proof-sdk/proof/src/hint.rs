@@ -6,44 +6,50 @@ use alloc::{
     vec::Vec,
 };
 use alloy_primitives::{hex, Bytes, B256};
-use core::fmt::Display;
+use core::{fmt::Display, str::FromStr};
 use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 
 /// A [Hint] is parsed in the format `<hint_type> <hint_data>`, where `<hint_type>` is a string that
 /// represents the type of hint, and `<hint_data>` is the data associated with the hint (bytes
 /// encoded as hex UTF-8).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Hint {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Hint<HT> {
     /// The type of hint.
-    pub hint_type: HintType,
+    pub hint_type: HT,
     /// The data associated with the hint.
     pub hint_data: Bytes,
 }
 
-impl Hint {
-    /// Parses a hint from a string.
-    pub fn parse(s: &str) -> Result<Self, HintParsingError> {
+impl<HT> Hint<HT> {
+    /// Splits the [Hint] into its components.
+    pub fn split(self) -> (HT, Bytes) {
+        (self.hint_type, self.hint_data)
+    }
+}
+
+impl<HT> FromStr for Hint<HT>
+where
+    HT: FromStr<Err = HintParsingError>,
+{
+    type Err = HintParsingError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.split(' ').collect::<Vec<_>>();
 
         if parts.len() != 2 {
             return Err(HintParsingError(alloc::format!("Invalid hint format: {}", s)));
         }
 
-        let hint_type = HintType::try_from(parts.remove(0))?;
+        let hint_type = parts.remove(0).parse::<HT>()?;
         let hint_data =
             hex::decode(parts.remove(0)).map_err(|e| HintParsingError(e.to_string()))?.into();
 
         Ok(Self { hint_type, hint_data })
     }
-
-    /// Splits the [Hint] into its components.
-    pub fn split(self) -> (HintType, Bytes) {
-        (self.hint_type, self.hint_data)
-    }
 }
 
 /// The [HintType] enum is used to specify the type of hint that was received.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HintType {
     /// A hint that specifies the block header of a layer 1 block.
     L1BlockHeader,
@@ -81,6 +87,7 @@ impl HintType {
         let concatenated = hex::encode(data.iter().copied().flatten().copied().collect::<Vec<_>>());
         alloc::format!("{} {}", self, concatenated)
     }
+
     /// Retrieves a preimage through an oracle
     pub async fn get_preimage<T: CommsClient>(
         &self,
@@ -97,6 +104,7 @@ impl HintType {
             .await
             .map_err(OracleProviderError::Preimage)
     }
+
     /// Retrieves a preimage through an oracle
     pub async fn get_exact_preimage<T: CommsClient>(
         &self,
@@ -116,10 +124,10 @@ impl HintType {
     }
 }
 
-impl TryFrom<&str> for HintType {
-    type Error = HintParsingError;
+impl FromStr for HintType {
+    type Err = HintParsingError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "l1-block-header" => Ok(Self::L1BlockHeader),
             "l1-transactions" => Ok(Self::L1Transactions),

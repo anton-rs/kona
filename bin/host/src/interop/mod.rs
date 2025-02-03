@@ -6,5 +6,5 @@ pub use cfg::{InteropHost, InteropProviders};
 mod local_kv;
 pub use local_kv::InteropLocalInputs;
 
-mod fetcher;
-pub use fetcher::InteropFetcher;
+mod handler;
+pub use handler::InteropHintHandler;

@@ -44,6 +44,7 @@ alloy-rpc-types-beacon.workspace = true
 
 # Op Alloy
 op-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
+op-alloy-network.workspace = true
 
 # Revm
 revm = { workspace = true, features = ["std", "c-kzg", "secp256k1", "portable", "blst"] }

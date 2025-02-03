@@ -2640,6 +2640,7 @@ dependencies = [
  "maili-protocol",
  "maili-registry",
  "maili-rpc",
+ "op-alloy-network",
  "op-alloy-rpc-types-engine",
  "proptest",
  "reqwest",
@@ -3290,6 +3291,39 @@ name = "op-alloy-flz"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5402b85f0fa22712960498c3a123875d7b53da21928b24a8f8667babb268c4c"
+
+[[package]]
+name = "op-alloy-network"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b062f0c57e8b910f9ec1222b6fba2dddd7e33fb7b139a68556a7390d40b03624"
+dependencies = [
+ "alloy-consensus",
+ "alloy-network",
+ "alloy-primitives",
+ "alloy-rpc-types-eth",
+ "alloy-signer",
+ "op-alloy-consensus",
+ "op-alloy-rpc-types",
+]
+
+[[package]]
+name = "op-alloy-rpc-types"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06d55acda15bd273d1d9a052536cf46c3520f597ac9884376c9c56241f2f5e9b"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-network-primitives",
+ "alloy-primitives",
+ "alloy-rpc-types-eth",
+ "alloy-serde",
+ "derive_more",
+ "op-alloy-consensus",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "op-alloy-rpc-types-engine"

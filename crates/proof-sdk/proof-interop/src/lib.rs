@@ -13,7 +13,7 @@ pub use pre_state::{
 };
 
 mod hint;
-pub use hint::{Hint, HintType};
+pub use hint::HintType;
 
 mod provider;
 pub use provider::OracleInteropProvider;
