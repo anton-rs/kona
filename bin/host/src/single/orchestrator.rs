@@ -5,7 +5,7 @@ use crate::{
     eth::http_provider, DetachedHostOrchestrator, DiskKeyValueStore, Fetcher, HostOrchestrator,
     MemoryKeyValueStore, SharedKeyValueStore, SplitKeyValueStore,
 };
-use alloy_provider::ReqwestProvider;
+use alloy_provider::RootProvider;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kona_preimage::{HintWriter, NativeChannel, OracleReader};
