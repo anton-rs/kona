@@ -66,7 +66,7 @@ proptest.workspace = true
 [features]
 default = ["single", "interop"]
 single = []
-interop = []
+interop = ["single"]
 
 [[bin]]
 name = "kona-host"
