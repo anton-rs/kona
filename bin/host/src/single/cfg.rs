@@ -8,7 +8,7 @@ use crate::{
     SharedKeyValueStore, SplitKeyValueStore,
 };
 use alloy_primitives::B256;
-use alloy_provider::ReqwestProvider;
+use alloy_provider::RootProvider;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use kona_preimage::{
@@ -241,11 +241,11 @@ impl SingleChainHost {
 #[derive(Debug, Clone)]
 pub struct SingleChainProviders {
     /// The L1 EL provider.
-    l1_provider: ReqwestProvider,
+    l1_provider: RootProvider,
     /// The L1 beacon node provider.
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL provider.
-    l2_provider: ReqwestProvider,
+    l2_provider: RootProvider,
 }
 
 #[cfg(test)]

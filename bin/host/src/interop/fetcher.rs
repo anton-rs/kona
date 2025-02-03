@@ -9,7 +9,7 @@ use alloy_eips::{
     eip4844::{IndexedBlobHash, FIELD_ELEMENTS_PER_BLOB},
     BlockId,
 };
-use alloy_primitives::{address, keccak256, map::HashMap, Address, Bytes, B256};
+use alloy_primitives::{address, keccak256, Address, Bytes, B256};
 use alloy_provider::{Provider, RootProvider};
 use alloy_rlp::{Decodable, Encodable, EMPTY_STRING_CODE};
 use alloy_rpc_types::{

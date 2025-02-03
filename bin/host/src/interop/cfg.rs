@@ -11,7 +11,7 @@ use crate::{
     SharedKeyValueStore, SplitKeyValueStore,
 };
 use alloy_primitives::{Bytes, B256};
-use alloy_provider::{Provider, ReqwestProvider};
+use alloy_provider::{Provider, RootProvider};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -272,9 +272,9 @@ impl InteropHost {
 #[derive(Debug)]
 pub struct InteropProviders {
     /// The L1 EL provider.
-    l1_provider: ReqwestProvider,
+    l1_provider: RootProvider,
     /// The L1 beacon node provider.
     blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL providers, keyed by chain ID.
-    l2_providers: HashMap<u64, ReqwestProvider>,
+    l2_providers: HashMap<u64, RootProvider>,
 }
