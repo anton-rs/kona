@@ -1,6 +1,6 @@
 //! This module contains all CLI-specific code for the single chain entrypoint.
 
-use crate::cli::{cli_styles, parse_b256};
+use crate::cli::{cli_styles, parser::parse_b256};
 use alloy_primitives::B256;
 use anyhow::{anyhow, Result};
 use clap::Parser;

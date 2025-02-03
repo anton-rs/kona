@@ -1,7 +1,10 @@
 //! This module contains all CLI-specific code for the interop entrypoint.
 
 use super::local_kv::DEFAULT_CHAIN_ID;
-use crate::cli::{cli_styles, parse_b256, parse_bytes};
+use crate::cli::{
+    cli_styles,
+    parser::{parse_b256, parse_bytes},
+};
 use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
