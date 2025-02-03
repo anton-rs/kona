@@ -6,10 +6,7 @@
 
 use anyhow::Result;
 use clap::{ArgAction, Parser, Subcommand};
-use kona_host::{
-    cli::{cli_styles, init_tracing_subscriber},
-    DetachedHostOrchestrator,
-};
+use kona_host::cli::{cli_styles, init_tracing_subscriber};
 use serde::Serialize;
 use tracing::info;
 
@@ -39,10 +36,10 @@ pub struct HostCli {
 pub enum HostMode {
     /// Run the host in single-chain mode.
     #[cfg(feature = "single")]
-    Single(kona_host::single::SingleChainHostCli),
+    Single(kona_host::single::SingleChainHost),
     /// Run the host in super-chain (interop) mode.
     #[cfg(feature = "interop")]
-    Super(kona_host::interop::InteropHostCli),
+    Super(kona_host::interop::InteropHost),
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -53,11 +50,11 @@ async fn main() -> Result<()> {
     match cfg.mode {
         #[cfg(feature = "single")]
         HostMode::Single(cfg) => {
-            cfg.run().await?;
+            cfg.start().await?;
         }
         #[cfg(feature = "interop")]
         HostMode::Super(cfg) => {
-            cfg.run().await?;
+            cfg.start().await?;
         }
     }
 

@@ -1,17 +1,33 @@
 //! This module contains all CLI-specific code for the single chain entrypoint.
 
-use crate::cli::{cli_styles, parser::parse_b256};
+use super::{SingleChainFetcher, SingleChainLocalInputs};
+use crate::{
+    cli::{cli_styles, parser::parse_b256},
+    eth::http_provider,
+    DiskKeyValueStore, MemoryKeyValueStore, OfflineHostBackend, PreimageServer,
+    SharedKeyValueStore, SplitKeyValueStore,
+};
 use alloy_primitives::B256;
+use alloy_provider::RootProvider;
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use kona_preimage::{
+    BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
+};
+use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
+use kona_std_fpvm::{FileChannel, FileDescriptor};
 use maili_genesis::RollupConfig;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
+use tokio::{
+    sync::RwLock,
+    task::{self, JoinHandle},
+};
 
 /// The host binary CLI application arguments.
 #[derive(Default, Parser, Serialize, Clone, Debug)]
 #[command(styles = cli_styles())]
-pub struct SingleChainHostCli {
+pub struct SingleChainHost {
     /// Hash of the L1 head block. Derivation stops after this block is processed.
     #[clap(long, value_parser = parse_b256, env)]
     pub l1_head: B256,
@@ -91,12 +107,84 @@ pub struct SingleChainHostCli {
     pub rollup_config_path: Option<PathBuf>,
 }
 
-impl SingleChainHostCli {
+impl SingleChainHost {
+    /// Starts the [SingleChainHost] application.
+    pub async fn start(self) -> Result<()> {
+        if self.server {
+            let hint = FileChannel::new(FileDescriptor::HintRead, FileDescriptor::HintWrite);
+            let preimage =
+                FileChannel::new(FileDescriptor::PreimageRead, FileDescriptor::PreimageWrite);
+
+            self.start_server(hint, preimage).await?.await?
+        } else {
+            self.start_native().await
+        }
+    }
+
+    /// Starts the preimage server, communicating with the client over the provided channels.
+    async fn start_server<C>(&self, hint: C, preimage: C) -> Result<JoinHandle<Result<()>>>
+    where
+        C: Channel + Send + Sync + 'static,
+    {
+        let kv_store = self.create_key_value_store()?;
+
+        let task_handle = if self.is_offline() {
+            task::spawn(
+                PreimageServer::new(
+                    OracleServer::new(preimage),
+                    HintReader::new(hint),
+                    Arc::new(OfflineHostBackend::new(kv_store)),
+                )
+                .start(),
+            )
+        } else {
+            let providers = self.create_providers().await?;
+            let backend = SingleChainFetcher::new(
+                kv_store.clone(),
+                providers.l1_provider,
+                providers.blob_provider,
+                providers.l2_provider,
+                self.agreed_l2_head_hash,
+            );
+
+            task::spawn(
+                PreimageServer::new(
+                    OracleServer::new(preimage),
+                    HintReader::new(hint),
+                    Arc::new(backend),
+                )
+                .start(),
+            )
+        };
+
+        Ok(task_handle)
+    }
+
+    /// Starts the host in native mode, running both the client and preimage server in the same
+    /// process.
+    async fn start_native(&self) -> Result<()> {
+        let hint = BidirectionalChannel::new()?;
+        let preimage = BidirectionalChannel::new()?;
+
+        let server_task = self.start_server(hint.host, preimage.host).await?;
+        let client_task = task::spawn(kona_client::single::run(
+            OracleReader::new(preimage.client),
+            HintWriter::new(hint.client),
+            None,
+        ));
+
+        let (_, client_result) = tokio::try_join!(server_task, client_task)?;
+
+        // Bubble up the exit status of the client program if execution completes.
+        std::process::exit(client_result.is_err() as i32)
+    }
+
     /// Returns `true` if the host is running in offline mode.
     pub const fn is_offline(&self) -> bool {
         self.l1_node_address.is_none() &&
             self.l2_node_address.is_none() &&
-            self.l1_beacon_address.is_none()
+            self.l1_beacon_address.is_none() &&
+            self.data_dir.is_some()
     }
 
     /// Reads the [RollupConfig] from the file system and returns it as a string.
@@ -115,11 +203,54 @@ impl SingleChainHostCli {
         serde_json::from_str(&ser_config)
             .map_err(|e| anyhow!("Error deserializing RollupConfig: {e}"))
     }
+
+    /// Creates the key-value store for the host backend.
+    fn create_key_value_store(&self) -> Result<SharedKeyValueStore> {
+        let local_kv_store = SingleChainLocalInputs::new(self.clone());
+
+        let kv_store: SharedKeyValueStore = if let Some(ref data_dir) = self.data_dir {
+            let disk_kv_store = DiskKeyValueStore::new(data_dir.clone());
+            let split_kv_store = SplitKeyValueStore::new(local_kv_store, disk_kv_store);
+            Arc::new(RwLock::new(split_kv_store))
+        } else {
+            let mem_kv_store = MemoryKeyValueStore::new();
+            let split_kv_store = SplitKeyValueStore::new(local_kv_store, mem_kv_store);
+            Arc::new(RwLock::new(split_kv_store))
+        };
+
+        Ok(kv_store)
+    }
+
+    /// Creates the providers required for the host backend.
+    async fn create_providers(&self) -> Result<SingleChainProviders> {
+        let l1_provider =
+            http_provider(self.l1_node_address.as_ref().ok_or(anyhow!("Provider must be set"))?);
+        let blob_provider = OnlineBlobProvider::init(OnlineBeaconClient::new_http(
+            self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
+        ))
+        .await;
+        let l2_provider = http_provider(
+            self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
+        );
+
+        Ok(SingleChainProviders { l1_provider, blob_provider, l2_provider })
+    }
+}
+
+/// The providers required for the single chain host.
+#[derive(Debug, Clone)]
+pub struct SingleChainProviders {
+    /// The L1 EL provider.
+    l1_provider: RootProvider,
+    /// The L1 beacon node provider.
+    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
+    /// The L2 EL provider.
+    l2_provider: RootProvider,
 }
 
 #[cfg(test)]
 mod test {
-    use crate::single::SingleChainHostCli;
+    use crate::single::SingleChainHost;
     use alloy_primitives::B256;
     use clap::Parser;
 
@@ -177,7 +308,7 @@ mod test {
         for (args_ext, valid) in cases.into_iter() {
             let args = default_flags.iter().chain(args_ext.iter()).cloned().collect::<Vec<_>>();
 
-            let parsed = SingleChainHostCli::try_parse_from(args);
+            let parsed = SingleChainHost::try_parse_from(args);
             assert_eq!(parsed.is_ok(), valid);
         }
     }

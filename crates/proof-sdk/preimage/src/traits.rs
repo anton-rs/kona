@@ -102,6 +102,13 @@ pub trait PreimageFetcher {
     async fn get_preimage(&self, key: PreimageKey) -> PreimageOracleResult<Vec<u8>>;
 }
 
+/// A [PreimageServerBackend] is a trait that combines the [PreimageFetcher] and [HintRouter]
+/// traits.
+pub trait PreimageServerBackend: PreimageFetcher + HintRouter {}
+
+// Implement the super trait for any type that satisfies the bounds
+impl<T: PreimageFetcher + HintRouter> PreimageServerBackend for T {}
+
 /// A [Channel] is a high-level interface to read and write data to a counterparty.
 #[async_trait]
 pub trait Channel {

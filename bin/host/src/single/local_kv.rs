@@ -1,7 +1,7 @@
 //! Contains a concrete implementation of the [KeyValueStore] trait that stores data on disk,
-//! using the [SingleChainHostCli] config.
+//! using the [SingleChainHost] config.
 
-use super::SingleChainHostCli;
+use super::SingleChainHost;
 use crate::KeyValueStore;
 use alloy_primitives::B256;
 use anyhow::Result;
@@ -11,23 +11,20 @@ use kona_proof::boot::{
     L2_ROLLUP_CONFIG_KEY,
 };
 
-/// The default chain ID to use if none is provided.
-const DEFAULT_CHAIN_ID: u64 = 0xbeefbabe;
-
-/// A simple, synchronous key-value store that returns data from a [SingleChainHostCli] config.
+/// A simple, synchronous key-value store that returns data from a [SingleChainHost] config.
 #[derive(Debug)]
-pub struct LocalKeyValueStore {
-    cfg: SingleChainHostCli,
+pub struct SingleChainLocalInputs {
+    cfg: SingleChainHost,
 }
 
-impl LocalKeyValueStore {
-    /// Create a new [LocalKeyValueStore] with the given [SingleChainHostCli] config.
-    pub const fn new(cfg: SingleChainHostCli) -> Self {
+impl SingleChainLocalInputs {
+    /// Create a new [SingleChainLocalInputs] with the given [SingleChainHost] config.
+    pub const fn new(cfg: SingleChainHost) -> Self {
         Self { cfg }
     }
 }
 
-impl KeyValueStore for LocalKeyValueStore {
+impl KeyValueStore for SingleChainLocalInputs {
     fn get(&self, key: B256) -> Option<Vec<u8>> {
         let preimage_key = PreimageKey::try_from(*key).ok()?;
         match preimage_key.key_value() {
@@ -38,7 +35,7 @@ impl KeyValueStore for LocalKeyValueStore {
                 Some(self.cfg.claimed_l2_block_number.to_be_bytes().to_vec())
             }
             L2_CHAIN_ID_KEY => {
-                Some(self.cfg.l2_chain_id.unwrap_or(DEFAULT_CHAIN_ID).to_be_bytes().to_vec())
+                Some(self.cfg.l2_chain_id.unwrap_or_default().to_be_bytes().to_vec())
             }
             L2_ROLLUP_CONFIG_KEY => {
                 let rollup_config = self.cfg.read_rollup_config().ok()?;

@@ -1,24 +1,16 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
-mod orchestrator;
-pub use orchestrator::{DetachedHostOrchestrator, HostOrchestrator};
-
-mod fetcher;
-pub use fetcher::Fetcher;
+mod server;
+pub use server::PreimageServer;
 
 mod kv;
 pub use kv::{
     DiskKeyValueStore, KeyValueStore, MemoryKeyValueStore, SharedKeyValueStore, SplitKeyValueStore,
 };
 
-mod preimage;
-pub use preimage::{
-    OfflineHintRouter, OfflinePreimageFetcher, OnlineHintRouter, OnlinePreimageFetcher,
-};
-
-mod server;
-pub use server::PreimageServer;
+mod offline;
+pub use offline::OfflineHostBackend;
 
 pub mod cli;
 

@@ -26,7 +26,7 @@ pub use hint::{HintReader, HintWriter};
 mod traits;
 pub use traits::{
     Channel, CommsClient, HintReaderServer, HintRouter, HintWriterClient, PreimageFetcher,
-    PreimageOracleClient, PreimageOracleServer,
+    PreimageOracleClient, PreimageOracleServer, PreimageServerBackend,
 };
 
 #[cfg(any(test, feature = "std"))]
