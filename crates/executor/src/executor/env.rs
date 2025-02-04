@@ -236,7 +236,6 @@ where
                 };
                 Ok(env)
             }
-            _ => Err(ExecutorError::UnsupportedTransactionType(transaction.tx_type() as u8)),
         }
     }
 }
