@@ -34,9 +34,8 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
     async fn header_by_hash(&mut self, hash: B256) -> Result<Header, Self::Error> {
         // Fetch the header RLP from the oracle.
-        let header_rlp = HintType::L1BlockHeader
-            .get_preimage(self.oracle.as_ref(), hash, PreimageKeyType::Keccak256)
-            .await?;
+        HintType::L1BlockHeader.with_data(&[hash.as_ref()]).send(self.oracle.as_ref()).await?;
+        let header_rlp = self.oracle.get(PreimageKey::new_keccak256(*hash)).await?;
 
         // Decode the header RLP into a Header.
         Header::decode(&mut header_rlp.as_slice()).map_err(OracleProviderError::Rlp)
@@ -70,10 +69,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
         // Send a hint for the block's receipts, and walk through the receipts trie in the header to
         // verify them.
-        self.oracle
-            .write(&HintType::L1Receipts.encode_with(&[hash.as_ref()]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        HintType::L1Receipts.with_data(&[hash.as_ref()]).send(self.oracle.as_ref()).await?;
         let trie_walker = OrderedListWalker::try_new_hydrated(header.receipts_root, self)
             .map_err(OracleProviderError::TrieWalker)?;
 
@@ -105,10 +101,7 @@ impl<T: CommsClient + Sync + Send> ChainProvider for OracleL1ChainProvider<T> {
 
         // Send a hint for the block's transactions, and walk through the transactions trie in the
         // header to verify them.
-        self.oracle
-            .write(&HintType::L1Transactions.encode_with(&[hash.as_ref()]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        HintType::L1Transactions.with_data(&[hash.as_ref()]).send(self.oracle.as_ref()).await?;
         let trie_walker = OrderedListWalker::try_new_hydrated(header.transactions_root, self)
             .map_err(OracleProviderError::TrieWalker)?;
 

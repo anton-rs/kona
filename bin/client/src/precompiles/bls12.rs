@@ -10,8 +10,7 @@ use crate::{HINT_WRITER, ORACLE_READER};
 use alloc::{string::ToString, vec::Vec};
 use alloy_primitives::{address, keccak256, Address, Bytes};
 use kona_preimage::{
-    errors::PreimageOracleError, HintWriterClient, PreimageKey, PreimageKeyType,
-    PreimageOracleClient,
+    errors::PreimageOracleError, PreimageKey, PreimageKeyType, PreimageOracleClient,
 };
 use kona_proof::{errors::OracleProviderError, HintType};
 use revm::{
@@ -57,10 +56,7 @@ fn fpvm_bls12_pairing(input: &Bytes, gas_limit: u64) -> PrecompileResult {
     let result_data = kona_proof::block_on(async move {
         // Write the hint for the ecrecover precompile run.
         let hint_data = &[BLS12_PAIRING_CHECK.as_ref(), input.as_ref()];
-        HINT_WRITER
-            .write(&HintType::L1Precompile.encode_with(hint_data))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        HintType::L1Precompile.with_data(hint_data).send(&HINT_WRITER).await?;
 
         // Construct the key hash for the ecrecover precompile run.
         let raw_key_data = hint_data.iter().copied().flatten().copied().collect::<Vec<u8>>();

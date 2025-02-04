@@ -6,7 +6,7 @@ use alloy_primitives::B256;
 use core::fmt::Debug;
 use kona_driver::{Driver, DriverError};
 use kona_executor::{ExecutorError, KonaHandleRegister, TrieDBProvider};
-use kona_preimage::{CommsClient, HintWriterClient, PreimageKeyType, PreimageOracleClient};
+use kona_preimage::{CommsClient, HintWriterClient, PreimageKey, PreimageOracleClient};
 use kona_proof::{
     errors::OracleProviderError,
     executor::KonaExecutor,
@@ -162,12 +162,11 @@ where
 {
     let mut output_preimage = [0u8; 128];
     HintType::StartingL2Output
-        .get_exact_preimage(
-            caching_oracle,
-            agreed_l2_output_root,
-            PreimageKeyType::Keccak256,
-            &mut output_preimage,
-        )
+        .with_data(&[agreed_l2_output_root.as_ref()])
+        .send(caching_oracle)
+        .await?;
+    caching_oracle
+        .get_exact(PreimageKey::new_keccak256(*agreed_l2_output_root), output_preimage.as_mut())
         .await?;
 
     output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)

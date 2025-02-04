@@ -34,11 +34,11 @@ impl HintHandler for InteropHintHandler {
         providers: &<Self::Cfg as OnlineHostBackendCfg>::Providers,
         kv: SharedKeyValueStore,
     ) -> Result<()> {
-        match hint.hint_type {
+        match hint.ty {
             HintType::L1BlockHeader => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let raw_header: Bytes =
                     providers.l1.client().request("debug_getRawHeader", [hash]).await?;
 
@@ -46,9 +46,9 @@ impl HintHandler for InteropHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*hash).into(), raw_header.into())?;
             }
             HintType::L1Transactions => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let Block { transactions, .. } = providers
                     .l1
                     .get_block_by_hash(hash, BlockTransactionsKind::Full)
@@ -62,20 +62,20 @@ impl HintHandler for InteropHintHandler {
                 store_ordered_trie(kv.as_ref(), encoded_transactions.as_slice()).await?;
             }
             HintType::L1Receipts => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let raw_receipts: Vec<Bytes> =
                     providers.l1.client().request("debug_getRawReceipts", [hash]).await?;
 
                 store_ordered_trie(kv.as_ref(), raw_receipts.as_slice()).await?;
             }
             HintType::L1Blob => {
-                ensure!(hint.hint_data.len() == 48, "Invalid hint data length");
+                ensure!(hint.data.len() == 48, "Invalid hint data length");
 
-                let hash_data_bytes: [u8; 32] = hint.hint_data[0..32].try_into()?;
-                let index_data_bytes: [u8; 8] = hint.hint_data[32..40].try_into()?;
-                let timestamp_data_bytes: [u8; 8] = hint.hint_data[40..48].try_into()?;
+                let hash_data_bytes: [u8; 32] = hint.data[0..32].try_into()?;
+                let index_data_bytes: [u8; 8] = hint.data[32..40].try_into()?;
+                let timestamp_data_bytes: [u8; 8] = hint.data[40..48].try_into()?;
 
                 let hash: B256 = hash_data_bytes.into();
                 let index = u64::from_be_bytes(index_data_bytes);
@@ -132,11 +132,11 @@ impl HintHandler for InteropHintHandler {
                 )?;
             }
             HintType::L1Precompile => {
-                ensure!(hint.hint_data.len() >= 20, "Invalid hint data length");
+                ensure!(hint.data.len() >= 20, "Invalid hint data length");
 
-                let address = Address::from_slice(&hint.hint_data.as_ref()[..20]);
-                let input = hint.hint_data[20..].to_vec();
-                let input_hash = keccak256(hint.hint_data.as_ref());
+                let address = Address::from_slice(&hint.data.as_ref()[..20]);
+                let input = hint.data[20..].to_vec();
+                let input_hash = keccak256(hint.data.as_ref());
 
                 let result = crate::eth::execute(address, input).map_or_else(
                     |_| vec![0u8; 1],
@@ -149,17 +149,16 @@ impl HintHandler for InteropHintHandler {
                 );
 
                 let mut kv_lock = kv.write().await;
-                kv_lock
-                    .set(PreimageKey::new_keccak256(*input_hash).into(), hint.hint_data.into())?;
+                kv_lock.set(PreimageKey::new_keccak256(*input_hash).into(), hint.data.into())?;
                 kv_lock.set(
                     PreimageKey::new(*input_hash, PreimageKeyType::Precompile).into(),
                     result,
                 )?;
             }
             HintType::AgreedPreState => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
 
                 if hash != keccak256(cfg.agreed_l2_pre_state.as_ref()) {
                     anyhow::bail!("Agreed pre-state hash does not match.");
@@ -176,13 +175,10 @@ impl HintHandler for InteropHintHandler {
                 const L2_TO_L1_MESSAGE_PASSER_ADDRESS: Address =
                     address!("4200000000000000000000000000000000000016");
 
-                ensure!(
-                    hint.hint_data.len() >= 32 && hint.hint_data.len() <= 40,
-                    "Invalid hint data length"
-                );
+                ensure!(hint.data.len() >= 32 && hint.data.len() <= 40, "Invalid hint data length");
 
-                let hash = B256::from_slice(&hint.hint_data.as_ref()[0..32]);
-                let chain_id = u64::from_be_bytes(hint.hint_data.as_ref()[32..40].try_into()?);
+                let hash = B256::from_slice(&hint.data.as_ref()[0..32]);
+                let chain_id = u64::from_be_bytes(hint.data.as_ref()[32..40].try_into()?);
                 let l2_provider = providers.l2(&chain_id)?;
 
                 // Decode the pre-state to determine the timestamp of the block.
@@ -237,14 +233,11 @@ impl HintHandler for InteropHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*output_root).into(), raw_output.into())?;
             }
             HintType::L2BlockHeader => {
-                ensure!(
-                    hint.hint_data.len() >= 32 && hint.hint_data.len() <= 40,
-                    "Invalid hint data length"
-                );
+                ensure!(hint.data.len() >= 32 && hint.data.len() <= 40, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref()[..32].try_into()?;
-                let chain_id = if hint.hint_data.len() == 40 {
-                    u64::from_be_bytes(hint.hint_data[32..40].try_into()?)
+                let hash: B256 = hint.data.as_ref()[..32].try_into()?;
+                let chain_id = if hint.data.len() == 40 {
+                    u64::from_be_bytes(hint.data[32..40].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
@@ -256,14 +249,11 @@ impl HintHandler for InteropHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*hash).into(), raw_header.into())?;
             }
             HintType::L2Transactions => {
-                ensure!(
-                    hint.hint_data.len() >= 32 && hint.hint_data.len() <= 40,
-                    "Invalid hint data length"
-                );
+                ensure!(hint.data.len() >= 32 && hint.data.len() <= 40, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref()[..32].try_into()?;
-                let chain_id = if hint.hint_data.len() == 40 {
-                    u64::from_be_bytes(hint.hint_data[32..40].try_into()?)
+                let hash: B256 = hint.data.as_ref()[..32].try_into()?;
+                let chain_id = if hint.data.len() == 40 {
+                    u64::from_be_bytes(hint.data[32..40].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
@@ -281,14 +271,11 @@ impl HintHandler for InteropHintHandler {
                 store_ordered_trie(kv.as_ref(), encoded_transactions.as_slice()).await?;
             }
             HintType::L2Receipts => {
-                ensure!(
-                    hint.hint_data.len() >= 32 && hint.hint_data.len() <= 40,
-                    "Invalid hint data length"
-                );
+                ensure!(hint.data.len() >= 32 && hint.data.len() <= 40, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref()[..32].try_into()?;
-                let chain_id = if hint.hint_data.len() == 40 {
-                    u64::from_be_bytes(hint.hint_data[32..40].try_into()?)
+                let hash: B256 = hint.data.as_ref()[..32].try_into()?;
+                let chain_id = if hint.data.len() == 40 {
+                    u64::from_be_bytes(hint.data[32..40].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
@@ -305,14 +292,11 @@ impl HintHandler for InteropHintHandler {
                 // geth hashdb scheme code hash key prefix
                 const CODE_PREFIX: u8 = b'c';
 
-                ensure!(
-                    hint.hint_data.len() >= 32 && hint.hint_data.len() <= 40,
-                    "Invalid hint data length"
-                );
+                ensure!(hint.data.len() >= 32 && hint.data.len() <= 40, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data[..32].as_ref().try_into()?;
-                let chain_id = if hint.hint_data.len() == 40 {
-                    u64::from_be_bytes(hint.hint_data[32..40].try_into()?)
+                let hash: B256 = hint.data[..32].as_ref().try_into()?;
+                let chain_id = if hint.data.len() == 40 {
+                    u64::from_be_bytes(hint.data[32..40].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
@@ -340,14 +324,11 @@ impl HintHandler for InteropHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*hash).into(), code.into())?;
             }
             HintType::L2StateNode => {
-                ensure!(
-                    hint.hint_data.len() >= 32 && hint.hint_data.len() <= 40,
-                    "Invalid hint data length"
-                );
+                ensure!(hint.data.len() >= 32 && hint.data.len() <= 40, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
-                let chain_id = if hint.hint_data.len() == 40 {
-                    u64::from_be_bytes(hint.hint_data[32..40].try_into()?)
+                let hash: B256 = hint.data.as_ref().try_into()?;
+                let chain_id = if hint.data.len() == 40 {
+                    u64::from_be_bytes(hint.data[32..40].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
@@ -361,14 +342,14 @@ impl HintHandler for InteropHintHandler {
             }
             HintType::L2AccountProof => {
                 ensure!(
-                    hint.hint_data.len() >= 8 + 20 && hint.hint_data.len() <= 8 + 20 + 8,
+                    hint.data.len() >= 8 + 20 && hint.data.len() <= 8 + 20 + 8,
                     "Invalid hint data length"
                 );
 
-                let block_number = u64::from_be_bytes(hint.hint_data.as_ref()[..8].try_into()?);
-                let address = Address::from_slice(&hint.hint_data.as_ref()[8..28]);
-                let chain_id = if hint.hint_data.len() == 8 + 20 + 8 {
-                    u64::from_be_bytes(hint.hint_data[28..].try_into()?)
+                let block_number = u64::from_be_bytes(hint.data.as_ref()[..8].try_into()?);
+                let address = Address::from_slice(&hint.data.as_ref()[8..28]);
+                let chain_id = if hint.data.len() == 8 + 20 + 8 {
+                    u64::from_be_bytes(hint.data[28..].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
@@ -390,15 +371,15 @@ impl HintHandler for InteropHintHandler {
             }
             HintType::L2AccountStorageProof => {
                 ensure!(
-                    hint.hint_data.len() >= 8 + 20 + 32 && hint.hint_data.len() <= 8 + 20 + 32 + 8,
+                    hint.data.len() >= 8 + 20 + 32 && hint.data.len() <= 8 + 20 + 32 + 8,
                     "Invalid hint data length"
                 );
 
-                let block_number = u64::from_be_bytes(hint.hint_data.as_ref()[..8].try_into()?);
-                let address = Address::from_slice(&hint.hint_data.as_ref()[8..28]);
-                let slot = B256::from_slice(&hint.hint_data.as_ref()[28..]);
-                let chain_id = if hint.hint_data.len() == 8 + 20 + 32 + 8 {
-                    u64::from_be_bytes(hint.hint_data[60..].try_into()?)
+                let block_number = u64::from_be_bytes(hint.data.as_ref()[..8].try_into()?);
+                let address = Address::from_slice(&hint.data.as_ref()[8..28]);
+                let slot = B256::from_slice(&hint.data.as_ref()[28..]);
+                let chain_id = if hint.data.len() == 8 + 20 + 32 + 8 {
+                    u64::from_be_bytes(hint.data[60..].try_into()?)
                 } else {
                     cfg.active_l2_chain_id()?
                 };
