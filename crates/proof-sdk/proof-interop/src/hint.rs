@@ -1,12 +1,8 @@
 //! This module contains the [HintType] enum.
 
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
-use alloy_primitives::hex;
+use alloc::{string::ToString, vec::Vec};
 use core::{fmt::Display, str::FromStr};
-use kona_proof::errors::HintParsingError;
+use kona_proof::{errors::HintParsingError, Hint};
 
 /// The [HintType] enum is used to specify the type of hint that was received.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -46,10 +42,15 @@ pub enum HintType {
 }
 
 impl HintType {
-    /// Encodes the hint type as a string.
-    pub fn encode_with(&self, data: &[&[u8]]) -> String {
-        let concatenated = hex::encode(data.iter().copied().flatten().copied().collect::<Vec<_>>());
-        alloc::format!("{} {}", self, concatenated)
+    /// Creates a new [Hint] from `self` and the specified data. The data passed will be
+    /// concatenated into a single byte array before being stored in the resulting [Hint].
+    pub fn with_data(self, data: &[&[u8]]) -> Hint<Self> {
+        let total_len = data.iter().map(|d| d.len()).sum();
+        let hint_data = data.iter().fold(Vec::with_capacity(total_len), |mut acc, d| {
+            acc.extend_from_slice(d);
+            acc
+        });
+        Hint::new(self, hint_data)
     }
 }
 

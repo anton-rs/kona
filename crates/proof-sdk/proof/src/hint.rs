@@ -34,7 +34,7 @@ where
         (self.ty, self.data)
     }
 
-    /// Sends the hint to the passed [CommsClient].
+    /// Sends the hint to the passed [HintWriterClient].
     pub async fn send<T: HintWriterClient>(&self, comms: &T) -> Result<(), OracleProviderError> {
         comms.write(&self.encode()).await.map_err(OracleProviderError::Preimage)
     }
@@ -100,7 +100,7 @@ pub enum HintType {
 }
 
 impl HintType {
-    /// Creates a new [Hint] from [self] and the specified data. The data passed will be
+    /// Creates a new [Hint] from `self` and the specified data. The data passed will be
     /// concatenated into a single byte array before being stored in the resulting [Hint].
     pub fn with_data(self, data: &[&[u8]]) -> Hint<Self> {
         let total_len = data.iter().map(|d| d.len()).sum();
