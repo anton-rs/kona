@@ -80,9 +80,7 @@ where
         block_number: u64,
     ) -> Result<B256, TrieDBError> {
         match db.storage_roots().get(&L2_TO_L1_BRIDGE) {
-            Some(storage_root) => {
-                storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)
-            }
+            Some(storage_root) => Ok(storage_root.blind()),
             None => Ok(db
                 .get_trie_account(&L2_TO_L1_BRIDGE, block_number)?
                 .ok_or(TrieDBError::MissingAccountInfo)?

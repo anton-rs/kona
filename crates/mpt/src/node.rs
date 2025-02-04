@@ -104,28 +104,17 @@ impl TrieNode {
         Self::Blinded { commitment }
     }
 
-    /// Returns the commitment of a [TrieNode::Blinded] node, if `self` is of the
-    /// [TrieNode::Blinded] or [TrieNode::Empty] variants.
-    ///
-    /// ## Returns
-    /// - `Some(B256)` - The commitment of the blinded node
-    /// - `None` - `self` is not a [TrieNode::Blinded] node
-    pub const fn blinded_commitment(&self) -> Option<B256> {
+    /// Blinds the [TrieNode].. Alternatively, if the [TrieNode] is a [TrieNode::Blinded] node
+    /// already, its commitment is returned directly.
+    pub fn blind(&self) -> B256 {
         match self {
-            Self::Blinded { commitment } => Some(*commitment),
-            Self::Empty => Some(EMPTY_ROOT_HASH),
-            _ => None,
-        }
-    }
-
-    /// Blinds the [TrieNode] if its encoded length is longer than an encoded [B256] string in
-    /// length. Alternatively, if the [TrieNode] is a [TrieNode::Blinded] node already, it
-    /// is left as-is.
-    pub fn blind(&mut self) {
-        if self.length() >= B256::ZERO.len() && !matches!(self, Self::Blinded { .. }) {
-            let mut rlp_buf = Vec::with_capacity(self.length());
-            self.encode_in_place(&mut rlp_buf);
-            *self = Self::Blinded { commitment: keccak256(rlp_buf) }
+            Self::Blinded { commitment } => *commitment,
+            Self::Empty => EMPTY_ROOT_HASH,
+            _ => {
+                let mut rlp_buf = Vec::with_capacity(self.length());
+                self.encode(&mut rlp_buf);
+                keccak256(rlp_buf)
+            }
         }
     }
 
@@ -360,44 +349,6 @@ impl TrieNode {
         }
     }
 
-    /// Alternative function to the [Encodable::encode] implementation for this type, that blinds
-    /// children nodes throughout the encoding process. This function is useful in the case where
-    /// the trie node cache is no longer required (i.e., during [Self::blind]).
-    ///
-    /// ## Takes
-    /// - `self` - The root trie node
-    /// - `out` - The buffer to write the encoded trie node to
-    pub fn encode_in_place(&mut self, out: &mut dyn alloy_rlp::BufMut) {
-        let payload_length = self.payload_length();
-        match self {
-            Self::Empty => out.put_u8(EMPTY_STRING_CODE),
-            Self::Blinded { commitment } => commitment.encode(out),
-            Self::Leaf { prefix, value } => {
-                // Encode the leaf node's header and key-value pair.
-                Header { list: true, payload_length }.encode(out);
-                alloy_trie::nodes::encode_path_leaf(prefix, true).as_slice().encode(out);
-                value.encode(out);
-            }
-            Self::Extension { prefix, node } => {
-                // Encode the extension node's header, prefix, and pointer node.
-                Header { list: true, payload_length }.encode(out);
-                alloy_trie::nodes::encode_path_leaf(prefix, false).as_slice().encode(out);
-                node.blind();
-                node.encode_in_place(out);
-            }
-            Self::Branch { stack } => {
-                // In branch nodes, if an element is longer than 32 bytes in length, it is blinded.
-                // Assuming we have an open trie node, we must re-hash the elements
-                // that are longer than 32 bytes in length.
-                Header { list: true, payload_length }.encode(out);
-                stack.iter_mut().for_each(|node| {
-                    node.blind();
-                    node.encode_in_place(out);
-                });
-            }
-        }
-    }
-
     /// If applicable, collapses `self` into a more compact form.
     ///
     /// ## Takes
@@ -562,7 +513,7 @@ impl TrieNode {
     ///   than a [B256].
     fn blinded_length(&self) -> usize {
         let encoded_len = self.length();
-        if encoded_len >= B256::ZERO.len() && !matches!(self, Self::Blinded { .. }) {
+        if encoded_len >= B256::ZERO.len() {
             B256::ZERO.length()
         } else {
             encoded_len
@@ -572,32 +523,39 @@ impl TrieNode {
 
 impl Encodable for TrieNode {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length = self.payload_length();
         match self {
             Self::Empty => out.put_u8(EMPTY_STRING_CODE),
             Self::Blinded { commitment } => commitment.encode(out),
             Self::Leaf { prefix, value } => {
                 // Encode the leaf node's header and key-value pair.
-                Header { list: true, payload_length: self.payload_length() }.encode(out);
+                Header { list: true, payload_length }.encode(out);
                 alloy_trie::nodes::encode_path_leaf(prefix, true).as_slice().encode(out);
                 value.encode(out);
             }
             Self::Extension { prefix, node } => {
                 // Encode the extension node's header, prefix, and pointer node.
-                Header { list: true, payload_length: self.payload_length() }.encode(out);
+                Header { list: true, payload_length }.encode(out);
                 alloy_trie::nodes::encode_path_leaf(prefix, false).as_slice().encode(out);
-                let mut blinded = node.clone();
-                blinded.blind();
-                blinded.encode(out);
+                if node.length() >= B256::ZERO.len() {
+                    let hash = node.blind();
+                    hash.encode(out);
+                } else {
+                    node.encode(out);
+                }
             }
             Self::Branch { stack } => {
                 // In branch nodes, if an element is longer than 32 bytes in length, it is blinded.
                 // Assuming we have an open trie node, we must re-hash the elements
                 // that are longer than 32 bytes in length.
-                Header { list: true, payload_length: self.payload_length() }.encode(out);
+                Header { list: true, payload_length }.encode(out);
                 stack.iter().for_each(|node| {
-                    let mut blinded = node.clone();
-                    blinded.blind();
-                    blinded.encode(out);
+                    if node.length() >= B256::ZERO.len() {
+                        let hash = node.blind();
+                        hash.encode(out);
+                    } else {
+                        node.encode(out);
+                    }
                 });
             }
         }
@@ -679,7 +637,7 @@ mod test {
     #[test]
     fn test_empty_blinded() {
         let trie_node = TrieNode::Empty;
-        assert_eq!(trie_node.blinded_commitment().unwrap(), EMPTY_ROOT_HASH);
+        assert_eq!(trie_node.blind(), EMPTY_ROOT_HASH);
     }
 
     #[test]
@@ -801,8 +759,7 @@ mod test {
             assert_eq!(v, encoded_node.as_slice());
         }
 
-        root_node.blind();
-        let commitment = root_node.blinded_commitment().unwrap();
+        let commitment = root_node.blind();
         assert_eq!(commitment, root);
     }
 
@@ -856,8 +813,7 @@ mod test {
                 node.insert(&Nibbles::unpack(key), key.into(), &NoopTrieProvider).unwrap();
             }
 
-            node.blind();
-            assert_eq!(node.blinded_commitment().unwrap(), hb.root());
+            assert_eq!(node.blind(), hb.root());
         }
 
         /// Differential test for deleting an arbitrary number of keys from a `TrieNode` / `HashBuilder`.

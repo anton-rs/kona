@@ -151,16 +151,15 @@ where
         self.update_accounts(bundle)?;
 
         // Recompute the root hash of the trie.
-        self.root_node.blind();
+        let root = self.root_node.blind();
 
         debug!(
             target: "client_executor",
-            "Recomputed state root: {commitment:?}",
-            commitment = self.root_node.blinded_commitment()
+            "Recomputed state root: {root}",
         );
 
         // Extract the new state root from the root node.
-        self.root_node.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)
+        Ok(root)
     }
 
     /// Fetches the [TrieAccount] of an account from the trie DB.
@@ -239,11 +238,8 @@ where
             })?;
 
             // Recompute the account storage root.
-            acc_storage_root.blind();
-
-            let commitment =
-                acc_storage_root.blinded_commitment().ok_or(TrieDBError::RootNotBlinded)?;
-            trie_account.storage_root = commitment;
+            let root = acc_storage_root.blind();
+            trie_account.storage_root = root;
 
             // RLP encode the trie account for insertion.
             let mut account_buf = Vec::with_capacity(trie_account.length());
@@ -407,14 +403,14 @@ mod tests {
     fn test_trie_db_take_root_node() {
         let db = new_test_db();
         let root_node = db.take_root_node();
-        assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
+        assert_eq!(root_node.blind(), B256::default());
     }
 
     #[test]
     fn test_trie_db_root_node_ref() {
         let db = new_test_db();
         let root_node = db.root();
-        assert_eq!(root_node.blinded_commitment(), Some(B256::default()));
+        assert_eq!(root_node.blind(), B256::default());
     }
 
     #[test]
