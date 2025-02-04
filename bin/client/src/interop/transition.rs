@@ -63,6 +63,9 @@ where
         OracleL2ChainProvider::new(safe_head_hash, rollup_config.clone(), oracle.clone());
     let beacon = OracleBlobProvider::new(oracle.clone());
 
+    // Set the active L2 chain ID for the L2 provider.
+    l2_provider.set_chain_id(boot.agreed_pre_state.active_l2_chain_id());
+
     // Fetch the safe head's block header.
     let safe_head = l2_provider
         .header_by_hash(safe_head_hash)

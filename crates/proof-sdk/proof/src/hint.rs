@@ -34,6 +34,20 @@ where
         (self.ty, self.data)
     }
 
+    /// Appends more data to [Hint::data].
+    pub fn with_data<T: AsRef<[u8]>>(self, data: T) -> Self {
+        // No-op if the data is empty.
+        if data.as_ref().is_empty() {
+            return self;
+        }
+
+        let mut hint_data = Vec::with_capacity(self.data.len() + data.as_ref().len());
+        hint_data[..self.data.len()].copy_from_slice(self.data.as_ref());
+        hint_data[self.data.len()..].copy_from_slice(data.as_ref());
+
+        Self { data: hint_data.into(), ..self }
+    }
+
     /// Sends the hint to the passed [HintWriterClient].
     pub async fn send<T: HintWriterClient>(&self, comms: &T) -> Result<(), OracleProviderError> {
         comms.write(&self.encode()).await.map_err(OracleProviderError::Preimage)
