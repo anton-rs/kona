@@ -180,32 +180,6 @@ impl InteropHost {
             self.data_dir.is_some()
     }
 
-    /// Returns the active L2 chain ID based on the agreed L2 pre-state.
-    pub fn active_l2_chain_id(&self) -> Result<u64> {
-        let pre_state = match PreState::decode(&mut self.agreed_l2_pre_state.as_ref()) {
-            Ok(pre_state) => pre_state,
-            // If the pre-state is invalid, return a dummy chain ID.
-            Err(_) => return Ok(0),
-        };
-
-        match pre_state {
-            PreState::SuperRoot(super_root) => Ok(super_root
-                .output_roots
-                .first()
-                .ok_or(anyhow!("output roots are empty"))?
-                .chain_id),
-            PreState::TransitionState(transition_state) => Ok(transition_state
-                .pre_state
-                .output_roots
-                .get(
-                    (transition_state.step as usize)
-                        .min(transition_state.pre_state.output_roots.len() - 1),
-                )
-                .ok_or(anyhow!("no output root found"))?
-                .chain_id),
-        }
-    }
-
     /// Reads the [RollupConfig]s from the file system and returns a map of L2 chain ID ->
     /// [RollupConfig]s.
     pub fn read_rollup_configs(&self) -> Result<HashMap<u64, RollupConfig>> {
