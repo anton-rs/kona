@@ -1,14 +1,14 @@
 //! This module contains all CLI-specific code for the interop entrypoint.
 
-use super::{InteropFetcher, InteropLocalInputs};
+use super::{InteropHintHandler, InteropLocalInputs};
 use crate::{
     cli::{
         cli_styles,
         parser::{parse_b256, parse_bytes},
     },
     eth::http_provider,
-    DiskKeyValueStore, MemoryKeyValueStore, OfflineHostBackend, PreimageServer,
-    SharedKeyValueStore, SplitKeyValueStore,
+    DiskKeyValueStore, MemoryKeyValueStore, OfflineHostBackend, OnlineHostBackend,
+    OnlineHostBackendCfg, PreimageServer, SharedKeyValueStore, SplitKeyValueStore,
 };
 use alloy_primitives::{Bytes, B256};
 use alloy_provider::{Provider, RootProvider};
@@ -18,10 +18,12 @@ use clap::Parser;
 use kona_preimage::{
     BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
 };
-use kona_proof_interop::PreState;
+use kona_proof::Hint;
+use kona_proof_interop::{HintType, PreState};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_std_fpvm::{FileChannel, FileDescriptor};
 use maili_genesis::RollupConfig;
+use op_alloy_network::Optimism;
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::{
@@ -131,12 +133,11 @@ impl InteropHost {
             )
         } else {
             let providers = self.create_providers().await?;
-            let backend = InteropFetcher::new(
+            let backend = OnlineHostBackend::new(
                 self.clone(),
                 kv_store.clone(),
-                providers.l1_provider,
-                providers.blob_provider,
-                providers.l2_providers,
+                providers,
+                InteropHintHandler,
             );
 
             task::spawn(
@@ -260,21 +261,36 @@ impl InteropHost {
             self.l2_node_addresses.as_ref().ok_or(anyhow!("L2 node addresses must be set"))?;
         let mut l2_providers = HashMap::default();
         for l2_node_address in l2_node_addresses {
-            let l2_provider = http_provider(l2_node_address);
+            let l2_provider = http_provider::<Optimism>(l2_node_address);
             let chain_id = l2_provider.get_chain_id().await?;
             l2_providers.insert(chain_id, l2_provider);
         }
 
-        Ok(InteropProviders { l1_provider, blob_provider, l2_providers })
+        Ok(InteropProviders { l1: l1_provider, blobs: blob_provider, l2s: l2_providers })
     }
 }
+
+impl OnlineHostBackendCfg for InteropHost {
+    type Hint = Hint<HintType>;
+    type Providers = InteropProviders;
+}
+
 /// The providers required for the single chain host.
 #[derive(Debug)]
 pub struct InteropProviders {
     /// The L1 EL provider.
-    l1_provider: RootProvider,
+    pub l1: RootProvider,
     /// The L1 beacon node provider.
-    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
+    pub blobs: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL providers, keyed by chain ID.
-    l2_providers: HashMap<u64, RootProvider>,
+    pub l2s: HashMap<u64, RootProvider<Optimism>>,
+}
+
+impl InteropProviders {
+    /// Returns the L2 [RootProvider] for the given chain ID.
+    pub fn l2(&self, chain_id: &u64) -> Result<&RootProvider<Optimism>> {
+        self.l2s
+            .get(chain_id)
+            .ok_or_else(|| anyhow!("No provider found for chain ID: {}", chain_id))
+    }
 }

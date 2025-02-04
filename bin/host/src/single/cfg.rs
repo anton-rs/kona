@@ -1,11 +1,11 @@
 //! This module contains all CLI-specific code for the single chain entrypoint.
 
-use super::{SingleChainFetcher, SingleChainLocalInputs};
+use super::{SingleChainHintHandler, SingleChainLocalInputs};
 use crate::{
     cli::{cli_styles, parser::parse_b256},
     eth::http_provider,
-    DiskKeyValueStore, MemoryKeyValueStore, OfflineHostBackend, PreimageServer,
-    SharedKeyValueStore, SplitKeyValueStore,
+    DiskKeyValueStore, MemoryKeyValueStore, OfflineHostBackend, OnlineHostBackend,
+    OnlineHostBackendCfg, PreimageServer, SharedKeyValueStore, SplitKeyValueStore,
 };
 use alloy_primitives::B256;
 use alloy_provider::RootProvider;
@@ -14,9 +14,11 @@ use clap::Parser;
 use kona_preimage::{
     BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
 };
+use kona_proof::{Hint, HintType};
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_std_fpvm::{FileChannel, FileDescriptor};
 use maili_genesis::RollupConfig;
+use op_alloy_network::Optimism;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tokio::{
@@ -139,12 +141,11 @@ impl SingleChainHost {
             )
         } else {
             let providers = self.create_providers().await?;
-            let backend = SingleChainFetcher::new(
+            let backend = OnlineHostBackend::new(
+                self.clone(),
                 kv_store.clone(),
-                providers.l1_provider,
-                providers.blob_provider,
-                providers.l2_provider,
-                self.agreed_l2_head_hash,
+                providers,
+                SingleChainHintHandler,
             );
 
             task::spawn(
@@ -229,23 +230,28 @@ impl SingleChainHost {
             self.l1_beacon_address.clone().ok_or(anyhow!("Beacon API URL must be set"))?,
         ))
         .await;
-        let l2_provider = http_provider(
+        let l2_provider = http_provider::<Optimism>(
             self.l2_node_address.as_ref().ok_or(anyhow!("L2 node address must be set"))?,
         );
 
-        Ok(SingleChainProviders { l1_provider, blob_provider, l2_provider })
+        Ok(SingleChainProviders { l1: l1_provider, blobs: blob_provider, l2: l2_provider })
     }
+}
+
+impl OnlineHostBackendCfg for SingleChainHost {
+    type Hint = Hint<HintType>;
+    type Providers = SingleChainProviders;
 }
 
 /// The providers required for the single chain host.
 #[derive(Debug, Clone)]
 pub struct SingleChainProviders {
     /// The L1 EL provider.
-    l1_provider: RootProvider,
+    pub l1: RootProvider,
     /// The L1 beacon node provider.
-    blob_provider: OnlineBlobProvider<OnlineBeaconClient>,
+    pub blobs: OnlineBlobProvider<OnlineBeaconClient>,
     /// The L2 EL provider.
-    l2_provider: RootProvider,
+    pub l2: RootProvider<Optimism>,
 }
 
 #[cfg(test)]

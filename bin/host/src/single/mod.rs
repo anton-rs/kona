@@ -6,5 +6,5 @@ pub use cfg::{SingleChainHost, SingleChainProviders};
 mod local_kv;
 pub use local_kv::SingleChainLocalInputs;
 
-mod fetcher;
-pub use fetcher::SingleChainFetcher;
+mod handler;
+pub use handler::SingleChainHintHandler;

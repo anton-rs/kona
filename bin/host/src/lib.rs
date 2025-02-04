@@ -9,8 +9,8 @@ pub use kv::{
     DiskKeyValueStore, KeyValueStore, MemoryKeyValueStore, SharedKeyValueStore, SplitKeyValueStore,
 };
 
-mod offline;
-pub use offline::OfflineHostBackend;
+mod backend;
+pub use backend::{HintHandler, OfflineHostBackend, OnlineHostBackend, OnlineHostBackendCfg};
 
 pub mod cli;
 
