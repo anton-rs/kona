@@ -35,11 +35,11 @@ impl HintHandler for SingleChainHintHandler {
         providers: &<Self::Cfg as OnlineHostBackendCfg>::Providers,
         kv: SharedKeyValueStore,
     ) -> Result<()> {
-        match hint.hint_type {
+        match hint.ty {
             HintType::L1BlockHeader => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let raw_header: Bytes =
                     providers.l1.client().request("debug_getRawHeader", [hash]).await?;
 
@@ -47,9 +47,9 @@ impl HintHandler for SingleChainHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*hash).into(), raw_header.into())?;
             }
             HintType::L1Transactions => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let Block { transactions, .. } = providers
                     .l1
                     .get_block_by_hash(hash, BlockTransactionsKind::Full)
@@ -63,20 +63,20 @@ impl HintHandler for SingleChainHintHandler {
                 store_ordered_trie(kv.as_ref(), encoded_transactions.as_slice()).await?;
             }
             HintType::L1Receipts => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let raw_receipts: Vec<Bytes> =
                     providers.l1.client().request("debug_getRawReceipts", [hash]).await?;
 
                 store_ordered_trie(kv.as_ref(), raw_receipts.as_slice()).await?;
             }
             HintType::L1Blob => {
-                ensure!(hint.hint_data.len() == 48, "Invalid hint data length");
+                ensure!(hint.data.len() == 48, "Invalid hint data length");
 
-                let hash_data_bytes: [u8; 32] = hint.hint_data[0..32].try_into()?;
-                let index_data_bytes: [u8; 8] = hint.hint_data[32..40].try_into()?;
-                let timestamp_data_bytes: [u8; 8] = hint.hint_data[40..48].try_into()?;
+                let hash_data_bytes: [u8; 32] = hint.data[0..32].try_into()?;
+                let index_data_bytes: [u8; 8] = hint.data[32..40].try_into()?;
+                let timestamp_data_bytes: [u8; 8] = hint.data[40..48].try_into()?;
 
                 let hash: B256 = hash_data_bytes.into();
                 let index = u64::from_be_bytes(index_data_bytes);
@@ -133,11 +133,11 @@ impl HintHandler for SingleChainHintHandler {
                 )?;
             }
             HintType::L1Precompile => {
-                ensure!(hint.hint_data.len() >= 20, "Invalid hint data length");
+                ensure!(hint.data.len() >= 20, "Invalid hint data length");
 
-                let address = Address::from_slice(&hint.hint_data.as_ref()[..20]);
-                let input = hint.hint_data[20..].to_vec();
-                let input_hash = keccak256(hint.hint_data.as_ref());
+                let address = Address::from_slice(&hint.data.as_ref()[..20]);
+                let input = hint.data[20..].to_vec();
+                let input_hash = keccak256(hint.data.as_ref());
 
                 let result = crate::eth::execute(address, input).map_or_else(
                     |_| vec![0u8; 1],
@@ -150,18 +150,17 @@ impl HintHandler for SingleChainHintHandler {
                 );
 
                 let mut kv_lock = kv.write().await;
-                kv_lock
-                    .set(PreimageKey::new_keccak256(*input_hash).into(), hint.hint_data.into())?;
+                kv_lock.set(PreimageKey::new_keccak256(*input_hash).into(), hint.data.into())?;
                 kv_lock.set(
                     PreimageKey::new(*input_hash, PreimageKeyType::Precompile).into(),
                     result,
                 )?;
             }
             HintType::L2BlockHeader => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
                 // Fetch the raw header from the L2 chain provider.
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let raw_header: Bytes =
                     providers.l2.client().request("debug_getRawHeader", [hash]).await?;
 
@@ -170,9 +169,9 @@ impl HintHandler for SingleChainHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*hash).into(), raw_header.into())?;
             }
             HintType::L2Transactions => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
                 let Block { transactions, .. } = providers
                     .l2
                     .get_block_by_hash(hash, BlockTransactionsKind::Full)
@@ -190,7 +189,7 @@ impl HintHandler for SingleChainHintHandler {
                 const L2_TO_L1_MESSAGE_PASSER_ADDRESS: Address =
                     address!("4200000000000000000000000000000000000016");
 
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
                 // Fetch the header for the L2 head block.
                 let raw_header: Bytes = providers
@@ -227,9 +226,9 @@ impl HintHandler for SingleChainHintHandler {
                 // geth hashdb scheme code hash key prefix
                 const CODE_PREFIX: u8 = b'c';
 
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
 
                 // Attempt to fetch the code from the L2 chain provider.
                 let code_key = [&[CODE_PREFIX], hash.as_slice()].concat();
@@ -255,9 +254,9 @@ impl HintHandler for SingleChainHintHandler {
                 kv_lock.set(PreimageKey::new_keccak256(*hash).into(), code.into())?;
             }
             HintType::L2StateNode => {
-                ensure!(hint.hint_data.len() == 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 32, "Invalid hint data length");
 
-                let hash: B256 = hint.hint_data.as_ref().try_into()?;
+                let hash: B256 = hint.data.as_ref().try_into()?;
 
                 // Fetch the preimage from the L2 chain provider.
                 let preimage: Bytes = providers.l2.client().request("debug_dbGet", &[hash]).await?;
@@ -266,10 +265,10 @@ impl HintHandler for SingleChainHintHandler {
                 kv_write_lock.set(PreimageKey::new_keccak256(*hash).into(), preimage.into())?;
             }
             HintType::L2AccountProof => {
-                ensure!(hint.hint_data.len() == 8 + 20, "Invalid hint data length");
+                ensure!(hint.data.len() == 8 + 20, "Invalid hint data length");
 
-                let block_number = u64::from_be_bytes(hint.hint_data.as_ref()[..8].try_into()?);
-                let address = Address::from_slice(&hint.hint_data.as_ref()[8..28]);
+                let block_number = u64::from_be_bytes(hint.data.as_ref()[..8].try_into()?);
+                let address = Address::from_slice(&hint.data.as_ref()[8..28]);
 
                 let proof_response = providers
                     .l2
@@ -287,11 +286,11 @@ impl HintHandler for SingleChainHintHandler {
                 })?;
             }
             HintType::L2AccountStorageProof => {
-                ensure!(hint.hint_data.len() == 8 + 20 + 32, "Invalid hint data length");
+                ensure!(hint.data.len() == 8 + 20 + 32, "Invalid hint data length");
 
-                let block_number = u64::from_be_bytes(hint.hint_data.as_ref()[..8].try_into()?);
-                let address = Address::from_slice(&hint.hint_data.as_ref()[8..28]);
-                let slot = B256::from_slice(&hint.hint_data.as_ref()[28..]);
+                let block_number = u64::from_be_bytes(hint.data.as_ref()[..8].try_into()?);
+                let address = Address::from_slice(&hint.data.as_ref()[8..28]);
+                let slot = B256::from_slice(&hint.data.as_ref()[28..]);
 
                 let mut proof_response = providers
                     .l2
@@ -319,11 +318,11 @@ impl HintHandler for SingleChainHintHandler {
                 })?;
             }
             HintType::L2PayloadWitness => {
-                ensure!(hint.hint_data.len() >= 32, "Invalid hint data length");
+                ensure!(hint.data.len() >= 32, "Invalid hint data length");
 
-                let parent_block_hash = B256::from_slice(&hint.hint_data.as_ref()[..32]);
+                let parent_block_hash = B256::from_slice(&hint.data.as_ref()[..32]);
                 let payload_attributes: OpPayloadAttributes =
-                    serde_json::from_slice(&hint.hint_data[32..])?;
+                    serde_json::from_slice(&hint.data[32..])?;
 
                 let execute_payload_response: ExecutionWitness = providers
                     .l2

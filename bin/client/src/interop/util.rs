@@ -30,13 +30,13 @@ where
         }
     };
 
-    caching_oracle
-        .write(&HintType::L2OutputRoot.encode_with(&[
+    HintType::L2OutputRoot
+        .with_data(&[
             rich_output.output_root.as_slice(),
             rich_output.chain_id.to_be_bytes().as_slice(),
-        ]))
-        .await
-        .map_err(OracleProviderError::Preimage)?;
+        ])
+        .send(caching_oracle)
+        .await?;
     let output_preimage = caching_oracle
         .get(PreimageKey::new(*rich_output.output_root, PreimageKeyType::Keccak256))
         .await

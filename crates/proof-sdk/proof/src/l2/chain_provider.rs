@@ -91,10 +91,10 @@ impl<T: CommsClient + Send + Sync> BatchValidationProvider for OracleL2ChainProv
         let header_hash = header.hash_slow();
 
         // Fetch the transactions in the block.
-        self.oracle
-            .write(&HintType::L2Transactions.encode_with(&[header_hash.as_ref()]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        HintType::L2Transactions
+            .with_data(&[header_hash.as_ref()])
+            .send(self.oracle.as_ref())
+            .await?;
         let trie_walker = OrderedListWalker::try_new_hydrated(transactions_root, self)
             .map_err(OracleProviderError::TrieWalker)?;
 
@@ -165,19 +165,23 @@ impl<T: CommsClient> TrieDBProvider for OracleL2ChainProvider<T> {
     fn bytecode_by_hash(&self, hash: B256) -> Result<Bytes, OracleProviderError> {
         // Fetch the bytecode preimage from the caching oracle.
         crate::block_on(async move {
-            HintType::L2Code
-                .get_preimage(self.oracle.as_ref(), hash, PreimageKeyType::Keccak256)
+            HintType::L2Code.with_data(&[hash.as_slice()]).send(self.oracle.as_ref()).await?;
+            self.oracle
+                .get(PreimageKey::new_keccak256(*hash))
                 .await
                 .map(Into::into)
+                .map_err(OracleProviderError::Preimage)
         })
     }
 
     fn header_by_hash(&self, hash: B256) -> Result<Header, OracleProviderError> {
         // Fetch the header from the caching oracle.
         crate::block_on(async move {
-            let header_bytes = HintType::L2BlockHeader
-                .get_preimage(self.oracle.as_ref(), hash, PreimageKeyType::Keccak256)
+            HintType::L2BlockHeader
+                .with_data(&[hash.as_slice()])
+                .send(self.oracle.as_ref())
                 .await?;
+            let header_bytes = self.oracle.get(PreimageKey::new_keccak256(*hash)).await?;
 
             Header::decode(&mut header_bytes.as_slice()).map_err(OracleProviderError::Rlp)
         })
@@ -189,22 +193,16 @@ impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
 
     fn hint_trie_node(&self, hash: B256) -> Result<(), Self::Error> {
         crate::block_on(async move {
-            self.oracle
-                .write(&HintType::L2StateNode.encode_with(&[hash.as_slice()]))
-                .await
-                .map_err(OracleProviderError::Preimage)
+            HintType::L2StateNode.with_data(&[hash.as_slice()]).send(self.oracle.as_ref()).await
         })
     }
 
     fn hint_account_proof(&self, address: Address, block_number: u64) -> Result<(), Self::Error> {
         crate::block_on(async move {
-            self.oracle
-                .write(
-                    &HintType::L2AccountProof
-                        .encode_with(&[block_number.to_be_bytes().as_ref(), address.as_slice()]),
-                )
+            HintType::L2AccountProof
+                .with_data(&[block_number.to_be_bytes().as_ref(), address.as_slice()])
+                .send(self.oracle.as_ref())
                 .await
-                .map_err(OracleProviderError::Preimage)
         })
     }
 
@@ -215,14 +213,14 @@ impl<T: CommsClient> TrieHinter for OracleL2ChainProvider<T> {
         block_number: u64,
     ) -> Result<(), Self::Error> {
         crate::block_on(async move {
-            self.oracle
-                .write(&HintType::L2AccountStorageProof.encode_with(&[
+            HintType::L2AccountStorageProof
+                .with_data(&[
                     block_number.to_be_bytes().as_ref(),
                     address.as_slice(),
                     slot.to_be_bytes::<32>().as_ref(),
-                ]))
+                ])
+                .send(self.oracle.as_ref())
                 .await
-                .map_err(OracleProviderError::Preimage)
         })
     }
 }

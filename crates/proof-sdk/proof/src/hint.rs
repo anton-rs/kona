@@ -5,9 +5,9 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{hex, Bytes, B256};
+use alloy_primitives::{hex, Bytes};
 use core::{fmt::Display, str::FromStr};
-use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
+use kona_preimage::HintWriterClient;
 
 /// A [Hint] is parsed in the format `<hint_type> <hint_data>`, where `<hint_type>` is a string that
 /// represents the type of hint, and `<hint_data>` is the data associated with the hint (bytes
@@ -15,15 +15,33 @@ use kona_preimage::{CommsClient, PreimageKey, PreimageKeyType};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Hint<HT> {
     /// The type of hint.
-    pub hint_type: HT,
+    pub ty: HT,
     /// The data associated with the hint.
-    pub hint_data: Bytes,
+    pub data: Bytes,
 }
 
-impl<HT> Hint<HT> {
+impl<HT> Hint<HT>
+where
+    HT: Display,
+{
+    /// Creates a new [Hint] with the specified type and data.
+    pub fn new<T: Into<Bytes>>(ty: HT, data: T) -> Self {
+        Self { ty, data: data.into() }
+    }
+
     /// Splits the [Hint] into its components.
     pub fn split(self) -> (HT, Bytes) {
-        (self.hint_type, self.hint_data)
+        (self.ty, self.data)
+    }
+
+    /// Sends the hint to the passed [HintWriterClient].
+    pub async fn send<T: HintWriterClient>(&self, comms: &T) -> Result<(), OracleProviderError> {
+        comms.write(&self.encode()).await.map_err(OracleProviderError::Preimage)
+    }
+
+    /// Encodes the hint as a string.
+    pub fn encode(&self) -> String {
+        alloc::format!("{} {}", self.ty, self.data)
     }
 }
 
@@ -44,7 +62,7 @@ where
         let hint_data =
             hex::decode(parts.remove(0)).map_err(|e| HintParsingError(e.to_string()))?.into();
 
-        Ok(Self { hint_type, hint_data })
+        Ok(Self { ty: hint_type, data: hint_data })
     }
 }
 
@@ -82,45 +100,15 @@ pub enum HintType {
 }
 
 impl HintType {
-    /// Encodes the hint type as a string.
-    pub fn encode_with(&self, data: &[&[u8]]) -> String {
-        let concatenated = hex::encode(data.iter().copied().flatten().copied().collect::<Vec<_>>());
-        alloc::format!("{} {}", self, concatenated)
-    }
-
-    /// Retrieves a preimage through an oracle
-    pub async fn get_preimage<T: CommsClient>(
-        &self,
-        oracle: &T,
-        image: B256,
-        preimage_key_type: PreimageKeyType,
-    ) -> Result<Vec<u8>, OracleProviderError> {
-        oracle
-            .write(&self.encode_with(&[image.as_ref()]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-        oracle
-            .get(PreimageKey::new(*image, preimage_key_type))
-            .await
-            .map_err(OracleProviderError::Preimage)
-    }
-
-    /// Retrieves a preimage through an oracle
-    pub async fn get_exact_preimage<T: CommsClient>(
-        &self,
-        oracle: &T,
-        image: B256,
-        preimage_key_type: PreimageKeyType,
-        buf: &mut [u8],
-    ) -> Result<(), OracleProviderError> {
-        oracle
-            .write(&self.encode_with(&[image.as_ref()]))
-            .await
-            .map_err(OracleProviderError::Preimage)?;
-        oracle
-            .get_exact(PreimageKey::new(*image, preimage_key_type), buf)
-            .await
-            .map_err(OracleProviderError::Preimage)
+    /// Creates a new [Hint] from `self` and the specified data. The data passed will be
+    /// concatenated into a single byte array before being stored in the resulting [Hint].
+    pub fn with_data(self, data: &[&[u8]]) -> Hint<Self> {
+        let total_len = data.iter().map(|d| d.len()).sum();
+        let hint_data = data.iter().fold(Vec::with_capacity(total_len), |mut acc, d| {
+            acc.extend_from_slice(d);
+            acc
+        });
+        Hint::new(self, hint_data)
     }
 }
 

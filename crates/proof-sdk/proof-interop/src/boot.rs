@@ -143,10 +143,10 @@ pub(crate) async fn read_raw_pre_state<O>(
 where
     O: CommsClient,
 {
-    caching_oracle
-        .write(&HintType::AgreedPreState.encode_with(&[agreed_pre_state_commitment.as_ref()]))
-        .await
-        .map_err(OracleProviderError::Preimage)?;
+    HintType::AgreedPreState
+        .with_data(&[agreed_pre_state_commitment.as_ref()])
+        .send(caching_oracle)
+        .await?;
     let pre = caching_oracle
         .get(PreimageKey::new(*agreed_pre_state_commitment, PreimageKeyType::Keccak256))
         .await

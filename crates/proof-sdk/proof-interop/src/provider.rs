@@ -41,13 +41,10 @@ where
         chain_id: u64,
         block_hash: B256,
     ) -> Result<Header, <Self as InteropProvider>::Error> {
-        self.oracle
-            .write(
-                &HintType::L2BlockHeader
-                    .encode_with(&[block_hash.as_slice(), chain_id.to_be_bytes().as_ref()]),
-            )
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        HintType::L2BlockHeader
+            .with_data(&[block_hash.as_slice(), chain_id.to_be_bytes().as_ref()])
+            .send(self.oracle.as_ref())
+            .await?;
 
         let header_rlp = self
             .oracle
@@ -67,13 +64,10 @@ where
     ) -> Result<Vec<OpReceiptEnvelope>, <Self as InteropProvider>::Error> {
         // Send a hint for the block's receipts, and walk through the receipts trie in the header to
         // verify them.
-        self.oracle
-            .write(
-                &HintType::L2Receipts
-                    .encode_with(&[block_hash.as_ref(), chain_id.to_be_bytes().as_slice()]),
-            )
-            .await
-            .map_err(OracleProviderError::Preimage)?;
+        HintType::L2Receipts
+            .with_data(&[block_hash.as_ref(), chain_id.to_be_bytes().as_slice()])
+            .send(self.oracle.as_ref())
+            .await?;
         let trie_walker = OrderedListWalker::try_new_hydrated(header.receipts_root, self)
             .map_err(OracleProviderError::TrieWalker)?;
 
@@ -115,13 +109,13 @@ where
                 .iter()
                 .find(|o| o.chain_id == chain_id)
                 .ok_or(OracleProviderError::UnknownChainId(chain_id))?;
-            self.oracle
-                .write(&HintType::L2OutputRoot.encode_with(&[
+            HintType::L2OutputRoot
+                .with_data(&[
                     output.output_root.as_slice(),
                     output.chain_id.to_be_bytes().as_slice(),
-                ]))
-                .await
-                .map_err(OracleProviderError::Preimage)?;
+                ])
+                .send(self.oracle.as_ref())
+                .await?;
             let output_preimage = self
                 .oracle
                 .get(PreimageKey::new(*output.output_root, PreimageKeyType::Keccak256))
