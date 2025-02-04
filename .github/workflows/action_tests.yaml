@@ -31,8 +31,16 @@ jobs:
         uses: autero1/action-gotestsum@v2.0.0
         with:
           gotestsum_version: 1.12.0
+      - name: Setup yq
+        uses: dcarbone/install-yq-action@v1
+      - name: Extract monorepo forge version
+        id: collect-versions
+        run: |
+          echo "forge-version=$(yq '.tools.forge' monorepo/mise.toml | tr -d '\n')" >> $GITHUB_OUTPUT
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ steps.collect-versions.outputs.forge-version }}
       - name: Run Actions Tests
         run: |
           just action-tests
