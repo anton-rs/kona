@@ -12,14 +12,13 @@ use crate::{
 };
 use alloy_primitives::{Bytes, B256};
 use alloy_provider::{Provider, RootProvider};
-use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use kona_preimage::{
     BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
 };
 use kona_proof::Hint;
-use kona_proof_interop::{HintType, PreState};
+use kona_proof_interop::HintType;
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_std_fpvm::{FileChannel, FileDescriptor};
 use maili_genesis::RollupConfig;
@@ -39,8 +38,7 @@ pub struct InteropHost {
     /// L1 chain.
     #[clap(long, value_parser = parse_b256, env)]
     pub l1_head: B256,
-    /// Agreed [PreState] to start from. Can be a [PreState::SuperRoot] or
-    /// [PreState::TransitionState].
+    /// Agreed [PreState] to start from.
     ///
     /// [PreState]: kona_proof_interop::PreState
     #[clap(long, visible_alias = "l2-pre-state", value_parser = parse_bytes, env)]
