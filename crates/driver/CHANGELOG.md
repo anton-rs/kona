@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4](https://github.com/op-rs/kona/compare/kona-driver-v0.2.3...kona-driver-v0.2.4) - 2025-02-05
+
+### Added
+
+- *(host)* Interop optimistic block re-execution hint (#983)
+- *(executor)* Export receipts (#969)
+- allow 7702 receipts after Isthmus active (#959)
+- *(host)* Interop proof support (part 1) (#910)
+- *(driver)* Multi-block derivation (#888)
+
+### Fixed
+
+- *(client)* Interop transition rules (#973)
+
 ## [0.2.3](https://github.com/op-rs/kona/compare/kona-driver-v0.2.2...kona-driver-v0.2.3) - 2025-01-16
 
 ### Added

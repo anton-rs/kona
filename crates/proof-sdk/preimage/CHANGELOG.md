@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2](https://github.com/op-rs/kona/compare/kona-preimage-v0.2.1...kona-preimage-v0.2.2) - 2025-02-05
+
+### Added
+
+- Derive Eq/Ord/Hash for (Archived) PreimageKey(Type) (#956)
+
+### Other
+
+- *(host)* Refactor fetchers (#995)
+- *(host)* Remove `HostOrchestrator` (#994)
+
 ## [0.2.1](https://github.com/op-rs/kona/compare/kona-preimage-v0.2.0...kona-preimage-v0.2.1) - 2025-01-07
 
 ### Fixed
