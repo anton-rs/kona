@@ -34,13 +34,13 @@ action-tests test_name='Test_ProgramAction' *args='':
   fi
 
   echo "Building host program for the native target"
-  just build-native --bin kona-host --release
+  just build-native --bin kona-host
 
   echo "Running action tests for the client program on the native target"
-  export KONA_HOST_PATH="{{justfile_directory()}}/target/release/kona-host"
+  export KONA_HOST_PATH="{{justfile_directory()}}/target/debug/kona-host"
 
   cd monorepo/op-e2e/actions/proofs && \
-    gotestsum --format=short-verbose -- -run "{{test_name}}" {{args}} -count=1 ./...
+    gotestsum --format=testname -- -run "{{test_name}}" {{args}} -count=1 ./...
 
 # Clean the action tests directory
 clean-actions:
