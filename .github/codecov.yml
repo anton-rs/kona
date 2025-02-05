@@ -23,7 +23,7 @@ ignore:
   - "**/test_utils*"
   - "**/test_util*"
   - "**/tests*"
-  - "crates/proof-sdk/proof"
+  - "crates/proof-sdk/proof-interop"
   - "crates/providers-alloy"
   - "crates/mpt/src/noop.rs"
 
