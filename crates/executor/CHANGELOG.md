@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4](https://github.com/op-rs/kona/compare/kona-executor-v0.2.3...kona-executor-v0.2.4) - 2025-02-05
+
+### Added
+
+- *(host)* Interop optimistic block re-execution hint (#983)
+- *(executor)* Export receipts (#969)
+- *(executor)* EIP-7251 Syscall Support [ISTHMUS] (#968)
+- *(executor)* EIP-7002 Syscall Support [ISTHMUS] (#965)
+- *(executor)* EIP-2935 Syscall Support [ISTHMUS] (#963)
+- fill eip 7702 tx env with auth list (#958)
+- allow 7702 receipts after Isthmus active (#959)
+- use empty requests hash when isthmus enabled (#951)
+- *(executor)* New static test harness (#938)
+- *(host)* Interop proof support (part 1) (#910)
+
+### Fixed
+
+- *(executor)* Removes EIP-7002 and EIP-7251 Pre-block Calls (#990)
+- *(executor)* Withdrawals root (#974)
+- *(executor)* Don't generate a diff when running tests (#967)
+
+### Other
+
+- Bump op-alloy dep (#996)
+- Update Dependencies (#988)
+- Update Maili Deps (#978)
+- *(executor)* De-duplicate `TrieAccount` type (#977)
+- *(executor)* TxEnv Stuffing (#970)
+- *(executor)* Update SpecId with Isthmus (#962)
+- *(executor)* Remove `anyhow` dev-dependency (#937)
+- *(mpt)* Remove `anyhow` dev-dependency (#919)
+
 ## [0.2.3](https://github.com/op-rs/kona/compare/kona-executor-v0.2.2...kona-executor-v0.2.3) - 2025-01-16
 
 ### Other

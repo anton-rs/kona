@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4](https://github.com/op-rs/kona/compare/kona-proof-v0.2.3...kona-proof-v0.2.4) - 2025-02-05
+
+### Added
+
+- *(proof-sdk)* Optional L2 chain ID in L2-specific hints (#999)
+- *(proof-sdk)* Cleanup `Hint` API (#998)
+- *(proof-interop)* Support multiple `RollupConfigs` in boot routine (#986)
+- *(host)* Interop optimistic block re-execution hint (#983)
+- *(executor)* Export receipts (#969)
+- allow 7702 receipts after Isthmus active (#959)
+- *(client)* Interop consolidation sub-problem (#913)
+- *(host)* Interop proof support (part 1) (#910)
+- *(driver)* Multi-block derivation (#888)
+
+### Other
+
+- *(host)* Refactor fetchers (#995)
+
 ## [0.2.3](https://github.com/op-rs/kona/compare/kona-proof-v0.2.2...kona-proof-v0.2.3) - 2025-01-16
 
 ### Added
