@@ -126,7 +126,8 @@ run-client-native-offline block_number l2_claim l2_output_root l2_head l1_head l
   cd $(git rev-parse --show-toplevel)
 
   echo "Running host program with native client program..."
-  cargo r --bin kona-host --profile test -- \
+  cargo r --bin kona-host -- \
+    single \
     --l1-head $L1_HEAD \
     --agreed-l2-head-hash $AGREED_L2_HEAD_HASH \
     --claimed-l2-output-root $CLAIMED_L2_OUTPUT_ROOT \
@@ -142,7 +143,7 @@ run-client-asterisc-offline block_number l2_claim l2_output_root l2_head l1_head
   #!/usr/bin/env bash
 
   HOST_BIN_PATH="./target/debug/kona-host"
-  CLIENT_BIN_PATH="./target/riscv64gc-unknown-none-elf/release-client-lto/kona"
+  CLIENT_BIN_PATH="./target/riscv64imac-unknown-none-elf/release-client-lto/kona"
   STATE_PATH="./state.bin.gz"
 
   CLAIMED_L2_BLOCK_NUMBER={{block_number}}
@@ -162,7 +163,7 @@ run-client-asterisc-offline block_number l2_claim l2_output_root l2_head l1_head
   asterisc load-elf --path=$CLIENT_BIN_PATH
 
   echo "Building host program for native target..."
-  cargo build --bin kona-host --profile test
+  cargo build --bin kona-host
 
   echo "Running asterisc"
   asterisc run \

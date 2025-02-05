@@ -19,12 +19,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
       - uses: taiki-e/install-action@just
-      - name: Install LLVM and Clang
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 19
-          sudo apt-get install llvm-19 llvm-19-tools
+      - uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install Rust stable toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -73,8 +68,7 @@ jobs:
       - name: Run host + client offline
         working-directory: ./bin/client
         run: |
-          export RUSTFLAGS="-C instrument-coverage"
-          export LLVM_PROFILE_FILE="kona-%p-%m.profraw"
+          source <(cargo llvm-cov show-env --export-prefix)
 
           mkdir -p ../../target
           just run-client-${{ matrix.target }}-offline \
@@ -84,18 +78,12 @@ jobs:
             $L2_HEAD \
             $L1_HEAD \
             $L2_CHAIN_ID
-      - name: Convert profile to lcov
-        run: |
-          llvm-profdata-19 merge -sparse *.profraw -o coverage.profdata
-          llvm-cov-19 export \
-            -format=lcov ./target/debug/kona-host \
-            -instr-profile=coverage.profdata > coverage.lcov
-            # Filter out lines with "//" (comments) or "impl" (function declarations)
-            grep -v -E '//$|impl' "coverage.lcov" > "filtered_coverage.lcov"
+
+          cargo llvm-cov report --lcov --output-path client_host_cov.lcov
       - name: Upload coverage to codecov.io
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
           env_vars: OS,RUST
-          files: filtered_coverage.lcov
+          files: client_host_cov.lcov
