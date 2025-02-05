@@ -12,14 +12,13 @@ use crate::{
 };
 use alloy_primitives::{Bytes, B256};
 use alloy_provider::{Provider, RootProvider};
-use alloy_rlp::Decodable;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use kona_preimage::{
     BidirectionalChannel, Channel, HintReader, HintWriter, OracleReader, OracleServer,
 };
 use kona_proof::Hint;
-use kona_proof_interop::{HintType, PreState};
+use kona_proof_interop::HintType;
 use kona_providers_alloy::{OnlineBeaconClient, OnlineBlobProvider};
 use kona_std_fpvm::{FileChannel, FileDescriptor};
 use maili_genesis::RollupConfig;
@@ -39,8 +38,7 @@ pub struct InteropHost {
     /// L1 chain.
     #[clap(long, value_parser = parse_b256, env)]
     pub l1_head: B256,
-    /// Agreed [PreState] to start from. Can be a [PreState::SuperRoot] or
-    /// [PreState::TransitionState].
+    /// Agreed [PreState] to start from.
     ///
     /// [PreState]: kona_proof_interop::PreState
     #[clap(long, visible_alias = "l2-pre-state", value_parser = parse_bytes, env)]
@@ -178,32 +176,6 @@ impl InteropHost {
             self.l2_node_addresses.is_none() &&
             self.l1_beacon_address.is_none() &&
             self.data_dir.is_some()
-    }
-
-    /// Returns the active L2 chain ID based on the agreed L2 pre-state.
-    pub fn active_l2_chain_id(&self) -> Result<u64> {
-        let pre_state = match PreState::decode(&mut self.agreed_l2_pre_state.as_ref()) {
-            Ok(pre_state) => pre_state,
-            // If the pre-state is invalid, return a dummy chain ID.
-            Err(_) => return Ok(0),
-        };
-
-        match pre_state {
-            PreState::SuperRoot(super_root) => Ok(super_root
-                .output_roots
-                .first()
-                .ok_or(anyhow!("output roots are empty"))?
-                .chain_id),
-            PreState::TransitionState(transition_state) => Ok(transition_state
-                .pre_state
-                .output_roots
-                .get(
-                    (transition_state.step as usize)
-                        .min(transition_state.pre_state.output_roots.len() - 1),
-                )
-                .ok_or(anyhow!("no output root found"))?
-                .chain_id),
-        }
     }
 
     /// Reads the [RollupConfig]s from the file system and returns a map of L2 chain ID ->
